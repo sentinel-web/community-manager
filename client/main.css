@@ -1,0 +1,45 @@
+* {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100vh;
+  width: 100vw;
+  background-color: black;
+  color: white;
+
+  body {
+    margin: 0;
+  }
+
+  body,
+  #react-target {
+    height: 100%;
+    width: 100%;
+  }
+
+  .app {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    flex: 1;
+
+    .logo {
+      img {
+        aspect-ratio: 1/1;
+        background-color: white;
+      }
+    }
+  }
+
+  main {
+    flex: 10;
+  }
+
+  footer {
+    flex: 1;
+  }
+}
