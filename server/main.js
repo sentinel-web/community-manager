@@ -1,3 +1,4 @@
-import { Meteor } from 'meteor/meteor';
-
-Meteor.startup(async () => {});
+import "./apis/members.server";
+import "./apis/events.server";
+import "./apis/tasks.server";
+import "./apis/settings.server";
