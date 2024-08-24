@@ -24,11 +24,11 @@ I recommend the following extensions for vs code:
 - Prettier - Code Formatter
 
 ## Start coding
-Once you have installed the requirements and finished setting up our code editor you can start developping be running the following command:
+Once you have installed the requirements and finished setting up our code editor you can start developing be running the following command:
 ```bash
-meteor npm install && meteor
+git clone https://github.com/sentinel-web/community-manager.git && cd community-manager && meteor npm install && meteor
 ```
-This will install all the necessary dependencies of the project and start the web server for you.
+This will clone the repository install all the necessary dependencies of the project and start the web server for you.
 
 ## Viewing inside the browser
 Now you're done and able to access your webserver under: [localhost:3000](http://localhost:3000)
