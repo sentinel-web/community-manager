@@ -6,8 +6,9 @@ import TableContainer from "../table/body/TableContainer";
 import TableHeader from "../table/header/TableHeader";
 import Table from "../table/Table";
 import { handleDelete, handleEdit } from "./member.actions";
-import { Col, Form, Row, Typography } from "antd";
+import { Col, Form, Row } from "antd";
 import TableActions from "../table/body/actions/TableActions";
+import SectionCard from "../section-card/SectionCard";
 
 export default function Members() {
   const [form] = Form.useForm();
@@ -68,45 +69,44 @@ export default function Members() {
   }, [members, usernameInput]);
 
   return (
-    <Row gutter={[16, 16]}>
-      <Col span={24}>
-        <Typography.Title level={2}>Members</Typography.Title>
-      </Col>
-      <Col span={24}>
-        <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          <TableHeader
-            handleInputChange={handleUsernameChange}
-            disabled={disabled}
-            inputName="username"
-          />
-          <TableContainer>
-            <Table
-              columns={[
-                {
-                  title: "Username",
-                  dataIndex: "username",
-                  key: "username",
-                  sorter: (a, b) => a.username.localeCompare(b.username),
-                },
-                {
-                  title: "Actions",
-                  dataIndex: "_id",
-                  key: "actions",
-                  render: (id, record) => (
-                    <TableActions
-                      record={record}
-                      handleDelete={handleDelete}
-                      handleEdit={handleEdit}
-                    />
-                  ),
-                },
-              ]}
-              datasource={datasource}
+    <SectionCard title="Members" ready={ready}>
+      <Row gutter={[16, 16]}>
+        <Col span={24}>
+          <Form form={form} layout="vertical" onFinish={handleSubmit}>
+            <TableHeader
+              handleInputChange={handleUsernameChange}
+              disabled={disabled}
+              inputName="username"
             />
-          </TableContainer>
-          <TableFooter ready={ready} count={datasource.length} />
-        </Form>
-      </Col>
-    </Row>
+            <TableContainer>
+              <Table
+                columns={[
+                  {
+                    title: "Username",
+                    dataIndex: "username",
+                    key: "username",
+                    sorter: (a, b) => a.username.localeCompare(b.username),
+                  },
+                  {
+                    title: "Actions",
+                    dataIndex: "_id",
+                    key: "actions",
+                    render: (id, record) => (
+                      <TableActions
+                        record={record}
+                        handleDelete={handleDelete}
+                        handleEdit={handleEdit}
+                      />
+                    ),
+                  },
+                ]}
+                datasource={datasource}
+              />
+            </TableContainer>
+            <TableFooter ready={ready} count={datasource.length} />
+          </Form>
+        </Col>
+      </Row>
+    </SectionCard>
   );
 }
