@@ -10,7 +10,7 @@ export default function Header() {
   return (
     <header>
       <Logo src={communityLogo} />
-      <Title text={communityTitle} />
+      <Title text={communityTitle?.length > 0 ? communityTitle : undefined} />
       <Navigation />
     </header>
   );

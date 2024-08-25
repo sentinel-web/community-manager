@@ -6,8 +6,9 @@ import TableHeader from "../table/header/TableHeader";
 import TableContainer from "../table/body/TableContainer";
 import Table from "../table/Table";
 import TableFooter from "../table/footer/TableFooter";
-import { Col, Form, Row, Typography } from "antd";
+import { Col, Form, Row } from "antd";
 import TableActions from "../table/body/actions/TableActions";
+import SectionCard from "../section-card/SectionCard";
 
 export default function Events() {
   const [form] = Form.useForm();
@@ -63,50 +64,49 @@ export default function Events() {
   }, [events, nameInput]);
 
   return (
-    <Row gutter={[16, 16]}>
-      <Col span={24}>
-        <Typography.Title level={2}>Events</Typography.Title>
-      </Col>
-      <Col span={24}>
-        <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          <TableHeader
-            handleInputChange={handleNameChange}
-            disabled={disabled}
-            inputName="name"
-          />
-          <TableContainer>
-            <Table
-              columns={[
-                {
-                  title: "Name",
-                  dataIndex: "name",
-                  sorter: (a, b) => a.name.localeCompare(b.name),
-                },
-                {
-                  title: "Start",
-                  dataIndex: "start",
-                  render: (date) =>
-                    date ? new Date(date).toLocaleString() : "-",
-                  sorter: (a, b) => a.start - b.start,
-                },
-                {
-                  title: "Actions",
-                  dataIndex: "_id",
-                  render: (id, record) => (
-                    <TableActions
-                      record={record}
-                      handleEdit={handleEventEdit}
-                      handleDelete={handleEventDelete}
-                    />
-                  ),
-                },
-              ]}
-              datasource={datasource}
+    <SectionCard title="Events" ready={ready}>
+      <Row gutter={[16, 16]}>
+        <Col span={24}>
+          <Form form={form} layout="vertical" onFinish={handleSubmit}>
+            <TableHeader
+              handleInputChange={handleNameChange}
+              disabled={disabled}
+              inputName="name"
             />
-          </TableContainer>
-          <TableFooter ready={ready} count={datasource.length} />
-        </Form>
-      </Col>
-    </Row>
+            <TableContainer>
+              <Table
+                columns={[
+                  {
+                    title: "Name",
+                    dataIndex: "name",
+                    sorter: (a, b) => a.name.localeCompare(b.name),
+                  },
+                  {
+                    title: "Start",
+                    dataIndex: "start",
+                    render: (date) =>
+                      date ? new Date(date).toLocaleString() : "-",
+                    sorter: (a, b) => a.start - b.start,
+                  },
+                  {
+                    title: "Actions",
+                    dataIndex: "_id",
+                    render: (id, record) => (
+                      <TableActions
+                        record={record}
+                        handleEdit={handleEventEdit}
+                        handleDelete={handleEventDelete}
+                      />
+                    ),
+                  },
+                ]}
+                datasource={datasource}
+              />
+            </TableContainer>
+            <TableFooter ready={ready} count={datasource.length} />
+          </Form>
+        </Col>
+      </Row>
+    </SectionCard>
   );
 }

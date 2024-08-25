@@ -1,29 +1,14 @@
 import React, { useEffect } from "react";
 import useNavigation from "./navigation.hook";
-import { Select } from "antd";
-
-const listItems = [
-  {
-    value: "dashboard",
-    label: "Dashboard",
-  },
-  {
-    value: "members",
-    label: "Members",
-  },
-  {
-    value: "events",
-    label: "Events",
-  },
-  {
-    value: "tasks",
-    label: "Tasks",
-  },
-  {
-    value: "settings",
-    label: "Settings",
-  },
-];
+import { Button, Dropdown } from "antd";
+import {
+  CalendarOutlined,
+  CheckCircleOutlined,
+  DashboardOutlined,
+  MenuOutlined,
+  SettingOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
 
 export function getNavigationValue() {
   const pathname = window.location.pathname;
@@ -46,28 +31,59 @@ export function getNavigationValue() {
 export default function Navigation() {
   const { navigationValue, setNavigationValue } = useNavigation();
   useEffect(function () {
-    window.addEventListener("hashchange", function () {
+    window.addEventListener("popstate", function () {
       if (navigationValue !== getNavigationValue()) {
         setNavigationValue(getNavigationValue());
       }
     });
     return function () {
-      window.removeEventListener("hashchange", function () {});
+      window.removeEventListener("popstate", function () {});
     };
   }, []);
 
-  function handleChange(value) {
-    setNavigationValue(value);
-    window.location.replace(value);
+  function handleNavigationClick({ key }) {
+    setNavigationValue(key);
+    window.history.pushState(null, null, `${window.location.origin}/${key}`);
   }
 
   return (
     <nav>
-      <Select
-        options={listItems}
-        value={navigationValue}
-        onChange={handleChange}
-      />
+      <Dropdown
+        trigger="click"
+        menu={{
+          selectedKeys: [navigationValue],
+          items: [
+            {
+              key: "dashboard",
+              label: "Dashboard",
+              icon: <DashboardOutlined />,
+            },
+            {
+              key: "members",
+              label: "Members",
+              icon: <UserOutlined />,
+            },
+            {
+              key: "events",
+              label: "Events",
+              icon: <CalendarOutlined />,
+            },
+            {
+              key: "tasks",
+              label: "Tasks",
+              icon: <CheckCircleOutlined />,
+            },
+            {
+              key: "settings",
+              label: "Settings",
+              icon: <SettingOutlined />,
+            },
+          ],
+          onClick: handleNavigationClick,
+        }}
+      >
+        <Button icon={<MenuOutlined />} />
+      </Dropdown>
     </nav>
   );
 }
