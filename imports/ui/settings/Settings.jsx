@@ -2,8 +2,9 @@ import React from "react";
 import useSettings from "./settings.hook";
 import { Meteor } from "meteor/meteor";
 import Logo from "../logo/Logo";
-import { Col, Form, Input, Row, Typography, Upload } from "antd";
+import { Col, ColorPicker, Input, Row, Typography } from "antd";
 import Dragger from "antd/es/upload/Dragger";
+import SectionCard from "../section-card/SectionCard";
 
 async function getEventValue(key, e) {
   switch (key) {
@@ -11,6 +12,8 @@ async function getEventValue(key, e) {
       return e.target.value;
     case "community-logo":
       return await transformFileToBase64(e);
+    case "community-color":
+      return e.toHexString ? e.toHexString() : undefined;
     default:
       return e.target.value;
   }
@@ -45,76 +48,103 @@ async function turnImageFileIntoWebp(file) {
 }
 
 export default function Settings() {
-  const [form] = Form.useForm();
-  const [disabled, setDisabled] = React.useState(false);
-  const { ready, communityTitle, communityLogo } = useSettings();
-  console.log({ ready, communityTitle });
-
-  React.useEffect(() => {
-    if (!ready) {
-      form.setFieldValue("community-title", "");
-      form.setFieldValue("community-logo", undefined);
-      setDisabled(true);
-    } else {
-      form.setFieldValue("community-title", communityTitle);
-      form.setFieldValue("community-logo", communityLogo);
-      setDisabled(false);
-    }
-  }, [ready, communityTitle, communityLogo]);
+  const { ready, communityTitle, communityLogo, communityColor } =
+    useSettings();
 
   async function handleChange(e, key) {
-    setDisabled(true);
     const value = await getEventValue(key, e);
-    Meteor.callAsync("settings.upsert", key, value)
-      .catch((error) => {
-        alert(
-          JSON.stringify(
-            { error: error.error, message: error.message },
-            null,
-            2
-          )
-        );
-      })
-      .finally(() => {
-        setDisabled(false);
-      });
+    Meteor.callAsync("settings.upsert", key, value).catch((error) => {
+      alert(
+        JSON.stringify({ error: error.error, message: error.message }, null, 2)
+      );
+    });
   }
 
   return (
+    <SectionCard title="Settings" ready={ready}>
+      <Row gutter={[16, 16]}>
+        <Col span={24}>
+          <Row gutter={[16, 16]}>
+            <Col span={24}>
+              <Row gutter={[16, 16]}>
+                <Col xs={24} lg={12}>
+                  <CommunityTitleSettings
+                    communityTitle={communityTitle}
+                    handleChange={handleChange}
+                  />
+                </Col>
+                <Col xs={24} lg={12}>
+                  <CommunityColorSettings
+                    communityColor={communityColor}
+                    handleChange={handleChange}
+                  />
+                </Col>
+                <Col span={24}>
+                  <CommunityLogoSettings
+                    communityLogo={communityLogo}
+                    handleChange={handleChange}
+                  />
+                </Col>
+              </Row>
+            </Col>
+          </Row>
+        </Col>
+      </Row>
+    </SectionCard>
+  );
+}
+
+function SettingTitle({ title }) {
+  return (
+    <Col span={24}>
+      <Typography.Title level={3}>{title}</Typography.Title>
+    </Col>
+  );
+}
+
+function CommunityTitleSettings({ communityTitle, handleChange }) {
+  return (
     <Row gutter={[16, 16]}>
+      <SettingTitle title="Community Title" />
       <Col span={24}>
-        <Typography.Title level={2}>Settings</Typography.Title>
+        <Input
+          placeholder="Enter title"
+          value={communityTitle}
+          onChange={(e) => handleChange(e, "community-title")}
+        />
       </Col>
+    </Row>
+  );
+}
+
+function CommunityLogoSettings({ communityLogo, handleChange }) {
+  return (
+    <Row gutter={[16, 16]}>
+      <SettingTitle title="Community Logo" />
       <Col span={24}>
-        <Row gutter={[16, 16]}>
-          <Col span={24}>
-            <Form
-              form={form}
-              layout="vertical"
-              initialValues={form.getFieldsValue()}
-            >
-              <Form.Item name="community-title" label="Community Title">
-                <Input
-                  placeholder="Enter title"
-                  disabled={disabled}
-                  onBlur={(e) => handleChange(e, "community-title")}
-                />
-              </Form.Item>
-              <Form.Item name="community-logo" label="Community Logo">
-                <Dragger
-                  disabled={disabled}
-                  beforeUpload={(file) => handleChange(file, "community-logo")}
-                  action={""}
-                  accept="image/*"
-                  multiple={false}
-                  showUploadList={false}
-                >
-                  <Logo src={communityLogo} />
-                </Dragger>
-              </Form.Item>
-            </Form>
-          </Col>
-        </Row>
+        <Dragger
+          beforeUpload={(file) => handleChange(file, "community-logo")}
+          action=""
+          accept="image/*"
+          multiple={false}
+          showUploadList={false}
+        >
+          <Logo src={communityLogo} />
+        </Dragger>
+      </Col>
+    </Row>
+  );
+}
+
+function CommunityColorSettings({ communityColor, handleChange }) {
+  return (
+    <Row gutter={[16, 16]}>
+      <SettingTitle title="Community Color" />
+      <Col span={24}>
+        <ColorPicker
+          defaultValue={communityColor}
+          onChange={(color) => handleChange(color, "community-color")}
+        />
       </Col>
     </Row>
   );
