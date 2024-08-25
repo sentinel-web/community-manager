@@ -107,6 +107,9 @@ html {
       overflow: auto;
 
       .login {
+        max-width: 800px;
+        margin: 0 auto;
+
         form {
           .title {
             margin: 0;
