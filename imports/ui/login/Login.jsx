@@ -38,7 +38,7 @@ const handleRegister = (event) => {
 
 export default function Login() {
   return (
-    <Row gutter={[16, 16]} className="login">
+    <Row gutter={[0, 16]} className="login">
       <Col span={24}>
         <Typography.Title level={2}>Login</Typography.Title>
       </Col>
