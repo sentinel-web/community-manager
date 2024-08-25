@@ -101,6 +101,7 @@ html {
     }
 
     main {
+      max-width: 1920px;
       flex: 10 5 50%;
       padding: 0.5rem;
       max-height: calc(100vh - 80px);
