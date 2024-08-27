@@ -9,6 +9,8 @@ import {
   SettingOutlined,
   UserOutlined,
 } from "@ant-design/icons";
+import { Meteor } from "meteor/meteor";
+import { useTracker } from "meteor/react-meteor-data";
 
 export function getNavigationValue() {
   const pathname = window.location.pathname;
@@ -29,6 +31,9 @@ export function getNavigationValue() {
 }
 
 export default function Navigation() {
+  const loggedIn = useTracker(() => {
+    return !!Meteor.userId();
+  }, []);
   const { navigationValue, setNavigationValue } = useNavigation();
   useEffect(function () {
     window.addEventListener("popstate", function () {
@@ -48,42 +53,44 @@ export default function Navigation() {
 
   return (
     <nav>
-      <Dropdown
-        trigger="click"
-        menu={{
-          selectedKeys: [navigationValue],
-          items: [
-            {
-              key: "dashboard",
-              label: "Dashboard",
-              icon: <DashboardOutlined />,
-            },
-            {
-              key: "members",
-              label: "Members",
-              icon: <UserOutlined />,
-            },
-            {
-              key: "events",
-              label: "Events",
-              icon: <CalendarOutlined />,
-            },
-            {
-              key: "tasks",
-              label: "Tasks",
-              icon: <CheckCircleOutlined />,
-            },
-            {
-              key: "settings",
-              label: "Settings",
-              icon: <SettingOutlined />,
-            },
-          ],
-          onClick: handleNavigationClick,
-        }}
-      >
-        <Button icon={<MenuOutlined />} />
-      </Dropdown>
+      {loggedIn && (
+        <Dropdown
+          trigger="click"
+          menu={{
+            selectedKeys: [navigationValue],
+            items: [
+              {
+                key: "dashboard",
+                label: "Dashboard",
+                icon: <DashboardOutlined />,
+              },
+              {
+                key: "members",
+                label: "Members",
+                icon: <UserOutlined />,
+              },
+              {
+                key: "events",
+                label: "Events",
+                icon: <CalendarOutlined />,
+              },
+              {
+                key: "tasks",
+                label: "Tasks",
+                icon: <CheckCircleOutlined />,
+              },
+              {
+                key: "settings",
+                label: "Settings",
+                icon: <SettingOutlined />,
+              },
+            ],
+            onClick: handleNavigationClick,
+          }}
+        >
+          <Button icon={<MenuOutlined />} />
+        </Dropdown>
+      )}
     </nav>
   );
 }
