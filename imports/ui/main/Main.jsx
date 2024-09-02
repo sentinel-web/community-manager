@@ -18,7 +18,7 @@ export default function Main() {
   }, []);
 
   return (
-    <main>
+    <section className="container">
       {!loggedIn && <Login />}
       {loggedIn && (
         <Suspense>
@@ -29,6 +29,6 @@ export default function Main() {
           {navigationValue === "settings" && <Settings />}
         </Suspense>
       )}
-    </main>
+    </section>
   );
 }
