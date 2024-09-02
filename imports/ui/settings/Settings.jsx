@@ -125,7 +125,7 @@ function CommunityLogoSettings({ communityLogo, handleChange }) {
         <Dragger
           beforeUpload={(file) => handleChange(file, "community-logo")}
           action=""
-          accept="image/*"
+          accept=".jpg, .jpeg, .png"
           multiple={false}
           showUploadList={false}
         >
