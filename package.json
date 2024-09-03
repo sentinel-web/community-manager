@@ -5,7 +5,8 @@
     "start": "meteor run",
     "test": "meteor test --once --driver-package meteortesting:mocha",
     "test-app": "TEST_WATCH=1 meteor test --full-app --driver-package meteortesting:mocha",
-    "visualize": "meteor --production --extra-packages bundle-visualizer"
+    "visualize": "meteor --production --extra-packages bundle-visualizer",
+    "update": "meteor update --all-packages && meteor npm update && meteor npm audit fix && meteor npm install"
   },
   "dependencies": {
     "@ant-design/icons": "^5.4.0",

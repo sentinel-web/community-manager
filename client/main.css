@@ -12,6 +12,10 @@ h6 {
   margin-bottom: 0 !important;
 }
 
+.alert {
+  margin: 0 0 0.5rem 0;
+}
+
 :root {
   @media (prefers-color-scheme: dark) {
     --text-color: #f8f8f2;
@@ -22,6 +26,10 @@ h6 {
     --text-color: #282828;
     --background-color: #f8f8f2;
   }
+}
+
+.ant-input-number {
+  width: 100%;
 }
 
 html {
