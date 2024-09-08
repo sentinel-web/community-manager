@@ -7,6 +7,7 @@ import {
   DashboardOutlined,
   MenuOutlined,
   SettingOutlined,
+  UserAddOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import { Meteor } from "meteor/meteor";
@@ -26,6 +27,8 @@ export function getNavigationValue() {
     return "tasks";
   } else if (pathname.includes("/settings")) {
     return "settings";
+  } else if (pathname.includes("/registrations")) {
+    return "registrations";
   }
   return "dashboard";
 }
@@ -78,6 +81,11 @@ export default function Navigation() {
                 key: "tasks",
                 label: "Tasks",
                 icon: <CheckCircleOutlined />,
+              },
+              {
+                key: "registrations",
+                label: "Registrations",
+                icon: <UserAddOutlined />,
               },
               {
                 key: "settings",
