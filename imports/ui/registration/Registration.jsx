@@ -1,6 +1,6 @@
 import React from "react";
 import SectionCard from "../section-card/SectionCard";
-import { App, Button, Col, Form, Input, Row } from "antd";
+import { App, Button, Col, Input, Row } from "antd";
 import useRegistrations from "./registrations.hook";
 import TableContainer from "../table/body/TableContainer";
 import Table from "../table/Table";
@@ -14,32 +14,23 @@ export default function Registration() {
   const { message, notification } = App.useApp();
   const { ready, registrations } = useRegistrations();
   const [searchValue, setSearchValue] = React.useState("");
-  const [form] = Form.useForm();
   const drawer = React.useContext(DrawerContext);
 
   function handleCreate() {
-    form.resetFields();
     drawer.setDrawerTitle("Create Registration");
+    drawer.setDrawerModel({});
     drawer.setDrawerComponent(
-      <RegistrationForm
-        form={form}
-        setOpen={drawer.setDrawerOpen}
-        initialValues={{}}
-      />
+      <RegistrationForm setOpen={drawer.setDrawerOpen} />
     );
     drawer.setDrawerOpen(true);
   }
 
   function handleEdit(e, record) {
     e.preventDefault();
-    form.setFieldsValue(record);
+    drawer.setDrawerModel(record);
     drawer.setDrawerTitle("Edit Registration");
     drawer.setDrawerComponent(
-      <RegistrationForm
-        form={form}
-        setOpen={drawer.setDrawerOpen}
-        initialValues={record}
-      />
+      <RegistrationForm setOpen={drawer.setDrawerOpen} />
     );
     drawer.setDrawerOpen(true);
   }

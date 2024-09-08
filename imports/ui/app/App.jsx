@@ -25,6 +25,7 @@ export default function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerComponent, setDrawerComponent] = useState(<></>);
   const [drawerTitle, setDrawerTitle] = useState("");
+  const [drawerModel, setDrawerModel] = useState({});
   useEffect(function () {
     document.body.classList.add(theme);
   }, []);
@@ -40,6 +41,8 @@ export default function App() {
             setDrawerOpen,
             drawerComponent,
             setDrawerComponent,
+            drawerModel,
+            setDrawerModel,
             drawerTitle,
             setDrawerTitle,
           }}

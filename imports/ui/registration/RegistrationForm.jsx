@@ -13,18 +13,38 @@ import {
 } from "antd";
 import React from "react";
 import { Meteor } from "meteor/meteor";
+import { DrawerContext } from "../app/App";
 
-export default function RegistrationForm({ form, setOpen, initialValues }) {
+export default function RegistrationForm({ setOpen }) {
+  const [form] = Form.useForm();
   const { message, notification } = App.useApp();
   const [loading, setLoading] = React.useState(false);
   const [disableSubmit, setDisableSubmit] = React.useState(false);
   const [nameError, setNameError] = React.useState(undefined);
   const [idError, setIdError] = React.useState(undefined);
+  const drawer = React.useContext(DrawerContext);
+  const model = React.useMemo(() => {
+    return drawer.drawerModel || {};
+  });
+  React.useEffect(() => {
+    if (Object.keys(model).length > 0) {
+      form.setFieldsValue(model);
+    } else {
+      form.setFieldsValue({
+        name: "",
+        id: null,
+        age: null,
+        discoveryType: null,
+        rulesReadAndAccepted: false,
+        description: "",
+      });
+    }
+  }, [model]);
 
   function validateName() {
     const value = form.getFieldValue("name");
     setNameError("validating");
-    Meteor.callAsync("registrations.validateName", value, initialValues?._id)
+    Meteor.callAsync("registrations.validateName", value, model?._id)
       .then((result) => {
         setNameError(result ? "success" : "error");
         setDisableSubmit(!result);
@@ -37,7 +57,7 @@ export default function RegistrationForm({ form, setOpen, initialValues }) {
   function validateId() {
     const value = form.getFieldValue("id");
     setIdError("validating");
-    Meteor.callAsync("registrations.validateId", value, initialValues?._id)
+    Meteor.callAsync("registrations.validateId", value, model?._id)
       .then((result) => {
         setIdError(result ? "success" : "error");
         setDisableSubmit(!result);
@@ -52,11 +72,11 @@ export default function RegistrationForm({ form, setOpen, initialValues }) {
     const { name, id, age, discoveryType, rulesReadAndAccepted, description } =
       values;
     const args = [
-      ...(initialValues?._id ? [initialValues._id] : []),
+      ...(model?._id ? [model._id] : []),
       { name, id, age, discoveryType, rulesReadAndAccepted, description },
     ];
     Meteor.callAsync(
-      Meteor.user() && initialValues?._id
+      Meteor.user() && model?._id
         ? "registrations.update"
         : "registrations.insert",
       ...args
@@ -92,8 +112,8 @@ export default function RegistrationForm({ form, setOpen, initialValues }) {
   }
 
   React.useEffect(() => {
-    handleValuesChange(initialValues ?? {}, initialValues ?? {});
-  }, [initialValues]);
+    handleValuesChange(model ?? {}, model ?? {});
+  }, [model]);
 
   return (
     <Form
