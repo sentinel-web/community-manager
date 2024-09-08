@@ -18,6 +18,7 @@ export default function Registration() {
   const drawer = React.useContext(DrawerContext);
 
   function handleCreate() {
+    form.resetFields();
     drawer.setDrawerTitle("Create Registration");
     drawer.setDrawerComponent(
       <RegistrationForm
@@ -26,12 +27,12 @@ export default function Registration() {
         initialValues={{}}
       />
     );
-    form.resetFields();
     drawer.setDrawerOpen(true);
   }
 
   function handleEdit(e, record) {
     e.preventDefault();
+    form.setFieldsValue(record);
     drawer.setDrawerTitle("Edit Registration");
     drawer.setDrawerComponent(
       <RegistrationForm
@@ -40,7 +41,6 @@ export default function Registration() {
         initialValues={record}
       />
     );
-    form.setFieldsValue(record);
     drawer.setDrawerOpen(true);
   }
 
@@ -60,7 +60,7 @@ export default function Registration() {
 
   const columns = React.useMemo(
     () => getRegistrationColumns(handleDelete, handleEdit),
-    [handleDelete, handleEdit]
+    []
   );
 
   function registrationNameIncludesSearchValue(registration) {
