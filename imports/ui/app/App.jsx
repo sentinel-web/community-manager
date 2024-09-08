@@ -23,9 +23,9 @@ export default function App() {
   const [theme, setTheme] = useState(getPreferedTheme());
   const [navigationValue, setNavigationValue] = useState(getNavigationValue());
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerComponent, setDrawerComponent] = useState(null);
-  const [drawerProps, setDrawerProps] = useState({});
+  const [drawerComponent, setDrawerComponent] = useState(<></>);
   const [drawerTitle, setDrawerTitle] = useState("");
+  const [drawerModel, setDrawerModel] = useState({});
   useEffect(function () {
     document.body.classList.add(theme);
   }, []);
@@ -41,8 +41,8 @@ export default function App() {
             setDrawerOpen,
             drawerComponent,
             setDrawerComponent,
-            drawerProps,
-            setDrawerProps,
+            drawerModel,
+            setDrawerModel,
             drawerTitle,
             setDrawerTitle,
           }}
@@ -83,11 +83,7 @@ export default function App() {
                 onClose={() => setDrawerOpen(false)}
                 title={drawerTitle}
               >
-                {drawerComponent ? (
-                  React.createElement(drawerComponent, drawerProps)
-                ) : (
-                  <></>
-                )}
+                {drawerComponent}
               </Drawer>
             </AntdApp>
           </ConfigProvider>
