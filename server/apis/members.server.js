@@ -82,25 +82,7 @@ if (Meteor.isServer) {
   });
 
   Meteor.methods({
-    'members.insert': async function (payload = {}) {
-      validateUserId(this.userId);
-      function prepareUser(payload) {
-        validatePayload(payload);
-        const { username, password } = payload;
-        if (!username || typeof username !== 'string') {
-          throw new Meteor.Error('members.insert', 'Invalid username', username);
-        }
-        if (!password || typeof password !== 'string') {
-          throw new Meteor.Error('members.insert', 'Invalid password', password);
-        }
-        const profile = extractProfileFromPayload(payload);
-        const user = {
-          username,
-          password,
-          profile,
-        };
-        return user;
-      }
+    'members.register': async function (username = '', password = 'password') {
       try {
         return await Accounts.createUserAsync(prepareUser(payload));
       } catch (error) {

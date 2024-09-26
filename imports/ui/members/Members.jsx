@@ -11,54 +11,40 @@ import getMembersColumns from './members.columns';
 import MemberForm from './MemberForm';
 
 export default function Members() {
-  const { message, notification, modal } = App.useApp();
+  const [form] = Form.useForm();
+  const [usernameInput, setUsernameInput] = React.useState('');
   const { ready, members } = useMembers();
   const [searchValue, setSearchValue] = React.useState('');
   const drawer = React.useContext(DrawerContext);
 
-  function handleCreate() {
-    drawer.setDrawerTitle('Create Member');
-    drawer.setDrawerModel({});
-    drawer.setDrawerComponent(<MemberForm setOpen={drawer.setDrawerOpen} />);
-    drawer.setDrawerOpen(true);
+  function handleSubmit(values) {
+    setDisabled(true);
+    const { username } = values;
+
+    if (username) {
+      const password = prompt('Enter password');
+      if (password) {
+        Meteor.callAsync('members.insert', username, password)
+          .then(() => {
+            form.resetFields();
+            setUsernameInput('');
+          })
+          .catch(error => {
+            alert(JSON.stringify({ error: error.error, message: error.message }, null, 2));
+          })
+          .finally(() => {
+            setDisabled(false);
+          });
+      } else {
+        setDisabled(false);
+      }
+    } else {
+      setDisabled(false);
+    }
   }
 
-  function handleEdit(e, record) {
-    e.preventDefault();
-    drawer.setDrawerModel(record);
-    drawer.setDrawerTitle('Edit Member');
-    drawer.setDrawerComponent(<MemberForm setOpen={drawer.setDrawerOpen} />);
-    drawer.setDrawerOpen(true);
-  }
-
-  function deleteMember(record) {
-    Meteor.callAsync('members.remove', record._id)
-      .then(() => {
-        message.success('Member deleted');
-      })
-      .catch(error => {
-        notification.error({
-          message: error.error,
-          description: error.message,
-        });
-      });
-  }
-
-  function handleModalConfirm(record) {
-    modal.confirm({
-      title: 'Delete Member',
-      content: 'Are you sure you want to delete this member?',
-      okText: 'Yes, delete',
-      cancelText: 'No, cancel',
-      onOk: () => {
-        deleteMember(record);
-      },
-    });
-  }
-
-  function handleDelete(e, record) {
-    e.preventDefault();
-    handleModalConfirm(record);
+  function handleUsernameChange(e) {
+    return setUsernameInput(e.target.value);
   }
 
   function filterMember(member) {
