@@ -11,7 +11,7 @@ import getMembersColumns from './members.columns';
 import MemberForm from './MemberForm';
 
 export default function Members() {
-  const { message, notification } = App.useApp();
+  const { message, notification, modal } = App.useApp();
   const { ready, members } = useMembers();
   const [searchValue, setSearchValue] = React.useState('');
   const drawer = React.useContext(DrawerContext);
@@ -31,8 +31,7 @@ export default function Members() {
     drawer.setDrawerOpen(true);
   }
 
-  function handleDelete(e, record) {
-    e.preventDefault();
+  function deleteMember(record) {
     Meteor.callAsync('members.remove', record._id)
       .then(() => {
         message.success('Member deleted');
@@ -43,6 +42,23 @@ export default function Members() {
           description: error.message,
         });
       });
+  }
+
+  function handleModalConfirm(record) {
+    modal.confirm({
+      title: 'Delete Member',
+      content: 'Are you sure you want to delete this member?',
+      okText: 'Yes, delete',
+      cancelText: 'No, cancel',
+      onOk: () => {
+        deleteMember(record);
+      },
+    });
+  }
+
+  function handleDelete(e, record) {
+    e.preventDefault();
+    handleModalConfirm(record);
   }
 
   function filterMember(member) {
