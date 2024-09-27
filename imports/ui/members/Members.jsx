@@ -1,6 +1,5 @@
 import React from 'react';
 import useMembers from './members.hook';
-import { Meteor } from 'meteor/meteor';
 import TableFooter from '../table/footer/TableFooter';
 import TableContainer from '../table/body/TableContainer';
 import Table from '../table/Table';
@@ -11,40 +10,41 @@ import getMembersColumns from './members.columns';
 import MemberForm from './MemberForm';
 
 export default function Members() {
-  const [form] = Form.useForm();
-  const [usernameInput, setUsernameInput] = React.useState('');
+  const { modal } = App.useApp();
   const { ready, members } = useMembers();
   const [searchValue, setSearchValue] = React.useState('');
   const drawer = React.useContext(DrawerContext);
 
-  function handleSubmit(values) {
-    setDisabled(true);
-    const { username } = values;
-
-    if (username) {
-      const password = prompt('Enter password');
-      if (password) {
-        Meteor.callAsync('members.insert', username, password)
-          .then(() => {
-            form.resetFields();
-            setUsernameInput('');
-          })
-          .catch(error => {
-            alert(JSON.stringify({ error: error.error, message: error.message }, null, 2));
-          })
-          .finally(() => {
-            setDisabled(false);
-          });
-      } else {
-        setDisabled(false);
-      }
-    } else {
-      setDisabled(false);
-    }
+  function handleCreate() {
+    drawer.setDrawerTitle('Create Member');
+    drawer.setDrawerModel({});
+    drawer.setDrawerComponent(<MemberForm setOpen={drawer.setDrawerOpen} />);
+    drawer.setDrawerOpen(true);
   }
 
-  function handleUsernameChange(e) {
-    return setUsernameInput(e.target.value);
+  function handleEdit(e, record) {
+    e.preventDefault();
+    drawer.setDrawerModel(record);
+    drawer.setDrawerTitle('Edit Member');
+    drawer.setDrawerComponent(<MemberForm setOpen={drawer.setDrawerOpen} />);
+    drawer.setDrawerOpen(true);
+  }
+
+  function handleModalConfirm(record) {
+    modal.confirm({
+      title: 'Delete Member',
+      content: 'Are you sure you want to delete this member?',
+      okText: 'Yes, delete',
+      cancelText: 'No, cancel',
+      onOk: () => {
+        deleteMember(record);
+      },
+    });
+  }
+
+  function handleDelete(e, record) {
+    e.preventDefault();
+    handleModalConfirm(record);
   }
 
   function filterMember(member) {
