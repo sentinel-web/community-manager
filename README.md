@@ -1,5 +1,5 @@
 # README.MD
-Welcome, to the community-manager repository!<br /> Here we are building a web application the is focused on handling the tasks related to managing ArmA III communities.
+Welcome, to the community-manager repository!<br /> Here we are building a web application that is focused on handling the tasks related to managing ArmA III communities.
 Our primary focus is managing events and attendence, members and skills, tasks, and settings.
 ## Requirements
 In order to develop for this project, you will need to install the following requirements:
@@ -9,19 +9,25 @@ In order to develop for this project, you will need to install the following req
 - a text editor of your choice (VS Code recommended) [link](https://code.visualstudio.com/download)
 
 ## Optional VS Code extensions
-I recommend the following extensions for vs code:
-- Auto Rename Tag
-- Better Comments
-- ES7+ React/Redux/React-Native snippets
-- JavaScript (ES6) code snippts
-- vscode-icons
-- WSL
-- Codeium
-- CSS Peek
-- ES Lint
-- GitLens
-- Path Intellisense
-- Prettier - Code Formatter
+<details>
+  <summary>
+    I recommend the following extensions for vs code:
+  </summary>
+  <ul>
+    <li>Auto Rename Tag</li>
+    <li>Better Comments</li>
+    <li>ES7+ React/Redux/React-Native snippets</li>
+    <li>JavaScript (ES6) code snippts</li>
+    <li>vscode-icons</li>
+    <li>WSL</li>
+    <li>Codeium</li>
+    <li>CSS Peek</li>
+    <li>ES Lint</li>
+    <li>GitLens</li>
+    <li>Path Intellisense</li>
+    <li>Prettier - Code Formatter</li>
+  </ul>  
+</details>
 
 ## Start coding
 Once you have installed the requirements and finished setting up our code editor you can start developing be running the following command:
