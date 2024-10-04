@@ -88,10 +88,10 @@ if (Meteor.isServer) {
         validatePayload(payload);
         const { username, password } = payload;
         if (!username || typeof username !== 'string') {
-          throw new Meteor.Error('invalid-username', 'Invalid username', username);
+          throw new Meteor.Error('members.insert', 'Invalid username', username);
         }
         if (!password || typeof password !== 'string') {
-          throw new Meteor.Error('invalid-password', 'Invalid password', password);
+          throw new Meteor.Error('members.insert', 'Invalid password', password);
         }
         const profile = extractProfileFromPayload(payload);
         const user = {
