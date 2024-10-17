@@ -1,11 +1,11 @@
-import React from "react";
-import { Meteor } from "meteor/meteor";
-import { Button, Col, Form, Input, Row, Typography } from "antd";
-import RegistrationModal from "../registration/RegistationModal";
+import React from 'react';
+import { Meteor } from 'meteor/meteor';
+import { Button, Col, Form, Input, Row, Typography } from 'antd';
+import RegistrationModal from '../registration/RegistrationModal';
 
-const handleSubmit = (values) => {
+const handleSubmit = values => {
   const { username, password } = values;
-  Meteor.loginWithPassword({ username }, password, (error) => {
+  Meteor.loginWithPassword({ username }, password, error => {
     if (error) {
       alert(error.message);
     }
@@ -21,27 +21,11 @@ export default function Login() {
       </Col>
       <Col span={24}>
         <Form layout="vertical" onFinish={handleSubmit}>
-          <Form.Item
-            label="Username"
-            name="username"
-            rules={[{ required: true, type: "string" }]}
-            required
-          >
-            <Input
-              placeholder="Enter username"
-              autoComplete="current-username"
-            />
+          <Form.Item label="Username" name="username" rules={[{ required: true, type: 'string' }]} required>
+            <Input placeholder="Enter username" autoComplete="current-username" />
           </Form.Item>
-          <Form.Item
-            label="Password"
-            name="password"
-            rules={[{ required: true, type: "string" }]}
-            required
-          >
-            <Input.Password
-              placeholder="Enter password"
-              autoComplete="current-password"
-            />
+          <Form.Item label="Password" name="password" rules={[{ required: true, type: 'string' }]} required>
+            <Input.Password placeholder="Enter password" autoComplete="current-password" />
           </Form.Item>
           <Row gutter={[16, 16]} align="middle">
             <Col span={12}>
