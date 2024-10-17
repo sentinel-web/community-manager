@@ -1,6 +1,6 @@
-import { Form, Modal } from "antd";
-import React from "react";
-import RegistrationForm from "./RegistrationForm";
+import { Form, Modal } from 'antd';
+import React from 'react';
+import RegistrationForm from './RegistrationForm';
 
 export default function RegistrationModal({ open, setOpen }) {
   const [form] = Form.useForm();
@@ -11,13 +11,7 @@ export default function RegistrationModal({ open, setOpen }) {
   }
 
   return (
-    <Modal
-      title="Registration"
-      open={open}
-      onCancel={handleClose}
-      footer={null}
-      destroyOnClose
-    >
+    <Modal title="Registration" open={open} onCancel={handleClose} footer={null} destroyOnClose>
       <RegistrationForm form={form} setOpen={setOpen} />
     </Modal>
   );

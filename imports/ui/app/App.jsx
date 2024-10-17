@@ -1,17 +1,11 @@
-import React, { createContext, useEffect, useState } from "react";
-import Header from "../header/Header";
-import Main from "../main/Main";
-import { getNavigationValue } from "../navigation/Navigation";
-import { getPreferedTheme } from "../theme/theme.hook";
-import {
-  App as AntdApp,
-  ConfigProvider,
-  theme as AntdTheme,
-  Layout,
-  Drawer,
-} from "antd";
-import useSettings from "../settings/settings.hook";
-import Footer from "../footer/Footer";
+import React, { createContext, useEffect, useState } from 'react';
+import Header from '../header/Header';
+import Main from '../main/Main';
+import { getNavigationValue } from '../navigation/Navigation';
+import { getPreferedTheme } from '../theme/theme.hook';
+import { App as AntdApp, ConfigProvider, theme as AntdTheme, Layout, Drawer } from 'antd';
+import useSettings from '../settings/settings.hook';
+import Footer from '../footer/Footer';
 
 export const NavigationContext = createContext({});
 export const ThemeContext = createContext({});
@@ -24,7 +18,8 @@ export default function App() {
   const [navigationValue, setNavigationValue] = useState(getNavigationValue());
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerComponent, setDrawerComponent] = useState(<></>);
-  const [drawerTitle, setDrawerTitle] = useState("");
+  const [drawerExtra, setDrawerExtra] = useState(<></>);
+  const [drawerTitle, setDrawerTitle] = useState('');
   const [drawerModel, setDrawerModel] = useState({});
   useEffect(function () {
     document.body.classList.add(theme);
@@ -32,9 +27,7 @@ export default function App() {
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme }}>
-      <NavigationContext.Provider
-        value={{ navigationValue, setNavigationValue }}
-      >
+      <NavigationContext.Provider value={{ navigationValue, setNavigationValue }}>
         <DrawerContext.Provider
           value={{
             drawerOpen,
@@ -45,6 +38,8 @@ export default function App() {
             setDrawerModel,
             drawerTitle,
             setDrawerTitle,
+            drawerExtra,
+            setDrawerExtra,
           }}
         >
           <ConfigProvider
@@ -53,20 +48,13 @@ export default function App() {
                 colorPrimary: communityColor,
                 borderRadius: 8,
                 fontSize: 16,
-                colorBgBase: theme === "dark" ? "#282828" : "#f8f8f2",
-                colorTextBase: theme === "dark" ? "#f8f8f2" : "#282828",
+                colorBgBase: theme === 'dark' ? '#282828' : '#f8f8f2',
+                colorTextBase: theme === 'dark' ? '#f8f8f2' : '#282828',
               },
-              algorithm:
-                theme === "dark"
-                  ? AntdTheme.darkAlgorithm
-                  : AntdTheme.defaultAlgorithm,
+              algorithm: theme === 'dark' ? AntdTheme.darkAlgorithm : AntdTheme.defaultAlgorithm,
             }}
           >
-            <AntdApp
-              className="app"
-              message={{ ...message, maxCount: 1 }}
-              notification={{ ...notification, maxCount: 3 }}
-            >
+            <AntdApp className="app" message={{ ...message, maxCount: 1 }} notification={{ ...notification, maxCount: 3 }}>
               <Layout>
                 <Layout.Header>
                   <Header />
@@ -78,11 +66,7 @@ export default function App() {
                   <Footer />
                 </Layout.Footer>
               </Layout>
-              <Drawer
-                open={drawerOpen}
-                onClose={() => setDrawerOpen(false)}
-                title={drawerTitle}
-              >
+              <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title={drawerTitle} extra={drawerExtra} destroyOnClose>
                 {drawerComponent}
               </Drawer>
             </AntdApp>
