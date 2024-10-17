@@ -18,6 +18,7 @@ export default function App() {
   const [navigationValue, setNavigationValue] = useState(getNavigationValue());
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerComponent, setDrawerComponent] = useState(<></>);
+  const [drawerExtra, setDrawerExtra] = useState(<></>);
   const [drawerTitle, setDrawerTitle] = useState('');
   const [drawerModel, setDrawerModel] = useState({});
   useEffect(function () {
@@ -65,7 +66,7 @@ export default function App() {
                   <Footer />
                 </Layout.Footer>
               </Layout>
-              <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title={drawerTitle}>
+              <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title={drawerTitle} extra={drawerExtra} destroyOnClose>
                 {drawerComponent}
               </Drawer>
             </AntdApp>

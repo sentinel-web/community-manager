@@ -1,5 +1,6 @@
 import React from 'react';
 import useMembers from './members.hook';
+import { Meteor } from 'meteor/meteor';
 import TableFooter from '../table/footer/TableFooter';
 import TableContainer from '../table/body/TableContainer';
 import Table from '../table/Table';
@@ -10,7 +11,7 @@ import getMembersColumns from './members.columns';
 import MemberForm from './MemberForm';
 
 export default function Members() {
-  const { modal } = App.useApp();
+  const { message, notification, modal } = App.useApp();
   const { ready, members } = useMembers();
   const [searchValue, setSearchValue] = React.useState('');
   const drawer = React.useContext(DrawerContext);
@@ -28,6 +29,19 @@ export default function Members() {
     drawer.setDrawerTitle('Edit Member');
     drawer.setDrawerComponent(<MemberForm setOpen={drawer.setDrawerOpen} />);
     drawer.setDrawerOpen(true);
+  }
+
+  function deleteMember(record) {
+    Meteor.callAsync('members.remove', record._id)
+      .then(() => {
+        message.success('Member deleted');
+      })
+      .catch(error => {
+        notification.error({
+          message: error.error,
+          description: error.message,
+        });
+      });
   }
 
   function handleModalConfirm(record) {
