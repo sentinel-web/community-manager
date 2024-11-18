@@ -5,9 +5,8 @@ if (Meteor.isServer) {
   Meteor.publish("tasks", function (filter = {}, options = {}) {
     if (!this.userId) {
       return [];
-    } else {
-      return TasksCollection.find(filter, options);
     }
+    return TasksCollection.find(filter, options);
   });
 
   Meteor.methods({
@@ -20,12 +19,11 @@ if (Meteor.isServer) {
       }
       if (!this.userId) {
         throw new Meteor.Error("not-authorized");
-      } else {
-        try {
-          return await TasksCollection.insertAsync({ name, status });
-        } catch (error) {
-          throw new Meteor.Error(error.message);
-        }
+      }
+      try {
+        return await TasksCollection.insertAsync({ name, status });
+      } catch (error) {
+        throw new Meteor.Error(error.message);
       }
     },
     "tasks.update": async function (taskId = "", data = {}) {
@@ -37,20 +35,19 @@ if (Meteor.isServer) {
       }
       if (!this.userId) {
         throw new Meteor.Error("not-authorized");
-      } else {
-        const task = await TasksCollection.findOneAsync(taskId);
-        if (task) {
-          try {
-            return await TasksCollection.updateAsync(
-              { _id: taskId },
-              { $set: data }
-            );
-          } catch (error) {
-            throw new Meteor.Error(error.message);
-          }
-        } else {
-          throw new Meteor.Error("task-not-found");
+      }
+      const task = await TasksCollection.findOneAsync(taskId);
+      if (task) {
+        try {
+          return await TasksCollection.updateAsync(
+            { _id: taskId },
+            { $set: data }
+          );
+        } catch (error) {
+          throw new Meteor.Error(error.message);
         }
+      } else {
+        throw new Meteor.Error("task-not-found");
       }
     },
     "tasks.remove": async function (taskId = "") {
@@ -59,17 +56,16 @@ if (Meteor.isServer) {
       }
       if (!this.userId) {
         throw new Meteor.Error("not-authorized");
-      } else {
-        const task = await TasksCollection.findOneAsync(taskId);
-        if (task) {
-          try {
-            return await TasksCollection.removeAsync({ _id: taskId });
-          } catch (error) {
-            throw new Meteor.Error(error.message);
-          }
-        } else {
-          throw new Meteor.Error("task-not-found");
+      }
+      const task = await TasksCollection.findOneAsync(taskId);
+      if (task) {
+        try {
+          return await TasksCollection.removeAsync({ _id: taskId });
+        } catch (error) {
+          throw new Meteor.Error(error.message);
         }
+      } else {
+        throw new Meteor.Error("task-not-found");
       }
     },
   });

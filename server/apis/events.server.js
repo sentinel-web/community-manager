@@ -5,9 +5,8 @@ if (Meteor.isServer) {
   Meteor.publish("events", function (filter = {}, options = {}) {
     if (!this.userId) {
       return [];
-    } else {
-      return EventsCollection.find(filter, options);
     }
+    return EventsCollection.find(filter, options);
   });
 
   Meteor.methods({
@@ -20,12 +19,11 @@ if (Meteor.isServer) {
       }
       if (!this.userId) {
         throw new Meteor.Error("not-authorized");
-      } else {
-        try {
-          return await EventsCollection.insertAsync({ name, start });
-        } catch (error) {
-          throw new Meteor.Error(error.message);
-        }
+      }
+      try {
+        return await EventsCollection.insertAsync({ name, start });
+      } catch (error) {
+        throw new Meteor.Error(error.message);
       }
     },
     "events.update": async function (eventId = "", data = {}) {
@@ -37,20 +35,19 @@ if (Meteor.isServer) {
       }
       if (!this.userId) {
         throw new Meteor.Error("not-authorized");
-      } else {
-        const event = await EventsCollection.findOneAsync(eventId);
-        if (event) {
-          try {
-            return await EventsCollection.updateAsync(
-              { _id: eventId },
-              { $set: data }
-            );
-          } catch (error) {
-            throw new Meteor.Error(error.message);
-          }
-        } else {
-          throw new Meteor.Error("event-not-found");
+      }
+      const event = await EventsCollection.findOneAsync(eventId);
+      if (event) {
+        try {
+          return await EventsCollection.updateAsync(
+            { _id: eventId },
+            { $set: data }
+          );
+        } catch (error) {
+          throw new Meteor.Error(error.message);
         }
+      } else {
+        throw new Meteor.Error("event-not-found");
       }
     },
     "events.remove": async function (eventId = "") {
@@ -59,17 +56,16 @@ if (Meteor.isServer) {
       }
       if (!this.userId) {
         throw new Meteor.Error("not-authorized");
-      } else {
-        const event = await EventsCollection.findOneAsync(eventId);
-        if (event) {
-          try {
-            return await EventsCollection.removeAsync({ _id: eventId });
-          } catch (error) {
-            throw new Meteor.Error(error.message);
-          }
-        } else {
-          throw new Meteor.Error("event-not-found");
+      }
+      const event = await EventsCollection.findOneAsync(eventId);
+      if (event) {
+        try {
+          return await EventsCollection.removeAsync({ _id: eventId });
+        } catch (error) {
+          throw new Meteor.Error(error.message);
         }
+      } else {
+        throw new Meteor.Error("event-not-found");
       }
     },
   });

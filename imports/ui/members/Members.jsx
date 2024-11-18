@@ -16,60 +16,73 @@ export default function Members() {
   const [searchValue, setSearchValue] = React.useState('');
   const drawer = React.useContext(DrawerContext);
 
-  function handleCreate() {
+  const handleCreate = React.useCallback(() => {
     drawer.setDrawerTitle('Create Member');
     drawer.setDrawerModel({});
     drawer.setDrawerComponent(<MemberForm setOpen={drawer.setDrawerOpen} />);
     drawer.setDrawerOpen(true);
-  }
+  }, [drawer]);
 
-  function handleEdit(e, record) {
-    e.preventDefault();
-    drawer.setDrawerModel(record);
-    drawer.setDrawerTitle('Edit Member');
-    drawer.setDrawerComponent(<MemberForm setOpen={drawer.setDrawerOpen} />);
-    drawer.setDrawerOpen(true);
-  }
+  const handleEdit = React.useCallback(
+    (e, record) => {
+      e.preventDefault();
+      drawer.setDrawerModel(record);
+      drawer.setDrawerTitle('Edit Member');
+      drawer.setDrawerComponent(<MemberForm setOpen={drawer.setDrawerOpen} />);
+      drawer.setDrawerOpen(true);
+    },
+    [drawer]
+  );
 
-  function deleteMember(record) {
-    Meteor.callAsync('members.remove', record._id)
-      .then(() => {
-        message.success('Member deleted');
-      })
-      .catch(error => {
-        notification.error({
-          message: error.error,
-          description: error.message,
+  const deleteMember = React.useCallback(
+    record => {
+      Meteor.callAsync('members.remove', record._id)
+        .then(() => {
+          message.success('Member deleted');
+        })
+        .catch(error => {
+          notification.error({
+            message: error.error,
+            description: error.message,
+          });
         });
+    },
+    [message, notification]
+  );
+
+  const handleModalConfirm = React.useCallback(
+    record => {
+      modal.confirm({
+        title: 'Delete Member',
+        content: 'Are you sure you want to delete this member?',
+        okText: 'Yes, delete',
+        cancelText: 'No, cancel',
+        onOk: () => {
+          deleteMember(record);
+        },
       });
-  }
+    },
+    [modal, deleteMember]
+  );
 
-  function handleModalConfirm(record) {
-    modal.confirm({
-      title: 'Delete Member',
-      content: 'Are you sure you want to delete this member?',
-      okText: 'Yes, delete',
-      cancelText: 'No, cancel',
-      onOk: () => {
-        deleteMember(record);
-      },
-    });
-  }
+  const handleDelete = React.useCallback(
+    (e, record) => {
+      e.preventDefault();
+      handleModalConfirm(record);
+    },
+    [handleModalConfirm]
+  );
 
-  function handleDelete(e, record) {
-    e.preventDefault();
-    handleModalConfirm(record);
-  }
+  const filterMember = React.useCallback(
+    member => {
+      const charactersOfInput = searchValue.split('');
+      const memberUsername = member?.username || '';
+      return charactersOfInput.every(char => memberUsername.includes(char));
+    },
+    [searchValue]
+  );
 
-  function filterMember(member) {
-    const charactersOfInput = searchValue.split('');
-    const memberUsername = member?.username || '';
-    return charactersOfInput.every(function (char) {
-      return memberUsername.includes(char);
-    });
-  }
-
-  function buildDatasource() {
+  const buildDatasource = React.useCallback(() => {
     return members
       .map(member => ({
         _id: member._id,
@@ -86,13 +99,13 @@ export default function Members() {
         description: member.profile?.description,
       }))
       .filter(member => filterMember(member));
-  }
+  }, [members, filterMember]);
 
   const datasource = React.useMemo(() => {
     return buildDatasource();
-  }, [members, searchValue]);
+  }, [buildDatasource]);
 
-  const columns = React.useMemo(() => getMembersColumns(handleDelete, handleEdit), []);
+  const columns = React.useMemo(() => getMembersColumns(handleDelete, handleEdit), [handleDelete, handleEdit]);
 
   return (
     <SectionCard title="Members" ready={ready}>

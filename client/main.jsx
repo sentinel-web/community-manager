@@ -1,14 +1,14 @@
-import React from "react";
-import { createRoot } from "react-dom/client";
-import { Meteor } from "meteor/meteor";
-import ReactTarget from "../imports/ui/ReactTarget";
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { Meteor } from 'meteor/meteor';
+import ReactTarget from '../imports/ui/ReactTarget';
 
 Meteor.startup(() => {
-  const html = document.querySelector("html");
+  const html = document.querySelector('html');
   if (html) {
-    html.setAttribute("lang", "en");
+    html.setAttribute('lang', 'en');
   }
-  const container = document.getElementById("react-target");
+  const container = document.getElementById('react-target');
   if (container) {
     const root = createRoot(container);
     root.render(<ReactTarget />);

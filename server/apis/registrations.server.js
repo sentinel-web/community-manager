@@ -6,13 +6,12 @@ if (Meteor.isServer) {
   Meteor.publish("registrations", function (filter = {}, options = {}) {
     if (!this.userId) {
       return [];
-    } else {
-      return RegistrationsCollection.find(filter, options);
     }
+    return RegistrationsCollection.find(filter, options);
   });
 
   Meteor.methods({
-    "registrations.insert": async function (payload = {}) {
+    "registrations.insert": async (payload = {}) => {
       if (!payload || typeof payload !== "object") {
         throw new Meteor.Error("invalid-payload", "Invalid payload", payload);
       }
@@ -35,22 +34,21 @@ if (Meteor.isServer) {
       }
       if (!this.userId) {
         throw new Meteor.Error("not-authorized");
-      } else {
-        const registration = await RegistrationsCollection.findOneAsync(
-          registrationId
-        );
-        if (registration) {
-          try {
-            return await RegistrationsCollection.updateAsync(
-              { _id: registrationId },
-              { $set: data }
-            );
-          } catch (error) {
-            throw new Meteor.Error(error.message);
-          }
-        } else {
-          throw new Meteor.Error("registration-not-found");
+      }
+      const registration = await RegistrationsCollection.findOneAsync(
+        registrationId
+      );
+      if (registration) {
+        try {
+          return await RegistrationsCollection.updateAsync(
+            { _id: registrationId },
+            { $set: data }
+          );
+        } catch (error) {
+          throw new Meteor.Error(error.message);
         }
+      } else {
+        throw new Meteor.Error("registration-not-found");
       }
     },
     "registrations.remove": async function (registrationId = "") {
@@ -63,21 +61,20 @@ if (Meteor.isServer) {
       }
       if (!this.userId) {
         throw new Meteor.Error("not-authorized");
-      } else {
-        const registration = await RegistrationsCollection.findOneAsync(
-          registrationId
-        );
-        if (registration) {
-          try {
-            return await RegistrationsCollection.removeAsync({
-              _id: registrationId,
-            });
-          } catch (error) {
-            throw new Meteor.Error(error.message);
-          }
-        } else {
-          throw new Meteor.Error("registration-not-found");
+      }
+      const registration = await RegistrationsCollection.findOneAsync(
+        registrationId
+      );
+      if (registration) {
+        try {
+          return await RegistrationsCollection.removeAsync({
+            _id: registrationId,
+          });
+        } catch (error) {
+          throw new Meteor.Error(error.message);
         }
+      } else {
+        throw new Meteor.Error("registration-not-found");
       }
     },
     "registrations.validateId": async function (id = "", excludeId = false) {
@@ -100,7 +97,7 @@ if (Meteor.isServer) {
       const matchingRegistrations = await RegistrationsCollection.findOneAsync(
         registrationFilter
       );
-      return matchingMembers || matchingRegistrations ? false : true;
+      return !(matchingMembers || matchingRegistrations);
     },
     "registrations.validateName": async function (
       name = "",
@@ -127,7 +124,7 @@ if (Meteor.isServer) {
       const matchingRegistrations = await RegistrationsCollection.findOneAsync(
         registrationFilter
       );
-      return matchingMembers || matchingRegistrations ? false : true;
+      return !(matchingMembers || matchingRegistrations);
     },
   });
 }

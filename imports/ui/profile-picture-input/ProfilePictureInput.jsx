@@ -54,7 +54,7 @@ export default function ProfilePictureInput({ fileList, setFileList, form, profi
     } else {
       setImageSrc(null);
     }
-  }, [profilePictureId]);
+  }, [profilePictureId, notification]);
 
   return (
     <Upload.Dragger
@@ -65,7 +65,11 @@ export default function ProfilePictureInput({ fileList, setFileList, form, profi
       customRequest={() => uploadImage(fileList[0])}
     >
       <Spin spinning={loading}>
-        {imageSrc ? <img style={{ maxHeight: 150, borderRadius: '50%' }} src={imageSrc} /> : <p>Click this area to upload a profile picture.</p>}
+        {imageSrc ? (
+          <img style={{ maxHeight: 150, borderRadius: '50%' }} src={imageSrc} alt="" />
+        ) : (
+          <p>Click this area to upload a profile picture.</p>
+        )}
       </Spin>
     </Upload.Dragger>
   );

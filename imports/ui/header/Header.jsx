@@ -1,9 +1,9 @@
-import React from "react";
-import Logo from "../logo/Logo";
-import Title from "../title/Title";
-import Navigation from "../navigation/Navigation";
-import useSettings from "../settings/settings.hook";
-import { Col, Row } from "antd";
+import React from 'react';
+import Logo from '../logo/Logo';
+import Title from '../title/Title';
+import Navigation from '../navigation/Navigation';
+import useSettings from '../settings/settings.hook';
+import { Col, Row } from 'antd';
 
 export default function Header() {
   const { communityTitle, communityLogo } = useSettings();
@@ -16,9 +16,7 @@ export default function Header() {
             <Logo src={communityLogo} />
           </Col>
           <Col flex="auto">
-            <Title
-              text={communityTitle?.length > 0 ? communityTitle : undefined}
-            />
+            <Title text={communityTitle?.length > 0 ? communityTitle : undefined} />
           </Col>
         </Row>
       </Col>
