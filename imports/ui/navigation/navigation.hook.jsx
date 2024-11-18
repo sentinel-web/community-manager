@@ -1,5 +1,5 @@
-import React from "react";
-import { NavigationContext } from "../app/App";
+import React from 'react';
+import { NavigationContext } from '../app/App';
 
 export default function useNavigation() {
   const value = React.useContext(NavigationContext);

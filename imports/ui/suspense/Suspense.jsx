@@ -1,5 +1,5 @@
-import { Col, Row } from "antd";
-import React from "react";
+import { Col, Row } from 'antd';
+import React from 'react';
 
 export default function Suspense({ children }) {
   return (

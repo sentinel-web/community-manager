@@ -1,18 +1,18 @@
-import React from "react";
-import useSettings from "./settings.hook";
-import { Meteor } from "meteor/meteor";
-import Logo from "../logo/Logo";
-import { Col, ColorPicker, Input, Row, Typography } from "antd";
-import Dragger from "antd/es/upload/Dragger";
-import SectionCard from "../section-card/SectionCard";
+import React from 'react';
+import useSettings from './settings.hook';
+import { Meteor } from 'meteor/meteor';
+import Logo from '../logo/Logo';
+import { Col, ColorPicker, Input, Row, Typography } from 'antd';
+import Dragger from 'antd/es/upload/Dragger';
+import SectionCard from '../section-card/SectionCard';
 
 async function getEventValue(key, e) {
   switch (key) {
-    case "community-title":
+    case 'community-title':
       return e.target.value;
-    case "community-logo":
+    case 'community-logo':
       return await transformFileToBase64(e);
-    case "community-color":
+    case 'community-color':
       return e.toHexString ? e.toHexString() : undefined;
     default:
       return e.target.value;
@@ -25,7 +25,7 @@ async function transformFileToBase64(file) {
     const reader = new FileReader();
     reader.readAsDataURL(image);
     reader.onload = () => resolve(reader.result);
-    reader.onerror = (error) => reject(error);
+    reader.onerror = error => reject(error);
   });
 }
 
@@ -33,30 +33,27 @@ async function turnImageFileIntoWebp(file) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
-      const canvas = document.createElement("canvas");
+      const canvas = document.createElement('canvas');
       canvas.width = img.width;
       canvas.height = img.height;
-      const ctx = canvas.getContext("2d");
+      const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0);
-      canvas.toBlob((blob) => {
+      canvas.toBlob(blob => {
         resolve(blob);
-      }, "image/webp");
+      }, 'image/webp');
     };
-    img.onerror = (error) => reject(error);
+    img.onerror = error => reject(error);
     img.src = URL.createObjectURL(file);
   });
 }
 
 export default function Settings() {
-  const { ready, communityTitle, communityLogo, communityColor } =
-    useSettings();
+  const { ready, communityTitle, communityLogo, communityColor } = useSettings();
 
   async function handleChange(e, key) {
     const value = await getEventValue(key, e);
-    Meteor.callAsync("settings.upsert", key, value).catch((error) => {
-      alert(
-        JSON.stringify({ error: error.error, message: error.message }, null, 2)
-      );
+    Meteor.callAsync('settings.upsert', key, value).catch(error => {
+      alert(JSON.stringify({ error: error.error, message: error.message }, null, 2));
     });
   }
 
@@ -68,22 +65,13 @@ export default function Settings() {
             <Col span={24}>
               <Row gutter={[16, 16]}>
                 <Col xs={24} lg={12}>
-                  <CommunityTitleSettings
-                    communityTitle={communityTitle}
-                    handleChange={handleChange}
-                  />
+                  <CommunityTitleSettings communityTitle={communityTitle} handleChange={handleChange} />
                 </Col>
                 <Col xs={24} lg={12}>
-                  <CommunityColorSettings
-                    communityColor={communityColor}
-                    handleChange={handleChange}
-                  />
+                  <CommunityColorSettings communityColor={communityColor} handleChange={handleChange} />
                 </Col>
                 <Col span={24}>
-                  <CommunityLogoSettings
-                    communityLogo={communityLogo}
-                    handleChange={handleChange}
-                  />
+                  <CommunityLogoSettings communityLogo={communityLogo} handleChange={handleChange} />
                 </Col>
               </Row>
             </Col>
@@ -107,11 +95,7 @@ function CommunityTitleSettings({ communityTitle, handleChange }) {
     <Row gutter={[16, 16]}>
       <SettingTitle title="Community Title" />
       <Col span={24}>
-        <Input
-          placeholder="Enter title"
-          value={communityTitle}
-          onChange={(e) => handleChange(e, "community-title")}
-        />
+        <Input placeholder="Enter title" value={communityTitle} onChange={e => handleChange(e, 'community-title')} />
       </Col>
     </Row>
   );
@@ -123,7 +107,7 @@ function CommunityLogoSettings({ communityLogo, handleChange }) {
       <SettingTitle title="Community Logo" />
       <Col span={24}>
         <Dragger
-          beforeUpload={(file) => handleChange(file, "community-logo")}
+          beforeUpload={file => handleChange(file, 'community-logo')}
           action=""
           accept=".jpg, .jpeg, .png"
           multiple={false}
@@ -141,10 +125,7 @@ function CommunityColorSettings({ communityColor, handleChange }) {
     <Row gutter={[16, 16]}>
       <SettingTitle title="Community Color" />
       <Col span={24}>
-        <ColorPicker
-          defaultValue={communityColor}
-          onChange={(color) => handleChange(color, "community-color")}
-        />
+        <ColorPicker defaultValue={communityColor} onChange={color => handleChange(color, 'community-color')} />
       </Col>
     </Row>
   );

@@ -76,9 +76,8 @@ if (Meteor.isServer) {
   Meteor.publish('members', function (filter = {}, options = {}) {
     if (!this.userId) {
       return [];
-    } else {
-      return MembersCollection.find(filter, { ...options, fields: { services: 0 } });
     }
+    return MembersCollection.find(filter, { ...options, fields: { services: 0 } });
   });
 
   Meteor.methods({
@@ -116,9 +115,9 @@ if (Meteor.isServer) {
         if (data.username && typeof data.username === 'string') {
           modifier.username = data.username;
         }
-        Object.keys(profile).forEach(key => {
-          modifier['profile.' + key] = profile[key];
-        });
+        for (const [key, value] of Object.entries(profile)) {
+          modifier[`profile.${key}`] = value;
+        }
         return {
           $set: modifier,
         };

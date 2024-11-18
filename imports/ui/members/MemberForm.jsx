@@ -1,4 +1,4 @@
-import { Alert, App, Button, Col, Divider, Form, Input, InputNumber, Row, Select, Upload } from 'antd';
+import { Alert, App, Button, Col, Divider, Form, Input, InputNumber, Row, Select } from 'antd';
 import React from 'react';
 import { Meteor } from 'meteor/meteor';
 import { DrawerContext } from '../app/App';
@@ -36,9 +36,9 @@ export default function MemberForm({ setOpen }) {
       });
       setFileList([]);
     }
-  }, [model]);
+  }, [model, form.setFieldsValue]);
 
-  function validateName() {
+  const validateName = React.useCallback(() => {
     const value = form.getFieldValue('name');
     setNameError('validating');
     Meteor.callAsync('registrations.validateName', value, model?._id)
@@ -49,9 +49,9 @@ export default function MemberForm({ setOpen }) {
       .catch(error => {
         setNameError('warning');
       });
-  }
+  }, [form, model?._id]);
 
-  function validateId() {
+  const validateId = React.useCallback(() => {
     const value = form.getFieldValue('id');
     setIdError('validating');
     Meteor.callAsync('registrations.validateId', value, model?._id)
@@ -62,48 +62,54 @@ export default function MemberForm({ setOpen }) {
       .catch(error => {
         setIdError('warning');
       });
-  }
+  }, [form, model?._id]);
 
-  function handleSubmit(values) {
-    setLoading(true);
-    const args = model?._id ? [model._id, values] : [values];
-    Meteor.callAsync(Meteor.user() && model?._id ? 'members.update' : 'members.insert', ...args)
-      .then(() => {
-        setOpen(false);
-        form.resetFields();
-        message.success('Save successful');
-      })
-      .catch(error => {
-        console.error(error);
-        notification.error({
-          message: error.error,
-          description: error.message,
-        });
-      })
-      .finally(() => setLoading(false));
-  }
+  const handleSubmit = React.useCallback(
+    values => {
+      setLoading(true);
+      const args = model?._id ? [model._id, values] : [values];
+      Meteor.callAsync(Meteor.user() && model?._id ? 'members.update' : 'members.insert', ...args)
+        .then(() => {
+          setOpen(false);
+          form.resetFields();
+          message.success('Save successful');
+        })
+        .catch(error => {
+          console.error(error);
+          notification.error({
+            message: error.error,
+            description: error.message,
+          });
+        })
+        .finally(() => setLoading(false));
+    },
+    [form, model?._id, setOpen, message, notification]
+  );
 
-  function handleValuesChange(changedValues, values) {
-    if ('name' in values) {
-      validateName();
-    }
-    if ('id' in values) {
-      validateId();
-    }
-    if ('rulesReadAndAccepted' in changedValues && 'rulesReadAndAccepted' in values) {
-      setDisableSubmit(!values.rulesReadAndAccepted);
-    }
-  }
+  const handleValuesChange = React.useCallback(
+    (changedValues, values) => {
+      if ('name' in values) {
+        validateName();
+      }
+      if ('id' in values) {
+        validateId();
+      }
+      if ('rulesReadAndAccepted' in changedValues && 'rulesReadAndAccepted' in values) {
+        setDisableSubmit(!values.rulesReadAndAccepted);
+      }
+    },
+    [validateName, validateId]
+  );
 
-  function handleCancel() {
+  const handleCancel = React.useCallback(() => {
     setOpen(false);
     form.resetFields();
     drawer.setDrawerModel({});
-  }
+  }, [setOpen, form, drawer]);
 
   React.useEffect(() => {
     handleValuesChange(model ?? {}, model ?? {});
-  }, [model]);
+  }, [model, handleValuesChange]);
 
   return (
     <Form autoComplete="off" form={form} layout="vertical" onFinish={handleSubmit} onValuesChange={handleValuesChange} disabled={loading}>

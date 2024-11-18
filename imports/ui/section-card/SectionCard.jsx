@@ -1,13 +1,9 @@
-import React from "react";
-import { Card, Col, Row, Typography } from "antd";
+import React from 'react';
+import { Card, Col, Row, Typography } from 'antd';
 
 export default function SectionCard({ children, title, ready }) {
   return (
-    <Card
-      loading={!ready}
-      type="inner"
-      title={<SectionCardTitle title={title} />}
-    >
+    <Card loading={!ready} type="inner" title={<SectionCardTitle title={title} />}>
       {children}
     </Card>
   );
