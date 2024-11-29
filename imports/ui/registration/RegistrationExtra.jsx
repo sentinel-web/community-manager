@@ -7,7 +7,7 @@ const ConfirmModal = ({ open, setOpen, record, handleExtraCleanup }) => {
   const [loading, setLoading] = React.useState(false);
   const [form] = Form.useForm();
 
-  async function handleCreate() {
+  const handleCreate = React.useCallback(async () => {
     setLoading(true);
     if (!record) {
       notification.error({
@@ -18,44 +18,30 @@ const ConfirmModal = ({ open, setOpen, record, handleExtraCleanup }) => {
       return;
     }
 
-    const validation = await form
-      .validateFields()
-      .then(values => {
-        const { username, password } = values;
-        const payload = {
-          username,
-          password,
-          ...record,
-        };
-        Meteor.callAsync('members.insert', payload)
-          .then(() => {
-            message.success('Member created');
-            setOpen(false);
-            handleExtraCleanup && handleExtraCleanup();
-          })
-          .catch(error => {
-            console.error(error);
-            notification.error({
-              message: error.error,
-              description: error.message,
-            });
-          })
-          .finally(() => setLoading(false));
-      })
-      .catch(error => {
-        notification.error({
-          message: 'Error',
-          description: 'Username and password are required',
-        });
+    try {
+      const values = await form.validateFields();
+      const { username, password } = values;
+      const payload = {
+        username,
+        password,
+        ...record,
+      };
+      await Meteor.callAsync('members.insert', payload);
+      message.success('Member created');
+      setOpen(false);
+      handleExtraCleanup?.();
+    } catch (error) {
+      console.error(error);
+      notification.error({
+        message: error.error,
+        description: error.message,
       });
-
-    if (!validation) {
+    } finally {
       setLoading(false);
-      return;
     }
-  }
+  }, [form, record, handleExtraCleanup, setOpen, message, notification]);
 
-  const toggleOpen = () => setOpen(!open);
+  const toggleOpen = React.useCallback(() => setOpen(prevOpen => !prevOpen), [setOpen]);
 
   return (
     <Modal
