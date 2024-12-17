@@ -91,7 +91,7 @@ html {
           border-radius: 50%;
           height: 5vh;
           width: 5vh;
-          object-fit: contain;
+          object-fit: cover;
           image-rendering: pixelated;
         }
       }
@@ -128,7 +128,7 @@ html {
 
         img {
           border-radius: 50%;
-          object-fit: contain;
+          object-fit: cover;
           width: 20vh;
           height: 20vh;
           image-rendering: pixelated;
