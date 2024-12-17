@@ -10,18 +10,22 @@ if (Meteor.isServer) {
   });
 
   Meteor.methods({
-    "tasks.insert": async function (name = "", status = "open") {
+    "tasks.insert": async function (payload = {}) {
+      const { name, status, description, participants } = payload;
       if (!name || typeof name !== "string") {
         throw new Meteor.Error("invalid-name", "Invalid name", name);
       }
       if (!status || typeof status !== "string") {
         throw new Meteor.Error("invalid-status", "Invalid status", status);
       }
+      if (typeof description !== "string" && description != null) {
+        throw new Meteor.Error("invalid-description", "Invalid description", description);
+      }
       if (!this.userId) {
         throw new Meteor.Error("not-authorized");
       }
       try {
-        return await TasksCollection.insertAsync({ name, status });
+        return await TasksCollection.insertAsync({ name, status, description, participants });
       } catch (error) {
         throw new Meteor.Error(error.message);
       }
