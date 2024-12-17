@@ -1,6 +1,7 @@
 import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base';
 import MembersCollection from '../../imports/api/collections/members.collection';
+import RanksCollection from '../../imports/api/collections/ranks.collection';
 
 function extractProfileFromPayload(payload = {}) {
   if (!payload || typeof payload !== 'object') {
@@ -37,6 +38,9 @@ function extractProfileFromPayload(payload = {}) {
   }
   if (payload.description && typeof payload.description === 'string') {
     profile.description = payload.description;
+  }
+  if (payload.taskFilter && typeof payload.taskFilter === 'object') {
+    profile.taskFilter = payload.taskFilter;
   }
   return profile;
 }
@@ -136,6 +140,40 @@ if (Meteor.isServer) {
       await getMemberById(memberId);
       try {
         return await MembersCollection.removeAsync({ _id: memberId });
+      } catch (error) {
+        throw new Meteor.Error(error.message);
+      }
+    },
+    'members.options': async function () {
+      validateUserId(this.userId);
+      const getRankName = async (rankId) => {
+        const rank = await RanksCollection.findOneAsync({ _id: rankId });
+        if (rank) {
+          return rank.name;
+        }
+        return rankId;
+      }
+
+      const members = await MembersCollection.find({}, { fields: { 'profile.rankId': 1, 'profile.id': 1, 'profile.name': 1 } }).fetchAsync();
+
+      const options = []
+
+      for (const member of members) {
+        const rankName = await getRankName(member.profile?.rankId)
+        options.push({
+          label: `${rankName || ''} ${member.profile?.id || '0000'}-${member.profile?.name || 'Name'}`,
+          value: member._id,
+        })
+      }
+
+      return options
+    },
+    'members.find': async function (filter = {}, options = {}) {
+      validateUserId(this.userId);
+      if (!filter || typeof filter !== 'object') throw new Meteor.Error('members.find', 'Invalid filter', filter);
+      if (!options || typeof options !== 'object') throw new Meteor.Error('members.find', 'Invalid options', options);
+      try {
+        return await MembersCollection.find(filter, options).fetchAsync();
       } catch (error) {
         throw new Meteor.Error(error.message);
       }
