@@ -6,3 +6,4 @@ import './apis/registrations.server';
 import './apis/profilePictures.server';
 import './apis/discoveryTypes.server';
 import './apis/taskStatus.server';
+import './apis/ranks.server';
