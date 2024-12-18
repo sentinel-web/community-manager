@@ -1,5 +1,5 @@
-import { Mongo } from "meteor/mongo";
+import { Mongo } from 'meteor/mongo';
 
-const EventsCollection = new Mongo.Collection("events");
+const EventsCollection = new Mongo.Collection('events');
 
 export default EventsCollection;
