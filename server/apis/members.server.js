@@ -76,6 +76,14 @@ async function getMemberById(memberId) {
   return member;
 }
 
+const getRankName = async rankId => {
+  const rank = await RanksCollection.findOneAsync({ _id: rankId });
+  if (rank) {
+    return rank.name;
+  }
+  return rankId;
+};
+
 if (Meteor.isServer) {
   Meteor.publish('members', function (filter = {}, options = {}) {
     if (!this.userId) {
@@ -146,13 +154,6 @@ if (Meteor.isServer) {
     },
     'members.options': async function () {
       validateUserId(this.userId);
-      const getRankName = async rankId => {
-        const rank = await RanksCollection.findOneAsync({ _id: rankId });
-        if (rank) {
-          return rank.name;
-        }
-        return rankId;
-      };
 
       const members = await MembersCollection.find({}, { fields: { 'profile.rankId': 1, 'profile.id': 1, 'profile.name': 1 } }).fetchAsync();
 
@@ -168,12 +169,20 @@ if (Meteor.isServer) {
 
       return options;
     },
-    'members.find': async function (filter = {}, options = {}) {
+    'members.participantNames': async function (filter = {}, options = {}) {
       validateUserId(this.userId);
-      if (!filter || typeof filter !== 'object') throw new Meteor.Error('members.find', 'Invalid filter', filter);
-      if (!options || typeof options !== 'object') throw new Meteor.Error('members.find', 'Invalid options', options);
+      if (!filter || typeof filter !== 'object') throw new Meteor.Error('members.participantNames', 'Invalid filter', filter);
+      if (!options || typeof options !== 'object') throw new Meteor.Error('members.participantNames', 'Invalid options', options);
       try {
-        return await MembersCollection.find(filter, options).fetchAsync();
+        const members = await MembersCollection.find(filter, options).fetchAsync();
+        const names = [];
+        for (const member of members) {
+          const rankName = await getRankName(member.profile?.rankId);
+          const userName = member.profile?.name || 'Name';
+          const id = member.profile?.id || '0000';
+          names.push(`${rankName || ''} ${id}-${userName}`);
+        }
+        return names.join(', ');
       } catch (error) {
         throw new Meteor.Error(error.message);
       }
