@@ -1,22 +1,29 @@
-import { Alert, App, Button, Col, Divider, Form, Input, InputNumber, Row, Select } from 'antd';
-import React from 'react';
+import { Alert, App, Button, Col, Divider, Form, Input, InputNumber, Row, Select, Tag } from 'antd';
+import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Meteor } from 'meteor/meteor';
-import { DrawerContext } from '../app/App';
+import { DrawerContext, SubdrawerContext } from '../app/App';
 import ProfilePictureInput from '../profile-picture-input/ProfilePictureInput';
+import useRanks from './ranks/ranks.hook';
+import RanksCollection from '../../api/collections/ranks.collection';
+import RanksForm from './ranks/RanksForm';
+import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
+
+const empty = <></>;
 
 export default function MemberForm({ setOpen }) {
   const [form] = Form.useForm();
-  const { message, notification } = App.useApp();
-  const [loading, setLoading] = React.useState(false);
-  const [disableSubmit, setDisableSubmit] = React.useState(false);
-  const [nameError, setNameError] = React.useState(undefined);
-  const [idError, setIdError] = React.useState(undefined);
-  const [fileList, setFileList] = React.useState([]);
-  const drawer = React.useContext(DrawerContext);
-  const model = React.useMemo(() => {
+  const { message, notification, modal } = App.useApp();
+  const [loading, setLoading] = useState(false);
+  const [disableSubmit, setDisableSubmit] = useState(false);
+  const [nameError, setNameError] = useState(undefined);
+  const [idError, setIdError] = useState(undefined);
+  const [fileList, setFileList] = useState([]);
+  const drawer = useContext(DrawerContext);
+  const subdrawer = useContext(SubdrawerContext);
+  const model = useMemo(() => {
     return drawer.drawerModel || {};
   }, [drawer]);
-  React.useEffect(() => {
+  useEffect(() => {
     if (Object.keys(model).length > 0) {
       form.setFieldsValue(model);
     } else {
@@ -38,7 +45,7 @@ export default function MemberForm({ setOpen }) {
     }
   }, [model, form.setFieldsValue]);
 
-  const validateName = React.useCallback(() => {
+  const validateName = useCallback(() => {
     const value = form.getFieldValue('name');
     setNameError('validating');
     Meteor.callAsync('registrations.validateName', value, model?._id)
@@ -51,7 +58,7 @@ export default function MemberForm({ setOpen }) {
       });
   }, [form, model?._id]);
 
-  const validateId = React.useCallback(() => {
+  const validateId = useCallback(() => {
     const value = form.getFieldValue('id');
     setIdError('validating');
     Meteor.callAsync('registrations.validateId', value, model?._id)
@@ -64,7 +71,7 @@ export default function MemberForm({ setOpen }) {
       });
   }, [form, model?._id]);
 
-  const handleSubmit = React.useCallback(
+  const handleSubmit = useCallback(
     values => {
       setLoading(true);
       const args = model?._id ? [model._id, values] : [values];
@@ -86,7 +93,7 @@ export default function MemberForm({ setOpen }) {
     [form, model?._id, setOpen, message, notification]
   );
 
-  const handleValuesChange = React.useCallback(
+  const handleValuesChange = useCallback(
     (changedValues, values) => {
       if ('name' in values) {
         validateName();
@@ -101,15 +108,76 @@ export default function MemberForm({ setOpen }) {
     [validateName, validateId]
   );
 
-  const handleCancel = React.useCallback(() => {
+  const handleCancel = useCallback(() => {
     setOpen(false);
     form.resetFields();
     drawer.setDrawerModel({});
   }, [setOpen, form, drawer]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     handleValuesChange(model ?? {}, model ?? {});
   }, [model, handleValuesChange]);
+
+  const { ready, ranks } = useRanks();
+  const rankOptions = useMemo(() => {
+    return ready ? ranks.map(rank => ({ label: rank.name, value: rank._id, title: rank.description })) : [];
+  }, [ready, ranks]);
+
+  const handleEdit = useCallback(
+    async (e, value) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const model = await RanksCollection.findOneAsync(value);
+      subdrawer.setDrawerTitle('Edit Rank');
+      subdrawer.setDrawerModel(model);
+      subdrawer.setDrawerComponent(<RanksForm setOpen={subdrawer.setDrawerOpen} useSubdrawer />);
+      subdrawer.setDrawerOpen(true);
+    },
+    [subdrawer]
+  );
+
+  const handleDelete = useCallback(
+    async (e, value) => {
+      e.preventDefault();
+      e.stopPropagation();
+      modal.confirm({
+        title: 'Are you sure you want to delete this rank?',
+        okText: 'Delete',
+        onOk: async () => {
+          await Meteor.callAsync('ranks.remove', value);
+        },
+      });
+    },
+    [modal]
+  );
+
+  const optionRender = useCallback(
+    ({ label, value }) => {
+      const match = RanksCollection.findOne(value);
+      return (
+        <Row gutter={[16, 16]} align="middle" justify="space-between" key={value}>
+          <Col flex="auto">
+            <Tag color={match?.color}>{label}</Tag>
+          </Col>
+          <Col>
+            <Button icon={<EditOutlined />} onClick={e => handleEdit(e, value)} type="text" size="small" />
+          </Col>
+          <Col>
+            <Button icon={<DeleteOutlined />} onClick={e => handleDelete(e, value)} type="text" size="small" danger />
+          </Col>
+        </Row>
+      );
+    },
+    [handleEdit, handleDelete]
+  );
+
+  const handleCreate = useCallback(() => {
+    subdrawer.setDrawerTitle('Create Rank');
+    subdrawer.setDrawerModel({});
+    subdrawer.setDrawerComponent(<RanksForm setOpen={subdrawer.setDrawerOpen} useSubdrawer />);
+    subdrawer.setDrawerExtra(empty);
+    subdrawer.setDrawerOpen(true);
+  }, [subdrawer]);
 
   return (
     <Form autoComplete="off" form={form} layout="vertical" onFinish={handleSubmit} onValuesChange={handleValuesChange} disabled={loading}>
@@ -156,9 +224,23 @@ export default function MemberForm({ setOpen }) {
       >
         <InputNumber min={1000} max={9999} step={1} placeholder="Enter ID" />
       </Form.Item>
-      <Form.Item name="rankId" label="Rank" rules={[{ type: 'string' }]}>
-        <Select placeholder="Select rank" options={[]} />
-      </Form.Item>
+      <Row gutter={8} justify="space-between" align="middle">
+        <Col flex="auto">
+          <Form.Item name="rankId" label="Rank" rules={[{ type: 'string' }]}>
+            <Select
+              placeholder="Select rank"
+              options={rankOptions}
+              optionRender={optionRender}
+              optionFilterProp="label"
+              loading={!ready}
+              showSearch
+            />
+          </Form.Item>
+        </Col>
+        <Col>
+          <Button icon={<PlusOutlined />} onClick={handleCreate} style={{ marginTop: 8 }} />
+        </Col>
+      </Row>
       <Form.Item name="specializationIds" label="Specializations" rules={[{ type: 'array' }]}>
         <Select mode="multiple" placeholder="Select specializations" options={[]} />
       </Form.Item>
