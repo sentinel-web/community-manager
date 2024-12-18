@@ -12,6 +12,7 @@ import { Meteor } from 'meteor/meteor';
 import TaskFilter from './TaskFilter';
 import { useTracker } from 'meteor/react-meteor-data';
 import KanbanBoard from './KanbanBoard';
+import useTaskStatus from './task-status/task-status.hook';
 
 const empty = <></>;
 
@@ -119,6 +120,11 @@ export default function Tasks() {
     return getTaskColumns(openUpdateDrawer, handleTaskDelete);
   }, [openUpdateDrawer, handleTaskDelete]);
 
+  const { taskStatus } = useTaskStatus();
+  const taskStatusOptions = useMemo(() => {
+    return taskStatus.map(status => status._id);
+  }, [taskStatus]);
+
   return (
     <SectionCard title="Tasks" ready={ready}>
       <Row gutter={[16, 16]}>
@@ -143,7 +149,7 @@ export default function Tasks() {
               edit={openUpdateDrawer}
               remove={handleTaskDelete}
               tasks={datasource}
-              options={filter?.status?.length ? filter.status : ['open', 'in-progress', 'done']}
+              options={filter?.status?.length ? filter.status : taskStatusOptions}
             />
           </Col>
         )}

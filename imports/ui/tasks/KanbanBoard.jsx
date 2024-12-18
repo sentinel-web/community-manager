@@ -3,6 +3,7 @@ import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { Button, Card, Col, Row } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import { Participants } from './task.columns';
+import TaskStatusTag from './task-status/TaskStatusTag';
 
 const KanbanBoard = ({ tasks, options, edit, remove }) => {
   const onDragEnd = result => {
@@ -31,7 +32,7 @@ const KanbanBoard = ({ tasks, options, edit, remove }) => {
             <Droppable droppableId={status}>
               {provided => (
                 <div ref={provided.innerRef} {...provided.droppableProps}>
-                  <Card title={status}>
+                  <Card title={<TaskStatusTag taskStatusId={status} />}>
                     {columns[status]?.map((task, index) => (
                       <Draggable key={`${status}-${task._id}`} draggableId={task._id} index={index}>
                         {provided => (
