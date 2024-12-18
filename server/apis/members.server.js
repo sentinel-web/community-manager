@@ -146,27 +146,27 @@ if (Meteor.isServer) {
     },
     'members.options': async function () {
       validateUserId(this.userId);
-      const getRankName = async (rankId) => {
+      const getRankName = async rankId => {
         const rank = await RanksCollection.findOneAsync({ _id: rankId });
         if (rank) {
           return rank.name;
         }
         return rankId;
-      }
+      };
 
       const members = await MembersCollection.find({}, { fields: { 'profile.rankId': 1, 'profile.id': 1, 'profile.name': 1 } }).fetchAsync();
 
-      const options = []
+      const options = [];
 
       for (const member of members) {
-        const rankName = await getRankName(member.profile?.rankId)
+        const rankName = await getRankName(member.profile?.rankId);
         options.push({
           label: `${rankName || ''} ${member.profile?.id || '0000'}-${member.profile?.name || 'Name'}`,
           value: member._id,
-        })
+        });
       }
 
-      return options
+      return options;
     },
     'members.find': async function (filter = {}, options = {}) {
       validateUserId(this.userId);

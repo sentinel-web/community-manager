@@ -1,5 +1,5 @@
-import { Mongo } from "meteor/mongo";
+import { Mongo } from 'meteor/mongo';
 
-const SettingsCollection = new Mongo.Collection("settings");
+const SettingsCollection = new Mongo.Collection('settings');
 
 export default SettingsCollection;

@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import TableActions from '../table/body/actions/TableActions';
 import { Meteor } from 'meteor/meteor';
+import TaskStatusTag from './task-status/TaskStatusTag';
+import TaskStatusCollection from '../../api/collections/taskStatus.collection';
 
 export const Participants = ({ participants }) => {
   const [value, setValue] = React.useState('loading...');
@@ -38,8 +40,13 @@ const getTaskColumns = (handleTaskEdit, handleTaskDelete) => {
     {
       title: 'Status',
       dataIndex: 'status',
-      sorter: (a, b) => (a.status || '').localeCompare(b.status || ''),
+      sorter: (a, b) => {
+        const aStatus = a.status ? TaskStatusCollection.findOne({ _id: a.status })?.name : a.status;
+        const bStatus = b.status ? TaskStatusCollection.findOne({ _id: b.status })?.name : b.status;
+        return aStatus.localeCompare(bStatus);
+      },
       ellipsis: true,
+      render: status => (status ? <TaskStatusTag taskStatusId={status} /> : '-'),
     },
     {
       title: 'Actions',
