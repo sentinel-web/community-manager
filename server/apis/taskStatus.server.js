@@ -46,15 +46,14 @@ if (Meteor.isServer) {
       if (!this.userId) {
         throw new Meteor.Error('taskStatus.update', 'not-authorized', JSON.stringify(this.userId));
       }
-      const discoveryType = await TaskStatusCollection.findOneAsync(taskStatusId);
-      if (discoveryType) {
-        try {
-          return await TaskStatusCollection.updateAsync({ _id: taskStatusId }, { $set: data });
-        } catch (error) {
-          throw new Meteor.Error(error.message);
-        }
-      } else {
+      const taskStatus = await TaskStatusCollection.findOneAsync(taskStatusId);
+      if (!taskStatus) {
         throw new Meteor.Error('taskStatus.update', 'taskStatus-not-found', JSON.stringify(taskStatusId));
+      }
+      try {
+        return await TaskStatusCollection.updateAsync({ _id: taskStatusId }, { $set: data });
+      } catch (error) {
+        throw new Meteor.Error(error.message);
       }
     },
     'taskStatus.remove': async function (taskStatusId = '') {
