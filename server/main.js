@@ -7,3 +7,4 @@ import './apis/profilePictures.server';
 import './apis/discoveryTypes.server';
 import './apis/taskStatus.server';
 import './apis/ranks.server';
+import './apis/specializations.server';

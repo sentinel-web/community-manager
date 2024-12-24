@@ -7,6 +7,8 @@ import useRanks from './ranks/ranks.hook';
 import RanksCollection from '../../api/collections/ranks.collection';
 import RanksForm from './ranks/RanksForm';
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
+import RanksSelect from './ranks/RanksSelect';
+import SpecializationsSelect from '../specializations/SpecializationsSelect';
 
 const empty = <></>;
 
@@ -118,59 +120,6 @@ export default function MemberForm({ setOpen }) {
     handleValuesChange(model ?? {}, model ?? {});
   }, [model, handleValuesChange]);
 
-  const { ready, ranks } = useRanks();
-  const rankOptions = useMemo(() => {
-    return ready ? ranks.map(rank => ({ label: rank.name, value: rank._id, title: rank.description })) : [];
-  }, [ready, ranks]);
-
-  const handleEdit = useCallback(
-    async (e, value) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const model = await RanksCollection.findOneAsync(value);
-      subdrawer.setDrawerTitle('Edit Rank');
-      subdrawer.setDrawerModel(model);
-      subdrawer.setDrawerComponent(<RanksForm setOpen={subdrawer.setDrawerOpen} useSubdrawer />);
-      subdrawer.setDrawerOpen(true);
-    },
-    [subdrawer]
-  );
-
-  const handleDelete = useCallback(
-    async (e, value) => {
-      e.preventDefault();
-      e.stopPropagation();
-      modal.confirm({
-        title: 'Are you sure you want to delete this rank?',
-        okText: 'Delete',
-        onOk: async () => {
-          await Meteor.callAsync('ranks.remove', value);
-        },
-      });
-    },
-    [modal]
-  );
-
-  const optionRender = useCallback(
-    ({ label, value }) => {
-      const match = RanksCollection.findOne(value);
-      return (
-        <Row gutter={[16, 16]} align="middle" justify="space-between" key={value}>
-          <Col flex="auto">
-            <Tag color={match?.color}>{label}</Tag>
-          </Col>
-          <Col>
-            <Button icon={<EditOutlined />} onClick={e => handleEdit(e, value)} type="text" size="small" />
-          </Col>
-          <Col>
-            <Button icon={<DeleteOutlined />} onClick={e => handleDelete(e, value)} type="text" size="small" danger />
-          </Col>
-        </Row>
-      );
-    },
-    [handleEdit, handleDelete]
-  );
-
   const handleCreate = useCallback(() => {
     subdrawer.setDrawerTitle('Create Rank');
     subdrawer.setDrawerModel({});
@@ -226,24 +175,13 @@ export default function MemberForm({ setOpen }) {
       </Form.Item>
       <Row gutter={8} justify="space-between" align="middle">
         <Col flex="auto">
-          <Form.Item name="rankId" label="Rank" rules={[{ type: 'string' }]}>
-            <Select
-              placeholder="Select rank"
-              options={rankOptions}
-              optionRender={optionRender}
-              optionFilterProp="label"
-              loading={!ready}
-              showSearch
-            />
-          </Form.Item>
+          <RanksSelect name="rankId" label="Rank" rules={[{ type: 'string' }]} />
         </Col>
         <Col>
           <Button icon={<PlusOutlined />} onClick={handleCreate} style={{ marginTop: 8 }} />
         </Col>
       </Row>
-      <Form.Item name="specializationIds" label="Specializations" rules={[{ type: 'array' }]}>
-        <Select mode="multiple" placeholder="Select specializations" options={[]} />
-      </Form.Item>
+      <SpecializationsSelect name="specializationIds" label="Specializations" rules={[{ type: 'array' }]} multiple />
       <Form.Item name="roleId" label="Role" rules={[{ type: 'string' }]}>
         <Select placeholder="Select role" options={[]} />
       </Form.Item>
