@@ -7,6 +7,7 @@ import {
   DashboardOutlined,
   MenuOutlined,
   SettingOutlined,
+  SolutionOutlined,
   UserAddOutlined,
   UserOutlined,
 } from '@ant-design/icons';
@@ -29,6 +30,9 @@ export function getNavigationValue() {
   }
   if (pathname.includes('/tasks')) {
     return 'tasks';
+  }
+  if (pathname.includes('/specializations')) {
+    return 'specializations';
   }
   if (pathname.includes('/settings')) {
     return 'settings';
@@ -90,6 +94,11 @@ export default function Navigation() {
                 key: 'tasks',
                 label: 'Tasks',
                 icon: <CheckCircleOutlined />,
+              },
+              {
+                key: 'specializations',
+                label: 'Specializations',
+                icon: <SolutionOutlined />,
               },
               {
                 key: 'registrations',

@@ -37,7 +37,7 @@ if (Meteor.isServer) {
         throw new Meteor.Error('ranks.insert', 'Invalid nextRankId', JSON.stringify(nextRankId));
       }
       try {
-        return await RanksCollection.insertAsync({ name, color, description });
+        return await RanksCollection.insertAsync({ name, color, description, previousRankId, nextRankId });
       } catch (error) {
         throw new Meteor.Error(error.message);
       }
@@ -77,6 +77,26 @@ if (Meteor.isServer) {
 
       try {
         return await RanksCollection.removeAsync({ _id: rankId });
+      } catch (error) {
+        throw new Meteor.Error(error.message);
+      }
+    },
+    'ranks.options': async function () {
+      if (!this.userId) {
+        throw new Meteor.Error('ranks.options', 'not-authorized', JSON.stringify(this.userId));
+      }
+      try {
+        const ranks = await RanksCollection.find({}).fetchAsync();
+        const options = [];
+        for (const rank of ranks) {
+          options.push({
+            label: rank.name,
+            value: rank._id,
+            title: rank.description,
+            raw: rank,
+          });
+        }
+        return options;
       } catch (error) {
         throw new Meteor.Error(error.message);
       }

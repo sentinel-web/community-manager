@@ -9,6 +9,7 @@ const Dashboard = React.lazy(() => import('../dashboard/Dashboard'));
 const Members = React.lazy(() => import('../members/Members'));
 const Events = React.lazy(() => import('../events/Events'));
 const Tasks = React.lazy(() => import('../tasks/Tasks'));
+const Specializations = React.lazy(() => import('../specializations/Specializations'));
 const Registrations = React.lazy(() => import('../registration/Registration'));
 const Settings = React.lazy(() => import('../settings/Settings'));
 
@@ -27,6 +28,7 @@ export default function Main() {
           {navigationValue === 'members' && <Members />}
           {navigationValue === 'events' && <Events />}
           {navigationValue === 'tasks' && <Tasks />}
+          {navigationValue === 'specializations' && <Specializations />}
           {navigationValue === 'registrations' && <Registrations />}
           {navigationValue === 'settings' && <Settings />}
         </Suspense>
