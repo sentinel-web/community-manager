@@ -1,17 +1,15 @@
-import { Button, Col, Form, Input, Row } from 'antd';
+import { Button, Col, Input, Row } from 'antd';
 import React from 'react';
 
-export default function TableHeader({ handleInputChange = console.warn, disabled = false, inputName = '' }) {
+export default function TableHeader({ handleChange = console.warn, value = '', handleCreate = console.warn }) {
   return (
     <Row gutter={[16, 16]}>
       <Col flex="auto">
-        <Form.Item name={inputName} required>
-          <Input name={inputName} placeholder={`Enter ${inputName}`} onChange={handleInputChange} disabled={disabled} autoComplete="off" required />
-        </Form.Item>
+        <Input.Search placeholder="Search..." value={value} onChange={handleChange} />
       </Col>
       <Col>
-        <Button type="primary" htmlType="submit" title="Submit new entry" disabled={disabled}>
-          Submit
+        <Button type="primary" onClick={handleCreate}>
+          Create
         </Button>
       </Col>
     </Row>

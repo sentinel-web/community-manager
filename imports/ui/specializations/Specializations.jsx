@@ -9,6 +9,7 @@ import { DrawerContext, SubdrawerContext } from '../app/App';
 import SpecializationForm from './SpecializationForm';
 import { Meteor } from 'meteor/meteor';
 import getSpecializationColumns from './specializations.columns';
+import TableHeader from '../table/header/TableHeader';
 
 export default function Specializations({ useSubdrawer }) {
   const [nameInput, setNameInput] = useState('');
@@ -74,16 +75,7 @@ export default function Specializations({ useSubdrawer }) {
     <SectionCard title="Specializations" ready={ready}>
       <Row gutter={[16, 16]}>
         <Col span={24}>
-          <Row gutter={[16, 16]}>
-            <Col flex="auto">
-              <Input.Search placeholder="Search by name" value={nameInput} onChange={handleNameChange} />
-            </Col>
-            <Col>
-              <Button type="primary" onClick={handleCreate}>
-                Create
-              </Button>
-            </Col>
-          </Row>
+          <TableHeader value={nameInput} handleChange={handleNameChange} handleCreate={handleCreate} />
         </Col>
         <Col span={24}>
           <TableContainer>

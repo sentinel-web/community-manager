@@ -3,6 +3,11 @@ import React, { useCallback } from 'react';
 
 export default function TableActions({ record, handleDelete, handleEdit }) {
   const { modal } = App.useApp();
+  const styles = {
+    button: {
+      width: '100%',
+    },
+  };
   const handleRemove = useCallback(
     e => {
       modal.confirm({
@@ -21,10 +26,12 @@ export default function TableActions({ record, handleDelete, handleEdit }) {
   return (
     <Row gutter={[16, 16]}>
       <Col flex="auto">
-        <Button onClick={e => handleEdit(e, record)}>Edit</Button>
+        <Button style={styles.button} onClick={e => handleEdit(e, record)}>
+          Edit
+        </Button>
       </Col>
       <Col flex="auto">
-        <Button onClick={e => handleRemove(e, record)} danger>
+        <Button style={styles.button} onClick={e => handleRemove(e, record)} danger>
           Delete
         </Button>
       </Col>
