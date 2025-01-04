@@ -1,13 +1,12 @@
 import { Tag, Tooltip } from 'antd';
-import React from 'react';
-import DiscoveryTypesCollection from '../../../api/collections/discoveryTypes.collection';
+import React, { useMemo } from 'react';
 import useDiscoveryTypes from './discovery-types.hook';
 
 export default function DiscoveryTypeTag({ discoveryTypeId }) {
-  const { ready, discoveryTypes, count } = useDiscoveryTypes();
-  const discoveryType = React.useMemo(() => {
-    return ready ? DiscoveryTypesCollection.findOne(discoveryTypeId) : null;
-  }, [discoveryTypeId, ready]);
+  const { ready, discoveryTypes } = useDiscoveryTypes();
+  const discoveryType = useMemo(() => {
+    return ready ? discoveryTypes.find(type => type._id === discoveryTypeId) : null;
+  }, [discoveryTypeId, ready, discoveryTypes]);
   if (!discoveryTypeId) return <Tag>-</Tag>;
   if (!discoveryType) return <Tag>Not found</Tag>;
   return (
