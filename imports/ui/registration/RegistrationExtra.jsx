@@ -1,13 +1,13 @@
 import { App, Button, Form, Input, Modal, Space } from 'antd';
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { Meteor } from 'meteor/meteor';
 
 const ConfirmModal = ({ open, setOpen, record, handleExtraCleanup }) => {
   const { message, notification } = App.useApp();
-  const [loading, setLoading] = React.useState(false);
+  const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
 
-  const handleCreate = React.useCallback(async () => {
+  const handleCreate = useCallback(async () => {
     setLoading(true);
     if (!record) {
       notification.error({
@@ -41,7 +41,7 @@ const ConfirmModal = ({ open, setOpen, record, handleExtraCleanup }) => {
     }
   }, [form, record, handleExtraCleanup, setOpen, message, notification]);
 
-  const toggleOpen = React.useCallback(() => setOpen(prevOpen => !prevOpen), [setOpen]);
+  const toggleOpen = useCallback(() => setOpen(prevOpen => !prevOpen), [setOpen]);
 
   return (
     <Modal
@@ -66,7 +66,7 @@ const ConfirmModal = ({ open, setOpen, record, handleExtraCleanup }) => {
 };
 
 export default function RegistrationExtra({ record, handleExtraCleanup }) {
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = useState(false);
 
   return (
     <Space>

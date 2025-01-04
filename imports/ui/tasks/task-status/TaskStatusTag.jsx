@@ -1,10 +1,10 @@
 import { Tag, Tooltip } from 'antd';
-import React from 'react';
+import React, { useMemo } from 'react';
 import useTaskStatus from './task-status.hook';
 
 export default function TaskStatusTag({ taskStatusId }) {
   const { ready, taskStatus } = useTaskStatus();
-  const match = React.useMemo(() => {
+  const match = useMemo(() => {
     return ready ? taskStatus.find(status => status._id === taskStatusId) : null;
   }, [taskStatusId, ready, taskStatus]);
   if (!taskStatusId) return <Tag>-</Tag>;
