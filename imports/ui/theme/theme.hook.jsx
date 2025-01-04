@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { ThemeContext } from '../app/App';
 
 export function getPreferedTheme() {
@@ -6,7 +6,7 @@ export function getPreferedTheme() {
 }
 
 export default function useTheme() {
-  const value = React.useContext(ThemeContext);
+  const value = useContext(ThemeContext);
 
   return { theme: value.theme, setTheme: value.setTheme };
 }

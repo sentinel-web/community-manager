@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Meteor } from 'meteor/meteor';
 import { Button, Col, Form, Input, Row, Typography } from 'antd';
 import RegistrationModal from '../registration/RegistrationModal';
@@ -13,7 +13,7 @@ const handleSubmit = values => {
 };
 
 export default function Login() {
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = useState(false);
   return (
     <Row gutter={[0, 16]} className="login">
       <Col span={24}>
