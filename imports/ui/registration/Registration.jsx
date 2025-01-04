@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useCallback, useContext, useMemo, useState } from 'react';
 import SectionCard from '../section-card/SectionCard';
-import { App, Button, Col, Input, Row } from 'antd';
+import { App, Col, Row } from 'antd';
 import useRegistrations from './registrations.hook';
 import TableContainer from '../table/body/TableContainer';
 import Table from '../table/Table';
@@ -10,16 +10,17 @@ import TableFooter from '../table/footer/TableFooter';
 import { DrawerContext } from '../app/App';
 import RegistrationForm from './RegistrationForm';
 import RegistrationExtra from './RegistrationExtra';
+import TableHeader from '../table/header/TableHeader';
 
 const empty = <></>;
 
 export default function Registration() {
   const { message, notification } = App.useApp();
   const { ready, registrations } = useRegistrations();
-  const [searchValue, setSearchValue] = React.useState('');
-  const drawer = React.useContext(DrawerContext);
+  const [searchValue, setSearchValue] = useState('');
+  const drawer = useContext(DrawerContext);
 
-  const handleCreate = React.useCallback(() => {
+  const handleCreate = useCallback(() => {
     drawer.setDrawerTitle('Create Registration');
     drawer.setDrawerModel({});
     drawer.setDrawerComponent(<RegistrationForm setOpen={drawer.setDrawerOpen} />);
@@ -27,7 +28,7 @@ export default function Registration() {
     drawer.setDrawerOpen(true);
   }, [drawer]);
 
-  const handleExtraCleanup = React.useCallback(() => {
+  const handleExtraCleanup = useCallback(() => {
     drawer.setDrawerTitle('');
     drawer.setDrawerModel({});
     drawer.setDrawerComponent(empty);
@@ -35,7 +36,7 @@ export default function Registration() {
     drawer.setDrawerOpen(false);
   }, [drawer]);
 
-  const handleEdit = React.useCallback(
+  const handleEdit = useCallback(
     (e, record) => {
       e.preventDefault();
       drawer.setDrawerModel(record);
@@ -47,7 +48,7 @@ export default function Registration() {
     [drawer, handleExtraCleanup]
   );
 
-  const handleDelete = React.useCallback(
+  const handleDelete = useCallback(
     (e, record) => {
       e.preventDefault();
       Meteor.callAsync('registrations.remove', record._id)
@@ -64,9 +65,9 @@ export default function Registration() {
     [message, notification]
   );
 
-  const columns = React.useMemo(() => getRegistrationColumns(handleDelete, handleEdit), [handleDelete, handleEdit]);
+  const columns = useMemo(() => getRegistrationColumns(handleDelete, handleEdit), [handleDelete, handleEdit]);
 
-  const registrationNameIncludesSearchValue = React.useCallback(
+  const registrationNameIncludesSearchValue = useCallback(
     registration => {
       if (!searchValue) return true;
       if (!registration?.name) return false;
@@ -76,7 +77,7 @@ export default function Registration() {
     [searchValue]
   );
 
-  const registrationIdIncludesSearchValue = React.useCallback(
+  const registrationIdIncludesSearchValue = useCallback(
     registration => {
       if (!searchValue) return true;
       if (!registration?.id) return false;
@@ -86,28 +87,19 @@ export default function Registration() {
     [searchValue]
   );
 
-  const filterRegistrationBySearchValue = React.useCallback(() => {
+  const filterRegistrationBySearchValue = useCallback(() => {
     return registrations.filter(registration => {
       return registrationNameIncludesSearchValue(registration) || registrationIdIncludesSearchValue(registration);
     });
   }, [registrations, registrationNameIncludesSearchValue, registrationIdIncludesSearchValue]);
 
-  const datasource = React.useMemo(() => filterRegistrationBySearchValue(), [filterRegistrationBySearchValue]);
+  const datasource = useMemo(() => filterRegistrationBySearchValue(), [filterRegistrationBySearchValue]);
 
   return (
     <SectionCard title="Registration" ready={ready}>
       <Row gutter={[16, 16]}>
         <Col span={24}>
-          <Row gutter={[16, 16]}>
-            <Col flex="auto">
-              <Input.Search placeholder="Search" onSearch={setSearchValue} />
-            </Col>
-            <Col>
-              <Button type="primary" onClick={handleCreate}>
-                Create
-              </Button>
-            </Col>
-          </Row>
+          <TableHeader value={searchValue} handleChange={setSearchValue} handleCreate={handleCreate} />
         </Col>
         <Col span={24}>
           <TableContainer>
