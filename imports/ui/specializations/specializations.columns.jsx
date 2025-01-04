@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import TableActions from '../table/body/actions/TableActions';
 import RankTag from '../members/ranks/RankTag';
 import { Participants } from '../tasks/task.columns';
@@ -6,15 +6,31 @@ import { Meteor } from 'meteor/meteor';
 import { Tag } from 'antd';
 
 const SpecializationTags = ({ specializations }) => {
-  const [value, setValue] = React.useState('loading...');
+  const [values, setValues] = useState('loading...');
   useEffect(() => {
-    if (!specializations?.length) setValue('-');
-    Meteor.callAsync('specializations.names', specializations)
-      .then(res => setValue(res))
+    if (!specializations?.length) setValues([]);
+    Meteor.callAsync('specializations.options')
+      .then(res => {
+        const data = res.filter(option => specializations.includes(option.value)).map(option => option);
+        setValues(data);
+      })
       .catch(console.error);
   }, [specializations]);
 
-  return <>{value}</>;
+  if (!Array.isArray(values)) return values;
+  if (!values.length) return '-';
+
+  return (
+    <>
+      {values.length > 0
+        ? values.map(value => (
+            <Tag style={{ marginRight: 4 }} key={value.value} color={value.raw.color}>
+              {value.label}
+            </Tag>
+          ))
+        : '-'}
+    </>
+  );
 };
 
 const getSpecializationColumns = (handleEdit, handleDelete) => {
@@ -28,27 +44,16 @@ const getSpecializationColumns = (handleEdit, handleDelete) => {
       render: (name, record) => (name ? record.color ? <Tag color={record.color}>{name}</Tag> : <Tag>{name}</Tag> : '-'),
     },
     {
-      title: 'Link to File',
-      dataIndex: 'linkToFile',
-      key: 'linkToFile',
+      title: 'Instructors',
+      dataIndex: 'instructors',
+      key: 'instructors',
       ellipsis: true,
-      sorter: (a, b) => String(a.linkToFile).localeCompare(String(b.linkToFile)),
-      render: linkToFile =>
-        linkToFile ? (
-          <a href={linkToFile} target="_blank" rel="noreferrer" title={linkToFile}>
-            Link
-          </a>
-        ) : (
-          '-'
-        ),
-    },
-    {
-      title: 'Description',
-      dataIndex: 'description',
-      key: 'description',
-      ellipsis: true,
-      sorter: (a, b) => String(a.description).localeCompare(String(b.description)),
-      render: description => description || '-',
+      sorter: (a, b) => {
+        const instructorsA = a.instructors || [];
+        const instructorsB = b.instructors || [];
+        return instructorsA.length - instructorsB.length;
+      },
+      render: instructors => (instructors ? <Participants participants={instructors} /> : '-'),
     },
     {
       title: 'Required Rank',
@@ -70,16 +75,19 @@ const getSpecializationColumns = (handleEdit, handleDelete) => {
       render: requiredSpecializations => (requiredSpecializations ? <SpecializationTags specializations={requiredSpecializations} /> : '-'),
     },
     {
-      title: 'Instructors',
-      dataIndex: 'instructors',
-      key: 'instructors',
+      title: 'Link to File',
+      dataIndex: 'linkToFile',
+      key: 'linkToFile',
       ellipsis: true,
-      sorter: (a, b) => {
-        const instructorsA = a.instructors || [];
-        const instructorsB = b.instructors || [];
-        return instructorsA.length - instructorsB.length;
-      },
-      render: instructors => (instructors ? <Participants participants={instructors} /> : '-'),
+      sorter: (a, b) => String(a.linkToFile).localeCompare(String(b.linkToFile)),
+      render: linkToFile =>
+        linkToFile ? (
+          <a href={linkToFile} target="_blank" rel="noreferrer" title={linkToFile}>
+            Link
+          </a>
+        ) : (
+          '-'
+        ),
     },
     {
       title: 'Actions',
