@@ -88,11 +88,9 @@ html {
         align-items: center;
 
         img {
-          border-radius: 50%;
           height: 5vh;
           width: 5vh;
           object-fit: cover;
-          image-rendering: pixelated;
         }
       }
     }
@@ -127,11 +125,9 @@ html {
         align-items: center;
 
         img {
-          border-radius: 50%;
           object-fit: cover;
           width: 20vh;
           height: 20vh;
-          image-rendering: pixelated;
         }
       }
     }
