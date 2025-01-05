@@ -1,17 +1,18 @@
-import React from 'react';
+import React, { lazy } from 'react';
 import useNavigation from '../navigation/navigation.hook';
 import Suspense from '../suspense/Suspense';
 import Login from '../login/Login';
 import { Meteor } from 'meteor/meteor';
 import { useTracker } from 'meteor/react-meteor-data';
 
-const Dashboard = React.lazy(() => import('../dashboard/Dashboard'));
-const Members = React.lazy(() => import('../members/Members'));
-const Events = React.lazy(() => import('../events/Events'));
-const Tasks = React.lazy(() => import('../tasks/Tasks'));
-const Specializations = React.lazy(() => import('../specializations/Specializations'));
-const Registrations = React.lazy(() => import('../registration/Registration'));
-const Settings = React.lazy(() => import('../settings/Settings'));
+const Dashboard = lazy(() => import('../dashboard/Dashboard'));
+const Members = lazy(() => import('../members/Members'));
+const Events = lazy(() => import('../events/Events'));
+const Tasks = lazy(() => import('../tasks/Tasks'));
+const Specializations = lazy(() => import('../specializations/Specializations'));
+const Squads = lazy(() => import('../squads/Squads'));
+const Registrations = lazy(() => import('../registration/Registration'));
+const Settings = lazy(() => import('../settings/Settings'));
 
 export default function Main() {
   const { navigationValue } = useNavigation();
@@ -29,6 +30,7 @@ export default function Main() {
           {navigationValue === 'events' && <Events />}
           {navigationValue === 'tasks' && <Tasks />}
           {navigationValue === 'specializations' && <Specializations />}
+          {navigationValue === 'squads' && <Squads />}
           {navigationValue === 'registrations' && <Registrations />}
           {navigationValue === 'settings' && <Settings />}
         </Suspense>

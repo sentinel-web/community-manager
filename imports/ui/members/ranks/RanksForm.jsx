@@ -5,6 +5,7 @@ import { DrawerContext, SubdrawerContext } from '../../app/App';
 import RanksCollection from '../../../api/collections/ranks.collection';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import useRanks from './ranks.hook';
+import { getColorFromValues } from '../../specializations/SpecializationForm';
 
 export default function RanksForm({ setOpen, useSubdrawer }) {
   const [form] = Form.useForm();
@@ -34,8 +35,8 @@ export default function RanksForm({ setOpen, useSubdrawer }) {
   const handleSubmit = useCallback(
     values => {
       setLoading(true);
-      const { name, color, description } = values;
-      const args = [...(model?._id ? [model._id] : []), { name, color: color?.toHexString?.() || color, description }];
+      const { name, description } = values;
+      const args = [...(model?._id ? [model._id] : []), { name, color: getColorFromValues(values), description }];
       Meteor.callAsync(Meteor.user() && model?._id ? 'ranks.update' : 'ranks.insert', ...args)
         .then(() => {
           setOpen(false);

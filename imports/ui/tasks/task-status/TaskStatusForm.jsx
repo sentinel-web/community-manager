@@ -2,6 +2,7 @@ import { App, Button, Col, ColorPicker, Form, Input, Row } from 'antd';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Meteor } from 'meteor/meteor';
 import { DrawerContext, SubdrawerContext } from '../../app/App';
+import { getColorFromValues } from '../../specializations/SpecializationForm';
 
 export default function TaskStatusForm({ setOpen, useSubdrawer }) {
   const [form] = Form.useForm();
@@ -28,8 +29,8 @@ export default function TaskStatusForm({ setOpen, useSubdrawer }) {
   const handleSubmit = useCallback(
     values => {
       setLoading(true);
-      const { name, color, description } = values;
-      const args = [...(model?._id ? [model._id] : []), { name, color: color?.toHexString?.() || color, description }];
+      const { name, description } = values;
+      const args = [...(model?._id ? [model._id] : []), { name, color: getColorFromValues(values), description }];
       Meteor.callAsync(Meteor.user() && model?._id ? 'taskStatus.update' : 'taskStatus.insert', ...args)
         .then(() => {
           setOpen(false);

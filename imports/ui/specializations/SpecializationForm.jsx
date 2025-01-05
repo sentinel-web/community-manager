@@ -6,6 +6,10 @@ import RanksSelect from '../members/ranks/RanksSelect';
 import MembersSelect from '../members/MembersSelect';
 import SpecializationsSelect from './SpecializationsSelect';
 
+export function getColorFromValues(values) {
+  return values?.color ? values.color?.toHexString?.() || values.color : values?.color;
+}
+
 const SpecializationForm = ({ setOpen, useSubdrawer }) => {
   const drawer = useContext(DrawerContext);
   const subdrawer = useContext(SubdrawerContext);
@@ -18,7 +22,7 @@ const SpecializationForm = ({ setOpen, useSubdrawer }) => {
 
   const handleFinish = useCallback(
     async values => {
-      const color = values?.color ? values.color?.toHexString?.() || values.color : values?.color;
+      const color = getColorFromValues(values);
       values.color = color;
       const args = [...(model?._id ? [model._id] : []), values];
       Meteor.callAsync(endpoint, ...args)
