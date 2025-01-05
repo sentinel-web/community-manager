@@ -1,8 +1,8 @@
 import { App, Spin, Upload } from 'antd';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Meteor } from 'meteor/meteor';
 
-async function turnImageFileToBase64(file) {
+export async function turnImageFileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -11,10 +11,19 @@ async function turnImageFileToBase64(file) {
   });
 }
 
+export async function turnBase64ToImage(base64) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = error => reject(error);
+    img.src = base64;
+  });
+}
+
 export default function ProfilePictureInput({ fileList, setFileList, form, profilePictureId }) {
   const { notification } = App.useApp();
-  const [loading, setLoading] = React.useState(false);
-  const [imageSrc, setImageSrc] = React.useState(null);
+  const [loading, setLoading] = useState(false);
+  const [imageSrc, setImageSrc] = useState(null);
 
   async function uploadImage(file) {
     setLoading(true);
@@ -34,7 +43,7 @@ export default function ProfilePictureInput({ fileList, setFileList, form, profi
       .finally(() => setLoading(false));
   }
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (profilePictureId && typeof profilePictureId === 'string') {
       setLoading(true);
       Meteor.callAsync('profilePictures.get', profilePictureId)
