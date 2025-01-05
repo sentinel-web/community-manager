@@ -2,9 +2,18 @@ import React from 'react';
 import TableActions from '../table/body/actions/TableActions';
 import RanksCollection from '../../api/collections/ranks.collection';
 import RankTag from './ranks/RankTag';
+import { SquadTags } from '../squads/squads.columns';
 
 export default function getMembersColumns(handleDelete, handleEdit) {
   return [
+    {
+      title: 'Squad',
+      dataIndex: 'squadId',
+      key: 'squadId',
+      ellipsis: true,
+      sorter: (a, b) => String(a.squadId).localeCompare(String(b.squadId)),
+      render: squadId => (squadId ? <SquadTags squadIds={[squadId]} /> : '-'),
+    },
     {
       title: 'Rank',
       dataIndex: 'rankId',
@@ -18,13 +27,6 @@ export default function getMembersColumns(handleDelete, handleEdit) {
       render: rankId => <RankTag rankId={rankId} />,
     },
     {
-      title: 'Name',
-      dataIndex: 'name',
-      key: 'name',
-      ellipsis: true,
-      sorter: (a, b) => String(a.name).localeCompare(String(b.name)),
-    },
-    {
       title: 'ID',
       dataIndex: 'id',
       key: 'id',
@@ -32,11 +34,11 @@ export default function getMembersColumns(handleDelete, handleEdit) {
       sorter: (a, b) => String(a.id).localeCompare(String(b.id)),
     },
     {
-      title: 'Description',
-      dataIndex: 'description',
-      key: 'description',
+      title: 'Name',
+      dataIndex: 'name',
+      key: 'name',
       ellipsis: true,
-      sorter: (a, b) => String(a.description).localeCompare(String(b.description)),
+      sorter: (a, b) => String(a.name).localeCompare(String(b.name)),
     },
     {
       title: 'Actions',

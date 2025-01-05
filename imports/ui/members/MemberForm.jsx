@@ -1,14 +1,13 @@
-import { Alert, App, Button, Col, Divider, Form, Input, InputNumber, Row, Select, Tag } from 'antd';
+import { Alert, App, Button, Col, Divider, Form, Input, InputNumber, Row, Select } from 'antd';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Meteor } from 'meteor/meteor';
 import { DrawerContext, SubdrawerContext } from '../app/App';
 import ProfilePictureInput from '../profile-picture-input/ProfilePictureInput';
-import useRanks from './ranks/ranks.hook';
-import RanksCollection from '../../api/collections/ranks.collection';
 import RanksForm from './ranks/RanksForm';
-import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined } from '@ant-design/icons';
 import RanksSelect from './ranks/RanksSelect';
 import SpecializationsSelect from '../specializations/SpecializationsSelect';
+import SquadsSelect from '../squads/SquadsSelect';
 
 const empty = <></>;
 
@@ -185,9 +184,7 @@ export default function MemberForm({ setOpen }) {
       <Form.Item name="roleId" label="Role" rules={[{ type: 'string' }]}>
         <Select placeholder="Select role" options={[]} />
       </Form.Item>
-      <Form.Item name="squadId" label="Squad" rules={[{ type: 'string' }]}>
-        <Select placeholder="Select squad" options={[]} />
-      </Form.Item>
+      <SquadsSelect name="squadId" label="Squad" rules={[{ type: 'string' }]} />
       <Form.Item name="discordTag" label="Discord Tag" rules={[{ type: 'string' }]}>
         <Input placeholder="Enter discord tag" />
       </Form.Item>

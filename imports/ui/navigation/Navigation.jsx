@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import useNavigation from './navigation.hook';
 import { Button, Dropdown } from 'antd';
 import {
@@ -8,6 +8,7 @@ import {
   MenuOutlined,
   SettingOutlined,
   SolutionOutlined,
+  TeamOutlined,
   UserAddOutlined,
   UserOutlined,
 } from '@ant-design/icons';
@@ -34,6 +35,9 @@ export function getNavigationValue() {
   if (pathname.includes('/specializations')) {
     return 'specializations';
   }
+  if (pathname.includes('/squads')) {
+    return 'squads';
+  }
   if (pathname.includes('/settings')) {
     return 'settings';
   }
@@ -59,7 +63,7 @@ export default function Navigation() {
     };
   }, [navigationValue, setNavigationValue]);
 
-  const handleNavigationClick = React.useCallback(
+  const handleNavigationClick = useCallback(
     ({ key }) => {
       setNavigationValue(key);
       window.history.pushState(null, null, `${window.location.origin}/${key}`);
@@ -81,19 +85,24 @@ export default function Navigation() {
                 icon: <DashboardOutlined />,
               },
               {
-                key: 'members',
-                label: 'Members',
-                icon: <UserOutlined />,
-              },
-              {
                 key: 'events',
                 label: 'Events',
                 icon: <CalendarOutlined />,
               },
               {
-                key: 'tasks',
-                label: 'Tasks',
-                icon: <CheckCircleOutlined />,
+                key: 'members',
+                label: 'Members',
+                icon: <UserOutlined />,
+              },
+              {
+                key: 'squads',
+                label: 'Squads',
+                icon: <TeamOutlined />,
+              },
+              {
+                key: 'registrations',
+                label: 'Registrations',
+                icon: <UserAddOutlined />,
               },
               {
                 key: 'specializations',
@@ -101,9 +110,9 @@ export default function Navigation() {
                 icon: <SolutionOutlined />,
               },
               {
-                key: 'registrations',
-                label: 'Registrations',
-                icon: <UserAddOutlined />,
+                key: 'tasks',
+                label: 'Tasks',
+                icon: <CheckCircleOutlined />,
               },
               {
                 key: 'settings',

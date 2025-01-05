@@ -1,29 +1,30 @@
-import React from 'react';
+import React, { useCallback, useContext, useMemo, useState } from 'react';
 import useMembers from './members.hook';
 import { Meteor } from 'meteor/meteor';
 import TableFooter from '../table/footer/TableFooter';
 import TableContainer from '../table/body/TableContainer';
 import Table from '../table/Table';
-import { App, Button, Col, Input, Row } from 'antd';
+import { App, Col, Row } from 'antd';
 import SectionCard from '../section-card/SectionCard';
 import { DrawerContext } from '../app/App';
 import getMembersColumns from './members.columns';
 import MemberForm from './MemberForm';
+import TableHeader from '../table/header/TableHeader';
 
 export default function Members() {
   const { message, notification, modal } = App.useApp();
   const { ready, members } = useMembers();
-  const [searchValue, setSearchValue] = React.useState('');
-  const drawer = React.useContext(DrawerContext);
+  const [searchValue, setSearchValue] = useState('');
+  const drawer = useContext(DrawerContext);
 
-  const handleCreate = React.useCallback(() => {
+  const handleCreate = useCallback(() => {
     drawer.setDrawerTitle('Create Member');
     drawer.setDrawerModel({});
     drawer.setDrawerComponent(<MemberForm setOpen={drawer.setDrawerOpen} />);
     drawer.setDrawerOpen(true);
   }, [drawer]);
 
-  const handleEdit = React.useCallback(
+  const handleEdit = useCallback(
     (e, record) => {
       e.preventDefault();
       drawer.setDrawerModel(record);
@@ -34,7 +35,7 @@ export default function Members() {
     [drawer]
   );
 
-  const deleteMember = React.useCallback(
+  const deleteMember = useCallback(
     record => {
       Meteor.callAsync('members.remove', record._id)
         .then(() => {
@@ -50,7 +51,7 @@ export default function Members() {
     [message, notification]
   );
 
-  const handleModalConfirm = React.useCallback(
+  const handleModalConfirm = useCallback(
     record => {
       modal.confirm({
         title: 'Delete Member',
@@ -65,7 +66,7 @@ export default function Members() {
     [modal, deleteMember]
   );
 
-  const handleDelete = React.useCallback(
+  const handleDelete = useCallback(
     (e, record) => {
       e.preventDefault();
       handleModalConfirm(record);
@@ -73,7 +74,7 @@ export default function Members() {
     [handleModalConfirm]
   );
 
-  const filterMember = React.useCallback(
+  const filterMember = useCallback(
     member => {
       const charactersOfInput = searchValue.split('');
       const memberUsername = member?.username || '';
@@ -82,7 +83,7 @@ export default function Members() {
     [searchValue]
   );
 
-  const buildDatasource = React.useCallback(() => {
+  const buildDatasource = useCallback(() => {
     return members
       .map(member => ({
         _id: member._id,
@@ -101,26 +102,17 @@ export default function Members() {
       .filter(member => filterMember(member));
   }, [members, filterMember]);
 
-  const datasource = React.useMemo(() => {
+  const datasource = useMemo(() => {
     return buildDatasource();
   }, [buildDatasource]);
 
-  const columns = React.useMemo(() => getMembersColumns(handleDelete, handleEdit), [handleDelete, handleEdit]);
+  const columns = useMemo(() => getMembersColumns(handleDelete, handleEdit), [handleDelete, handleEdit]);
 
   return (
     <SectionCard title="Members" ready={ready}>
       <Row gutter={[16, 16]}>
         <Col span={24}>
-          <Row gutter={[16, 16]}>
-            <Col flex="auto">
-              <Input.Search placeholder="Search" onSearch={setSearchValue} />
-            </Col>
-            <Col>
-              <Button type="primary" onClick={handleCreate}>
-                Create
-              </Button>
-            </Col>
-          </Row>
+          <TableHeader handleChange={setSearchValue} handleCreate={handleCreate} value={searchValue} />
         </Col>
         <Col span={24}>
           <TableContainer>
