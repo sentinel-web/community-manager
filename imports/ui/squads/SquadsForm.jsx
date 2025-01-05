@@ -3,6 +3,7 @@ import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { DrawerContext, SubdrawerContext } from '../app/App';
 import { turnBase64ToImage, turnImageFileToBase64 } from '../profile-picture-input/ProfilePictureInput';
 import { Meteor } from 'meteor/meteor';
+import { getColorFromValues } from '../specializations/SpecializationForm';
 
 const SquadsForm = ({ setOpen, useSubdrawer = false }) => {
   const drawer = useContext(DrawerContext);
@@ -36,7 +37,7 @@ const SquadsForm = ({ setOpen, useSubdrawer = false }) => {
   };
 
   const handleFinish = async values => {
-    const color = values?.color ? values.color?.toHexString?.() || values.color : values?.color;
+    const color = getColorFromValues(values);
     values.color = color;
     const image = imageSrc;
     values.image = image;
