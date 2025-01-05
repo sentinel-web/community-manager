@@ -1,32 +1,28 @@
-import { Meteor } from "meteor/meteor";
-import SettingsCollection from "../../imports/api/collections/settings.collection";
+import { Meteor } from 'meteor/meteor';
+import SettingsCollection from '../../imports/api/collections/settings.collection';
+import { validatePublish, validateString, validateUserId } from '../main';
 
 if (Meteor.isServer) {
-  Meteor.publish("settings", (filter = {}, options = {}) => SettingsCollection.find(filter, options));
+  Meteor.publish('settings', function (filter = {}, options = {}) {
+    validatePublish(this.userId, filter, options);
+    return SettingsCollection.find(filter, options);
+  });
 
   Meteor.methods({
-    "settings.upsert": async function (key, value) {
-      if (!this.userId) {
-        throw new Meteor.Error("not-authorized");
-      }
-      if (!key || typeof key !== "string") {
-        throw new Meteor.Error("invalid-key", "Invalid key", key);
-      }
+    'settings.upsert': async function (key, value) {
+      validateUserId(this.userId);
+      validateString(key, true);
       if (!value) {
-        throw new Meteor.Error("invalid-value", "Invalid value", value);
+        throw new Meteor.Error('invalid-value', 'Invalid value', value);
       }
       try {
-        return await SettingsCollection.upsertAsync(key, {
-          $set: { key, value },
-        });
+        return await SettingsCollection.upsertAsync(key, { $set: { key, value } });
       } catch (error) {
         throw new Meteor.Error(error.message);
       }
     },
-    "settings.remove": async function (key = null) {
-      if (!this.userId) {
-        throw new Meteor.Error("not-authorized");
-      }
+    'settings.remove': async function (key = null) {
+      validateUserId(this.userId);
       try {
         return await SettingsCollection.removeAsync(key);
       } catch (error) {

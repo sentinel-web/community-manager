@@ -2,6 +2,7 @@ import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base';
 import MembersCollection from '../../imports/api/collections/members.collection';
 import RanksCollection from '../../imports/api/collections/ranks.collection';
+import { validateObject, validatePublish, validateString, validateUserId } from '../main';
 
 function extractProfileFromPayload(payload = {}) {
   if (!payload || typeof payload !== 'object') {
@@ -46,49 +47,30 @@ function extractProfileFromPayload(payload = {}) {
 }
 
 function validatePayload(payload) {
-  if (!payload || typeof payload !== 'object') {
-    throw new Meteor.Error('invalid-payload', 'Invalid payload', payload);
-  }
-}
-
-function validateUserId(userId) {
-  if (!userId || typeof userId !== 'string') {
-    throw new Meteor.Error('invalid-user-id', 'Invalid user ID', userId);
-  }
-}
-
-function validateMemberId(memberId) {
-  if (!memberId || typeof memberId !== 'string') {
-    throw new Meteor.Error('invalid-member-id', 'Invalid member ID', memberId);
-  }
-}
-
-function validateMember(member) {
-  if (!member || typeof member !== 'object') {
-    throw new Meteor.Error('invalid-member', 'Invalid member', member);
-  }
+  validateObject(payload, true);
 }
 
 async function getMemberById(memberId) {
-  validateMemberId(memberId);
+  validateUserId(memberId);
   const member = await MembersCollection.findOneAsync(memberId);
-  validateMember(member);
+  validateObject(member, true);
   return member;
 }
 
 const getRankName = async rankId => {
+  validateString(rankId, true);
   const rank = await RanksCollection.findOneAsync({ _id: rankId });
-  if (rank) {
-    return rank.name;
-  }
-  return rankId;
+  validateObject(rank, true);
+  return rank.name || '-';
+};
+
+const getFullName = (rank, id, name) => {
+  return `${rank || 'Unranked'}-${id || '0000'} ${name || 'Name'}`;
 };
 
 if (Meteor.isServer) {
   Meteor.publish('members', function (filter = {}, options = {}) {
-    if (!this.userId) {
-      return [];
-    }
+    validatePublish(this.userId, filter, options);
     return MembersCollection.find(filter, { ...options, fields: { services: 0 } });
   });
 
@@ -98,13 +80,9 @@ if (Meteor.isServer) {
       function prepareUser(payload) {
         validatePayload(payload);
         const { username, password } = payload;
-        if (!username || typeof username !== 'string') {
-          throw new Meteor.Error('members.insert', 'Invalid username', username);
-        }
-        if (!password || typeof password !== 'string') {
-          throw new Meteor.Error('members.insert', 'Invalid password', password);
-        }
-        const profile = extractProfileFromPayload(payload);
+        validateString(username, true);
+        validateString(password, true);
+        const profile = extractProfileFromPayload(payload) || {};
         const user = {
           username,
           password,
@@ -162,7 +140,7 @@ if (Meteor.isServer) {
       for (const member of members) {
         const rankName = await getRankName(member.profile?.rankId);
         options.push({
-          label: `${rankName || ''} ${member.profile?.id || '0000'}-${member.profile?.name || 'Name'}`,
+          label: getFullName(rankName, member.profile?.id, member.profile?.name),
           value: member._id,
         });
       }
@@ -171,16 +149,14 @@ if (Meteor.isServer) {
     },
     'members.participantNames': async function (filter = {}, options = {}) {
       validateUserId(this.userId);
-      if (!filter || typeof filter !== 'object') throw new Meteor.Error('members.participantNames', 'Invalid filter', filter);
-      if (!options || typeof options !== 'object') throw new Meteor.Error('members.participantNames', 'Invalid options', options);
+      validateObject(filter, true);
+      validateObject(options, true);
       try {
         const members = await MembersCollection.find(filter, options).fetchAsync();
         const names = [];
         for (const member of members) {
           const rankName = await getRankName(member.profile?.rankId);
-          const userName = member.profile?.name || 'Name';
-          const id = member.profile?.id || '0000';
-          names.push(`${rankName || ''} ${id}-${userName}`);
+          names.push(getFullName(rankName, member.profile?.id, member.profile?.name));
         }
         return names.join(', ');
       } catch (error) {

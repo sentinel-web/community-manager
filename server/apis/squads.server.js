@@ -1,41 +1,21 @@
 import { Meteor } from 'meteor/meteor';
 import SquadsCollection from '../../imports/api/collections/squads.collection';
+import { validateObject, validatePublish, validateString, validateUserId } from '../main';
 
 if (Meteor.isServer) {
   Meteor.publish('squads', function (filter = {}, options = {}) {
-    if (!this.userId || typeof this.userId !== 'string') {
-      throw new Meteor.Error('squads', 'not-authorized', JSON.stringify(this.userId));
-    }
-    if (!filter || typeof filter !== 'object') {
-      throw new Meteor.Error('squads', 'Invalid filter', JSON.stringify(filter));
-    }
-    if (!options || typeof options !== 'object') {
-      throw new Meteor.Error('squads', 'Invalid options', JSON.stringify(options));
-    }
-
+    validatePublish(this.userId, filter, options);
     return SquadsCollection.find(filter, options);
   });
 
   Meteor.methods({
     'squads.insert': async function ({ name = '', description = '', image = '', color = '', shortRangeFrequency = '' } = {}) {
-      if (!this.userId) {
-        throw new Meteor.Error('squads.insert', 'not-authorized', JSON.stringify(this.userId));
-      }
-      if (!name || typeof name !== 'string') {
-        throw new Meteor.Error('squads.insert', 'Invalid name', JSON.stringify(name));
-      }
-      if (typeof color !== 'string' && color != null) {
-        throw new Meteor.Error('squads.insert', 'Invalid color', JSON.stringify(color));
-      }
-      if (typeof description !== 'string' && description != null) {
-        throw new Meteor.Error('squads.insert', 'Invalid description', JSON.stringify(description));
-      }
-      if (typeof image !== 'string' && image != null) {
-        throw new Meteor.Error('squads.insert', 'Invalid image', JSON.stringify(image));
-      }
-      if (typeof shortRangeFrequency !== 'string' && shortRangeFrequency != null) {
-        throw new Meteor.Error('squads.insert', 'Invalid shortRangeFrequency', JSON.stringify(shortRangeFrequency));
-      }
+      validateUserId(this.userId);
+      validateString(name, true);
+      validateString(color, false);
+      validateString(description, false);
+      validateString(image, false);
+      validateString(shortRangeFrequency, false);
       try {
         return await SquadsCollection.insertAsync({
           name,
@@ -49,19 +29,11 @@ if (Meteor.isServer) {
       }
     },
     'squads.update': async function (squadId = '', data = {}) {
-      if (!this.userId) {
-        throw new Meteor.Error('squads.update', 'not-authorized', JSON.stringify(this.userId));
-      }
-      if (!squadId || typeof squadId !== 'string') {
-        throw new Meteor.Error('squads.update', 'Invalid squad ID', JSON.stringify(squadId));
-      }
-      if (!data || typeof data !== 'object') {
-        throw new Meteor.Error('squads.update', 'Invalid data', JSON.stringify(data));
-      }
+      validateUserId(this.userId);
+      validateString(squadId, true);
+      validateObject(data, true);
       const squad = await SquadsCollection.findOneAsync(squadId);
-      if (!squad) {
-        throw new Meteor.Error('squads.update', 'squad-not-found', JSON.stringify(squadId));
-      }
+      validateObject(squad, true);
       try {
         return await SquadsCollection.updateAsync({ _id: squadId }, { $set: data });
       } catch (error) {
@@ -69,18 +41,10 @@ if (Meteor.isServer) {
       }
     },
     'squads.remove': async function (squadId = '') {
-      if (!this.userId) {
-        throw new Meteor.Error('squads.remove', 'not-authorized', JSON.stringify(this.userId));
-      }
-      if (!squadId || typeof squadId !== 'string') {
-        throw new Meteor.Error('squads.remove', 'Invalid squad ID', JSON.stringify(squadId));
-      }
-
+      validateUserId(this.userId);
+      validateString(squadId, true);
       const squad = await SquadsCollection.findOneAsync(squadId);
-      if (!squad) {
-        throw new Meteor.Error('squads.remove', 'squad-not-found', JSON.stringify(squadId));
-      }
-
+      validateObject(squad, true);
       try {
         return await SquadsCollection.removeAsync({ _id: squadId });
       } catch (error) {
@@ -88,9 +52,7 @@ if (Meteor.isServer) {
       }
     },
     'squads.options': async function () {
-      if (!this.userId) {
-        throw new Meteor.Error('squads.options', 'not-authorized', JSON.stringify(this.userId));
-      }
+      validateUserId(this.userId);
       try {
         const squads = await SquadsCollection.find({}).fetchAsync();
         const options = [];
