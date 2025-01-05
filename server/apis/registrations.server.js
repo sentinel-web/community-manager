@@ -1,20 +1,18 @@
 import { Meteor } from 'meteor/meteor';
 import RegistrationsCollection from '../../imports/api/collections/registrations.collection';
 import MembersCollection from '../../imports/api/collections/members.collection';
+import { validateNumber, validateObject, validatePublish, validateUserId } from '../main';
 
 if (Meteor.isServer) {
   Meteor.publish('registrations', function (filter = {}, options = {}) {
-    if (!this.userId) {
-      return [];
-    }
+    validatePublish(this.userId, filter, options);
     return RegistrationsCollection.find(filter, options);
   });
 
   Meteor.methods({
     'registrations.insert': async (payload = {}) => {
-      if (!payload || typeof payload !== 'object') {
-        throw new Meteor.Error('invalid-payload', 'Invalid payload', payload);
-      }
+      validateUserId(this.userId);
+      validateObject(payload, true);
       try {
         return await RegistrationsCollection.insertAsync(payload);
       } catch (error) {
@@ -22,50 +20,33 @@ if (Meteor.isServer) {
       }
     },
     'registrations.update': async function (registrationId = '', data = {}) {
-      if (!registrationId || typeof registrationId !== 'string') {
-        throw new Meteor.Error('invalid-registration-id', 'Invalid registration ID', registrationId);
-      }
-      if (!data || typeof data !== 'object') {
-        throw new Meteor.Error('invalid-data', 'Invalid data', data);
-      }
-      if (!this.userId) {
-        throw new Meteor.Error('not-authorized');
-      }
+      validateUserId(this.userId);
+      validateString(registrationId, true);
+      validateObject(data, true);
       const registration = await RegistrationsCollection.findOneAsync(registrationId);
-      if (registration) {
-        try {
-          return await RegistrationsCollection.updateAsync({ _id: registrationId }, { $set: data });
-        } catch (error) {
-          throw new Meteor.Error(error.message);
-        }
-      } else {
-        throw new Meteor.Error('registration-not-found');
+      validateObject(registration, true);
+      try {
+        return await RegistrationsCollection.updateAsync({ _id: registrationId }, { $set: data });
+      } catch (error) {
+        throw new Meteor.Error(error.message);
       }
     },
     'registrations.remove': async function (registrationId = '') {
-      if (!registrationId || typeof registrationId !== 'string') {
-        throw new Meteor.Error('invalid-registration-id', 'Invalid registration ID', registrationId);
-      }
-      if (!this.userId) {
-        throw new Meteor.Error('not-authorized');
-      }
+      validateUserId(this.userId);
+      validateString(registrationId, true);
       const registration = await RegistrationsCollection.findOneAsync(registrationId);
-      if (registration) {
-        try {
-          return await RegistrationsCollection.removeAsync({
-            _id: registrationId,
-          });
-        } catch (error) {
-          throw new Meteor.Error(error.message);
-        }
-      } else {
-        throw new Meteor.Error('registration-not-found');
+      validateObject(registration, true);
+      try {
+        return await RegistrationsCollection.removeAsync({
+          _id: registrationId,
+        });
+      } catch (error) {
+        throw new Meteor.Error(error.message);
       }
     },
     'registrations.validateId': async function (id = '', excludeId = false) {
-      if (!id || typeof id !== 'number') {
-        throw new Meteor.Error('invalid-id', 'Invalid ID', id);
-      }
+      validateUserId(this.userId);
+      validateNumber(id, true);
 
       const filter = { $and: [{ 'profile.id': id }] };
       if (this.userId && excludeId) {
