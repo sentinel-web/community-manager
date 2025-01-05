@@ -1,17 +1,17 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Meteor } from 'meteor/meteor';
 import { useTracker } from 'meteor/react-meteor-data';
 import { Button, Col, Row, Typography } from 'antd';
 import SectionCard from '../section-card/SectionCard';
 
 export default function Dashboard() {
-  const [username, setUsername] = React.useState('loading...');
+  const [username, setUsername] = useState('loading...');
 
   const user = useTracker(() => {
     return Meteor.user();
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (user) {
       setUsername(user.username);
     } else {

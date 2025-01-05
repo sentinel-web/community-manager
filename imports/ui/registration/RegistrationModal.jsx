@@ -1,11 +1,11 @@
 import { Form, Modal } from 'antd';
-import React from 'react';
+import React, { useCallback } from 'react';
 import RegistrationForm from './RegistrationForm';
 
 export default function RegistrationModal({ open, setOpen }) {
   const [form] = Form.useForm();
 
-  const handleClose = React.useCallback(() => {
+  const handleClose = useCallback(() => {
     setOpen(false);
     form.resetFields();
   }, [setOpen, form.resetFields]);

@@ -1,11 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import TableActions from '../table/body/actions/TableActions';
 import { Meteor } from 'meteor/meteor';
 import TaskStatusTag from './task-status/TaskStatusTag';
 import TaskStatusCollection from '../../api/collections/taskStatus.collection';
 
 export const Participants = ({ participants }) => {
-  const [value, setValue] = React.useState('loading...');
+  const [value, setValue] = useState('loading...');
 
   useEffect(() => {
     if (!participants?.length) setValue('-');
