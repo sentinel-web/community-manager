@@ -31,6 +31,11 @@ export default function App() {
   const [subdrawerModel, setSubdrawerModel] = useState({});
 
   useEffect(() => {
+    if (!communityColor) return;
+    document.documentElement.style.setProperty('--primary-color', communityColor);
+  }, [communityColor]);
+
+  useEffect(() => {
     document.body.classList.add(theme);
   }, [theme]);
 

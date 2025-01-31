@@ -1,6 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 import EventsCollection from '../../imports/api/collections/events.collection';
-import { validateDate, validateObject, validatePublish, validateString, validateUserId } from '../main';
+import { validateArrayOfStrings, validateBoolean, validateDate, validateObject, validatePublish, validateString, validateUserId } from '../main';
 
 if (Meteor.isServer) {
   Meteor.publish('events', function (filter = {}, options = {}) {
@@ -9,12 +9,29 @@ if (Meteor.isServer) {
   });
 
   Meteor.methods({
-    'events.insert': async function ({ name = '', start = new Date() } = {}) {
+    'events.insert': async function ({
+      start = new Date(),
+      end = new Date(),
+      name = '',
+      description = '',
+      preset = '',
+      hosts = [],
+      attendees = [],
+      eventType = '',
+      isPrivate = false,
+    } = {}) {
       validateUserId(this.userId);
-      validateString(name, true);
-      validateDate(start, true);
+      validateString(name, false);
+      validateDate(start, false);
+      validateDate(end, false);
+      validateString(eventType, true);
+      validateString(description, true);
+      validateString(preset, true);
+      validateArrayOfStrings(hosts, true);
+      validateArrayOfStrings(attendees, true);
+      validateBoolean(isPrivate, true);
       try {
-        return await EventsCollection.insertAsync({ name, start });
+        return await EventsCollection.insertAsync({ start, end, name, description, preset, hosts, attendees, eventType, isPrivate });
       } catch (error) {
         throw new Meteor.Error(error.message);
       }

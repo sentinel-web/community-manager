@@ -16,10 +16,15 @@ h6 {
   margin: 0 0 0.5rem 0;
 }
 
+:root {
+  --border-color: #585858;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --text-color: #f8f8f2;
     --background-color: #282828;
+    --primary-color: #708152;
   }
 }
 
@@ -27,6 +32,7 @@ h6 {
   :root {
     --text-color: #282828;
     --background-color: #f8f8f2;
+    --primary-color: #708152;
   }
 }
 
@@ -99,9 +105,8 @@ html {
       max-width: 1920px;
       min-width: 100%;
       margin: 0 auto;
-      flex: 10 5 50%;
       padding: 0.5rem;
-      max-height: calc(100vh - 80px);
+      max-height: calc(100vh - 80px - 56px);
       overflow: auto;
 
       .login {
@@ -136,4 +141,46 @@ html {
       padding: 0.5rem;
     }
   }
+}
+
+.rbc-toolbar button {
+  color: var(--text-color) !important;
+  border-color: var(--border-color) !important;
+  background-color: var(--background-color) !important;
+}
+
+.rbc-toolbar button:hover,
+.rbc-toolbar button:active,
+.rbc-toolbar button:focus,
+.rbc-toolbar button.rbc-active,
+.rbc-toolbar button.rbc-active:hover,
+.rbc-toolbar button.rbc-active:active,
+.rbc-toolbar button.rbc-active:focus {
+  color: var(--text-color) !important;
+  background-color: var(--primary-color) !important;
+}
+
+.rbc-month-view,
+.rbc-time-view,
+.rbc-agenda-view,
+.rbc-month-view *,
+.rbc-time-view *,
+.rbc-agenda-view * {
+  border-color: var(--border-color) !important;
+}
+
+.rbc-off-range-bg {
+  background: var(--background-color) !important;
+}
+
+.rbc-today {
+  background-color: var(--primary-color) !important;
+}
+
+.rbc-month-view {
+  border-radius: 8px;
+}
+
+.rbc-month-row:last-child .rbc-row-bg .rbc-day-bg:last-child {
+  border-bottom-right-radius: 8px;
 }
