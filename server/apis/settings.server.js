@@ -29,5 +29,15 @@ if (Meteor.isServer) {
         throw new Meteor.Error(error.message);
       }
     },
+    'settings.findOne': async function (filter = {}) {
+      validateUserId(this.userId);
+      validateString(filter, true);
+      try {
+        const setting = await SettingsCollection.findOneAsync(filter);
+        return setting.value;
+      } catch (error) {
+        throw new Meteor.Error(error.message);
+      }
+    },
   });
 }
