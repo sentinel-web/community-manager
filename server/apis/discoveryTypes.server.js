@@ -1,10 +1,11 @@
 import { Meteor } from 'meteor/meteor';
 import DiscoveryTypesCollection from '../../imports/api/collections/discoveryTypes.collection';
-import { validateObject, validatePublish, validateString, validateUserId } from '../main';
+import { validateObject, validateString, validateUserId } from '../main';
 
 if (Meteor.isServer) {
-  Meteor.publish('discoveryTypes', function (filter = {}, options = {}) {
-    validatePublish(this.userId, filter, options);
+  Meteor.publish('discoveryTypes', (filter = {}, options = {}) => {
+    validateObject(options, false);
+    validateObject(filter, false);
     return DiscoveryTypesCollection.find(filter, options);
   });
 

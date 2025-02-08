@@ -1,10 +1,11 @@
 import { Meteor } from 'meteor/meteor';
 import SettingsCollection from '../../imports/api/collections/settings.collection';
-import { validatePublish, validateString, validateUserId } from '../main';
+import { validateObject, validateString, validateUserId } from '../main';
 
 if (Meteor.isServer) {
-  Meteor.publish('settings', function (filter = {}, options = {}) {
-    validatePublish(this.userId, filter, options);
+  Meteor.publish('settings', (filter = {}, options = {}) => {
+    validateObject(filter, false);
+    validateObject(options, false);
     return SettingsCollection.find(filter, options);
   });
 
@@ -29,8 +30,7 @@ if (Meteor.isServer) {
         throw new Meteor.Error(error.message);
       }
     },
-    'settings.findOne': async function (filter = {}) {
-      validateUserId(this.userId);
+    'settings.findOne': async (filter = {}) => {
       validateString(filter, false);
       try {
         const setting = await SettingsCollection.findOneAsync(filter);

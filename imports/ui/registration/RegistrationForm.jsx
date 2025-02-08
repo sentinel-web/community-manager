@@ -167,12 +167,16 @@ export default function RegistrationForm({ setOpen }) {
           <Col flex="auto">
             <Tag color={discoveryType?.color}>{label}</Tag>
           </Col>
-          <Col>
-            <Button icon={<EditOutlined />} onClick={e => handleEdit(e, value)} type="text" size="small" />
-          </Col>
-          <Col>
-            <Button icon={<DeleteOutlined />} onClick={e => handleDelete(e, value)} type="text" size="small" danger />
-          </Col>
+          {Meteor.user() && (
+            <Col>
+              <Button icon={<EditOutlined />} onClick={e => handleEdit(e, value)} type="text" size="small" />
+            </Col>
+          )}
+          {Meteor.user() && (
+            <Col>
+              <Button icon={<DeleteOutlined />} onClick={e => handleDelete(e, value)} type="text" size="small" danger />
+            </Col>
+          )}
         </Row>
       );
     },
@@ -233,9 +237,11 @@ export default function RegistrationForm({ setOpen }) {
             />
           </Form.Item>
         </Col>
-        <Col>
-          <Button icon={<PlusOutlined />} onClick={handleCreate} style={{ marginTop: 8 }} />
-        </Col>
+        {Meteor.user() && (
+          <Col>
+            <Button icon={<PlusOutlined />} onClick={handleCreate} style={{ marginTop: 8 }} />
+          </Col>
+        )}
       </Row>
       <Form.Item name="rulesReadAndAccepted" label="I read the rules and accept them" rules={[{ required: true, type: 'boolean' }]} required>
         <Switch />
