@@ -12,10 +12,10 @@ if (Meteor.isServer) {
     'tasks.insert': async function (payload = {}) {
       validateUserId(this.userId);
       const { name, status, description, participants } = payload;
-      validateString(name, true);
-      validateString(status, true);
-      validateString(description, false);
-      validateString(participants, false);
+      validateString(name, false);
+      validateString(status, false);
+      validateString(description, true);
+      validateString(participants, true);
       try {
         return await TasksCollection.insertAsync({ name, status, description, participants });
       } catch (error) {
@@ -24,10 +24,10 @@ if (Meteor.isServer) {
     },
     'tasks.update': async function (taskId = '', data = {}) {
       validateUserId(this.userId);
-      validateString(taskId, true);
-      validateObject(data, true);
+      validateString(taskId, false);
+      validateObject(data, false);
       const task = await TasksCollection.findOneAsync(taskId);
-      validateObject(task, true);
+      validateObject(task, false);
       try {
         return await TasksCollection.updateAsync({ _id: taskId }, { $set: data });
       } catch (error) {
@@ -36,9 +36,9 @@ if (Meteor.isServer) {
     },
     'tasks.remove': async function (taskId = '') {
       validateUserId(this.userId);
-      validateString(taskId, true);
+      validateString(taskId, false);
       const task = await TasksCollection.findOneAsync(taskId);
-      validateObject(task, true);
+      validateObject(task, false);
       try {
         return await TasksCollection.removeAsync({ _id: taskId });
       } catch (error) {

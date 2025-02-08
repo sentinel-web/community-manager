@@ -38,10 +38,10 @@ if (Meteor.isServer) {
     },
     'events.update': async function (eventId = '', data = {}) {
       validateUserId(this.userId);
-      validateString(eventId, true);
-      validateObject(data, true);
+      validateString(eventId, false);
+      validateObject(data, false);
       const event = await EventsCollection.findOneAsync(eventId);
-      validateObject(event, true);
+      validateObject(event, false);
       try {
         return await EventsCollection.updateAsync({ _id: eventId }, { $set: data });
       } catch (error) {
@@ -50,9 +50,9 @@ if (Meteor.isServer) {
     },
     'events.remove': async function (eventId = '') {
       validateUserId(this.userId);
-      validateString(eventId, true);
+      validateString(eventId, false);
       const event = await EventsCollection.findOneAsync(eventId);
-      validateObject(event, true);
+      validateObject(event, false);
       try {
         return await EventsCollection.removeAsync({ _id: eventId });
       } catch (error) {

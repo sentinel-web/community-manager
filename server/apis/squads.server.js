@@ -11,11 +11,11 @@ if (Meteor.isServer) {
   Meteor.methods({
     'squads.insert': async function ({ name = '', description = '', image = '', color = '', shortRangeFrequency = '' } = {}) {
       validateUserId(this.userId);
-      validateString(name, true);
-      validateString(color, false);
-      validateString(description, false);
-      validateString(image, false);
-      validateString(shortRangeFrequency, false);
+      validateString(name, false);
+      validateString(color, true);
+      validateString(description, true);
+      validateString(image, true);
+      validateString(shortRangeFrequency, true);
       try {
         return await SquadsCollection.insertAsync({
           name,
@@ -30,10 +30,10 @@ if (Meteor.isServer) {
     },
     'squads.update': async function (squadId = '', data = {}) {
       validateUserId(this.userId);
-      validateString(squadId, true);
-      validateObject(data, true);
+      validateString(squadId, false);
+      validateObject(data, false);
       const squad = await SquadsCollection.findOneAsync(squadId);
-      validateObject(squad, true);
+      validateObject(squad, false);
       try {
         return await SquadsCollection.updateAsync({ _id: squadId }, { $set: data });
       } catch (error) {
@@ -42,9 +42,9 @@ if (Meteor.isServer) {
     },
     'squads.remove': async function (squadId = '') {
       validateUserId(this.userId);
-      validateString(squadId, true);
+      validateString(squadId, false);
       const squad = await SquadsCollection.findOneAsync(squadId);
-      validateObject(squad, true);
+      validateObject(squad, false);
       try {
         return await SquadsCollection.removeAsync({ _id: squadId });
       } catch (error) {

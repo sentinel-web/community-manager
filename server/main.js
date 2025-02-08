@@ -166,6 +166,6 @@ export function validateObject(object, optional) {
 
 export function validatePublish(userId, filter, options) {
   validateUserId(userId);
-  validateObject(filter, true);
-  validateObject(options, true);
+  validateObject(filter, false);
+  validateObject(options, false);
 }

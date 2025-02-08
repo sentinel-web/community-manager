@@ -11,9 +11,9 @@ if (Meteor.isServer) {
   Meteor.methods({
     'discoveryTypes.insert': async function ({ name = '', color = '', description = '' } = {}) {
       validateUserId(this.userId);
-      validateString(name, true);
-      validateString(color, false);
-      validateString(description, false);
+      validateString(name, false);
+      validateString(color, true);
+      validateString(description, true);
       try {
         return await DiscoveryTypesCollection.insertAsync({ name, color, description });
       } catch (error) {
@@ -22,10 +22,10 @@ if (Meteor.isServer) {
     },
     'discoveryTypes.update': async function (discoveryTypeId = '', data = {}) {
       validateUserId(this.userId);
-      validateString(discoveryTypeId, true);
-      validateObject(data, true);
+      validateString(discoveryTypeId, false);
+      validateObject(data, false);
       const discoveryType = await DiscoveryTypesCollection.findOneAsync(discoveryTypeId);
-      validateObject(discoveryType, true);
+      validateObject(discoveryType, false);
       try {
         return await DiscoveryTypesCollection.updateAsync({ _id: discoveryTypeId }, { $set: data });
       } catch (error) {
@@ -34,9 +34,9 @@ if (Meteor.isServer) {
     },
     'discoveryTypes.remove': async function (discoveryTypeId = '') {
       validateUserId(this.userId);
-      validateString(discoveryTypeId, true);
+      validateString(discoveryTypeId, false);
       const discoveryType = await DiscoveryTypesCollection.findOneAsync(discoveryTypeId);
-      validateObject(discoveryType, true);
+      validateObject(discoveryType, false);
       try {
         return await DiscoveryTypesCollection.removeAsync({ _id: discoveryTypeId });
       } catch (error) {
