@@ -11,9 +11,9 @@ if (Meteor.isServer) {
   Meteor.methods({
     'taskStatus.insert': async function ({ name = '', color = '', description = '' } = {}) {
       validateUserId(this.userId);
-      validateString(name, true);
-      validateString(color, false);
-      validateString(description, false);
+      validateString(name, false);
+      validateString(color, true);
+      validateString(description, true);
       try {
         return await TaskStatusCollection.insertAsync({ name, color, description });
       } catch (error) {
@@ -22,10 +22,10 @@ if (Meteor.isServer) {
     },
     'taskStatus.update': async function (taskStatusId = '', data = {}) {
       validateUserId(this.userId);
-      validateString(taskStatusId, true);
-      validateObject(data, true);
+      validateString(taskStatusId, false);
+      validateObject(data, false);
       const taskStatus = await TaskStatusCollection.findOneAsync(taskStatusId);
-      validateObject(taskStatus, true);
+      validateObject(taskStatus, false);
       try {
         return await TaskStatusCollection.updateAsync({ _id: taskStatusId }, { $set: data });
       } catch (error) {
@@ -34,9 +34,9 @@ if (Meteor.isServer) {
     },
     'taskStatus.remove': async function (taskStatusId = '') {
       validateUserId(this.userId);
-      validateString(taskStatusId, true);
+      validateString(taskStatusId, false);
       const taskStatus = await TaskStatusCollection.findOneAsync(taskStatusId);
-      validateObject(taskStatus, true);
+      validateObject(taskStatus, false);
       try {
         return await TaskStatusCollection.removeAsync({ _id: taskStatusId });
       } catch (error) {

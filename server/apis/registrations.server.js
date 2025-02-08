@@ -12,7 +12,7 @@ if (Meteor.isServer) {
   Meteor.methods({
     'registrations.insert': async (payload = {}) => {
       validateUserId(this.userId);
-      validateObject(payload, true);
+      validateObject(payload, false);
       try {
         return await RegistrationsCollection.insertAsync(payload);
       } catch (error) {
@@ -21,10 +21,10 @@ if (Meteor.isServer) {
     },
     'registrations.update': async function (registrationId = '', data = {}) {
       validateUserId(this.userId);
-      validateString(registrationId, true);
-      validateObject(data, true);
+      validateString(registrationId, false);
+      validateObject(data, false);
       const registration = await RegistrationsCollection.findOneAsync(registrationId);
-      validateObject(registration, true);
+      validateObject(registration, false);
       try {
         return await RegistrationsCollection.updateAsync({ _id: registrationId }, { $set: data });
       } catch (error) {
@@ -33,9 +33,9 @@ if (Meteor.isServer) {
     },
     'registrations.remove': async function (registrationId = '') {
       validateUserId(this.userId);
-      validateString(registrationId, true);
+      validateString(registrationId, false);
       const registration = await RegistrationsCollection.findOneAsync(registrationId);
-      validateObject(registration, true);
+      validateObject(registration, false);
       try {
         return await RegistrationsCollection.removeAsync({
           _id: registrationId,
@@ -46,7 +46,7 @@ if (Meteor.isServer) {
     },
     'registrations.validateId': async function (id = '', excludeId = false) {
       validateUserId(this.userId);
-      validateNumber(id, true);
+      validateNumber(id, false);
 
       const filter = { $and: [{ 'profile.id': id }] };
       if (this.userId && excludeId) {

@@ -47,20 +47,20 @@ function extractProfileFromPayload(payload = {}) {
 }
 
 function validatePayload(payload) {
-  validateObject(payload, true);
+  validateObject(payload, false);
 }
 
 async function getMemberById(memberId) {
   validateUserId(memberId);
   const member = await MembersCollection.findOneAsync(memberId);
-  validateObject(member, true);
+  validateObject(member, false);
   return member;
 }
 
 const getRankName = async rankId => {
-  validateString(rankId, true);
+  validateString(rankId, false);
   const rank = await RanksCollection.findOneAsync({ _id: rankId });
-  validateObject(rank, true);
+  validateObject(rank, false);
   return rank.name || '-';
 };
 
@@ -80,8 +80,8 @@ if (Meteor.isServer) {
       function prepareUser(payload) {
         validatePayload(payload);
         const { username, password } = payload;
-        validateString(username, true);
-        validateString(password, true);
+        validateString(username, false);
+        validateString(password, false);
         const profile = extractProfileFromPayload(payload) || {};
         const user = {
           username,
@@ -149,8 +149,8 @@ if (Meteor.isServer) {
     },
     'members.participantNames': async function (filter = {}, options = {}) {
       validateUserId(this.userId);
-      validateObject(filter, true);
-      validateObject(options, true);
+      validateObject(filter, false);
+      validateObject(options, false);
       try {
         const members = await MembersCollection.find(filter, options).fetchAsync();
         const names = [];

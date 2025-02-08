@@ -11,11 +11,11 @@ if (Meteor.isServer) {
   Meteor.methods({
     'ranks.insert': async function ({ name = '', color = '', description = '', previousRankId = '', nextRankId = '' } = {}) {
       validateUserId(this.userId);
-      validateString(name, true);
-      validateString(color, false);
-      validateString(description, false);
-      validateString(previousRankId, false);
-      validateString(nextRankId, false);
+      validateString(name, false);
+      validateString(color, true);
+      validateString(description, true);
+      validateString(previousRankId, true);
+      validateString(nextRankId, true);
       try {
         return await RanksCollection.insertAsync({ name, color, description, previousRankId, nextRankId });
       } catch (error) {
@@ -24,10 +24,10 @@ if (Meteor.isServer) {
     },
     'ranks.update': async function (rankId = '', data = {}) {
       validateUserId(this.userId);
-      validateString(rankId, true);
-      validateObject(data, true);
+      validateString(rankId, false);
+      validateObject(data, false);
       const rank = await RanksCollection.findOneAsync(rankId);
-      validateObject(rank, true);
+      validateObject(rank, false);
       try {
         return await RanksCollection.updateAsync({ _id: rankId }, { $set: data });
       } catch (error) {
@@ -36,9 +36,9 @@ if (Meteor.isServer) {
     },
     'ranks.remove': async function (rankId = '') {
       validateUserId(this.userId);
-      validateString(rankId, true);
+      validateString(rankId, false);
       const rank = await RanksCollection.findOneAsync(rankId);
-      validateObject(rank, true);
+      validateObject(rank, false);
       try {
         return await RanksCollection.removeAsync({ _id: rankId });
       } catch (error) {

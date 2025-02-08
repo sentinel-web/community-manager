@@ -3,13 +3,13 @@ import { Meteor } from 'meteor/meteor';
 import { validateObject, validatePublish } from '../main';
 
 function validatePayload(payload) {
-  validateObject(payload, true);
+  validateObject(payload, false);
 }
 
 async function validateProfilePictureId(profilePictureId) {
-  validateString(profilePictureId, true);
+  validateString(profilePictureId, false);
   const profilePicture = await ProfilePicturesCollection.findOneAsync({ _id: profilePictureId });
-  validateObject(profilePicture, true);
+  validateObject(profilePicture, false);
 }
 
 if (Meteor.isServer) {

@@ -11,9 +11,9 @@ if (Meteor.isServer) {
   Meteor.methods({
     'eventTypes.insert': async function ({ name = '', color = '', description = '' } = {}) {
       validateUserId(this.userId);
-      validateString(name, true);
-      validateString(color, false);
-      validateString(description, false);
+      validateString(name, false);
+      validateString(color, true);
+      validateString(description, true);
       try {
         return await EventTypesCollection.insertAsync({ name, color, description });
       } catch (error) {
@@ -22,10 +22,10 @@ if (Meteor.isServer) {
     },
     'eventTypes.update': async function (eventTypeId = '', data = {}) {
       validateUserId(this.userId);
-      validateString(eventTypeId, true);
-      validateObject(data, true);
+      validateString(eventTypeId, false);
+      validateObject(data, false);
       const eventType = await EventTypesCollection.findOneAsync(eventTypeId);
-      validateObject(eventType, true);
+      validateObject(eventType, false);
       try {
         return await EventTypesCollection.updateAsync({ _id: eventTypeId }, { $set: data });
       } catch (error) {
@@ -34,9 +34,9 @@ if (Meteor.isServer) {
     },
     'eventTypes.remove': async function (eventTypeId = '') {
       validateUserId(this.userId);
-      validateString(eventTypeId, true);
+      validateString(eventTypeId, false);
       const eventType = await EventTypesCollection.findOneAsync(eventTypeId);
-      validateObject(eventType, true);
+      validateObject(eventType, false);
       try {
         return await EventTypesCollection.removeAsync({ _id: eventTypeId });
       } catch (error) {

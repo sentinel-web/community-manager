@@ -11,7 +11,7 @@ if (Meteor.isServer) {
   Meteor.methods({
     'settings.upsert': async function (key, value) {
       validateUserId(this.userId);
-      validateString(key, true);
+      validateString(key, false);
       if (!value) {
         throw new Meteor.Error('invalid-value', 'Invalid value', value);
       }
@@ -31,7 +31,7 @@ if (Meteor.isServer) {
     },
     'settings.findOne': async function (filter = {}) {
       validateUserId(this.userId);
-      validateString(filter, true);
+      validateString(filter, false);
       try {
         const setting = await SettingsCollection.findOneAsync(filter);
         return setting.value;

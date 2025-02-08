@@ -19,13 +19,13 @@ if (Meteor.isServer) {
       linkToFile = '',
     } = {}) {
       validateUserId(this.userId);
-      validateString(name, true);
-      validateString(color, false);
-      validateString(description, false);
-      validateString(requiredRankId, false);
-      validateArrayOfStrings(requiredSpecializationIds, false);
-      validateArrayOfStrings(instructors, false);
-      validateString(linkToFile, false);
+      validateString(name, false);
+      validateString(color, true);
+      validateString(description, true);
+      validateString(requiredRankId, true);
+      validateArrayOfStrings(requiredSpecializationIds, true);
+      validateArrayOfStrings(instructors, true);
+      validateString(linkToFile, true);
       try {
         return await SpecializationsCollection.insertAsync({
           name,
@@ -42,10 +42,10 @@ if (Meteor.isServer) {
     },
     'specializations.update': async function (specializationId = '', data = {}) {
       validateUserId(this.userId);
-      validateString(specializationId, true);
-      validateObject(data, true);
+      validateString(specializationId, false);
+      validateObject(data, false);
       const specialization = await SpecializationsCollection.findOneAsync(specializationId);
-      validateObject(specialization, true);
+      validateObject(specialization, false);
       try {
         return await SpecializationsCollection.updateAsync({ _id: specializationId }, { $set: data });
       } catch (error) {
@@ -54,9 +54,9 @@ if (Meteor.isServer) {
     },
     'specializations.remove': async function (specializationId = '') {
       validateUserId(this.userId);
-      validateString(specializationId, true);
+      validateString(specializationId, false);
       const specialization = await SpecializationsCollection.findOneAsync(specializationId);
-      validateObject(specialization, true);
+      validateObject(specialization, false);
       try {
         return await SpecializationsCollection.removeAsync({ _id: specializationId });
       } catch (error) {
@@ -83,7 +83,7 @@ if (Meteor.isServer) {
     },
     'specializations.names': async function (specializations = []) {
       validateUserId(this.userId);
-      validateArrayOfStrings(specializations, true);
+      validateArrayOfStrings(specializations, false);
       try {
         const names = [];
         for (const specialization of specializations) {
