@@ -85,9 +85,8 @@ export default function Navigation() {
                 icon: <DashboardOutlined />,
               },
               {
-                key: 'events',
-                label: 'Events',
-                icon: <CalendarOutlined />,
+                key: 'div-1',
+                type: 'divider',
               },
               {
                 key: 'members',
@@ -110,9 +109,22 @@ export default function Navigation() {
                 icon: <SolutionOutlined />,
               },
               {
+                key: 'div-2',
+                type: 'divider',
+              },
+              {
+                key: 'events',
+                label: 'Events',
+                icon: <CalendarOutlined />,
+              },
+              {
                 key: 'tasks',
                 label: 'Tasks',
                 icon: <CheckCircleOutlined />,
+              },
+              {
+                key: 'div-3',
+                type: 'divider',
               },
               {
                 key: 'settings',
