@@ -82,7 +82,7 @@ const SquadsForm = ({ setOpen, useSubdrawer = false }) => {
         <Input placeholder="Enter icon" />
       </Form.Item>
       <Form.Item label="Description" name="description" rules={[{ required: false, type: 'string' }]}>
-        <Input.TextArea placeholder="Enter description" />
+        <Input.TextArea autoSize placeholder="Enter description" />
       </Form.Item>
       <Row gutter={[16, 16]} align="middle" justify="end">
         <Col>

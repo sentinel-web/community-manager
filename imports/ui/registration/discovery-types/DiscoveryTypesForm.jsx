@@ -58,7 +58,7 @@ export default function DiscoveryTypeForm({ setOpen, useSubdrawer }) {
         <Input placeholder="Enter desired name" />
       </Form.Item>
       <Form.Item name="description" label="Description" rules={[{ required: false, type: 'string' }]}>
-        <Input.TextArea placeholder="Enter description" />
+        <Input.TextArea autoSize placeholder="Enter description" />
       </Form.Item>
       <Form.Item name="color" label="Color">
         <ColorPicker format="hex" />

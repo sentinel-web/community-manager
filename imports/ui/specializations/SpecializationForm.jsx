@@ -61,7 +61,7 @@ const SpecializationForm = ({ setOpen, useSubdrawer }) => {
       <SpecializationsSelect multiple name="requiredSpecializations" label="Required Specializations" rules={[{ required: false, type: 'array' }]} />
       <RanksSelect name="requiredRankId" label="Required Rank" rules={[{ required: false, type: 'string' }]} />
       <Form.Item name="description" label="Description" rules={[{ required: false, type: 'string' }]}>
-        <Input.TextArea placeholder="Enter description" />
+        <Input.TextArea autoSize placeholder="Enter description" />
       </Form.Item>
       <Row gutter={[16, 16]} align="middle" justify="end">
         <Col>

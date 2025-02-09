@@ -248,7 +248,7 @@ export default function RegistrationForm({ setOpen }) {
       </Form.Item>
       {Meteor.user() && (
         <Form.Item name="description" label="Description" rules={[{ type: 'string' }]}>
-          <Input.TextArea placeholder="Enter description" />
+          <Input.TextArea autoSize placeholder="Enter description" />
         </Form.Item>
       )}
       <Row gutter={[16, 16]} align="middle" justify="end">
