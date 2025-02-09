@@ -11,6 +11,7 @@ import {
   TeamOutlined,
   UserAddOutlined,
   UserOutlined,
+  ClusterOutlined,
 } from '@ant-design/icons';
 import { Meteor } from 'meteor/meteor';
 import { useTracker } from 'meteor/react-meteor-data';
@@ -22,6 +23,9 @@ export function getNavigationValue() {
   }
   if (pathname.includes('/dashboard')) {
     return 'dashboard';
+  }
+  if (pathname.includes('/orbat')) {
+    return 'orbat';
   }
   if (pathname.includes('/members')) {
     return 'members';
@@ -85,7 +89,26 @@ export default function Navigation() {
                 icon: <DashboardOutlined />,
               },
               {
+                key: 'orbat',
+                label: 'Orbat',
+                icon: <ClusterOutlined />,
+              },
+              {
                 key: 'div-1',
+                type: 'divider',
+              },
+              {
+                key: 'events',
+                label: 'Events',
+                icon: <CalendarOutlined />,
+              },
+              {
+                key: 'tasks',
+                label: 'Tasks',
+                icon: <CheckCircleOutlined />,
+              },
+              {
+                key: 'div-2',
                 type: 'divider',
               },
               {
@@ -107,20 +130,6 @@ export default function Navigation() {
                 key: 'specializations',
                 label: 'Specializations',
                 icon: <SolutionOutlined />,
-              },
-              {
-                key: 'div-2',
-                type: 'divider',
-              },
-              {
-                key: 'events',
-                label: 'Events',
-                icon: <CalendarOutlined />,
-              },
-              {
-                key: 'tasks',
-                label: 'Tasks',
-                icon: <CheckCircleOutlined />,
               },
               {
                 key: 'div-3',
