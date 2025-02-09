@@ -94,9 +94,23 @@ export default function App() {
                     <Footer />
                   </Layout.Footer>
                 </Layout>
-                <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title={drawerTitle} extra={drawerExtra} destroyOnClose>
+                <Drawer
+                  width={window.innerWidth < 768 ? window.innerWidth : window.innerWidth * 0.33}
+                  open={drawerOpen}
+                  onClose={() => setDrawerOpen(false)}
+                  title={drawerTitle}
+                  extra={drawerExtra}
+                  destroyOnClose
+                >
                   {drawerComponent}
-                  <Drawer open={subdrawerOpen} onClose={() => setSubdrawerOpen(false)} title={subdrawerTitle} extra={subdrawerExtra} destroyOnClose>
+                  <Drawer
+                    width={window.innerWidth < 768 ? window.innerWidth : window.innerWidth * 0.33}
+                    open={subdrawerOpen}
+                    onClose={() => setSubdrawerOpen(false)}
+                    title={subdrawerTitle}
+                    extra={subdrawerExtra}
+                    destroyOnClose
+                  >
                     {subdrawerComponent}
                   </Drawer>
                 </Drawer>
