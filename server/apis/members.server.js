@@ -22,6 +22,9 @@ function extractProfileFromPayload(payload = {}) {
   if (payload.rankId && typeof payload.rankId === 'string') {
     profile.rankId = payload.rankId;
   }
+  if (payload.navyRankId && typeof payload.navyRankId === 'string') {
+    profile.navyRankId = payload.navyRankId;
+  }
   if (payload.specializationIds && Array.isArray(payload.specializationIds)) {
     profile.specializationIds = payload.specializationIds;
   }
@@ -36,6 +39,15 @@ function extractProfileFromPayload(payload = {}) {
   }
   if (payload.steamProfileLink && typeof payload.steamProfileLink === 'string') {
     profile.steamProfileLink = payload.steamProfileLink;
+  }
+  if (payload.entryDate && payload.entryDate instanceof Date) {
+    profile.entryDate = payload.entryDate;
+  }
+  if (payload.exitDate && payload.exitDate instanceof Date) {
+    profile.exitDate = payload.exitDate;
+  }
+  if (payload.hasCustomArmour && typeof payload.hasCustomArmour === 'boolean') {
+    profile.hasCustomArmour = payload.hasCustomArmour;
   }
   if (payload.description && typeof payload.description === 'string') {
     profile.description = payload.description;

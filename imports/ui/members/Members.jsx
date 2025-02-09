@@ -36,7 +36,8 @@ export default function Members() {
   );
 
   const deleteMember = useCallback(
-    record => {
+    (e, record) => {
+      e.preventDefault();
       Meteor.callAsync('members.remove', record._id)
         .then(() => {
           message.success('Member deleted');
@@ -92,12 +93,16 @@ export default function Members() {
         name: member.profile?.name,
         id: member.profile?.id,
         rankId: member.profile?.rankId,
+        navyRankId: member.profile?.navyRankId,
         specializationIds: member.profile?.specializationIds,
         roleId: member.profile?.roleId,
         squadId: member.profile?.squadId,
         discordTag: member.profile?.discordTag,
         steamProfileLink: member.profile?.steamProfileLink,
         description: member.profile?.description,
+        entryDate: member.profile?.entryDate,
+        exitDate: member.profile?.exitDate,
+        hasCustomArmour: member.profile?.hasCustomArmour,
       }))
       .filter(member => filterMember(member));
   }, [members, filterMember]);
