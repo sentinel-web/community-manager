@@ -20,6 +20,7 @@ function extractProfileFromPayload(payload = {}) {
   profile.squadId = payload.squadId || null;
   profile.discordTag = payload.discordTag || null;
   profile.steamProfileLink = payload.steamProfileLink || null;
+  profile.medalIds = payload.medalIds || null;
   profile.entryDate = payload.entryDate || null;
   profile.exitDate = payload.exitDate || null;
   profile.hasCustomArmour = payload.hasCustomArmour || null;

@@ -11,6 +11,7 @@ import './apis/taskStatus.server';
 import './apis/ranks.server';
 import './apis/specializations.server';
 import './apis/squads.server';
+import './apis/medals.server';
 
 export function validateUserId(userId) {
   if (!userId || typeof userId !== 'string') {

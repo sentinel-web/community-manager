@@ -76,6 +76,7 @@ export default function Members() {
         squadId: member.profile?.squadId,
         discordTag: member.profile?.discordTag,
         steamProfileLink: member.profile?.steamProfileLink,
+        medalIds: member.profile?.medalIds,
         description: member.profile?.description,
         entryDate: member.profile?.entryDate,
         exitDate: member.profile?.exitDate,
