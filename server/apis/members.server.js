@@ -10,51 +10,21 @@ function extractProfileFromPayload(payload = {}) {
     return {};
   }
   const profile = {};
-  if (payload.profilePictureId && typeof payload.profilePictureId === 'string') {
-    profile.profilePictureId = payload.profilePictureId;
-  }
-  if (payload.name && typeof payload.name === 'string') {
-    profile.name = payload.name;
-  }
-  if (payload.id && typeof payload.id === 'number') {
-    profile.id = payload.id;
-  }
-  if (payload.rankId && typeof payload.rankId === 'string') {
-    profile.rankId = payload.rankId;
-  }
-  if (payload.navyRankId && typeof payload.navyRankId === 'string') {
-    profile.navyRankId = payload.navyRankId;
-  }
-  if (payload.specializationIds && Array.isArray(payload.specializationIds)) {
-    profile.specializationIds = payload.specializationIds;
-  }
-  if (payload.roleId && typeof payload.roleId === 'string') {
-    profile.roleId = payload.roleId;
-  }
-  if (payload.squadId && typeof payload.squadId === 'string') {
-    profile.squadId = payload.squadId;
-  }
-  if (payload.discordTag && typeof payload.discordTag === 'string') {
-    profile.discordTag = payload.discordTag;
-  }
-  if (payload.steamProfileLink && typeof payload.steamProfileLink === 'string') {
-    profile.steamProfileLink = payload.steamProfileLink;
-  }
-  if (payload.entryDate && payload.entryDate instanceof Date) {
-    profile.entryDate = payload.entryDate;
-  }
-  if (payload.exitDate && payload.exitDate instanceof Date) {
-    profile.exitDate = payload.exitDate;
-  }
-  if (payload.hasCustomArmour && typeof payload.hasCustomArmour === 'boolean') {
-    profile.hasCustomArmour = payload.hasCustomArmour;
-  }
-  if (payload.description && typeof payload.description === 'string') {
-    profile.description = payload.description;
-  }
-  if (payload.taskFilter && typeof payload.taskFilter === 'object') {
-    profile.taskFilter = payload.taskFilter;
-  }
+  profile.profilePictureId = payload.profilePictureId || null;
+  profile.name = payload.name || null;
+  profile.id = payload.id || null;
+  profile.rankId = payload.rankId || null;
+  profile.navyRankId = payload.navyRankId || null;
+  profile.specializationIds = payload.specializationIds || null;
+  profile.roleId = payload.roleId || null;
+  profile.squadId = payload.squadId || null;
+  profile.discordTag = payload.discordTag || null;
+  profile.steamProfileLink = payload.steamProfileLink || null;
+  profile.entryDate = payload.entryDate || null;
+  profile.exitDate = payload.exitDate || null;
+  profile.hasCustomArmour = payload.hasCustomArmour || null;
+  profile.description = payload.description || null;
+  profile.taskFilter = payload.taskFilter || null;
   return profile;
 }
 
@@ -114,7 +84,7 @@ if (Meteor.isServer) {
         validatePayload(data);
         const modifier = {};
         const profile = extractProfileFromPayload(data);
-        if (data.username && typeof data.username === 'string') {
+        if (data.username !== undefined || typeof data.username === 'string') {
           modifier.username = data.username;
         }
         for (const [key, value] of Object.entries(profile)) {

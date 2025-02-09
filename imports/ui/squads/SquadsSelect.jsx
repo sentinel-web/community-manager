@@ -4,6 +4,7 @@ import { Meteor } from 'meteor/meteor';
 import { SubdrawerContext } from '../app/App';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import SquadsForm from './SquadsForm';
+import { getLegibleTextColor } from '../../helpers/color.helper';
 
 export default function SquadsSelect({ multiple, name, label, rules }) {
   const { modal } = App.useApp();
@@ -61,7 +62,9 @@ export default function SquadsSelect({ multiple, name, label, rules }) {
       return (
         <Row gutter={[8, 8]} align="middle" justify="space-between" key={value}>
           <Col flex="auto">
-            <Tag color={match?.raw?.color}>{label}</Tag>
+            <Tag color={match?.raw?.color}>
+              <span style={{ color: match?.raw?.color ? getLegibleTextColor(match?.raw?.color) : undefined }}>{label}</span>
+            </Tag>
           </Col>
           <Col>
             <Button icon={<EditOutlined />} onClick={e => handleEdit(e, value)} type="text" size="small" />
@@ -83,6 +86,7 @@ export default function SquadsSelect({ multiple, name, label, rules }) {
         optionFilterProp="label"
         options={squadOptions}
         optionRender={optionRender}
+        allowClear
         showSearch
       />
     </Form.Item>

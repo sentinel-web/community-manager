@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import TableActions from '../table/body/actions/TableActions';
 import { Meteor } from 'meteor/meteor';
 import { Tag } from 'antd';
+import { getLegibleTextColor } from '../../helpers/color.helper';
 
 export const SquadTags = ({ squadIds }) => {
   const [squadNames, setSquadNames] = useState([]);
@@ -19,7 +20,7 @@ export const SquadTags = ({ squadIds }) => {
     <>
       {squadNames.map(squadName => (
         <Tag color={squadName.raw.color} key={squadName.value}>
-          {squadName.label}
+          <span style={{ color: squadName.raw.color ? getLegibleTextColor(squadName.raw.color) : undefined }}>{squadName.label}</span>
         </Tag>
       ))}
     </>
@@ -39,7 +40,18 @@ const getSquadsColumns = (handleEdit, handleDelete) => {
       dataIndex: 'name',
       key: 'name',
       sorter: (a, b) => String(a.name).localeCompare(String(b.name)),
-      render: (name, record) => (name ? record.color ? <Tag color={record.color}>{name}</Tag> : <Tag>{name}</Tag> : '-'),
+      render: (name, record) =>
+        name ? (
+          record.color ? (
+            <Tag color={record.color}>
+              <span style={{ color: getLegibleTextColor(record.color) }}>{name}</span>
+            </Tag>
+          ) : (
+            <Tag>{name}</Tag>
+          )
+        ) : (
+          '-'
+        ),
     },
     {
       title: 'Short Range Frequency',

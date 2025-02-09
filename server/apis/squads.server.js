@@ -9,13 +9,14 @@ if (Meteor.isServer) {
   });
 
   Meteor.methods({
-    'squads.insert': async function ({ name = '', description = '', image = '', color = '', shortRangeFrequency = '' } = {}) {
+    'squads.insert': async function ({ name = '', description = '', image = '', color = '', shortRangeFrequency = '', parentSquadId = '' } = {}) {
       validateUserId(this.userId);
       validateString(name, false);
       validateString(color, true);
       validateString(description, true);
       validateString(image, true);
       validateString(shortRangeFrequency, true);
+      validateString(parentSquadId, true);
       try {
         return await SquadsCollection.insertAsync({
           name,
@@ -23,6 +24,7 @@ if (Meteor.isServer) {
           description,
           image,
           shortRangeFrequency,
+          parentSquadId,
         });
       } catch (error) {
         throw new Meteor.Error(error.message);

@@ -52,29 +52,6 @@ export default function Members() {
     [message, notification]
   );
 
-  const handleModalConfirm = useCallback(
-    record => {
-      modal.confirm({
-        title: 'Delete Member',
-        content: 'Are you sure you want to delete this member?',
-        okText: 'Yes, delete',
-        cancelText: 'No, cancel',
-        onOk: () => {
-          deleteMember(record);
-        },
-      });
-    },
-    [modal, deleteMember]
-  );
-
-  const handleDelete = useCallback(
-    (e, record) => {
-      e.preventDefault();
-      handleModalConfirm(record);
-    },
-    [handleModalConfirm]
-  );
-
   const filterMember = useCallback(
     member => {
       const charactersOfInput = searchValue.split('');
@@ -111,7 +88,7 @@ export default function Members() {
     return buildDatasource();
   }, [buildDatasource]);
 
-  const columns = useMemo(() => getMembersColumns(handleDelete, handleEdit), [handleDelete, handleEdit]);
+  const columns = useMemo(() => getMembersColumns(deleteMember, handleEdit), [deleteMember, handleEdit]);
 
   return (
     <SectionCard title="Members" ready={ready}>
