@@ -37,7 +37,9 @@ const TaskForm = ({ setOpen }) => {
 
   const [participantOptions, setParticipantOptions] = useState([]);
   useEffect(() => {
-    Meteor.callAsync('members.options').then(res => setParticipantOptions(res));
+    Meteor.callAsync('members.options')
+      .then(res => setParticipantOptions(res))
+      .catch(console.error);
   }, []);
 
   const { ready, taskStatus } = useTaskStatus();
