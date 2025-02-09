@@ -10,6 +10,7 @@ import SpecializationsSelect from '../specializations/SpecializationsSelect';
 import SquadsSelect from '../squads/SquadsSelect';
 import { getDateFromValues } from '../events/EventForm';
 import dayjs from 'dayjs';
+import MedalsSelect from './medals/MedalsSelect';
 
 const empty = <></>;
 
@@ -57,6 +58,7 @@ export default function MemberForm({ setOpen }) {
         squadId: null,
         discordTag: '',
         steamProfileLink: '',
+        medalIds: [],
         description: '',
         entryDate: null,
         exitDate: null,
@@ -219,6 +221,7 @@ export default function MemberForm({ setOpen }) {
       <Form.Item name="steamProfileLink" label="Steam Profile Link" rules={[{ type: 'url' }]}>
         <Input placeholder="Enter steam profile link" />
       </Form.Item>
+      <MedalsSelect name="medalIds" label="Medals" rules={[{ type: 'array' }]} multiple />
       <Form.Item name="entryDate" label="Entry Date" rules={[{ type: 'date' }]}>
         <DatePicker style={styles.datePicker} />
       </Form.Item>
