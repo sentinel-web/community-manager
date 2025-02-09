@@ -17,7 +17,7 @@ const styles = {
   },
 };
 
-const getDateFromValues = (values, key = 'date') => {
+export const getDateFromValues = (values, key = 'date') => {
   if (values[key]) return values[key].toDate();
   return values[key];
 };
@@ -129,11 +129,13 @@ const EventForm = ({ setOpen }) => {
         <Input.TextArea placeholder="Enter description" />
       </Form.Item>
       <Row gutter={[16, 16]} justify="end" align="middle">
-        <Col>
-          <Button type="primary" onClick={handleDelete} icon={<DeleteOutlined />} danger>
-            Delete
-          </Button>
-        </Col>
+        {model?._id && (
+          <Col>
+            <Button type="primary" onClick={handleDelete} icon={<DeleteOutlined />} danger>
+              Delete
+            </Button>
+          </Col>
+        )}
         <Col>
           <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
             Save
