@@ -61,14 +61,6 @@ const getSquadsColumns = (handleEdit, handleDelete) => {
       render: shortRangeFrequency => shortRangeFrequency || '-',
     },
     {
-      title: 'Description',
-      dataIndex: 'description',
-      key: 'description',
-      sorter: (a, b) => String(a.description).localeCompare(String(b.description)),
-      render: description => (description ? <span style={{ whiteSpace: 'pre-wrap' }}>{description}</span> : '-'),
-      ellipsis: true,
-    },
-    {
       title: 'Actions',
       dataIndex: 'actions',
       key: 'actions',

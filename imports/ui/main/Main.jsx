@@ -6,6 +6,7 @@ import { Meteor } from 'meteor/meteor';
 import { useTracker } from 'meteor/react-meteor-data';
 
 const Dashboard = lazy(() => import('../dashboard/Dashboard'));
+const Orbat = lazy(() => import('../orbat/Orbat'));
 const Members = lazy(() => import('../members/Members'));
 const Events = lazy(() => import('../events/Events'));
 const Tasks = lazy(() => import('../tasks/Tasks'));
@@ -26,6 +27,7 @@ export default function Main() {
       {loggedIn && (
         <Suspense>
           {navigationValue === 'dashboard' && <Dashboard />}
+          {navigationValue === 'orbat' && <Orbat />}
           {navigationValue === 'members' && <Members />}
           {navigationValue === 'events' && <Events />}
           {navigationValue === 'tasks' && <Tasks />}

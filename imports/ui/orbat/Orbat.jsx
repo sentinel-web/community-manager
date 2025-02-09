@@ -79,13 +79,15 @@ export default function Orbat() {
 
   return (
     <Card loading={!ready} title={<Typography.Title level={3}>ORBAT</Typography.Title>}>
-      {options.map((option, index) => {
-        return (
-          <Tree key={option.id} label={<ORBAT_Label option={option} />}>
-            {option.children?.map(mapOption)}
-          </Tree>
-        );
-      })}
+      <div style={{ overflow: 'auto' }}>
+        {options.map((option, index) => {
+          return (
+            <Tree key={option.id} label={<ORBAT_Label option={option} />}>
+              {option.children?.map(mapOption)}
+            </Tree>
+          );
+        })}
+      </div>
     </Card>
   );
 }
