@@ -1,6 +1,6 @@
 import ProfilePicturesCollection from '../../imports/api/collections/profilePictures.collection';
 import { Meteor } from 'meteor/meteor';
-import { validateObject, validatePublish } from '../main';
+import { validateObject, validatePublish, validateString, validateUserId } from '../main';
 
 function validatePayload(payload) {
   validateObject(payload, false);

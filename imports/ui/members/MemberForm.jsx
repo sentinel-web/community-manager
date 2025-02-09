@@ -1,4 +1,4 @@
-import { Alert, App, Button, Col, Divider, Form, Input, InputNumber, Row, Select } from 'antd';
+import { Alert, App, Button, Col, DatePicker, Divider, Form, Input, InputNumber, Row, Select, Switch } from 'antd';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Meteor } from 'meteor/meteor';
 import { DrawerContext, SubdrawerContext } from '../app/App';
@@ -8,12 +8,25 @@ import { PlusOutlined } from '@ant-design/icons';
 import RanksSelect from './ranks/RanksSelect';
 import SpecializationsSelect from '../specializations/SpecializationsSelect';
 import SquadsSelect from '../squads/SquadsSelect';
+import { getDateFromValues } from '../events/EventForm';
+import dayjs from 'dayjs';
 
 const empty = <></>;
 
+const styles = {
+  datePicker: {
+    width: '100%',
+  },
+};
+
+export const transformDateToDays = (values, key = 'date') => {
+  if (values[key]) return dayjs(values[key]);
+  return values[key];
+};
+
 export default function MemberForm({ setOpen }) {
   const [form] = Form.useForm();
-  const { message, notification, modal } = App.useApp();
+  const { message, notification } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [disableSubmit, setDisableSubmit] = useState(false);
   const [nameError, setNameError] = useState(undefined);
@@ -26,7 +39,10 @@ export default function MemberForm({ setOpen }) {
   }, [drawer]);
   useEffect(() => {
     if (Object.keys(model).length > 0) {
-      form.setFieldsValue(model);
+      const data = { ...model };
+      data.entryDate = transformDateToDays(data, 'entryDate');
+      data.exitDate = transformDateToDays(data, 'exitDate');
+      form.setFieldsValue(data);
     } else {
       form.setFieldsValue({
         profilePictureId: '',
@@ -35,12 +51,15 @@ export default function MemberForm({ setOpen }) {
         name: '',
         id: null,
         rankId: null,
+        navyRankId: null,
         specializationIds: [],
         roleId: null,
         squadId: null,
         discordTag: '',
         steamProfileLink: '',
         description: '',
+        entryDate: null,
+        exitDate: null,
       });
       setFileList([]);
     }
@@ -75,7 +94,8 @@ export default function MemberForm({ setOpen }) {
   const handleSubmit = useCallback(
     values => {
       setLoading(true);
-      const args = model?._id ? [model._id, values] : [values];
+      const payload = { ...values, entryDate: getDateFromValues(values, 'entryDate'), exitDate: getDateFromValues(values, 'exitDate') };
+      const args = model?._id ? [model._id, payload] : [payload];
       Meteor.callAsync(Meteor.user() && model?._id ? 'members.update' : 'members.insert', ...args)
         .then(() => {
           setOpen(false);
@@ -180,6 +200,14 @@ export default function MemberForm({ setOpen }) {
           <Button icon={<PlusOutlined />} onClick={handleCreate} style={{ marginTop: 8 }} />
         </Col>
       </Row>
+      <Row gutter={8} justify="space-between" align="middle">
+        <Col flex="auto">
+          <RanksSelect name="navyRankId" label="Navy Rank" rules={[{ type: 'string' }]} />
+        </Col>
+        <Col>
+          <Button icon={<PlusOutlined />} onClick={handleCreate} style={{ marginTop: 8 }} />
+        </Col>
+      </Row>
       <SpecializationsSelect name="specializationIds" label="Specializations" rules={[{ type: 'array' }]} multiple />
       <Form.Item name="roleId" label="Role" rules={[{ type: 'string' }]}>
         <Select placeholder="Select role" options={[]} />
@@ -190,6 +218,15 @@ export default function MemberForm({ setOpen }) {
       </Form.Item>
       <Form.Item name="steamProfileLink" label="Steam Profile Link" rules={[{ type: 'url' }]}>
         <Input placeholder="Enter steam profile link" />
+      </Form.Item>
+      <Form.Item name="entryDate" label="Entry Date" rules={[{ type: 'date' }]}>
+        <DatePicker style={styles.datePicker} />
+      </Form.Item>
+      <Form.Item name="exitDate" label="Exit Date" rules={[{ type: 'date' }]}>
+        <DatePicker style={styles.datePicker} />
+      </Form.Item>
+      <Form.Item name="hasCustomArmour" label="Has Custom Armour" valuePropName="checked" rules={[{ type: 'boolean' }]}>
+        <Switch />
       </Form.Item>
       {Meteor.user() && (
         <Form.Item name="description" label="Description" rules={[{ type: 'string' }]}>
