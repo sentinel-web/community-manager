@@ -10,22 +10,22 @@ function extractProfileFromPayload(payload = {}) {
     return {};
   }
   const profile = {};
-  profile.profilePictureId = payload.profilePictureId || null;
-  profile.name = payload.name || null;
-  profile.id = payload.id || null;
-  profile.rankId = payload.rankId || null;
-  profile.navyRankId = payload.navyRankId || null;
-  profile.specializationIds = payload.specializationIds || null;
-  profile.roleId = payload.roleId || null;
-  profile.squadId = payload.squadId || null;
-  profile.discordTag = payload.discordTag || null;
-  profile.steamProfileLink = payload.steamProfileLink || null;
-  profile.medalIds = payload.medalIds || null;
-  profile.entryDate = payload.entryDate || null;
-  profile.exitDate = payload.exitDate || null;
-  profile.hasCustomArmour = payload.hasCustomArmour || null;
-  profile.description = payload.description || null;
-  profile.taskFilter = payload.taskFilter || null;
+  profile.profilePictureId = payload.profilePictureId === null ? null : payload.profilePictureId;
+  profile.name = payload.name === null ? null : payload.name;
+  profile.id = payload.id === null ? null : payload.id;
+  profile.rankId = payload.rankId === null ? null : payload.rankId;
+  profile.navyRankId = payload.navyRankId === null ? null : payload.navyRankId;
+  profile.specializationIds = payload.specializationIds === null ? null : payload.specializationIds;
+  profile.roleId = payload.roleId === null ? null : payload.roleId;
+  profile.squadId = payload.squadId === null ? null : payload.squadId;
+  profile.discordTag = payload.discordTag === null ? null : payload.discordTag;
+  profile.steamProfileLink = payload.steamProfileLink === null ? null : payload.steamProfileLink;
+  profile.medalIds = payload.medalIds === null ? null : payload.medalIds;
+  profile.entryDate = payload.entryDate === null ? null : payload.entryDate;
+  profile.exitDate = payload.exitDate === null ? null : payload.exitDate;
+  profile.hasCustomArmour = payload.hasCustomArmour === null ? null : payload.hasCustomArmour;
+  profile.description = payload.description === null ? null : payload.description;
+  profile.taskFilter = payload.taskFilter || undefined;
   return profile;
 }
 
@@ -41,10 +41,8 @@ async function getMemberById(memberId) {
 }
 
 const getRankName = async rankId => {
-  validateString(rankId, false);
-  const rank = await RanksCollection.findOneAsync({ _id: rankId });
-  validateObject(rank, false);
-  return rank.name || '-';
+  const rank = await RanksCollection.findOneAsync({ _id: rankId || null });
+  return rank?.name;
 };
 
 const getFullName = (rank, id, name) => {

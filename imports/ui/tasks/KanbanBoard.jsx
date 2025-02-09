@@ -46,7 +46,7 @@ const KanbanBoard = ({ tasks, options, edit, remove }) => {
                                     <Button onClick={e => edit(e, task)}>Edit</Button>
                                   </Col>
                                   <Col>
-                                    <Button onClick={e => remove(e, task._id)} danger>
+                                    <Button onClick={e => remove(e, task)} danger>
                                       Delete
                                     </Button>
                                   </Col>
