@@ -4,6 +4,7 @@ import { DrawerContext, SubdrawerContext } from '../app/App';
 import { turnBase64ToImage, turnImageFileToBase64 } from '../profile-picture-input/ProfilePictureInput';
 import { Meteor } from 'meteor/meteor';
 import { getColorFromValues } from '../specializations/SpecializationForm';
+import SquadsSelect from './SquadsSelect';
 
 const SquadsForm = ({ setOpen, useSubdrawer = false }) => {
   const drawer = useContext(DrawerContext);
@@ -76,6 +77,7 @@ const SquadsForm = ({ setOpen, useSubdrawer = false }) => {
           </Form.Item>
         </Col>
       </Row>
+      <SquadsSelect label="Parent Squad" name="parentSquadId" rules={[{ required: false, type: 'string' }]} />
       <Form.Item label="Short Range Frequency" name="shortRangeFrequency" rules={[{ required: false, type: 'string' }]}>
         <Input placeholder="Enter icon" />
       </Form.Item>
