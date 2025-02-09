@@ -126,7 +126,7 @@ const EventForm = ({ setOpen }) => {
         <Input placeholder="Enter preset link" />
       </Form.Item>
       <Form.Item name="description" label="Description" rules={[{ type: 'string' }]}>
-        <Input.TextArea placeholder="Enter description" />
+        <Input.TextArea autoSize placeholder="Enter description" />
       </Form.Item>
       <Row gutter={[16, 16]} justify="end" align="middle">
         {model?._id && (
