@@ -7,6 +7,8 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { DrawerContext } from '../app/App';
 import EventForm from './EventForm';
+import { getLegibleTextColor } from '../../helpers/color.helper';
+import { Meteor } from 'meteor/meteor';
 
 const localizer = dayjsLocalizer(dayjs);
 const DnDCalendar = withDragAndDrop(Calendar);
@@ -14,6 +16,25 @@ const DnDCalendar = withDragAndDrop(Calendar);
 const EventCalendar = () => {
   const { events } = useEvents();
   const drawer = useContext(DrawerContext);
+
+  const [eventTypes, setEventTypes] = useState([]);
+  const fetchEventTypes = useCallback(() => {
+    Meteor.callAsync('eventTypes.options')
+      .then(res => setEventTypes(res))
+      .catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    fetchEventTypes();
+  }, [fetchEventTypes]);
+
+  const getColorByEventType = useCallback(
+    eventTypeId => {
+      const option = eventTypes.find(option => option.value === eventTypeId);
+      return option?.raw?.color;
+    },
+    [eventTypes]
+  );
 
   const openForm = useCallback(
     event => {
@@ -70,6 +91,12 @@ const EventCalendar = () => {
         events={events.map(e => ({ ...e, title: e.name }))}
         startAccessor="start"
         endAccessor="end"
+        eventPropGetter={event => {
+          const color = event.color || (event.eventType ? getColorByEventType(event.eventType) : undefined);
+          const backgroundColor = color;
+          const textColor = color ? getLegibleTextColor(backgroundColor) : undefined;
+          return { style: { backgroundColor: backgroundColor, color: textColor } };
+        }}
         draggableAccessor={event => true}
         onEventDrop={onEventDrop}
         onEventResize={onEventResize}

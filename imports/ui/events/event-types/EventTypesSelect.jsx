@@ -4,14 +4,17 @@ import { Meteor } from 'meteor/meteor';
 import { SubdrawerContext } from '../../app/App';
 import EventTypesForm from './EventTypesForm';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
+import useEventTypes from './eventTypes.hook';
 
 const EventTypesSelect = ({ multiple, name, label, rules }) => {
   const { modal } = App.useApp();
   const subdrawer = useContext(SubdrawerContext);
+  const { eventTypes } = useEventTypes();
   const [eventTypesOptions, setEventTypesOptions] = useState([]);
   useEffect(() => {
+    if (!eventTypes?.length) return;
     Meteor.callAsync('eventTypes.options').then(res => setEventTypesOptions(res));
-  }, []);
+  }, [eventTypes]);
 
   const handleEdit = useCallback(
     (e, value) => {
