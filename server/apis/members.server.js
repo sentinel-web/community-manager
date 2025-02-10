@@ -20,6 +20,7 @@ function extractProfileFromPayload(payload = {}) {
   profile.squadId = payload.squadId === null ? null : payload.squadId;
   profile.discordTag = payload.discordTag === null ? null : payload.discordTag;
   profile.steamProfileLink = payload.steamProfileLink === null ? null : payload.steamProfileLink;
+  profile.staticAttendencePoints = payload.staticAttendencePoints === null ? null : payload.staticAttendencePoints;
   profile.medalIds = payload.medalIds === null ? null : payload.medalIds;
   profile.entryDate = payload.entryDate === null ? null : payload.entryDate;
   profile.exitDate = payload.exitDate === null ? null : payload.exitDate;
