@@ -1,4 +1,4 @@
-import { Alert, App, Button, Col, DatePicker, Divider, Form, Input, InputNumber, Row, Select, Switch } from 'antd';
+import { Alert, App, Button, Col, DatePicker, Divider, Form, Input, InputNumber, Row, Select, Switch, Tabs } from 'antd';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Meteor } from 'meteor/meteor';
 import { DrawerContext, SubdrawerContext } from '../app/App';
@@ -58,6 +58,7 @@ export default function MemberForm({ setOpen }) {
         squadId: null,
         discordTag: '',
         steamProfileLink: '',
+        staticAttendencePoints: null,
         medalIds: [],
         description: '',
         entryDate: null,
@@ -157,85 +158,109 @@ export default function MemberForm({ setOpen }) {
           <ProfilePictureInput fileList={fileList} setFileList={setFileList} form={form} profilePictureId={model?.profilePictureId} />
         </Col>
       </Row>
-      <Divider>Member Account</Divider>
-      <Form.Item name="username" label="Username" rules={[{ required: true, type: 'string' }]} required>
-        <Input placeholder="Enter username" />
-      </Form.Item>
-      {!model?._id && (
-        <Form.Item name="password" label="Password" rules={[{ required: true, type: 'string' }]} required>
-          <Input.Password placeholder="Enter password" />
-        </Form.Item>
-      )}
-      <Divider>Member Profile</Divider>
-      {(nameError === 'error' || idError === 'error') && (
-        <Alert
-          className="alert"
-          type="error"
-          description={
-            <Row gutter={[16, 16]}>
-              {nameError === 'error' && <Col span={24}>Name already in use</Col>}
-              {idError === 'error' && <Col span={24}>ID already in use</Col>}
-            </Row>
-          }
-        />
-      )}
-      <Form.Item name="name" label="Name" rules={[{ required: true, type: 'string' }]} status={nameError} required>
-        <Input placeholder="Enter name" />
-      </Form.Item>
-      <Form.Item
-        name="id"
-        label="ID"
-        rules={[
-          { required: true, type: 'number' },
-          { min: 1000, max: 9999, type: 'number' },
+      <Tabs
+        items={[
+          {
+            key: 'basedata',
+            label: 'Base Data',
+            children: (
+              <>
+                <Divider>Member Account</Divider>
+                <Form.Item name="username" label="Username" rules={[{ required: true, type: 'string' }]} required>
+                  <Input placeholder="Enter username" />
+                </Form.Item>
+                {!model?._id && (
+                  <Form.Item name="password" label="Password" rules={[{ required: true, type: 'string' }]} required>
+                    <Input.Password placeholder="Enter password" />
+                  </Form.Item>
+                )}
+                <Divider>Member Profile</Divider>
+                {(nameError === 'error' || idError === 'error') && (
+                  <Alert
+                    className="alert"
+                    type="error"
+                    description={
+                      <Row gutter={[16, 16]}>
+                        {nameError === 'error' && <Col span={24}>Name already in use</Col>}
+                        {idError === 'error' && <Col span={24}>ID already in use</Col>}
+                      </Row>
+                    }
+                  />
+                )}
+                <Form.Item
+                  name="id"
+                  label="ID"
+                  rules={[
+                    { required: true, type: 'number' },
+                    { min: 1000, max: 9999, type: 'number' },
+                  ]}
+                  status={idError}
+                  required
+                >
+                  <InputNumber min={1000} max={9999} step={1} placeholder="Enter ID" />
+                </Form.Item>
+                <Form.Item name="name" label="Name" rules={[{ required: true, type: 'string' }]} status={nameError} required>
+                  <Input placeholder="Enter name" />
+                </Form.Item>
+                <SquadsSelect name="squadId" label="Squad" rules={[{ type: 'string' }]} />
+                <Row gutter={8} justify="space-between" align="middle">
+                  <Col flex="auto">
+                    <RanksSelect name="rankId" label="Rank" rules={[{ type: 'string' }]} />
+                  </Col>
+                  <Col>
+                    <Button icon={<PlusOutlined />} onClick={handleCreate} style={{ marginTop: 8 }} />
+                  </Col>
+                </Row>
+                <Row gutter={8} justify="space-between" align="middle">
+                  <Col flex="auto">
+                    <RanksSelect name="navyRankId" label="Navy Rank" rules={[{ type: 'string' }]} />
+                  </Col>
+                  <Col>
+                    <Button icon={<PlusOutlined />} onClick={handleCreate} style={{ marginTop: 8 }} />
+                  </Col>
+                </Row>
+                {Meteor.user() && (
+                  <Form.Item name="description" label="Description" rules={[{ type: 'string' }]}>
+                    <Input.TextArea autoSize placeholder="Enter description" />
+                  </Form.Item>
+                )}
+              </>
+            ),
+          },
+          {
+            key: 'admin',
+            label: 'Admin Data',
+            children: (
+              <>
+                <Divider>Admin Data</Divider>
+                <SpecializationsSelect name="specializationIds" label="Specializations" rules={[{ type: 'array' }]} multiple />
+                <MedalsSelect name="medalIds" label="Medals" rules={[{ type: 'array' }]} multiple />
+                <Form.Item name="roleId" label="Role" rules={[{ type: 'string' }]}>
+                  <Select placeholder="Select role" options={[]} />
+                </Form.Item>
+                <Form.Item name="discordTag" label="Discord Tag" rules={[{ type: 'string' }]}>
+                  <Input placeholder="Enter discord tag" />
+                </Form.Item>
+                <Form.Item name="steamProfileLink" label="Steam Profile Link" rules={[{ type: 'url' }]}>
+                  <Input placeholder="Enter steam profile link" />
+                </Form.Item>
+                <Form.Item name="staticAttendencePoints" label="Static Attendence Points" rules={[{ type: 'number' }]}>
+                  <InputNumber min={0} placeholder="Enter static attendence points" />
+                </Form.Item>
+                <Form.Item name="entryDate" label="Entry Date" rules={[{ type: 'date' }]}>
+                  <DatePicker style={styles.datePicker} />
+                </Form.Item>
+                <Form.Item name="exitDate" label="Exit Date" rules={[{ type: 'date' }]}>
+                  <DatePicker style={styles.datePicker} />
+                </Form.Item>
+                <Form.Item name="hasCustomArmour" label="Has Custom Armour" valuePropName="checked" rules={[{ type: 'boolean' }]}>
+                  <Switch />
+                </Form.Item>
+              </>
+            ),
+          },
         ]}
-        status={idError}
-        required
-      >
-        <InputNumber min={1000} max={9999} step={1} placeholder="Enter ID" />
-      </Form.Item>
-      <Row gutter={8} justify="space-between" align="middle">
-        <Col flex="auto">
-          <RanksSelect name="rankId" label="Rank" rules={[{ type: 'string' }]} />
-        </Col>
-        <Col>
-          <Button icon={<PlusOutlined />} onClick={handleCreate} style={{ marginTop: 8 }} />
-        </Col>
-      </Row>
-      <Row gutter={8} justify="space-between" align="middle">
-        <Col flex="auto">
-          <RanksSelect name="navyRankId" label="Navy Rank" rules={[{ type: 'string' }]} />
-        </Col>
-        <Col>
-          <Button icon={<PlusOutlined />} onClick={handleCreate} style={{ marginTop: 8 }} />
-        </Col>
-      </Row>
-      <SpecializationsSelect name="specializationIds" label="Specializations" rules={[{ type: 'array' }]} multiple />
-      <Form.Item name="roleId" label="Role" rules={[{ type: 'string' }]}>
-        <Select placeholder="Select role" options={[]} />
-      </Form.Item>
-      <SquadsSelect name="squadId" label="Squad" rules={[{ type: 'string' }]} />
-      <Form.Item name="discordTag" label="Discord Tag" rules={[{ type: 'string' }]}>
-        <Input placeholder="Enter discord tag" />
-      </Form.Item>
-      <Form.Item name="steamProfileLink" label="Steam Profile Link" rules={[{ type: 'url' }]}>
-        <Input placeholder="Enter steam profile link" />
-      </Form.Item>
-      <MedalsSelect name="medalIds" label="Medals" rules={[{ type: 'array' }]} multiple />
-      <Form.Item name="entryDate" label="Entry Date" rules={[{ type: 'date' }]}>
-        <DatePicker style={styles.datePicker} />
-      </Form.Item>
-      <Form.Item name="exitDate" label="Exit Date" rules={[{ type: 'date' }]}>
-        <DatePicker style={styles.datePicker} />
-      </Form.Item>
-      <Form.Item name="hasCustomArmour" label="Has Custom Armour" valuePropName="checked" rules={[{ type: 'boolean' }]}>
-        <Switch />
-      </Form.Item>
-      {Meteor.user() && (
-        <Form.Item name="description" label="Description" rules={[{ type: 'string' }]}>
-          <Input.TextArea autoSize placeholder="Enter description" />
-        </Form.Item>
-      )}
+      />
       <Row gutter={[16, 16]} align="middle" justify="end">
         <Col>
           <Button onClick={handleCancel} danger>
