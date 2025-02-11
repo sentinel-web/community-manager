@@ -1,8 +1,9 @@
-import { Card, Typography } from 'antd';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Card, Descriptions, Empty, Popover, Typography } from 'antd';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Tree, TreeNode } from 'react-organizational-chart';
 import useSquads from '../squads/squads.hook';
 import { turnBase64ToImage } from '../profile-picture-input/ProfilePictureInput';
+import { Meteor } from 'meteor/meteor';
 
 export default function Orbat() {
   const { ready, squads } = useSquads();
@@ -80,7 +81,7 @@ export default function Orbat() {
   return (
     <Card loading={!ready} title={<Typography.Title level={3}>ORBAT</Typography.Title>}>
       <div style={{ overflow: 'auto' }}>
-        {options.map((option, index) => {
+        {options.map(option => {
           return (
             <Tree key={option.id} label={<ORBAT_Label option={option} />}>
               {option.children?.map(mapOption)}
@@ -93,15 +94,42 @@ export default function Orbat() {
 }
 
 const ORBAT_Label = ({ option }) => {
+  const [items, setItems] = useState([]);
+  useEffect(() => {
+    Meteor.callAsync('orbat.popover.items', option.id).then(setItems).catch(console.error);
+  }, [option.id]);
+  const hoverStyle = { cursor: 'pointer' };
+
   return (
     <div>
-      <img style={{ maxWidth: '128px', aspectRatio: '1/1', objectFit: 'contain' }} src={option.src} alt="-" title={option.info || option.name} />
-      <div>
-        <Typography.Text>{option.name}</Typography.Text>
-      </div>
-      <div>
-        <Typography.Text type="secondary">{option.descritpion}</Typography.Text>
-      </div>
+      <Popover
+        trigger="click"
+        placement="bottom"
+        content={
+          items?.length > 0 ? (
+            <div style={{ maxWidth: 400 }}>
+              <Descriptions items={items} />
+            </div>
+          ) : (
+            <Empty />
+          )
+        }
+      >
+        <img
+          style={{ ...hoverStyle, maxWidth: '128px', aspectRatio: '1/1', objectFit: 'contain' }}
+          src={option.src}
+          alt="-"
+          title={option.info || option.name}
+        />
+        <div>
+          <Typography.Text style={hoverStyle}>{option.name}</Typography.Text>
+        </div>
+        <div>
+          <Typography.Text style={hoverStyle} type="secondary">
+            {option.descritpion}
+          </Typography.Text>
+        </div>
+      </Popover>
     </div>
   );
 };
