@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "jsx": "react",
+    "module": "ESNext",
+    "target": "ES2020",
+    "baseUrl": ".",
+    "paths": {
+      "/*": ["./*"],
+      "/imports/*": ["./imports/*"],
+      "meteor/*": [".meteor/local/types/packages.d.ts"]
+    },
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "preserveSymlinks": true
+  },
+  "include": [
+    "**/*",
+    ".meteor/local/types/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/node_modules/*",
+    ".meteor",
+    "dist",
+    "build"
+  ]
+}

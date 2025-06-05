@@ -1,7 +1,7 @@
 # README.MD
 
 Welcome, to the community-manager repository!<br /> Here we are building a web application that is focused on handling the tasks related to managing ArmA III communities.
-Our primary focus is managing events and attendence, members and skills, tasks, and settings.
+Our primary focus is managing events and attendance, members and skills, tasks, and settings.
 
 ## Requirements
 
