@@ -1,15 +1,15 @@
+import { DeleteOutlined, SaveOutlined } from '@ant-design/icons';
 import { App, Button, Col, ColorPicker, DatePicker, Form, Input, Row, Switch } from 'antd';
-import React, { useCallback, useContext, useMemo } from 'react';
-import { DrawerContext, SubdrawerContext } from '../app/App';
-import { Meteor } from 'meteor/meteor';
 import dayjs from 'dayjs';
+import { Meteor } from 'meteor/meteor';
+import PropTypes from 'prop-types';
+import React, { useCallback, useContext, useMemo } from 'react';
+import EventTypesCollection from '../../api/collections/eventTypes.collection';
+import { DrawerContext } from '../app/App';
+import CollectionSelect from '../components/CollectionSelect';
 import MembersSelect from '../members/MembersSelect';
-import EventTypesSelect from './event-types/EventTypesSelect';
-import { DeleteOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons';
-import EventTypesForm from './event-types/EventTypesForm';
 import { getColorFromValues } from '../specializations/SpecializationForm';
-
-const empty = <></>;
+import EventTypesForm from './event-types/EventTypesForm';
 
 const styles = {
   datePicker: {
@@ -22,10 +22,12 @@ export const getDateFromValues = (values, key = 'date') => {
   return values[key];
 };
 
+EventForm.propTypes = {
+  setOpen: PropTypes.func,
+};
 const EventForm = ({ setOpen }) => {
   const { message, notification, modal } = App.useApp();
   const drawer = useContext(DrawerContext);
-  const subdrawer = useContext(SubdrawerContext);
 
   const model = useMemo(() => {
     const data = drawer.drawerModel || {};
@@ -61,14 +63,6 @@ const EventForm = ({ setOpen }) => {
     [model?._id, message, notification, setOpen]
   );
 
-  const handleCreate = useCallback(() => {
-    subdrawer.setDrawerTitle('Create Event Types');
-    subdrawer.setDrawerModel({});
-    subdrawer.setDrawerComponent(<EventTypesForm setOpen={subdrawer.setDrawerOpen} useSubdrawer />);
-    subdrawer.setDrawerExtra(empty);
-    subdrawer.setDrawerOpen(true);
-  }, [subdrawer]);
-
   const handleDelete = useCallback(() => {
     modal.confirm({
       title: 'Are you sure you want to delete this event?',
@@ -89,8 +83,10 @@ const EventForm = ({ setOpen }) => {
     });
   }, [modal, message, setOpen, model, notification]);
 
+  const [form] = Form.useForm();
+
   return (
-    <Form layout="vertical" initialValues={model} onFinish={handleFinish}>
+    <Form form={form} layout="vertical" initialValues={model} onFinish={handleFinish}>
       <Form.Item name="start" label="Start Date" rules={[{ required: true, type: 'date' }]}>
         <DatePicker style={styles.datePicker} showTime />
       </Form.Item>
@@ -100,16 +96,17 @@ const EventForm = ({ setOpen }) => {
       <Form.Item name="name" label="Name" rules={[{ required: true, type: 'string' }]}>
         <Input placeholder="Enter title" />
       </Form.Item>
-      <Row gutter={8} justify="space-between" align="middle" style={{ flexWrap: 'nowrap' }}>
-        <Col flex="auto">
-          <EventTypesSelect name="eventType" label="Event Type" rules={[{ type: 'string' }]} />
-        </Col>
-        <Col>
-          <Button icon={<PlusOutlined />} onClick={handleCreate} style={{ marginTop: 8 }} />
-        </Col>
-      </Row>
-      <MembersSelect multiple name="hosts" label="Hosts" rules={[{ type: 'array' }]} />
-      <MembersSelect multiple name="attendees" label="Attendees" rules={[{ type: 'array' }]} />
+      <CollectionSelect
+        defaultValue={model.eventType}
+        name="eventType"
+        label="Event Type"
+        rules={[{ type: 'string' }]}
+        collection={EventTypesCollection}
+        subscription="eventTypes"
+        FormComponent={EventTypesForm}
+      />
+      <MembersSelect multiple name="hosts" label="Hosts" rules={[{ type: 'array' }]} defaultValue={model.hosts} />
+      <MembersSelect multiple name="attendees" label="Attendees" rules={[{ type: 'array' }]} defaultValue={model.attendees} />
       <Row gutter={[16, 16]} style={{ flexWrap: 'nowrap' }}>
         <Col flex="auto">
           <Form.Item name="isPrivate" label="Is Private" valuePropName="checked" rules={[{ type: 'boolean' }]}>

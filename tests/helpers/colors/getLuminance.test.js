@@ -1,5 +1,6 @@
-import getLuminance from '../../../imports/helpers/colors/getLuminance';
+/* global describe, it */
 import assert from 'node:assert';
+import getLuminance from '../../../imports/helpers/colors/getLuminance';
 
 describe('getLuminance', () => {
   it('calculates luminance for RGB values', () => {

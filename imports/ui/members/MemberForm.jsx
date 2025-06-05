@@ -1,18 +1,19 @@
-import { Alert, App, Button, Col, DatePicker, Divider, Form, Input, InputNumber, Row, Select, Switch, Tabs } from 'antd';
-import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { Alert, App, Button, Col, DatePicker, Divider, Form, Input, InputNumber, Row, Switch } from 'antd';
+import dayjs from 'dayjs';
 import { Meteor } from 'meteor/meteor';
-import { DrawerContext, SubdrawerContext } from '../app/App';
+import PropTypes from 'prop-types';
+import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import RanksCollection from '../../api/collections/ranks.collection';
+import RolesCollection from '../../api/collections/roles.collection';
+import { DrawerContext } from '../app/App';
+import CollectionSelect from '../components/CollectionSelect';
+import { getDateFromValues } from '../events/EventForm';
 import ProfilePictureInput from '../profile-picture-input/ProfilePictureInput';
-import RanksForm from './ranks/RanksForm';
-import { PlusOutlined } from '@ant-design/icons';
-import RanksSelect from './ranks/RanksSelect';
 import SpecializationsSelect from '../specializations/SpecializationsSelect';
 import SquadsSelect from '../squads/SquadsSelect';
-import { getDateFromValues } from '../events/EventForm';
-import dayjs from 'dayjs';
 import MedalsSelect from './medals/MedalsSelect';
-
-const empty = <></>;
+import RanksForm from './ranks/RanksForm';
+import RolesForm from './roles/RolesForm';
 
 const styles = {
   datePicker: {
@@ -25,6 +26,9 @@ export const transformDateToDays = (values, key = 'date') => {
   return values[key];
 };
 
+MemberForm.propTypes = {
+  setOpen: PropTypes.func,
+};
 export default function MemberForm({ setOpen }) {
   const [form] = Form.useForm();
   const { message, notification } = App.useApp();
@@ -34,35 +38,37 @@ export default function MemberForm({ setOpen }) {
   const [idError, setIdError] = useState(undefined);
   const [fileList, setFileList] = useState([]);
   const drawer = useContext(DrawerContext);
-  const subdrawer = useContext(SubdrawerContext);
   const model = useMemo(() => {
     return drawer.drawerModel || {};
   }, [drawer]);
   useEffect(() => {
     if (Object.keys(model).length > 0) {
       const data = { ...model };
-      data.entryDate = transformDateToDays(data, 'entryDate');
-      data.exitDate = transformDateToDays(data, 'exitDate');
+      data.profile.entryDate = transformDateToDays(data.profile, 'entryDate');
+      data.profile.exitDate = transformDateToDays(data.profile, 'exitDate');
       form.setFieldsValue(data);
     } else {
       form.setFieldsValue({
-        profilePictureId: '',
         username: '',
         password: '',
-        name: '',
-        id: null,
-        rankId: null,
-        navyRankId: null,
-        specializationIds: [],
-        roleId: null,
-        squadId: null,
-        discordTag: '',
-        steamProfileLink: '',
-        staticAttendencePoints: null,
-        medalIds: [],
-        description: '',
-        entryDate: null,
-        exitDate: null,
+        profile: {
+          profilePictureId: '',
+          name: '',
+          id: null,
+          rankId: null,
+          navyRankId: null,
+          specializationIds: [],
+          roleId: null,
+          squadId: null,
+          discordTag: '',
+          steamProfileLink: '',
+          staticAttendancePoints: null,
+          staticInactivityPoints: null,
+          medalIds: [],
+          description: '',
+          entryDate: null,
+          exitDate: null,
+        },
       });
       setFileList([]);
     }
@@ -77,6 +83,7 @@ export default function MemberForm({ setOpen }) {
         setDisableSubmit(!result);
       })
       .catch(error => {
+        console.error(error);
         setNameError('warning');
       });
   }, [form, model?._id]);
@@ -90,6 +97,7 @@ export default function MemberForm({ setOpen }) {
         setDisableSubmit(!result);
       })
       .catch(error => {
+        console.error(error);
         setIdError('warning');
       });
   }, [form, model?._id]);
@@ -97,7 +105,14 @@ export default function MemberForm({ setOpen }) {
   const handleSubmit = useCallback(
     values => {
       setLoading(true);
-      const payload = { ...values, entryDate: getDateFromValues(values, 'entryDate'), exitDate: getDateFromValues(values, 'exitDate') };
+      const payload = {
+        ...values,
+        profile: {
+          ...values.profile,
+          entryDate: getDateFromValues(values.profile, 'entryDate'),
+          exitDate: getDateFromValues(values.profile, 'exitDate'),
+        },
+      };
       const args = model?._id ? [model._id, payload] : [payload];
       Meteor.callAsync(Meteor.user() && model?._id ? 'members.update' : 'members.insert', ...args)
         .then(() => {
@@ -142,125 +157,115 @@ export default function MemberForm({ setOpen }) {
     handleValuesChange(model ?? {}, model ?? {});
   }, [model, handleValuesChange]);
 
-  const handleCreate = useCallback(() => {
-    subdrawer.setDrawerTitle('Create Rank');
-    subdrawer.setDrawerModel({});
-    subdrawer.setDrawerComponent(<RanksForm setOpen={subdrawer.setDrawerOpen} useSubdrawer />);
-    subdrawer.setDrawerExtra(empty);
-    subdrawer.setDrawerOpen(true);
-  }, [subdrawer]);
-
   return (
     <Form autoComplete="off" form={form} layout="vertical" onFinish={handleSubmit} onValuesChange={handleValuesChange} disabled={loading}>
-      <Form.Item name="profilePictureId" hidden />
+      <Form.Item name={['profile', 'profilePictureId']} hidden />
       <Row justify="center" align="middle">
         <Col span={24}>
-          <ProfilePictureInput fileList={fileList} setFileList={setFileList} form={form} profilePictureId={model?.profilePictureId} />
+          <ProfilePictureInput fileList={fileList} setFileList={setFileList} form={form} profilePictureId={model?.profile?.profilePictureId} />
         </Col>
       </Row>
-      <Tabs
-        items={[
-          {
-            key: 'basedata',
-            label: 'Base Data',
-            children: (
-              <>
-                <Divider>Member Account</Divider>
-                <Form.Item name="username" label="Username" rules={[{ required: true, type: 'string' }]} required>
-                  <Input placeholder="Enter username" />
-                </Form.Item>
-                {!model?._id && (
-                  <Form.Item name="password" label="Password" rules={[{ required: true, type: 'string' }]} required>
-                    <Input.Password placeholder="Enter password" />
-                  </Form.Item>
-                )}
-                <Divider>Member Profile</Divider>
-                {(nameError === 'error' || idError === 'error') && (
-                  <Alert
-                    className="alert"
-                    type="error"
-                    description={
-                      <Row gutter={[16, 16]}>
-                        {nameError === 'error' && <Col span={24}>Name already in use</Col>}
-                        {idError === 'error' && <Col span={24}>ID already in use</Col>}
-                      </Row>
-                    }
-                  />
-                )}
-                <Form.Item
-                  name="id"
-                  label="ID"
-                  rules={[
-                    { required: true, type: 'number' },
-                    { min: 1000, max: 9999, type: 'number' },
-                  ]}
-                  status={idError}
-                  required
-                >
-                  <InputNumber min={1000} max={9999} step={1} placeholder="Enter ID" />
-                </Form.Item>
-                <Form.Item name="name" label="Name" rules={[{ required: true, type: 'string' }]} status={nameError} required>
-                  <Input placeholder="Enter name" />
-                </Form.Item>
-                <SquadsSelect name="squadId" label="Squad" rules={[{ type: 'string' }]} />
-                <Row gutter={8} justify="space-between" align="middle">
-                  <Col flex="auto">
-                    <RanksSelect name="rankId" label="Rank" rules={[{ type: 'string' }]} />
-                  </Col>
-                  <Col>
-                    <Button icon={<PlusOutlined />} onClick={handleCreate} style={{ marginTop: 8 }} />
-                  </Col>
-                </Row>
-                <Row gutter={8} justify="space-between" align="middle">
-                  <Col flex="auto">
-                    <RanksSelect name="navyRankId" label="Navy Rank" rules={[{ type: 'string' }]} />
-                  </Col>
-                  <Col>
-                    <Button icon={<PlusOutlined />} onClick={handleCreate} style={{ marginTop: 8 }} />
-                  </Col>
-                </Row>
-                {Meteor.user() && (
-                  <Form.Item name="description" label="Description" rules={[{ type: 'string' }]}>
-                    <Input.TextArea autoSize placeholder="Enter description" />
-                  </Form.Item>
-                )}
-              </>
-            ),
-          },
-          {
-            key: 'admin',
-            label: 'Admin Data',
-            children: (
-              <>
-                <Divider>Admin Data</Divider>
-                <SpecializationsSelect name="specializationIds" label="Specializations" rules={[{ type: 'array' }]} multiple />
-                <MedalsSelect name="medalIds" label="Medals" rules={[{ type: 'array' }]} multiple />
-                <Form.Item name="roleId" label="Role" rules={[{ type: 'string' }]}>
-                  <Select placeholder="Select role" options={[]} />
-                </Form.Item>
-                <Form.Item name="discordTag" label="Discord Tag" rules={[{ type: 'string' }]}>
-                  <Input placeholder="Enter discord tag" />
-                </Form.Item>
-                <Form.Item name="steamProfileLink" label="Steam Profile Link" rules={[{ type: 'url' }]}>
-                  <Input placeholder="Enter steam profile link" />
-                </Form.Item>
-                <Form.Item name="staticAttendencePoints" label="Static Attendence Points" rules={[{ type: 'number' }]}>
-                  <InputNumber min={0} placeholder="Enter static attendence points" />
-                </Form.Item>
-                <Form.Item name="entryDate" label="Entry Date" rules={[{ type: 'date' }]}>
-                  <DatePicker style={styles.datePicker} />
-                </Form.Item>
-                <Form.Item name="exitDate" label="Exit Date" rules={[{ type: 'date' }]}>
-                  <DatePicker style={styles.datePicker} />
-                </Form.Item>
-                <Form.Item name="hasCustomArmour" label="Has Custom Armour" valuePropName="checked" rules={[{ type: 'boolean' }]}>
-                  <Switch />
-                </Form.Item>
-              </>
-            ),
-          },
+      <Divider>Member Account</Divider>
+      <Form.Item name="username" label="Username" rules={[{ required: true, type: 'string' }]} required>
+        <Input placeholder="Enter username" />
+      </Form.Item>
+      {!model?._id && (
+        <Form.Item name="password" label="Password" rules={[{ required: true, type: 'string' }]} required>
+          <Input.Password placeholder="Enter password" />
+        </Form.Item>
+      )}
+      <Divider>Member Profile</Divider>
+      {(nameError === 'error' || idError === 'error') && (
+        <Alert
+          className="alert"
+          type="error"
+          description={
+            <Row gutter={[16, 16]}>
+              {nameError === 'error' && <Col span={24}>Name already in use</Col>}
+              {idError === 'error' && <Col span={24}>ID already in use</Col>}
+            </Row>
+          }
+        />
+      )}
+      <Form.Item
+        name={['profile', 'id']}
+        label="ID"
+        rules={[
+          { required: true, type: 'number' },
+          { min: 1000, max: 9999, type: 'number' },
         ]}
+        status={idError}
+        required
+      >
+        <InputNumber min={1000} max={9999} step={1} placeholder="Enter ID" />
+      </Form.Item>
+      <Form.Item name={['profile', 'name']} label="Name" rules={[{ required: true, type: 'string' }]} status={nameError} required>
+        <Input placeholder="Enter name" />
+      </Form.Item>
+      <SquadsSelect name={['profile', 'squadId']} label="Squad" rules={[{ type: 'string' }]} defaultValue={model?.profile?.squadId} />
+      <CollectionSelect
+        defaultValue={model?.profile?.rankId}
+        FormComponent={RanksForm}
+        name={['profile', 'rankId']}
+        label="Rank"
+        rules={[{ type: 'string' }]}
+        collection={RanksCollection}
+        subscription="ranks"
       />
+      <CollectionSelect
+        defaultValue={model?.profile?.navyRankId}
+        FormComponent={RanksForm}
+        name={['profile', 'navyRankId']}
+        label="Navy Rank"
+        rules={[{ type: 'string' }]}
+        collection={RanksCollection}
+        subscription="ranks"
+      />
+      {Meteor.user() && (
+        <Form.Item name={['profile', 'description']} label="Description" rules={[{ type: 'string' }]}>
+          <Input.TextArea autoSize placeholder="Enter description" />
+        </Form.Item>
+      )}
+      <Divider>Admin Data</Divider>
+      <SpecializationsSelect
+        name={['profile', 'specializationIds']}
+        label="Specializations"
+        rules={[{ type: 'array' }]}
+        defaultValue={model?.profile?.specializationIds}
+        multiple
+      />
+      <MedalsSelect name={['profile', 'medalIds']} label="Medals" rules={[{ type: 'array' }]} defaultValue={model?.profile?.medalIds} multiple />
+      <CollectionSelect
+        name={['profile', 'roleId']}
+        label="Role"
+        placeholder="Select role"
+        rules={[{ type: 'string' }]}
+        subscription="roles"
+        FormComponent={RolesForm}
+        defaultValue={model?.profile?.roleId}
+        collection={RolesCollection}
+      />
+      <Form.Item name={['profile', 'discordTag']} label="Discord Tag" rules={[{ type: 'string' }]}>
+        <Input placeholder="Enter discord tag" />
+      </Form.Item>
+      <Form.Item name={['profile', 'steamProfileLink']} label="Steam Profile Link" rules={[{ type: 'url' }]}>
+        <Input placeholder="Enter steam profile link" />
+      </Form.Item>
+      <Form.Item name={['profile', 'staticAttendancePoints']} label="Static Attendance Points" rules={[{ type: 'number' }]}>
+        <InputNumber min={0} placeholder="Enter static attendance points" />
+      </Form.Item>
+      <Form.Item name={['profile', 'staticInactivityPoints']} label="Static Inactivity Points" rules={[{ type: 'number' }]}>
+        <InputNumber min={0} placeholder="Enter static inactivity points" />
+      </Form.Item>
+      <Form.Item name={['profile', 'entryDate']} label="Entry Date" rules={[{ type: 'date' }]}>
+        <DatePicker style={styles.datePicker} />
+      </Form.Item>
+      <Form.Item name={['profile', 'exitDate']} label="Exit Date" rules={[{ type: 'date' }]}>
+        <DatePicker style={styles.datePicker} />
+      </Form.Item>
+      <Form.Item name={['profile', 'hasCustomArmour']} label="Has Custom Armour" valuePropName="checked" rules={[{ type: 'boolean' }]}>
+        <Switch />
+      </Form.Item>
       <Row gutter={[16, 16]} align="middle" justify="end">
         <Col>
           <Button onClick={handleCancel} danger>

@@ -1,10 +1,12 @@
-import React from 'react';
-import useSettings from './settings.hook';
-import { Meteor } from 'meteor/meteor';
-import Logo from '../logo/Logo';
-import { Col, ColorPicker, Input, Row, Typography } from 'antd';
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { Button, Col, ColorPicker, Input, List, Row, Typography } from 'antd';
 import Dragger from 'antd/es/upload/Dragger';
-import SectionCard from '../section-card/SectionCard';
+import { Meteor } from 'meteor/meteor';
+import PropTypes from 'prop-types';
+import React, { useCallback, useState } from 'react';
+import Logo from '../logo/Logo';
+import SectionCard from '../section/SectionCard';
+import useSettings from './settings.hook';
 
 async function getEventValue(key, e) {
   switch (key) {
@@ -48,7 +50,7 @@ async function turnImageFileIntoWebp(file) {
 }
 
 export default function Settings() {
-  const { ready, communityTitle, communityLogo, communityColor } = useSettings();
+  const { ready, communityTitle, communityLogo, communityColor, communityNameBlackList, communityIdBlackList } = useSettings();
 
   async function handleChange(e, key) {
     const value = await getEventValue(key, e);
@@ -64,14 +66,20 @@ export default function Settings() {
           <Row gutter={[16, 16]}>
             <Col span={24}>
               <Row gutter={[16, 16]}>
+                <Col span={24}>
+                  <CommunityLogoSettings communityLogo={communityLogo} handleChange={handleChange} />
+                </Col>
                 <Col xs={24} lg={12}>
                   <CommunityTitleSettings communityTitle={communityTitle} handleChange={handleChange} />
                 </Col>
                 <Col xs={24} lg={12}>
                   <CommunityColorSettings communityColor={communityColor} handleChange={handleChange} />
                 </Col>
-                <Col span={24}>
-                  <CommunityLogoSettings communityLogo={communityLogo} handleChange={handleChange} />
+                <Col xs={24} lg={12}>
+                  <CommunityNameBlackListSettings communityNameBlackList={communityNameBlackList} handleChange={handleChange} />
+                </Col>
+                <Col xs={24} lg={12}>
+                  <CommunityIdBlackListSettings communityIdBlackList={communityIdBlackList} handleChange={handleChange} />
                 </Col>
               </Row>
             </Col>
@@ -82,6 +90,9 @@ export default function Settings() {
   );
 }
 
+SettingTitle.propTypes = {
+  title: PropTypes.string,
+};
 function SettingTitle({ title }) {
   return (
     <Col span={24}>
@@ -90,6 +101,132 @@ function SettingTitle({ title }) {
   );
 }
 
+CommunityNameBlackListSettings.propTypes = {
+  communityNameBlackList: PropTypes.array,
+  handleChange: PropTypes.func,
+};
+function CommunityNameBlackListSettings({ communityNameBlackList, handleChange }) {
+  const [value, setValue] = useState('');
+
+  const handleClick = useCallback(() => {
+    if (value) {
+      const newList = [...communityNameBlackList, value];
+      handleChange({ target: { value: newList } }, 'community-name-black-list');
+      setValue('');
+    }
+  }, [value, communityNameBlackList, handleChange]);
+
+  const handleDelete = useCallback(
+    item => {
+      const newList = communityNameBlackList.filter(name => name !== item);
+      handleChange({ target: { value: newList } }, 'community-name-black-list');
+    },
+    [communityNameBlackList, handleChange]
+  );
+
+  return (
+    <Row gutter={[16, 16]}>
+      <SettingTitle title="Member Name Black List" />
+      <Col span={24}>
+        <Row gutter={[16, 16]}>
+          <Col flex="auto">
+            <Input
+              value={value}
+              style={{ width: '100%' }}
+              placeholder="Enter new black listed name"
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  handleClick();
+                }
+              }}
+              onChange={e => setValue(e.target.value)}
+            />
+          </Col>
+          <Col>
+            <Button icon={<PlusOutlined />} onClick={handleClick} type="primary" />
+          </Col>
+        </Row>
+      </Col>
+      <Col span={24}>
+        <List
+          bordered
+          dataSource={communityNameBlackList}
+          renderItem={item => (
+            <List.Item actions={[<Button type="text" danger key={`delete-${item}`} icon={<DeleteOutlined />} onClick={() => handleDelete(item)} />]}>
+              <Typography.Text>{item}</Typography.Text>
+            </List.Item>
+          )}
+        />
+      </Col>
+    </Row>
+  );
+}
+
+CommunityIdBlackListSettings.propTypes = {
+  communityIdBlackList: PropTypes.array,
+  handleChange: PropTypes.func,
+};
+function CommunityIdBlackListSettings({ communityIdBlackList, handleChange }) {
+  const [value, setValue] = useState('');
+
+  const handleClick = useCallback(() => {
+    if (value) {
+      const newList = [...communityIdBlackList, value];
+      handleChange({ target: { value: newList } }, 'community-id-black-list');
+      setValue('');
+    }
+  }, [value, communityIdBlackList, handleChange]);
+
+  const handleDelete = useCallback(
+    item => {
+      const newList = communityIdBlackList.filter(name => name !== item);
+      handleChange({ target: { value: newList } }, 'community-id-black-list');
+    },
+    [communityIdBlackList, handleChange]
+  );
+
+  return (
+    <Row gutter={[16, 16]}>
+      <SettingTitle title="Member ID Black List" />
+      <Col span={24}>
+        <Row gutter={[16, 16]}>
+          <Col flex="auto">
+            <Input
+              value={value}
+              style={{ width: '100%' }}
+              placeholder="Enter new black listed id"
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  handleClick();
+                }
+              }}
+              onChange={e => setValue(e.target.value)}
+            />
+          </Col>
+          <Col>
+            <Button icon={<PlusOutlined />} onClick={handleClick} type="primary" />
+          </Col>
+        </Row>
+      </Col>
+      <Col span={24}>
+        <List
+          bordered
+          dataSource={communityIdBlackList}
+          renderItem={item => (
+            <List.Item actions={[<Button type="text" danger key={`delete-${item}`} icon={<DeleteOutlined />} onClick={() => handleDelete(item)} />]}>
+              <Typography.Text>{item}</Typography.Text>
+            </List.Item>
+          )}
+        />
+      </Col>
+    </Row>
+  );
+}
+
+CommunityTitleSettings.propTypes = {
+  communityTitle: PropTypes.string,
+  handleChange: PropTypes.func,
+};
 function CommunityTitleSettings({ communityTitle, handleChange }) {
   return (
     <Row gutter={[16, 16]}>
@@ -101,6 +238,10 @@ function CommunityTitleSettings({ communityTitle, handleChange }) {
   );
 }
 
+CommunityLogoSettings.propTypes = {
+  communityLogo: PropTypes.string,
+  handleChange: PropTypes.func,
+};
 function CommunityLogoSettings({ communityLogo, handleChange }) {
   return (
     <Row gutter={[16, 16]}>
@@ -120,6 +261,10 @@ function CommunityLogoSettings({ communityLogo, handleChange }) {
   );
 }
 
+CommunityColorSettings.propTypes = {
+  communityColor: PropTypes.string,
+  handleChange: PropTypes.func,
+};
 function CommunityColorSettings({ communityColor, handleChange }) {
   return (
     <Row gutter={[16, 16]}>

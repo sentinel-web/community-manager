@@ -1,9 +1,9 @@
+import { Col, Grid, Row } from 'antd';
 import React from 'react';
 import Logo from '../logo/Logo';
-import Title from '../title/Title';
 import Navigation from '../navigation/Navigation';
 import useSettings from '../settings/settings.hook';
-import { Col, Grid, Row } from 'antd';
+import Title from '../title/Title';
 
 export default function Header() {
   const { communityTitle, communityLogo } = useSettings();

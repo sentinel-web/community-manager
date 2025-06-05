@@ -1,9 +1,15 @@
-import { App, Button, Col, ColorPicker, Form, Input, Row } from 'antd';
-import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { App, ColorPicker, Form, Input } from 'antd';
 import { Meteor } from 'meteor/meteor';
+import PropTypes from 'prop-types';
+import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { DrawerContext, SubdrawerContext } from '../../app/App';
+import FormFooter from '../../components/FormFooter';
 import { getColorFromValues } from '../../specializations/SpecializationForm';
 
+EventTypesForm.propTypes = {
+  setOpen: PropTypes.func,
+  useSubdrawer: PropTypes.bool,
+};
 export default function EventTypesForm({ setOpen, useSubdrawer }) {
   const [form] = Form.useForm();
   const { message, notification } = App.useApp();
@@ -60,18 +66,7 @@ export default function EventTypesForm({ setOpen, useSubdrawer }) {
       <Form.Item name="color" label="Color">
         <ColorPicker format="hex" />
       </Form.Item>
-      <Row gutter={[16, 16]} align="middle" justify="end">
-        <Col>
-          <Button onClick={() => setOpen(false)} danger>
-            Cancel
-          </Button>
-        </Col>
-        <Col>
-          <Button type="primary" htmlType="submit" loading={loading}>
-            Submit
-          </Button>
-        </Col>
-      </Row>
+      <FormFooter setOpen={setOpen} />
     </Form>
   );
 }

@@ -1,7 +1,14 @@
 import { App, Button, Col, Row } from 'antd';
+import PropTypes from 'prop-types';
 import React, { useCallback } from 'react';
 
-export default function TableActions({ record, handleDelete, handleEdit }) {
+TableActions.propTypes = {
+  record: PropTypes.any,
+  handleDelete: PropTypes.func,
+  handleEdit: PropTypes.func,
+  extra: PropTypes.any,
+};
+export default function TableActions({ record, handleDelete, handleEdit, extra }) {
   const { modal } = App.useApp();
   const styles = {
     button: {
@@ -24,7 +31,7 @@ export default function TableActions({ record, handleDelete, handleEdit }) {
   );
 
   return (
-    <Row gutter={[16, 16]}>
+    <Row gutter={[16, 16]} justify="center">
       <Col flex="auto">
         <Button style={styles.button} onClick={e => handleEdit(e, record)}>
           Edit
@@ -35,6 +42,7 @@ export default function TableActions({ record, handleDelete, handleEdit }) {
           Delete
         </Button>
       </Col>
+      {extra && React.createElement(extra, { record })}
     </Row>
   );
 }

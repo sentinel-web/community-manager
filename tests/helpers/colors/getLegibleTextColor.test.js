@@ -1,7 +1,8 @@
+/* global describe, it */
+import assert from 'node:assert';
 import getLegibleTextColor from '../../../imports/helpers/colors/getLegibleTextColor';
 import getLuminance from '../../../imports/helpers/colors/getLuminance';
 import parseColor from '../../../imports/helpers/colors/parseColor';
-import assert from 'node:assert';
 
 describe('getLegibleTextColor', () => {
   it('returns black for dark backgrounds', () => {

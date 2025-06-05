@@ -1,9 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import TableActions from '../table/body/actions/TableActions';
-import { Meteor } from 'meteor/meteor';
 import { Tag } from 'antd';
-import { getLegibleTextColor } from '../../helpers/color.helper';
+import { Meteor } from 'meteor/meteor';
+import PropTypes from 'prop-types';
+import React, { useEffect, useState } from 'react';
+import getLegibleTextColor from '../../helpers/colors/getLegibleTextColor';
+import TableActions from '../table/body/actions/TableActions';
 
+SquadTags.propTypes = {
+  squadIds: PropTypes.array,
+};
 export const SquadTags = ({ squadIds }) => {
   const [squadNames, setSquadNames] = useState([]);
 

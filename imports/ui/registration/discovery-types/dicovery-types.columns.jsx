@@ -1,6 +1,6 @@
+import { Tag } from 'antd';
 import React from 'react';
 import TableActions from '../../table/body/actions/TableActions';
-import { Tag } from 'antd';
 
 export default function getDiscoveryTypeColumns(handleDelete, handleEdit) {
   return [

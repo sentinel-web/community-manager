@@ -1,21 +1,29 @@
-import React, { useEffect, useState } from 'react';
-import { Meteor } from 'meteor/meteor';
-import { Form, Select } from 'antd';
+import PropTypes from 'prop-types';
+import React from 'react';
+import MembersCollection from '../../api/collections/members.collection';
+import CollectionSelect from '../components/CollectionSelect';
+import MemberForm from './MemberForm';
 
-export default function MembersSelect({ multiple, name, label, rules }) {
-  const [memberOptions, setMemberOptions] = useState([]);
-  useEffect(() => {
-    Meteor.callAsync('members.options').then(res => setMemberOptions(res));
-  }, []);
-
+MembersSelect.propTypes = {
+  multiple: PropTypes.bool,
+  name: PropTypes.string,
+  label: PropTypes.string,
+  rules: PropTypes.array,
+  defaultValue: PropTypes.any,
+};
+export default function MembersSelect({ multiple, name, label, rules, defaultValue }) {
   return (
-    <Form.Item name={name} label={label} rules={rules}>
-      <Select
-        placeholder={multiple ? 'Select members' : 'Select member'}
-        mode={multiple ? 'multiple' : undefined}
-        optionFilterProp="label"
-        options={memberOptions}
-      />
-    </Form.Item>
+    <CollectionSelect
+      defaultValue={defaultValue}
+      name={name}
+      label={label}
+      rules={rules}
+      mode={multiple ? 'multiple' : undefined}
+      collection={MembersCollection}
+      FormComponent={MemberForm}
+      subscription="members"
+      placeholder={multiple ? 'Select members' : 'Select member'}
+      extra={<></>}
+    />
   );
 }

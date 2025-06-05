@@ -1,12 +1,18 @@
 import { Tag, Tooltip } from 'antd';
-import React, { useMemo } from 'react';
-import useRanks from './ranks.hook';
+import { Meteor } from 'meteor/meteor';
+import PropTypes from 'prop-types';
+import React, { useEffect, useState } from 'react';
 
+RankTag.propTypes = {
+  rankId: PropTypes.string,
+};
 export default function RankTag({ rankId }) {
-  const { ready, ranks } = useRanks();
-  const match = useMemo(() => {
-    return ready ? ranks.find(status => status._id === rankId) : null;
-  }, [rankId, ready, ranks]);
+  const [match, setMatch] = useState(null);
+  useEffect(() => {
+    if (!rankId) setMatch(null);
+    else Meteor.callAsync('ranks.read', { _id: rankId }, { limit: 1 }).then(res => setMatch(res[0]));
+  }, [rankId]);
+
   if (!rankId) return <Tag>-</Tag>;
   if (!match) return <Tag>Not found</Tag>;
   return (

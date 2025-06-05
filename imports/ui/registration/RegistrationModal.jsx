@@ -1,7 +1,12 @@
 import { Form, Modal } from 'antd';
+import PropTypes from 'prop-types';
 import React, { useCallback } from 'react';
 import RegistrationForm from './RegistrationForm';
 
+RegistrationModal.propTypes = {
+  open: PropTypes.bool,
+  setOpen: PropTypes.func,
+};
 export default function RegistrationModal({ open, setOpen }) {
   const [form] = Form.useForm();
 
@@ -11,7 +16,7 @@ export default function RegistrationModal({ open, setOpen }) {
   }, [setOpen, form.resetFields]);
 
   return (
-    <Modal title="Registration" open={open} onCancel={handleClose} footer={null} destroyOnClose>
+    <Modal title="Registration" open={open} onCancel={handleClose} footer={null} centered destroyOnHidden>
       <RegistrationForm form={form} setOpen={setOpen} />
     </Modal>
   );

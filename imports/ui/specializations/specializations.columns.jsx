@@ -1,10 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import TableActions from '../table/body/actions/TableActions';
-import RankTag from '../members/ranks/RankTag';
-import { Participants } from '../tasks/task.columns';
-import { Meteor } from 'meteor/meteor';
 import { Tag } from 'antd';
+import { Meteor } from 'meteor/meteor';
+import PropTypes from 'prop-types';
+import React, { useEffect, useState } from 'react';
+import RankTag from '../members/ranks/RankTag';
+import TableActions from '../table/body/actions/TableActions';
+import { Participants } from '../tasks/task.columns';
 
+SpecializationTags.propTypes = {
+  specializations: PropTypes.array,
+};
 const SpecializationTags = ({ specializations }) => {
   const [values, setValues] = useState('loading...');
   useEffect(() => {

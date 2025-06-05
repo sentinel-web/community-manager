@@ -1,8 +1,14 @@
 import { App, Button, Form, Input, Modal, Space } from 'antd';
-import React, { useCallback, useState } from 'react';
 import { Meteor } from 'meteor/meteor';
+import PropTypes from 'prop-types';
+import React, { useCallback, useEffect, useState } from 'react';
 
-const ConfirmModal = ({ open, setOpen, record, handleExtraCleanup }) => {
+ConfirmModal.propTypes = {
+  open: PropTypes.bool,
+  setOpen: PropTypes.func,
+  record: PropTypes.object,
+};
+const ConfirmModal = ({ open, setOpen, record }) => {
   const { message, notification } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
@@ -20,16 +26,16 @@ const ConfirmModal = ({ open, setOpen, record, handleExtraCleanup }) => {
 
     try {
       const values = await form.validateFields();
-      const { username, password } = values;
+      const { username, password } = values || {};
+      const { name, id, age, discoveryType, description } = record || {};
       const payload = {
         username,
         password,
-        ...record,
+        profile: { name, id, age, discoveryType, description, registrationId: record._id },
       };
       await Meteor.callAsync('members.insert', payload);
       message.success('Member created');
       setOpen(false);
-      handleExtraCleanup?.();
     } catch (error) {
       console.error(error);
       notification.error({
@@ -39,7 +45,7 @@ const ConfirmModal = ({ open, setOpen, record, handleExtraCleanup }) => {
     } finally {
       setLoading(false);
     }
-  }, [form, record, handleExtraCleanup, setOpen, message, notification]);
+  }, [form, record, setOpen, message, notification]);
 
   const toggleOpen = useCallback(() => setOpen(prevOpen => !prevOpen), [setOpen]);
 
@@ -65,13 +71,27 @@ const ConfirmModal = ({ open, setOpen, record, handleExtraCleanup }) => {
   );
 };
 
-export default function RegistrationExtra({ record, handleExtraCleanup }) {
+RegistrationExtra.propTypes = {
+  record: PropTypes.object,
+};
+export default function RegistrationExtra({ record }) {
   const [open, setOpen] = useState(false);
+
+  const [createdAlready, setCreatedAlready] = useState(true);
+
+  useEffect(() => {
+    Meteor.callAsync('members.findOne', { 'profile.registrationId': record._id }, { fields: { service: 0 } }).then(res => {
+      if (res) setCreatedAlready(true);
+      else setCreatedAlready(false);
+    });
+  }, [record]);
 
   return (
     <Space>
-      <Button onClick={() => setOpen(true)}>Create member</Button>
-      <ConfirmModal open={open} setOpen={setOpen} record={record} handleExtraCleanup={handleExtraCleanup} />
+      <Button disabled={createdAlready} onClick={() => setOpen(true)}>
+        Create member
+      </Button>
+      <ConfirmModal open={open} setOpen={setOpen} record={record} />
     </Space>
   );
 }

@@ -1,5 +1,6 @@
-import parseColor from '../../../imports/helpers/colors/parseColor';
+/* global describe, it */
 import assert from 'node:assert';
+import parseColor from '../../../imports/helpers/colors/parseColor';
 
 describe('parseColor', () => {
   it('parses hex color to RGB values', () => {

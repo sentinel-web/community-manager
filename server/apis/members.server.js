@@ -1,38 +1,15 @@
-import { Meteor } from 'meteor/meteor';
+import dayjs from 'dayjs';
 import { Accounts } from 'meteor/accounts-base';
+import { Meteor } from 'meteor/meteor';
+import AttendancesCollection from '../../imports/api/collections/attendances.collection';
+import MedalsCollection from '../../imports/api/collections/medals.collection';
 import MembersCollection from '../../imports/api/collections/members.collection';
+import ProfilePicturesCollection from '../../imports/api/collections/profilePictures.collection';
 import RanksCollection from '../../imports/api/collections/ranks.collection';
-import { validateObject, validatePublish, validateString, validateUserId } from '../main';
-
-function extractProfileFromPayload(payload = {}) {
-  if (!payload || typeof payload !== 'object') {
-    console.warn('Invalid payload', payload);
-    return {};
-  }
-  const profile = {};
-  profile.profilePictureId = payload.profilePictureId === null ? null : payload.profilePictureId;
-  profile.name = payload.name === null ? null : payload.name;
-  profile.id = payload.id === null ? null : payload.id;
-  profile.rankId = payload.rankId === null ? null : payload.rankId;
-  profile.navyRankId = payload.navyRankId === null ? null : payload.navyRankId;
-  profile.specializationIds = payload.specializationIds === null ? null : payload.specializationIds;
-  profile.roleId = payload.roleId === null ? null : payload.roleId;
-  profile.squadId = payload.squadId === null ? null : payload.squadId;
-  profile.discordTag = payload.discordTag === null ? null : payload.discordTag;
-  profile.steamProfileLink = payload.steamProfileLink === null ? null : payload.steamProfileLink;
-  profile.staticAttendencePoints = payload.staticAttendencePoints === null ? null : payload.staticAttendencePoints;
-  profile.medalIds = payload.medalIds === null ? null : payload.medalIds;
-  profile.entryDate = payload.entryDate === null ? null : payload.entryDate;
-  profile.exitDate = payload.exitDate === null ? null : payload.exitDate;
-  profile.hasCustomArmour = payload.hasCustomArmour === null ? null : payload.hasCustomArmour;
-  profile.description = payload.description === null ? null : payload.description;
-  profile.taskFilter = payload.taskFilter || undefined;
-  return profile;
-}
-
-function validatePayload(payload) {
-  validateObject(payload, false);
-}
+import RolesCollection from '../../imports/api/collections/roles.collection';
+import SpecializationsCollection from '../../imports/api/collections/specializations.collection';
+import SquadsCollection from '../../imports/api/collections/squads.collection';
+import { validateObject, validatePublish, validateUserId } from '../main';
 
 async function getMemberById(memberId) {
   validateUserId(memberId);
@@ -51,52 +28,42 @@ const getFullName = (rank, id, name) => {
 };
 
 if (Meteor.isServer) {
+  Meteor.publish('user', function () {
+    validateUserId(this.userId);
+    return MembersCollection.find({ _id: this.userId }, { fields: { services: 0 } });
+  });
   Meteor.publish('members', function (filter = {}, options = {}) {
     validatePublish(this.userId, filter, options);
     return MembersCollection.find(filter, { ...options, fields: { services: 0 } });
   });
 
   Meteor.methods({
+    'members.read': async function (filter = {}, options = {}) {
+      validateUserId(this.userId);
+      validateObject(filter, false);
+      validateObject(options, false);
+      return await MembersCollection.find(filter, options).fetchAsync();
+    },
+    'members.findOne': async function (filter = {}, options = {}) {
+      validateUserId(this.userId);
+      validateObject(filter, false);
+      validateObject(options, false);
+      return await MembersCollection.findOneAsync(filter, options);
+    },
     'members.insert': async function (payload = {}) {
       validateUserId(this.userId);
-      function prepareUser(payload) {
-        validatePayload(payload);
-        const { username, password } = payload;
-        validateString(username, false);
-        validateString(password, false);
-        const profile = extractProfileFromPayload(payload) || {};
-        const user = {
-          username,
-          password,
-          profile,
-        };
-        return user;
-      }
+      validateObject(payload);
       try {
-        return await Accounts.createUserAsync(prepareUser(payload));
+        return await Accounts.createUserAsync(payload);
       } catch (error) {
         throw new Meteor.Error(error.message);
       }
     },
     'members.update': async function (memberId = '', data = {}) {
       validateUserId(this.userId);
-      function buildModifier(data) {
-        validatePayload(data);
-        const modifier = {};
-        const profile = extractProfileFromPayload(data);
-        if (data.username !== undefined || typeof data.username === 'string') {
-          modifier.username = data.username;
-        }
-        for (const [key, value] of Object.entries(profile)) {
-          modifier[`profile.${key}`] = value;
-        }
-        return {
-          $set: modifier,
-        };
-      }
       await getMemberById(memberId);
       const selector = { _id: memberId };
-      const modifier = buildModifier(data);
+      const modifier = { $set: data };
       try {
         return await MembersCollection.updateAsync(selector, modifier);
       } catch (error) {
@@ -144,6 +111,76 @@ if (Meteor.isServer) {
       } catch (error) {
         throw new Meteor.Error(error.message);
       }
+    },
+    'members.getUsedIds': async function () {
+      if (!this.userId) {
+        throw new Meteor.Error('not-authorized');
+      }
+
+      const members = await MembersCollection.find({}, { fields: { 'profile.id': 1 } }).mapAsync(m => m.profile.id);
+
+      return members;
+    },
+    'members.getUsedNames': async function () {
+      if (!this.userId) {
+        throw new Meteor.Error('not-authorized');
+      }
+
+      const members = await MembersCollection.find({}, { fields: { 'profile.name': 1 } }).mapAsync(m => m.profile.name);
+
+      return members;
+    },
+    'members.all': async function () {
+      if (!this.userId) {
+        throw new Meteor.Error('not-authorized');
+      }
+      const members = await MembersCollection.find({}).fetchAsync();
+      return members;
+    },
+    'members.profileStats': async function (user, role) {
+      if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
+
+      if (!user) user = await Meteor.users.findOneAsync(this.userId);
+
+      if (!user) throw new Meteor.Error(404, 'User not found');
+
+      const roleId = user.profile?.roleId;
+      if (!role) role = await RolesCollection.findOneAsync({ _id: roleId ?? null });
+
+      let inactivityPoints = user.profile?.staticInactivityPoints || 0;
+      let attendancePoints = user.profile?.staticAttendancePoints || 0;
+      await AttendancesCollection.find().forEachAsync(attendance => {
+        if (attendance[user._id] === -1) {
+          inactivityPoints += 1;
+        }
+        attendancePoints += attendance[user._id] || 0;
+      });
+
+      const result = {
+        ['profile picture']: user.profile?.profilePictureId
+          ? (await ProfilePicturesCollection.findOneAsync({ _id: user.profile.profilePictureId }))?.value
+          : '-',
+        squad: user.profile?.squadId ? (await SquadsCollection.findOneAsync({ _id: user.profile.squadId }))?.name : '-',
+        role: role?.name || '-',
+        ['entry date']: user.profile?.entryDate ? dayjs(user.profile.entryDate).format('YYYY-MM-DD') : '-',
+        rank: user.profile?.rankId
+          ? (await RanksCollection.findOneAsync({ _id: user.profile.rankId }))?.name ??
+            (user.profile.navyRankId ? (await RanksCollection.findOneAsync({ _id: user.profile.navyRankId }))?.name : '-')
+          : '-',
+        id: user.profile?.id || '-',
+        name: user.profile?.name || '-',
+        ['attendance points']: attendancePoints,
+        ['inactivity points']: inactivityPoints,
+        medals: user.profile?.medalIds?.length
+          ? (await MedalsCollection.find({ _id: { $in: user.profile.medalIds } }).mapAsync(m => m.name)).join(', ')
+          : '-',
+        specializations: user.profile?.specializationIds?.length
+          ? (await SpecializationsCollection.find({ _id: { $in: user.profile.specializationIds } }).mapAsync(s => s.name)).join(', ')
+          : '-',
+        description: user.profile?.description || '-',
+      };
+
+      return result;
     },
   });
 }

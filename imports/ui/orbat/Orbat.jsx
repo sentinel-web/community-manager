@@ -1,13 +1,27 @@
 import { Card, Descriptions, Empty, Popover, Typography } from 'antd';
+import { Meteor } from 'meteor/meteor';
+import PropTypes from 'prop-types';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Tree, TreeNode } from 'react-organizational-chart';
-import useSquads from '../squads/squads.hook';
 import { turnBase64ToImage } from '../profile-picture-input/ProfilePictureInput';
-import { Meteor } from 'meteor/meteor';
 
 export default function Orbat() {
-  const { ready, squads } = useSquads();
+  const [ready, setReady] = useState(true);
+  const [squads, setSquads] = useState([]);
   const [options, setOptions] = useState([]);
+
+  useEffect(() => {
+    setReady(false);
+    Meteor.callAsync('orbat.squads')
+      .then(squads => {
+        setSquads(squads);
+        setReady(true);
+      })
+      .catch(error => {
+        console.error(error);
+        setReady(true);
+      });
+  }, []);
 
   const findParentRecursive = useCallback((options, parentId) => {
     if (!parentId) {
@@ -81,6 +95,7 @@ export default function Orbat() {
   return (
     <Card loading={!ready} title={<Typography.Title level={3}>ORBAT</Typography.Title>}>
       <div style={{ overflow: 'auto' }}>
+        {options?.length === 0 && <Empty />}
         {options.map(option => {
           return (
             <Tree key={option.id} label={<ORBAT_Label option={option} />}>
@@ -93,6 +108,9 @@ export default function Orbat() {
   );
 }
 
+ORBAT_Label.propTypes = {
+  option: PropTypes.object,
+};
 const ORBAT_Label = ({ option }) => {
   const [items, setItems] = useState([]);
   useEffect(() => {

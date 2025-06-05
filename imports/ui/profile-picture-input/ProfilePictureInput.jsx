@@ -1,6 +1,7 @@
 import { App, Spin, Upload } from 'antd';
-import React, { useEffect, useState } from 'react';
 import { Meteor } from 'meteor/meteor';
+import PropTypes from 'prop-types';
+import React, { useEffect, useState } from 'react';
 
 export async function turnImageFileToBase64(file) {
   return new Promise((resolve, reject) => {
@@ -20,6 +21,12 @@ export async function turnBase64ToImage(base64) {
   });
 }
 
+ProfilePictureInput.propTypes = {
+  fileList: PropTypes.array,
+  setFileList: PropTypes.func,
+  form: PropTypes.object,
+  profilePictureId: PropTypes.string,
+};
 export default function ProfilePictureInput({ fileList, setFileList, form, profilePictureId }) {
   const { notification } = App.useApp();
   const [loading, setLoading] = useState(false);
@@ -38,7 +45,7 @@ export default function ProfilePictureInput({ fileList, setFileList, form, profi
         });
       })
       .then(res => {
-        form.setFieldsValue({ profilePictureId: res });
+        form.setFieldValue(['profile', 'profilePictureId'], res);
       })
       .finally(() => setLoading(false));
   }
@@ -46,10 +53,10 @@ export default function ProfilePictureInput({ fileList, setFileList, form, profi
   useEffect(() => {
     if (profilePictureId && typeof profilePictureId === 'string') {
       setLoading(true);
-      Meteor.callAsync('profilePictures.get', profilePictureId)
-        .then(async res => {
-          if (res) {
-            setImageSrc(res.value);
+      Meteor.callAsync('profilePictures.read', { _id: profilePictureId })
+        .then(res => {
+          if (res?.[0]) {
+            setImageSrc(res[0].value);
           }
         })
         .catch(error => {

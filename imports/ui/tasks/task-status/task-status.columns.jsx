@@ -1,7 +1,8 @@
 import { Tag } from 'antd';
 import React from 'react';
+import TableActions from '../../table/body/actions/TableActions';
 
-const getTaskStatusColumns = () => {
+const getTaskStatusColumns = (handleEdit, handleDelete) => {
   return [
     {
       title: 'Name',
@@ -24,6 +25,12 @@ const getTaskStatusColumns = () => {
       ellipsis: true,
       sorter: (a, b) => (a.color || '').localeCompare(b.color || ''),
       render: color => <Tag color={color || 'transparent'}>{color}</Tag>,
+    },
+    {
+      title: 'Actions',
+      dataIndex: '_id',
+      key: '_id',
+      render: (id, record) => <TableActions record={record} handleEdit={handleEdit} handleDelete={handleDelete} />,
     },
   ];
 };

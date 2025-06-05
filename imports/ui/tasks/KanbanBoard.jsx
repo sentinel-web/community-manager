@@ -1,11 +1,18 @@
-import React, { useMemo } from 'react';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
-import { Button, Card, Col, Row } from 'antd';
+import { Button, Card, Col, Empty, Grid, Row } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import { Participants } from './task.columns';
+import { useTracker } from 'meteor/react-meteor-data';
+import PropTypes from 'prop-types';
+import React, { useMemo } from 'react';
+import { DragDropContext, Draggable, Droppable } from 'react-beautiful-dnd';
 import TaskStatusTag from './task-status/TaskStatusTag';
+import { Participants } from './task.columns';
 
-const KanbanBoard = ({ tasks, options, edit, remove }) => {
+KanbanBoard.propTypes = {
+  datasource: PropTypes.array,
+  handleEdit: PropTypes.func,
+  handleDelete: PropTypes.func,
+};
+const KanbanBoard = ({ datasource, handleEdit, handleDelete }) => {
   const onDragEnd = result => {
     const { destination, source, draggableId } = result;
     if (!destination) return;
@@ -14,25 +21,35 @@ const KanbanBoard = ({ tasks, options, edit, remove }) => {
     Meteor.callAsync('tasks.update', draggableId, { status: destination.droppableId });
   };
 
+  const options = useTracker(() => Meteor.user()?.profile?.taskFilter?.status || [], []);
+
   const columns = useMemo(() => {
     return (
-      tasks?.reduce((acc, task) => {
+      datasource?.reduce((acc, task) => {
         if (!acc[task.status]) acc[task.status] = [];
         acc[task.status].push(task);
         return acc;
       }, {}) || {}
     );
-  }, [tasks]);
+  }, [datasource]);
+
+  const breakpoints = Grid.useBreakpoint();
+  const colSpan = useMemo(() => {
+    const minSpan = breakpoints.xxl ? 6 : breakpoints.lg ? 8 : breakpoints.md ? 12 : 24;
+    const calculatedSpan = 24 / (options.length || 1);
+    return Math.max(calculatedSpan, minSpan);
+  }, [options.length, breakpoints]);
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <Row gutter={16}>
+      <Row gutter={[16, 16]}>
         {options.map(status => (
-          <Col key={status} span={24 / (options.length || 1)}>
+          <Col key={status} span={colSpan}>
             <Droppable droppableId={status}>
               {provided => (
                 <div ref={provided.innerRef} {...provided.droppableProps}>
                   <Card title={<TaskStatusTag taskStatusId={status} />}>
+                    {!columns[status]?.length && <Empty />}
                     {columns[status]?.map((task, index) => (
                       <Draggable key={`${status}-${task._id}`} draggableId={task._id} index={index}>
                         {provided => (
@@ -43,10 +60,10 @@ const KanbanBoard = ({ tasks, options, edit, remove }) => {
                               extra={
                                 <Row gutter={[16, 16]} align="middle" justify="end">
                                   <Col>
-                                    <Button onClick={e => edit(e, task)}>Edit</Button>
+                                    <Button onClick={e => handleEdit(e, task)}>Edit</Button>
                                   </Col>
                                   <Col>
-                                    <Button onClick={e => remove(e, task)} danger>
+                                    <Button onClick={e => handleDelete(e, task)} danger>
                                       Delete
                                     </Button>
                                   </Col>
