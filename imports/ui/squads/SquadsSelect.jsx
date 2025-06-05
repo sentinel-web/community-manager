@@ -4,13 +4,6 @@ import SquadsCollection from '../../api/collections/squads.collection';
 import CollectionSelect from '../components/CollectionSelect';
 import SquadsForm from './SquadsForm';
 
-SquadsSelect.propTypes = {
-  multiple: PropTypes.bool,
-  name: PropTypes.string,
-  label: PropTypes.string,
-  rules: PropTypes.array,
-  defaultValue: PropTypes.any,
-};
 export default function SquadsSelect({ multiple, name, label, rules, defaultValue }) {
   return (
     <CollectionSelect
@@ -27,3 +20,10 @@ export default function SquadsSelect({ multiple, name, label, rules, defaultValu
     />
   );
 }
+SquadsSelect.propTypes = {
+  multiple: PropTypes.bool,
+  name: PropTypes.string,
+  label: PropTypes.string,
+  rules: PropTypes.array,
+  defaultValue: PropTypes.any,
+};

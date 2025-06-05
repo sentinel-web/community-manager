@@ -8,19 +8,6 @@ import { DrawerContext, SubdrawerContext } from '../app/App';
 
 const empty = <></>;
 
-CollectionSelect.propTypes = {
-  defaultValue: PropTypes.any,
-  onChange: PropTypes.func,
-  placeholder: PropTypes.string,
-  mode: PropTypes.string,
-  collection: PropTypes.object,
-  name: PropTypes.string,
-  label: PropTypes.string,
-  rules: PropTypes.array,
-  FormComponent: PropTypes.any,
-  subscription: PropTypes.object,
-  extra: PropTypes.any,
-};
 const CollectionSelect = ({
   defaultValue,
   onChange,
@@ -185,6 +172,19 @@ const CollectionSelect = ({
       <Col>{user && <Button icon={<PlusOutlined />} onClick={handleCreate} style={isFormItem ? { marginTop: 8 } : {}} />}</Col>
     </Row>
   );
+};
+CollectionSelect.propTypes = {
+  defaultValue: PropTypes.any,
+  onChange: PropTypes.func,
+  placeholder: PropTypes.string,
+  mode: PropTypes.string,
+  collection: PropTypes.object,
+  name: PropTypes.string,
+  label: PropTypes.string,
+  rules: PropTypes.array,
+  FormComponent: PropTypes.any,
+  subscription: PropTypes.object,
+  extra: PropTypes.any,
 };
 
 export default CollectionSelect;

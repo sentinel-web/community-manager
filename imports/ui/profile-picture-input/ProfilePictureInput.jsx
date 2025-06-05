@@ -21,12 +21,6 @@ export async function turnBase64ToImage(base64) {
   });
 }
 
-ProfilePictureInput.propTypes = {
-  fileList: PropTypes.array,
-  setFileList: PropTypes.func,
-  form: PropTypes.object,
-  profilePictureId: PropTypes.string,
-};
 export default function ProfilePictureInput({ fileList, setFileList, form, profilePictureId }) {
   const { notification } = App.useApp();
   const [loading, setLoading] = useState(false);
@@ -90,3 +84,9 @@ export default function ProfilePictureInput({ fileList, setFileList, form, profi
     </Upload.Dragger>
   );
 }
+ProfilePictureInput.propTypes = {
+  fileList: PropTypes.array,
+  setFileList: PropTypes.func,
+  form: PropTypes.object,
+  profilePictureId: PropTypes.string,
+};

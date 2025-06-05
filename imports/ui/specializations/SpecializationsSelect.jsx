@@ -4,13 +4,6 @@ import SpecializationsCollection from '../../api/collections/specializations.col
 import CollectionSelect from '../components/CollectionSelect';
 import SpecializationForm from './SpecializationForm';
 
-SpecializationsSelect.propTypes = {
-  multiple: PropTypes.bool,
-  name: PropTypes.string,
-  label: PropTypes.string,
-  rules: PropTypes.array,
-  defaultValue: PropTypes.any,
-};
 export default function SpecializationsSelect({ multiple, name, label, rules, defaultValue }) {
   return (
     <CollectionSelect
@@ -27,3 +20,10 @@ export default function SpecializationsSelect({ multiple, name, label, rules, de
     />
   );
 }
+SpecializationsSelect.propTypes = {
+  multiple: PropTypes.bool,
+  name: PropTypes.string,
+  label: PropTypes.string,
+  rules: PropTypes.array,
+  defaultValue: PropTypes.any,
+};

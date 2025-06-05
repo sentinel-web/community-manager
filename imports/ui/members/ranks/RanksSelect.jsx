@@ -4,13 +4,6 @@ import RanksCollection from '../../../api/collections/ranks.collection';
 import CollectionSelect from '../../components/CollectionSelect';
 import RanksForm from './RanksForm';
 
-RanksSelect.propTypes = {
-  multiple: PropTypes.bool,
-  name: PropTypes.string,
-  label: PropTypes.string,
-  rules: PropTypes.array,
-  defaultValue: PropTypes.any,
-};
 const RanksSelect = ({ multiple, name, label, rules, defaultValue }) => {
   return (
     <CollectionSelect
@@ -26,6 +19,13 @@ const RanksSelect = ({ multiple, name, label, rules, defaultValue }) => {
       extra={<></>}
     />
   );
+};
+RanksSelect.propTypes = {
+  multiple: PropTypes.bool,
+  name: PropTypes.string,
+  label: PropTypes.string,
+  rules: PropTypes.array,
+  defaultValue: PropTypes.any,
 };
 
 export default RanksSelect;

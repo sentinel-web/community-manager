@@ -7,10 +7,6 @@ import FormFooter from '../../components/FormFooter';
 import { getColorFromValues } from '../../specializations/SpecializationForm';
 import RanksSelect from './RanksSelect';
 
-RanksForm.propTypes = {
-  setOpen: PropTypes.func,
-  useSubdrawer: PropTypes.bool,
-};
 export default function RanksForm({ setOpen, useSubdrawer }) {
   const [form] = Form.useForm();
   const { message, notification } = App.useApp();
@@ -84,3 +80,7 @@ export default function RanksForm({ setOpen, useSubdrawer }) {
     </Form>
   );
 }
+RanksForm.propTypes = {
+  setOpen: PropTypes.func,
+  useSubdrawer: PropTypes.bool,
+};

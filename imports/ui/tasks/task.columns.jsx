@@ -5,9 +5,6 @@ import TaskStatusCollection from '../../api/collections/taskStatus.collection';
 import TableActions from '../table/body/actions/TableActions';
 import TaskStatusTag from './task-status/TaskStatusTag';
 
-Participants.propTypes = {
-  participants: PropTypes.array,
-};
 export const Participants = ({ participants }) => {
   const [value, setValue] = useState('loading...');
 
@@ -24,6 +21,9 @@ export const Participants = ({ participants }) => {
   }, [participants]);
 
   return <>{value}</>;
+};
+Participants.propTypes = {
+  participants: PropTypes.array,
 };
 
 const getTaskColumns = (handleTaskEdit, handleTaskDelete) => {

@@ -6,9 +6,6 @@ import RankTag from '../members/ranks/RankTag';
 import TableActions from '../table/body/actions/TableActions';
 import { Participants } from '../tasks/task.columns';
 
-SpecializationTags.propTypes = {
-  specializations: PropTypes.array,
-};
 const SpecializationTags = ({ specializations }) => {
   const [values, setValues] = useState('loading...');
   useEffect(() => {
@@ -35,6 +32,9 @@ const SpecializationTags = ({ specializations }) => {
         : '-'}
     </>
   );
+};
+SpecializationTags.propTypes = {
+  specializations: PropTypes.array,
 };
 
 const getSpecializationColumns = (handleEdit, handleDelete) => {

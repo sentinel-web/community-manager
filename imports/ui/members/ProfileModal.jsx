@@ -4,10 +4,6 @@ import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
 import { ProfileStats } from '../dashboard/Dashboard';
 
-ProfileModal.propTypes = {
-  showProfile: PropTypes.bool,
-  toggleProfile: PropTypes.func,
-};
 export default function ProfileModal({ showProfile = false, toggleProfile = console.warn }) {
   const [profileStats, setProfileStats] = useState(null);
   useEffect(() => {
@@ -20,3 +16,7 @@ export default function ProfileModal({ showProfile = false, toggleProfile = cons
     </Modal>
   );
 }
+ProfileModal.propTypes = {
+  showProfile: PropTypes.bool,
+  toggleProfile: PropTypes.func,
+};

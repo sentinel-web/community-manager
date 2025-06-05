@@ -90,9 +90,6 @@ export default function Settings() {
   );
 }
 
-SettingTitle.propTypes = {
-  title: PropTypes.string,
-};
 function SettingTitle({ title }) {
   return (
     <Col span={24}>
@@ -100,11 +97,10 @@ function SettingTitle({ title }) {
     </Col>
   );
 }
-
-CommunityNameBlackListSettings.propTypes = {
-  communityNameBlackList: PropTypes.array,
-  handleChange: PropTypes.func,
+SettingTitle.propTypes = {
+  title: PropTypes.string,
 };
+
 function CommunityNameBlackListSettings({ communityNameBlackList, handleChange }) {
   const [value, setValue] = useState('');
 
@@ -161,11 +157,11 @@ function CommunityNameBlackListSettings({ communityNameBlackList, handleChange }
     </Row>
   );
 }
-
-CommunityIdBlackListSettings.propTypes = {
-  communityIdBlackList: PropTypes.array,
+CommunityNameBlackListSettings.propTypes = {
+  communityNameBlackList: PropTypes.array,
   handleChange: PropTypes.func,
 };
+
 function CommunityIdBlackListSettings({ communityIdBlackList, handleChange }) {
   const [value, setValue] = useState('');
 
@@ -222,11 +218,11 @@ function CommunityIdBlackListSettings({ communityIdBlackList, handleChange }) {
     </Row>
   );
 }
-
-CommunityTitleSettings.propTypes = {
-  communityTitle: PropTypes.string,
+CommunityIdBlackListSettings.propTypes = {
+  communityIdBlackList: PropTypes.array,
   handleChange: PropTypes.func,
 };
+
 function CommunityTitleSettings({ communityTitle, handleChange }) {
   return (
     <Row gutter={[16, 16]}>
@@ -237,11 +233,11 @@ function CommunityTitleSettings({ communityTitle, handleChange }) {
     </Row>
   );
 }
-
-CommunityLogoSettings.propTypes = {
-  communityLogo: PropTypes.string,
+CommunityTitleSettings.propTypes = {
+  communityTitle: PropTypes.string,
   handleChange: PropTypes.func,
 };
+
 function CommunityLogoSettings({ communityLogo, handleChange }) {
   return (
     <Row gutter={[16, 16]}>
@@ -260,11 +256,11 @@ function CommunityLogoSettings({ communityLogo, handleChange }) {
     </Row>
   );
 }
-
-CommunityColorSettings.propTypes = {
-  communityColor: PropTypes.string,
+CommunityLogoSettings.propTypes = {
+  communityLogo: PropTypes.string,
   handleChange: PropTypes.func,
 };
+
 function CommunityColorSettings({ communityColor, handleChange }) {
   return (
     <Row gutter={[16, 16]}>
@@ -275,3 +271,7 @@ function CommunityColorSettings({ communityColor, handleChange }) {
     </Row>
   );
 }
+CommunityColorSettings.propTypes = {
+  communityColor: PropTypes.string,
+  handleChange: PropTypes.func,
+};

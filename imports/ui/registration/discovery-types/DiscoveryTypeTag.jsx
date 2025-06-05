@@ -3,9 +3,6 @@ import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
 
-DiscoveryTypeTag.propTypes = {
-  discoveryTypeId: PropTypes.string,
-};
 export default function DiscoveryTypeTag({ discoveryTypeId }) {
   const [match, setMatch] = useState(null);
 
@@ -22,3 +19,6 @@ export default function DiscoveryTypeTag({ discoveryTypeId }) {
     </Tooltip>
   );
 }
+DiscoveryTypeTag.propTypes = {
+  discoveryTypeId: PropTypes.string,
+};

@@ -12,10 +12,6 @@ export function getColorFromValues(values) {
   return values?.color ? values.color?.toHexString?.() || values.color : values?.color;
 }
 
-SpecializationForm.propTypes = {
-  setOpen: PropTypes.func,
-  useSubdrawer: PropTypes.bool,
-};
 const SpecializationForm = ({ setOpen, useSubdrawer }) => {
   const drawer = useContext(DrawerContext);
   const subdrawer = useContext(SubdrawerContext);
@@ -80,6 +76,10 @@ const SpecializationForm = ({ setOpen, useSubdrawer }) => {
       <FormFooter setOpen={setOpen} />
     </Form>
   );
+};
+SpecializationForm.propTypes = {
+  setOpen: PropTypes.func,
+  useSubdrawer: PropTypes.bool,
 };
 
 export default SpecializationForm;

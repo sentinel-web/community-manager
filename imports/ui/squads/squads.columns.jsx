@@ -5,9 +5,6 @@ import React, { useEffect, useState } from 'react';
 import getLegibleTextColor from '../../helpers/colors/getLegibleTextColor';
 import TableActions from '../table/body/actions/TableActions';
 
-SquadTags.propTypes = {
-  squadIds: PropTypes.array,
-};
 export const SquadTags = ({ squadIds }) => {
   const [squadNames, setSquadNames] = useState([]);
 
@@ -29,6 +26,9 @@ export const SquadTags = ({ squadIds }) => {
       ))}
     </>
   );
+};
+SquadTags.propTypes = {
+  squadIds: PropTypes.array,
 };
 
 const getSquadsColumns = (handleEdit, handleDelete) => {

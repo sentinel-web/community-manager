@@ -22,9 +22,6 @@ export const getDateFromValues = (values, key = 'date') => {
   return values[key];
 };
 
-EventForm.propTypes = {
-  setOpen: PropTypes.func,
-};
 const EventForm = ({ setOpen }) => {
   const { message, notification, modal } = App.useApp();
   const drawer = useContext(DrawerContext);
@@ -141,6 +138,9 @@ const EventForm = ({ setOpen }) => {
       </Row>
     </Form>
   );
+};
+EventForm.propTypes = {
+  setOpen: PropTypes.func,
 };
 
 export default EventForm;

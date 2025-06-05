@@ -4,13 +4,6 @@ import MembersCollection from '../../api/collections/members.collection';
 import CollectionSelect from '../components/CollectionSelect';
 import MemberForm from './MemberForm';
 
-MembersSelect.propTypes = {
-  multiple: PropTypes.bool,
-  name: PropTypes.string,
-  label: PropTypes.string,
-  rules: PropTypes.array,
-  defaultValue: PropTypes.any,
-};
 export default function MembersSelect({ multiple, name, label, rules, defaultValue }) {
   return (
     <CollectionSelect
@@ -27,3 +20,10 @@ export default function MembersSelect({ multiple, name, label, rules, defaultVal
     />
   );
 }
+MembersSelect.propTypes = {
+  multiple: PropTypes.bool,
+  name: PropTypes.string,
+  label: PropTypes.string,
+  rules: PropTypes.array,
+  defaultValue: PropTypes.any,
+};

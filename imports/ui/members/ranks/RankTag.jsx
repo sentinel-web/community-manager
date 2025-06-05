@@ -3,9 +3,6 @@ import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
 
-RankTag.propTypes = {
-  rankId: PropTypes.string,
-};
 export default function RankTag({ rankId }) {
   const [match, setMatch] = useState(null);
   useEffect(() => {
@@ -21,3 +18,6 @@ export default function RankTag({ rankId }) {
     </Tooltip>
   );
 }
+RankTag.propTypes = {
+  rankId: PropTypes.string,
+};

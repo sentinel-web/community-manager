@@ -108,9 +108,6 @@ export default function Orbat() {
   );
 }
 
-ORBAT_Label.propTypes = {
-  option: PropTypes.object,
-};
 const ORBAT_Label = ({ option }) => {
   const [items, setItems] = useState([]);
   useEffect(() => {
@@ -150,4 +147,7 @@ const ORBAT_Label = ({ option }) => {
       </Popover>
     </div>
   );
+};
+ORBAT_Label.propTypes = {
+  option: PropTypes.object,
 };

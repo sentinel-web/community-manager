@@ -87,10 +87,6 @@ export default function Events() {
   );
 }
 
-ViewTypeSelector.propTypes = {
-  viewType: PropTypes.string,
-  handleChange: PropTypes.func,
-};
 const ViewTypeSelector = ({ viewType, handleChange }) => {
   const viewTypes = useMemo(() => [
     { value: 'calendar', label: 'Calendar' },
@@ -98,4 +94,8 @@ const ViewTypeSelector = ({ viewType, handleChange }) => {
     { value: 'table', label: 'Table' },
   ]);
   return <Select style={{ minWidth: 125 }} value={viewType} onChange={handleChange} options={viewTypes} optionFilterProp="label" showSearch />;
+};
+ViewTypeSelector.propTypes = {
+  viewType: PropTypes.string,
+  handleChange: PropTypes.func,
 };

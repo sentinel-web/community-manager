@@ -9,9 +9,6 @@ import CollectionSelect from '../components/CollectionSelect';
 import FormFooter from '../components/FormFooter';
 import TaskStatusForm from './task-status/TaskStatusForm';
 
-TaskForm.propTypes = {
-  setOpen: PropTypes.func,
-};
 const TaskForm = ({ setOpen }) => {
   const { drawerModel: model } = useContext(DrawerContext);
   const { message, notification } = App.useApp();
@@ -92,6 +89,9 @@ const TaskForm = ({ setOpen }) => {
       <FormFooter setOpen={setOpen} />
     </Form>
   );
+};
+TaskForm.propTypes = {
+  setOpen: PropTypes.func,
 };
 
 export default TaskForm;

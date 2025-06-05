@@ -2,12 +2,6 @@ import { App, Button, Col, Row } from 'antd';
 import PropTypes from 'prop-types';
 import React, { useCallback } from 'react';
 
-TableActions.propTypes = {
-  record: PropTypes.any,
-  handleDelete: PropTypes.func,
-  handleEdit: PropTypes.func,
-  extra: PropTypes.any,
-};
 export default function TableActions({ record, handleDelete, handleEdit, extra }) {
   const { modal } = App.useApp();
   const styles = {
@@ -46,3 +40,9 @@ export default function TableActions({ record, handleDelete, handleEdit, extra }
     </Row>
   );
 }
+TableActions.propTypes = {
+  record: PropTypes.any,
+  handleDelete: PropTypes.func,
+  handleEdit: PropTypes.func,
+  extra: PropTypes.any,
+};

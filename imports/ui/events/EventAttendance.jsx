@@ -22,10 +22,6 @@ function MemberName({ memberId }) {
   return name;
 }
 
-AttendanceOption.propTypes = {
-  value: PropTypes.number,
-  setEditting: PropTypes.func,
-};
 function AttendanceOption({ value, setEditting }) {
   const colorMap = useMemo(() => {
     return {
@@ -55,13 +51,11 @@ function AttendanceOption({ value, setEditting }) {
     </Row>
   );
 }
-
-AttendanceSelect.propTypes = {
+AttendanceOption.propTypes = {
   value: PropTypes.number,
-  eventId: PropTypes.string,
-  memberId: PropTypes.string,
   setEditting: PropTypes.func,
 };
+
 function AttendanceSelect({ value, eventId, memberId, setEditting }) {
   const handleChange = newValue => {
     if (value === newValue) return;
@@ -96,12 +90,13 @@ function AttendanceSelect({ value, eventId, memberId, setEditting }) {
     </Row>
   );
 }
-
-AttendanceRender.propTypes = {
+AttendanceSelect.propTypes = {
   value: PropTypes.number,
   eventId: PropTypes.string,
   memberId: PropTypes.string,
+  setEditting: PropTypes.func,
 };
+
 function AttendanceRender({ value, eventId, memberId }) {
   const [editting, setEditting] = useState(false);
   return editting || value == null ? (
@@ -110,6 +105,11 @@ function AttendanceRender({ value, eventId, memberId }) {
     <AttendanceOption value={value} setEditting={setEditting} />
   );
 }
+AttendanceRender.propTypes = {
+  value: PropTypes.number,
+  eventId: PropTypes.string,
+  memberId: PropTypes.string,
+};
 
 function transformEventsIntoColumns(events) {
   const columns = [
@@ -151,9 +151,6 @@ function transformEventsIntoColumns(events) {
   return columns;
 }
 
-EventAttendance.propTypes = {
-  datasource: PropTypes.array,
-};
 export default function EventAttendance({ datasource }) {
   const columns = useMemo(() => transformEventsIntoColumns(datasource), [datasource]);
   useSubscribe('attendances', { eventId: { $in: datasource.map(event => event._id) } });
@@ -182,3 +179,6 @@ export default function EventAttendance({ datasource }) {
     </TableContainer>
   );
 }
+EventAttendance.propTypes = {
+  datasource: PropTypes.array,
+};

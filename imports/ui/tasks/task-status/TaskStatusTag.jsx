@@ -3,9 +3,6 @@ import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
 
-TaskStatusTag.propTypes = {
-  taskStatusId: PropTypes.string,
-};
 export default function TaskStatusTag({ taskStatusId }) {
   const [match, setMatch] = useState(null);
 
@@ -22,3 +19,6 @@ export default function TaskStatusTag({ taskStatusId }) {
     </Tooltip>
   );
 }
+TaskStatusTag.propTypes = {
+  taskStatusId: PropTypes.string,
+};

@@ -7,9 +7,6 @@ import { DrawerContext } from '../app/App';
 import CollectionSelect from '../components/CollectionSelect';
 import DiscoveryTypeForm from './discovery-types/DiscoveryTypesForm';
 
-RegistrationForm.propTypes = {
-  setOpen: PropTypes.func,
-};
 export default function RegistrationForm({ setOpen }) {
   const [form] = Form.useForm();
   const drawer = useContext(DrawerContext);
@@ -184,3 +181,6 @@ export default function RegistrationForm({ setOpen }) {
     </Form>
   );
 }
+RegistrationForm.propTypes = {
+  setOpen: PropTypes.func,
+};
