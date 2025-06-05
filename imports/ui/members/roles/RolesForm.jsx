@@ -7,9 +7,6 @@ import { DrawerContext } from '../../app/App';
 import FormFooter from '../../components/FormFooter';
 import { getColorFromValues } from '../../specializations/SpecializationForm';
 
-RolesForm.propTypes = {
-  setOpen: PropTypes.func,
-};
 const RolesForm = ({ setOpen }) => {
   const { drawerModel: model } = useContext(DrawerContext);
   const { message, notification } = App.useApp();
@@ -67,17 +64,20 @@ const RolesForm = ({ setOpen }) => {
     </Form>
   );
 };
-
-RuleInput.propTypes = {
-  name: PropTypes.string,
-  label: PropTypes.string,
+RolesForm.propTypes = {
+  setOpen: PropTypes.func,
 };
+
 const RuleInput = ({ name, label }) => {
   return (
     <Form.Item name={name} label={label} rules={[{ required: false, type: 'boolean' }]}>
       <Switch checkedChildren={<CheckOutlined />} unCheckedChildren={<CloseOutlined />} />
     </Form.Item>
   );
+};
+RuleInput.propTypes = {
+  name: PropTypes.string,
+  label: PropTypes.string,
 };
 
 export default RolesForm;

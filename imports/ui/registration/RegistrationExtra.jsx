@@ -3,11 +3,6 @@ import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useCallback, useEffect, useState } from 'react';
 
-ConfirmModal.propTypes = {
-  open: PropTypes.bool,
-  setOpen: PropTypes.func,
-  record: PropTypes.object,
-};
 const ConfirmModal = ({ open, setOpen, record }) => {
   const { message, notification } = App.useApp();
   const [loading, setLoading] = useState(false);
@@ -70,10 +65,12 @@ const ConfirmModal = ({ open, setOpen, record }) => {
     </Modal>
   );
 };
-
-RegistrationExtra.propTypes = {
+ConfirmModal.propTypes = {
+  open: PropTypes.bool,
+  setOpen: PropTypes.func,
   record: PropTypes.object,
 };
+
 export default function RegistrationExtra({ record }) {
   const [open, setOpen] = useState(false);
 
@@ -95,3 +92,6 @@ export default function RegistrationExtra({ record }) {
     </Space>
   );
 }
+RegistrationExtra.propTypes = {
+  record: PropTypes.object,
+};

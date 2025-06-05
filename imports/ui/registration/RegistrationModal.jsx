@@ -3,10 +3,6 @@ import PropTypes from 'prop-types';
 import React, { useCallback } from 'react';
 import RegistrationForm from './RegistrationForm';
 
-RegistrationModal.propTypes = {
-  open: PropTypes.bool,
-  setOpen: PropTypes.func,
-};
 export default function RegistrationModal({ open, setOpen }) {
   const [form] = Form.useForm();
 
@@ -21,3 +17,7 @@ export default function RegistrationModal({ open, setOpen }) {
     </Modal>
   );
 }
+RegistrationModal.propTypes = {
+  open: PropTypes.bool,
+  setOpen: PropTypes.func,
+};

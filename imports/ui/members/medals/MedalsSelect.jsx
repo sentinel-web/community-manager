@@ -4,13 +4,6 @@ import MedalsCollection from '../../../api/collections/medals.collection';
 import CollectionSelect from '../../components/CollectionSelect';
 import MedalsForm from './MedalsForm';
 
-MedalsSelect.propTypes = {
-  multiple: PropTypes.bool,
-  name: PropTypes.string,
-  label: PropTypes.string,
-  rules: PropTypes.array,
-  defaultValue: PropTypes.any,
-};
 export default function MedalsSelect({ multiple, name, label, rules, defaultValue }) {
   return (
     <CollectionSelect
@@ -25,3 +18,10 @@ export default function MedalsSelect({ multiple, name, label, rules, defaultValu
     />
   );
 }
+MedalsSelect.propTypes = {
+  multiple: PropTypes.bool,
+  name: PropTypes.string,
+  label: PropTypes.string,
+  rules: PropTypes.array,
+  defaultValue: PropTypes.any,
+};

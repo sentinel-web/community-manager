@@ -7,11 +7,6 @@ import { DragDropContext, Draggable, Droppable } from 'react-beautiful-dnd';
 import TaskStatusTag from './task-status/TaskStatusTag';
 import { Participants } from './task.columns';
 
-KanbanBoard.propTypes = {
-  datasource: PropTypes.array,
-  handleEdit: PropTypes.func,
-  handleDelete: PropTypes.func,
-};
 const KanbanBoard = ({ datasource, handleEdit, handleDelete }) => {
   const onDragEnd = result => {
     const { destination, source, draggableId } = result;
@@ -91,6 +86,11 @@ const KanbanBoard = ({ datasource, handleEdit, handleDelete }) => {
       </Row>
     </DragDropContext>
   );
+};
+KanbanBoard.propTypes = {
+  datasource: PropTypes.array,
+  handleEdit: PropTypes.func,
+  handleDelete: PropTypes.func,
 };
 
 export default KanbanBoard;

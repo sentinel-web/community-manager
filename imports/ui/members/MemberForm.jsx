@@ -26,9 +26,6 @@ export const transformDateToDays = (values, key = 'date') => {
   return values[key];
 };
 
-MemberForm.propTypes = {
-  setOpen: PropTypes.func,
-};
 export default function MemberForm({ setOpen }) {
   const [form] = Form.useForm();
   const { message, notification } = App.useApp();
@@ -281,3 +278,6 @@ export default function MemberForm({ setOpen }) {
     </Form>
   );
 }
+MemberForm.propTypes = {
+  setOpen: PropTypes.func,
+};

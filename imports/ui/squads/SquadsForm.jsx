@@ -8,10 +8,6 @@ import { turnBase64ToImage, turnImageFileToBase64 } from '../profile-picture-inp
 import { getColorFromValues } from '../specializations/SpecializationForm';
 import SquadsSelect from './SquadsSelect';
 
-SquadsForm.propTypes = {
-  setOpen: PropTypes.func,
-  useSubdrawer: PropTypes.bool,
-};
 const SquadsForm = ({ setOpen, useSubdrawer = false }) => {
   const drawer = useContext(DrawerContext);
   const subdrawer = useContext(SubdrawerContext);
@@ -93,6 +89,10 @@ const SquadsForm = ({ setOpen, useSubdrawer = false }) => {
       <FormFooter setOpen={setOpen} />
     </Form>
   );
+};
+SquadsForm.propTypes = {
+  setOpen: PropTypes.func,
+  useSubdrawer: PropTypes.bool,
 };
 
 export default SquadsForm;

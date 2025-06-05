@@ -2,12 +2,6 @@ import { Button, Col, Row } from 'antd';
 import PropTypes from 'prop-types';
 import React from 'react';
 
-TableFooter.propTypes = {
-  count: PropTypes.number,
-  ready: PropTypes.bool,
-  handleLoadMore: PropTypes.func,
-  disabled: PropTypes.bool,
-};
 export default function TableFooter({ count = 0, ready = false, handleLoadMore, disabled = false }) {
   return (
     <Row gutter={[16, 16]} justify="space-between" align="middle" style={{ marginTop: '16px' }}>
@@ -22,3 +16,9 @@ export default function TableFooter({ count = 0, ready = false, handleLoadMore, 
     </Row>
   );
 }
+TableFooter.propTypes = {
+  count: PropTypes.number,
+  ready: PropTypes.bool,
+  handleLoadMore: PropTypes.func,
+  disabled: PropTypes.bool,
+};

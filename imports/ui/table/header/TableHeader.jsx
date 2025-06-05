@@ -2,12 +2,6 @@ import { Button, Col, Input, Row } from 'antd';
 import PropTypes from 'prop-types';
 import React from 'react';
 
-TableHeader.propTypes = {
-  handleChange: PropTypes.func,
-  value: PropTypes.string,
-  handleCreate: PropTypes.func,
-  extra: PropTypes.node,
-};
 export default function TableHeader({ handleChange = console.warn, value = '', handleCreate = console.warn, extra = <></> }) {
   return (
     <Row gutter={[16, 16]}>
@@ -23,3 +17,9 @@ export default function TableHeader({ handleChange = console.warn, value = '', h
     </Row>
   );
 }
+TableHeader.propTypes = {
+  handleChange: PropTypes.func,
+  value: PropTypes.string,
+  handleCreate: PropTypes.func,
+  extra: PropTypes.node,
+};

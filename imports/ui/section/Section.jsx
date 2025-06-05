@@ -18,17 +18,6 @@ function defaultColumnsFactory() {
   return [];
 }
 
-Section.propTypes = {
-  title: PropTypes.string,
-  collectionName: PropTypes.string,
-  Collection: PropTypes.object,
-  FormComponent: PropTypes.object,
-  filterFactory: PropTypes.func,
-  columnsFactory: PropTypes.func,
-  extra: PropTypes.node,
-  headerExtra: PropTypes.node,
-  customView: PropTypes.bool,
-};
 export default function Section({
   title = '',
   collectionName = '',
@@ -121,13 +110,18 @@ export default function Section({
     </SectionCard>
   );
 }
-
-TableSection.propTypes = {
-  columns: PropTypes.array,
-  datasource: PropTypes.array,
-  handleLoadMore: PropTypes.func,
-  disabled: PropTypes.bool,
+Section.propTypes = {
+  title: PropTypes.string,
+  collectionName: PropTypes.string,
+  Collection: PropTypes.object,
+  FormComponent: PropTypes.object,
+  filterFactory: PropTypes.func,
+  columnsFactory: PropTypes.func,
+  extra: PropTypes.node,
+  headerExtra: PropTypes.node,
+  customView: PropTypes.bool,
 };
+
 const TableSection = ({ columns, datasource, handleLoadMore, disabled }) => {
   return (
     <>
@@ -137,4 +131,10 @@ const TableSection = ({ columns, datasource, handleLoadMore, disabled }) => {
       <TableFooter ready={true} count={datasource.length} handleLoadMore={handleLoadMore} disabled={disabled} />
     </>
   );
+};
+TableSection.propTypes = {
+  columns: PropTypes.array,
+  datasource: PropTypes.array,
+  handleLoadMore: PropTypes.func,
+  disabled: PropTypes.bool,
 };

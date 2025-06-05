@@ -1,10 +1,6 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 
-Logo.propTypes = {
-  src: PropTypes.string,
-  alt: PropTypes.string,
-};
 export default function Logo({ src = '/favicon-32x32.png', alt = 'Logo' }) {
   return (
     <div className="logo">
@@ -12,3 +8,7 @@ export default function Logo({ src = '/favicon-32x32.png', alt = 'Logo' }) {
     </div>
   );
 }
+Logo.propTypes = {
+  src: PropTypes.string,
+  alt: PropTypes.string,
+};

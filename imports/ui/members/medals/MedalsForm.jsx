@@ -6,10 +6,6 @@ import { DrawerContext, SubdrawerContext } from '../../app/App';
 import FormFooter from '../../components/FormFooter';
 import { getColorFromValues } from '../../specializations/SpecializationForm';
 
-MedalsForm.propTypes = {
-  setOpen: PropTypes.func,
-  useSubdrawer: PropTypes.bool,
-};
 export default function MedalsForm({ setOpen, useSubdrawer }) {
   const [form] = Form.useForm();
   const { message, notification } = App.useApp();
@@ -71,3 +67,7 @@ export default function MedalsForm({ setOpen, useSubdrawer }) {
     </Form>
   );
 }
+MedalsForm.propTypes = {
+  setOpen: PropTypes.func,
+  useSubdrawer: PropTypes.bool,
+};

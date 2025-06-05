@@ -2,11 +2,6 @@ import { Button, Col, Row } from 'antd';
 import PropTypes from 'prop-types';
 import React from 'react';
 
-FormFooter.propTypes = {
-  setOpen: PropTypes.func,
-  cancelText: PropTypes.string,
-  submitText: PropTypes.string,
-};
 const FormFooter = ({ setOpen, cancelText = 'Cancel', submitText = 'Submit' }) => {
   return (
     <Row gutter={[16, 16]} align="middle" justify="end">
@@ -22,6 +17,11 @@ const FormFooter = ({ setOpen, cancelText = 'Cancel', submitText = 'Submit' }) =
       </Col>
     </Row>
   );
+};
+FormFooter.propTypes = {
+  setOpen: PropTypes.func,
+  cancelText: PropTypes.string,
+  submitText: PropTypes.string,
 };
 
 export default FormFooter;

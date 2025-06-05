@@ -6,10 +6,6 @@ import { DrawerContext, SubdrawerContext } from '../../app/App';
 import FormFooter from '../../components/FormFooter';
 import { getColorFromValues } from '../../specializations/SpecializationForm';
 
-EventTypesForm.propTypes = {
-  setOpen: PropTypes.func,
-  useSubdrawer: PropTypes.bool,
-};
 export default function EventTypesForm({ setOpen, useSubdrawer }) {
   const [form] = Form.useForm();
   const { message, notification } = App.useApp();
@@ -70,3 +66,7 @@ export default function EventTypesForm({ setOpen, useSubdrawer }) {
     </Form>
   );
 }
+EventTypesForm.propTypes = {
+  setOpen: PropTypes.func,
+  useSubdrawer: PropTypes.bool,
+};

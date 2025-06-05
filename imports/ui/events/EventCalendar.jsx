@@ -14,10 +14,6 @@ import EventForm from './EventForm';
 const localizer = dayjsLocalizer(dayjs);
 const DnDCalendar = withDragAndDrop(Calendar);
 
-EventCalendar.propTypes = {
-  datasource: PropTypes.array,
-  setFilter: PropTypes.func,
-};
 const EventCalendar = ({ datasource, setFilter }) => {
   const drawer = useContext(DrawerContext);
   const [range, setRange] = useState({
@@ -124,6 +120,10 @@ const EventCalendar = ({ datasource, setFilter }) => {
       />
     </div>
   );
+};
+EventCalendar.propTypes = {
+  datasource: PropTypes.array,
+  setFilter: PropTypes.func,
 };
 
 export default EventCalendar;

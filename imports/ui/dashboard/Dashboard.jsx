@@ -75,9 +75,6 @@ export default function Dashboard() {
   );
 }
 
-ProfileStats.propTypes = {
-  profileStats: PropTypes.object,
-};
 export function ProfileStats({ profileStats }) {
   const fullWidthKeys = useMemo(() => ['description', 'specializations', 'medals'], []);
   const oneThirdWidthKeys = useMemo(() => ['rank', 'id', 'name', 'entry date', 'squad', 'role', 'attendance points', 'inactivity points'], []);
@@ -134,3 +131,6 @@ export function ProfileStats({ profileStats }) {
     </Row>
   );
 }
+ProfileStats.propTypes = {
+  profileStats: PropTypes.object,
+};
