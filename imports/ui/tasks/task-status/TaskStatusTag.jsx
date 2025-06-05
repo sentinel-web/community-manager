@@ -1,12 +1,19 @@
 import { Tag, Tooltip } from 'antd';
-import React, { useMemo } from 'react';
-import useTaskStatus from './task-status.hook';
+import { Meteor } from 'meteor/meteor';
+import PropTypes from 'prop-types';
+import React, { useEffect, useState } from 'react';
 
+TaskStatusTag.propTypes = {
+  taskStatusId: PropTypes.string,
+};
 export default function TaskStatusTag({ taskStatusId }) {
-  const { ready, taskStatus } = useTaskStatus();
-  const match = useMemo(() => {
-    return ready ? taskStatus.find(status => status._id === taskStatusId) : null;
-  }, [taskStatusId, ready, taskStatus]);
+  const [match, setMatch] = useState(null);
+
+  useEffect(() => {
+    if (!taskStatusId) setMatch(null);
+    else Meteor.callAsync('taskStatus.read', { _id: taskStatusId }, { limit: 1 }).then(res => setMatch(res[0]));
+  }, [taskStatusId]);
+
   if (!taskStatusId) return <Tag>-</Tag>;
   if (!match) return <Tag>Not found</Tag>;
   return (

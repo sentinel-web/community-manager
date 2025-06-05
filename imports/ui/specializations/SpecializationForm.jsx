@@ -1,15 +1,21 @@
-import { App, Button, Col, ColorPicker, Form, Input, Row } from 'antd';
-import React, { useCallback, useContext, useMemo } from 'react';
+import { App, Col, ColorPicker, Form, Input, Row } from 'antd';
 import { Meteor } from 'meteor/meteor';
+import PropTypes from 'prop-types';
+import React, { useCallback, useContext, useMemo } from 'react';
 import { DrawerContext, SubdrawerContext } from '../app/App';
-import RanksSelect from '../members/ranks/RanksSelect';
+import FormFooter from '../components/FormFooter';
 import MembersSelect from '../members/MembersSelect';
+import RanksSelect from '../members/ranks/RanksSelect';
 import SpecializationsSelect from './SpecializationsSelect';
 
 export function getColorFromValues(values) {
   return values?.color ? values.color?.toHexString?.() || values.color : values?.color;
 }
 
+SpecializationForm.propTypes = {
+  setOpen: PropTypes.func,
+  useSubdrawer: PropTypes.bool,
+};
 const SpecializationForm = ({ setOpen, useSubdrawer }) => {
   const drawer = useContext(DrawerContext);
   const subdrawer = useContext(SubdrawerContext);
@@ -40,8 +46,10 @@ const SpecializationForm = ({ setOpen, useSubdrawer }) => {
     [setOpen, notification, message, model?._id, endpoint]
   );
 
+  const [form] = Form.useForm();
+
   return (
-    <Form layout="vertical" onFinish={handleFinish} initialValues={model}>
+    <Form layout="vertical" form={form} onFinish={handleFinish} initialValues={model}>
       <Form.Item name="name" label="Name" rules={[{ required: true, type: 'string' }]}>
         <Input placeholder="Enter name" />
       </Form.Item>
@@ -57,24 +65,19 @@ const SpecializationForm = ({ setOpen, useSubdrawer }) => {
           </Form.Item>
         </Col>
       </Row>
-      <MembersSelect multiple name="instructors" label="Instructors" rules={[{ required: false, type: 'array' }]} />
-      <SpecializationsSelect multiple name="requiredSpecializations" label="Required Specializations" rules={[{ required: false, type: 'array' }]} />
-      <RanksSelect name="requiredRankId" label="Required Rank" rules={[{ required: false, type: 'string' }]} />
+      <MembersSelect multiple name="instructors" label="Instructors" rules={[{ required: false, type: 'array' }]} defaultValue={model?.instructors} />
+      <SpecializationsSelect
+        multiple
+        name="requiredSpecializations"
+        label="Required Specializations"
+        rules={[{ required: false, type: 'array' }]}
+        defaultValue={model?.requiredSpecializations}
+      />
+      <RanksSelect name="requiredRankId" label="Required Rank" rules={[{ required: false, type: 'string' }]} defaultValue={model?.requiredRankId} />
       <Form.Item name="description" label="Description" rules={[{ required: false, type: 'string' }]}>
         <Input.TextArea autoSize placeholder="Enter description" />
       </Form.Item>
-      <Row gutter={[16, 16]} align="middle" justify="end">
-        <Col>
-          <Button onClick={() => setOpen(false)} danger>
-            Cancel
-          </Button>
-        </Col>
-        <Col>
-          <Button type="primary" htmlType="submit">
-            Submit
-          </Button>
-        </Col>
-      </Row>
+      <FormFooter setOpen={setOpen} />
     </Form>
   );
 };

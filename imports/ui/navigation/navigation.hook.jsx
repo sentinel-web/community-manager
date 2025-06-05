@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import { useContext } from 'react';
 import { NavigationContext } from '../app/App';
 
 export default function useNavigation() {

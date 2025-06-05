@@ -1,11 +1,11 @@
+import { App as AntdApp, theme as AntdTheme, ConfigProvider, Drawer, Layout } from 'antd';
 import React, { createContext, useEffect, useState } from 'react';
+import Footer from '../footer/Footer';
 import Header from '../header/Header';
 import Main from '../main/Main';
 import { getNavigationValue } from '../navigation/Navigation';
-import { getPreferedTheme } from '../theme/theme.hook';
-import { App as AntdApp, ConfigProvider, theme as AntdTheme, Layout, Drawer } from 'antd';
 import useSettings from '../settings/settings.hook';
-import Footer from '../footer/Footer';
+import { getPreferedTheme } from '../theme/theme.hook';
 
 export const NavigationContext = createContext({});
 export const ThemeContext = createContext({});
@@ -87,7 +87,7 @@ export default function App() {
                   <Layout.Header>
                     <Header />
                   </Layout.Header>
-                  <Layout.Content>
+                  <Layout.Content style={{ flex: 1, overflow: 'auto' }}>
                     <Main />
                   </Layout.Content>
                   <Layout.Footer>
@@ -100,7 +100,7 @@ export default function App() {
                   onClose={() => setDrawerOpen(false)}
                   title={drawerTitle}
                   extra={drawerExtra}
-                  destroyOnClose
+                  destroyOnHidden
                 >
                   {drawerComponent}
                   <Drawer
@@ -109,7 +109,7 @@ export default function App() {
                     onClose={() => setSubdrawerOpen(false)}
                     title={subdrawerTitle}
                     extra={subdrawerExtra}
-                    destroyOnClose
+                    destroyOnHidden
                   >
                     {subdrawerComponent}
                   </Drawer>

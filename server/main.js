@@ -1,18 +1,54 @@
+import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
+import MembersCollection from '../imports/api/collections/members.collection';
+import RolesCollection from '../imports/api/collections/roles.collection';
+import './apis/dashboard.server';
 import './apis/members.server';
-import './apis/events.server';
-import './apis/eventTypes.server';
-import './apis/tasks.server';
-import './apis/settings.server';
-import './apis/registrations.server';
-import './apis/profilePictures.server';
-import './apis/discoveryTypes.server';
-import './apis/taskStatus.server';
-import './apis/ranks.server';
-import './apis/specializations.server';
-import './apis/squads.server';
-import './apis/medals.server';
 import './apis/orbat.server';
+import './apis/registrations.server';
+import './apis/settings.server';
+import './apis/specializations.server';
+import './crud.lib';
+import { createCollectionMethods, createCollectionPublish } from './crud.lib';
+
+async function createTestData() {
+  const adminRole = await RolesCollection.findOneAsync({ _id: 'admin' });
+  if (!adminRole) await RolesCollection.upsertAsync({ _id: 'admin' }, { _id: 'admin', name: 'admin', roles: true });
+  const user = await MembersCollection.findOneAsync({ username: 'admin' });
+  if (user) return;
+  await Accounts.createUserAsync({ username: 'admin', password: 'admin', profile: { name: 'Admin', roleId: 'admin' } });
+}
+
+if (Meteor.isServer) {
+  Meteor.startup(async () => {
+    await createTestData();
+  });
+}
+
+const collectionNames = [
+  'events',
+  'attendances',
+  'eventTypes',
+  'tasks',
+  'taskStatus',
+  // 'members', // ! handled separately
+  'squads',
+  'ranks',
+  'specializations',
+  'medals',
+  'registrations',
+  'discoveryTypes',
+  // 'settings', // ! handled separately
+  'roles',
+  'profilePictures',
+];
+
+if (Meteor.isServer) {
+  for (const collectionName of collectionNames) {
+    createCollectionPublish(collectionName);
+    createCollectionMethods(collectionName);
+  }
+}
 
 export function validateUserId(userId) {
   if (!userId || typeof userId !== 'string') {

@@ -1,5 +1,6 @@
-import hexToRgb from '../../../imports/helpers/colors/hexToRgb';
+/* global describe, it, expect */
 import assert from 'node:assert';
+import hexToRgb from '../../../imports/helpers/colors/hexToRgb';
 
 describe('hexToRgb', () => {
   it('converts hex color to RGB values', () => {

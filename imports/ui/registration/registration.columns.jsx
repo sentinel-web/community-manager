@@ -1,8 +1,9 @@
 import React from 'react';
 import TableActions from '../table/body/actions/TableActions';
 import DiscoveryTypeTag from './discovery-types/DiscoveryTypeTag';
+import RegistrationExtra from './RegistrationExtra';
 
-export default function getRegistrationColumns(handleDelete, handleEdit) {
+export default function getRegistrationColumns(handleEdit, handleDelete) {
   return [
     {
       title: 'Name',
@@ -40,7 +41,7 @@ export default function getRegistrationColumns(handleDelete, handleEdit) {
       title: 'Actions',
       dataIndex: '_id',
       key: '_id',
-      render: (id, record) => <TableActions record={record} handleEdit={handleEdit} handleDelete={handleDelete} />,
+      render: (id, record) => <TableActions record={record} handleEdit={handleEdit} handleDelete={handleDelete} extra={RegistrationExtra} />,
     },
   ];
 }

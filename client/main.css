@@ -106,12 +106,11 @@ html {
       min-width: 100%;
       margin: 0 auto;
       padding: 0.5rem;
-      max-height: calc(100vh - 80px - 56px);
       overflow: auto;
 
       .login {
         max-width: 800px;
-        margin: 0 auto;
+        margin: 20vh auto;
 
         form {
           .title {

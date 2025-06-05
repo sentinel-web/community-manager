@@ -1,16 +1,25 @@
-import { App, Button, Col, Form, Row, Select } from 'antd';
-import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { App, Form, Select } from 'antd';
 import { Meteor } from 'meteor/meteor';
+import PropTypes from 'prop-types';
+import React, { useCallback, useContext } from 'react';
+import TaskStatusCollection from '../../api/collections/taskStatus.collection';
 import { DrawerContext } from '../app/App';
-import useTaskStatus from './task-status/task-status.hook';
+import CollectionSelect from '../components/CollectionSelect';
+import FormFooter from '../components/FormFooter';
+import MembersSelect from '../members/MembersSelect';
+import TaskStatusForm from './task-status/TaskStatusForm';
 
+TaskFilter.propTypes = {
+  setOpen: PropTypes.func,
+};
 const TaskFilter = ({ setOpen }) => {
   const { drawerModel: model } = useContext(DrawerContext);
   const { notification } = App.useApp();
+  const [form] = Form.useForm();
 
   const handleFinish = useCallback(
     async values => {
-      Meteor.callAsync('members.update', Meteor.userId(), { taskFilter: values })
+      Meteor.callAsync('members.update', Meteor.userId(), { 'profile.taskFilter': values })
         .then(() => {
           setOpen(false);
         })
@@ -24,31 +33,8 @@ const TaskFilter = ({ setOpen }) => {
     [setOpen, notification]
   );
 
-  const [participantOptions, setParticipantOptions] = useState([]);
-  useEffect(() => {
-    Meteor.callAsync('members.options')
-      .then(res => setParticipantOptions(res))
-      .catch(error => {
-        notification.error({
-          message: error.error,
-          description: error.message,
-        });
-      });
-  }, [notification]);
-
-  const { ready, taskStatus } = useTaskStatus();
-  const taskStatusOptions = useMemo(() => {
-    return ready ? taskStatus.map(status => ({ value: status._id, label: status.name, title: status.description })) : [];
-  }, [ready, taskStatus]);
-
   return (
-    <Form layout="vertical" onFinish={handleFinish} initialValues={model || { status: [], participants: [] }}>
-      <Form.Item label="Status" name="status" rules={[{ required: false, type: 'array' }]}>
-        <Select mode="multiple" placeholder="Select status" loading={!ready} allowClear options={taskStatusOptions} optionFilterProp="label" />
-      </Form.Item>
-      <Form.Item label="Participants" name="participants" rules={[{ required: false, type: 'array' }]}>
-        <Select mode="multiple" placeholder="Select participants" allowClear options={participantOptions} />
-      </Form.Item>
+    <Form layout="vertical" form={form} onFinish={handleFinish} initialValues={model || { type: 'table', status: [], participants: [] }}>
       <Form.Item label="Type" name="type" rules={[{ required: false, type: 'string' }]}>
         <Select
           placeholder="Select type"
@@ -59,16 +45,26 @@ const TaskFilter = ({ setOpen }) => {
           ]}
         />
       </Form.Item>
-      <Row gutter={[16, 16]} align="middle" justify="end">
-        <Col>
-          <Button onClick={() => setOpen(false)}>Cancel</Button>
-        </Col>
-        <Col>
-          <Button type="primary" htmlType="submit">
-            Submit
-          </Button>
-        </Col>
-      </Row>
+      <CollectionSelect
+        defaultValue={model?.status}
+        name="status"
+        label="Status"
+        rules={[{ required: false, type: 'array' }]}
+        placeholder="Select status"
+        FormComponent={TaskStatusForm}
+        collection={TaskStatusCollection}
+        mode="multiple"
+        subscription="taskStatus"
+      />
+      <MembersSelect
+        name="participants"
+        label="Participants"
+        rules={[{ required: false, type: 'array' }]}
+        placeholder="Select participants"
+        defaultValue={model?.participants}
+        multiple
+      />
+      <FormFooter setOpen={setOpen} />
     </Form>
   );
 };

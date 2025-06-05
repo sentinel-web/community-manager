@@ -1,11 +1,17 @@
-import { Button, Col, ColorPicker, Form, Input, Row, Upload } from 'antd';
+import { Col, ColorPicker, Form, Input, Row, Upload } from 'antd';
+import { Meteor } from 'meteor/meteor';
+import PropTypes from 'prop-types';
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { DrawerContext, SubdrawerContext } from '../app/App';
+import FormFooter from '../components/FormFooter';
 import { turnBase64ToImage, turnImageFileToBase64 } from '../profile-picture-input/ProfilePictureInput';
-import { Meteor } from 'meteor/meteor';
 import { getColorFromValues } from '../specializations/SpecializationForm';
 import SquadsSelect from './SquadsSelect';
 
+SquadsForm.propTypes = {
+  setOpen: PropTypes.func,
+  useSubdrawer: PropTypes.bool,
+};
 const SquadsForm = ({ setOpen, useSubdrawer = false }) => {
   const drawer = useContext(DrawerContext);
   const subdrawer = useContext(SubdrawerContext);
@@ -77,23 +83,14 @@ const SquadsForm = ({ setOpen, useSubdrawer = false }) => {
           </Form.Item>
         </Col>
       </Row>
-      <SquadsSelect label="Parent Squad" name="parentSquadId" rules={[{ required: false, type: 'string' }]} />
+      <SquadsSelect label="Parent Squad" name="parentSquadId" rules={[{ required: false, type: 'string' }]} defaultValue={model.parentSquadId} />
       <Form.Item label="Short Range Frequency" name="shortRangeFrequency" rules={[{ required: false, type: 'string' }]}>
         <Input placeholder="Enter icon" />
       </Form.Item>
       <Form.Item label="Description" name="description" rules={[{ required: false, type: 'string' }]}>
         <Input.TextArea autoSize placeholder="Enter description" />
       </Form.Item>
-      <Row gutter={[16, 16]} align="middle" justify="end">
-        <Col>
-          <Button onClick={() => setOpen(false)}>Cancel</Button>
-        </Col>
-        <Col>
-          <Button type="primary" htmlType="submit">
-            Save
-          </Button>
-        </Col>
-      </Row>
+      <FormFooter setOpen={setOpen} />
     </Form>
   );
 };
