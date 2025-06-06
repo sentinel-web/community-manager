@@ -9,7 +9,7 @@ export default function useSettings() {
       ready: subscription.ready(),
       communityTitle: SettingsCollection.findOne({ key: 'community-title' })?.value,
       communityLogo: SettingsCollection.findOne({ key: 'community-logo' })?.value,
-      communityColor: SettingsCollection.findOne({ key: 'community-color' })?.value ?? '#708152',
+      communityColor: SettingsCollection.findOne({ key: 'community-color' })?.value ?? '#3b88c3',
       communityNameBlackList: SettingsCollection.findOne({ key: 'community-name-black-list' })?.value ?? [],
       communityIdBlackList: SettingsCollection.findOne({ key: 'community-id-black-list' })?.value ?? [],
     };
