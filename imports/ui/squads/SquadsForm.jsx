@@ -81,7 +81,10 @@ const SquadsForm = ({ setOpen, useSubdrawer = false }) => {
       </Row>
       <SquadsSelect label="Parent Squad" name="parentSquadId" rules={[{ required: false, type: 'string' }]} defaultValue={model.parentSquadId} />
       <Form.Item label="Short Range Frequency" name="shortRangeFrequency" rules={[{ required: false, type: 'string' }]}>
-        <Input placeholder="Enter icon" />
+        <Input placeholder="Enter short range frequency" />
+      </Form.Item>
+      <Form.Item label="Long Range Frequency" name="longRangeFrequency" rules={[{ required: false, type: 'string' }]}>
+        <Input placeholder="Enter long range frequency" />
       </Form.Item>
       <Form.Item label="Description" name="description" rules={[{ required: false, type: 'string' }]}>
         <Input.TextArea autoSize placeholder="Enter description" />
