@@ -65,6 +65,13 @@ const getSquadsColumns = (handleEdit, handleDelete) => {
       render: shortRangeFrequency => shortRangeFrequency || '-',
     },
     {
+      title: 'Long Range Frequency',
+      dataIndex: 'longRangeFrequency',
+      key: 'longRangeFrequency',
+      sorter: (a, b) => String(a.longRangeFrequency).localeCompare(String(b.longRangeFrequency)),
+      render: longRangeFrequency => longRangeFrequency || '-',
+    },
+    {
       title: 'Actions',
       dataIndex: 'actions',
       key: 'actions',
