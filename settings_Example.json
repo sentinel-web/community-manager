@@ -1,0 +1,6 @@
+{
+  "discord": {
+    "botToken": "Bot/BotToken",
+    "defaultGuildId": "Server-ID bot must be on Server"
+  }
+}
