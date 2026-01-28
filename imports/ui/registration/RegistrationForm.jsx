@@ -29,6 +29,7 @@ export default function RegistrationForm({ setOpen }) {
         name: '',
         id: null,
         age: null,
+        discordName: '',
         discoveryType: null,
         rulesReadAndAccepted: false,
         description: '',
@@ -67,8 +68,8 @@ export default function RegistrationForm({ setOpen }) {
   const handleSubmit = useCallback(
     values => {
       setLoading(true);
-      const { name, id, age, discoveryType, rulesReadAndAccepted, description } = values;
-      const args = [...(model?._id ? [model._id] : []), { name, id, age, discoveryType, rulesReadAndAccepted, description }];
+      const { name, id, age, discordName, discoveryType, rulesReadAndAccepted, description } = values;
+      const args = [...(model?._id ? [model._id] : []), { name, id, age, discordName, discoveryType, rulesReadAndAccepted, description }];
       Meteor.callAsync(Meteor.user() && model?._id ? 'registrations.update' : 'registrations.insert', ...args)
         .then(() => {
           setOpen(false);
@@ -145,6 +146,17 @@ export default function RegistrationForm({ setOpen }) {
         required
       >
         <InputNumber min={16} step={1} placeholder="Enter age" />
+      </Form.Item>
+      <Form.Item
+        name="discordName"
+        label="Discord Name"
+        rules={[
+          { required: true, type: 'string' },
+          { min: 2 },
+        ]}
+        required
+      >
+        <Input placeholder="e.g. Panda#1234 oder Panda" />
       </Form.Item>
       <CollectionSelect
         defaultValue={model?.discoveryType}

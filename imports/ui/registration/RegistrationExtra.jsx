@@ -22,11 +22,26 @@ const ConfirmModal = ({ open, setOpen, record }) => {
     try {
       const values = await form.validateFields();
       const { username, password } = values || {};
-      const { name, id, age, discoveryType, description } = record || {};
+      const { name, id, age, discoveryType, description, discordName } = record || {};
+      // DiscordName validate to Discord UserID
+      let discordId;
+      if (discordName){
+        const resolved = await Meteor.callAsync('discord.resolveUserIdByGlobalUsername', { username: discordName });
+        discordId = resolved?.user?.id ?? resolved;
+
+        if (!discordId) {
+          notification.error({
+            message: 'Error',
+            description: `Discord user "${discordName}" not found.`,
+          });
+          return;
+        }
+      }
+
       const payload = {
         username,
         password,
-        profile: { name, id, age, discoveryType, description, registrationId: record._id },
+        profile: { name, id, age, discoveryType, description, registrationId: record._id, discordName: discordName ?? '', discordId: discordId ?? '',},
       };
       await Meteor.callAsync('members.insert', payload);
       message.success('Member created');

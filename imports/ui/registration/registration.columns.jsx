@@ -24,6 +24,12 @@ export default function getRegistrationColumns(handleEdit, handleDelete) {
       sorter: (a, b) => a.age - b.age,
     },
     {
+      title: 'Discord Name',
+      dataIndex: 'discordName',
+      key: 'discordName',
+      sorter: (a, b) => a.discordName.localeCompare(b.discordName),
+    },
+    {
       title: 'Discovery Type',
       dataIndex: 'discoveryType',
       key: 'discoveryType',

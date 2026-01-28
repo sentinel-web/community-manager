@@ -2,6 +2,8 @@ import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
 import MembersCollection from '../imports/api/collections/members.collection';
 import RolesCollection from '../imports/api/collections/roles.collection';
+import '../imports/server/discord/client.js';
+import '../imports/api/discord/methods.js';
 import './apis/dashboard.server';
 import './apis/members.server';
 import './apis/orbat.server';
@@ -10,6 +12,7 @@ import './apis/settings.server';
 import './apis/specializations.server';
 import './crud.lib';
 import { createCollectionMethods, createCollectionPublish } from './crud.lib';
+import { getDiscord } from '../imports/server/discord/client.js';
 
 async function createTestData() {
   const adminRole = await RolesCollection.findOneAsync({ _id: 'admin' });
@@ -21,6 +24,7 @@ async function createTestData() {
 
 if (Meteor.isServer) {
   Meteor.startup(async () => {
+   getDiscord();
     await createTestData();
   });
 }
