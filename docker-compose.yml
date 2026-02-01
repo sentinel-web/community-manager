@@ -1,15 +1,22 @@
 services:
   app:
     build: .
-    ports:
-      - "3000:3000"
     environment:
-      - ROOT_URL=http://localhost:3000
-      - MONGO_URL=mongodb://mongo:27017/community-manager
+      - ROOT_URL=${ROOT_URL}
+      - MONGO_URL=${MONGO_URL:-mongodb://mongo:27017/community-manager}
     depends_on:
       mongo:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - traefik
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.community-manager.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.community-manager.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.community-manager.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.services.community-manager.loadbalancer.server.port=3000"
 
   mongo:
     image: mongo:7
@@ -24,3 +31,7 @@ services:
 
 volumes:
   mongo-data:
+
+networks:
+  traefik:
+    external: true
