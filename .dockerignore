@@ -1,0 +1,8 @@
+.git
+.github
+.meteor/local
+node_modules
+.eslintrc.cjs
+eslint.config.mjs
+.prettierrc
+README.md
