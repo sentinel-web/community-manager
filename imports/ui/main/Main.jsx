@@ -21,6 +21,7 @@ const Squads = lazy(() => import('../squads/Squads'));
 const Registrations = lazy(() => import('../registration/Registration'));
 const DiscoveryTypes = lazy(() => import('../registration/discovery-types/DiscoverTypes'));
 const Roles = lazy(() => import('../members/roles/Roles'));
+const Logs = lazy(() => import('../logs/Logs'));
 const Settings = lazy(() => import('../settings/Settings'));
 
 export default function Main() {
@@ -67,6 +68,7 @@ export default function Main() {
           {hasAccess && navigationValue === 'registrations' && <Registrations />}
           {hasAccess && navigationValue === 'discoveryTypes' && <DiscoveryTypes />}
           {hasAccess && navigationValue === 'roles' && <Roles />}
+          {hasAccess && navigationValue === 'logs' && <Logs />}
           {hasAccess && navigationValue === 'settings' && <Settings />}
         </Suspense>
       )}

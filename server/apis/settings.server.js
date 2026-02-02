@@ -1,6 +1,7 @@
 import { Meteor } from 'meteor/meteor';
 import SettingsCollection from '../../imports/api/collections/settings.collection';
 import { validateObject, validateString, validateUserId } from '../main';
+import { createLog } from './logs.server';
 
 if (Meteor.isServer) {
   Meteor.publish('settings', (filter = {}, options = {}) => {
@@ -17,7 +18,9 @@ if (Meteor.isServer) {
         throw new Meteor.Error('invalid-value', 'Invalid value', value);
       }
       try {
-        return await SettingsCollection.upsertAsync(key, { $set: { key, value } });
+        const result = await SettingsCollection.upsertAsync(key, { $set: { key, value } });
+        await createLog('settings.updated', { key });
+        return result;
       } catch (error) {
         throw new Meteor.Error(error.message);
       }
@@ -25,7 +28,9 @@ if (Meteor.isServer) {
     'settings.remove': async function (key = null) {
       validateUserId(this.userId);
       try {
-        return await SettingsCollection.removeAsync(key);
+        const result = await SettingsCollection.removeAsync(key);
+        await createLog('settings.deleted', { key });
+        return result;
       } catch (error) {
         throw new Meteor.Error(error.message);
       }
