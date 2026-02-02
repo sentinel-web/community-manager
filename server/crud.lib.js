@@ -1,10 +1,12 @@
 import { Meteor } from 'meteor/meteor';
 import { validateObject, validateString } from './main';
+import { createLog } from './apis/logs.server';
 
 import AttendancesCollection from '../imports/api/collections/attendances.collection';
 import DiscoveryTypesCollection from '../imports/api/collections/discoveryTypes.collection';
 import EventsCollection from '../imports/api/collections/events.collection';
 import EventTypesCollection from '../imports/api/collections/eventTypes.collection';
+import LogsCollection from '../imports/api/collections/logs.collection';
 import MedalsCollection from '../imports/api/collections/medals.collection';
 import MembersCollection from '../imports/api/collections/members.collection';
 import ProfilePicturesCollection from '../imports/api/collections/profilePictures.collection';
@@ -31,6 +33,8 @@ export function getCollection(collection) {
       return MedalsCollection;
     case 'events':
       return EventsCollection;
+    case 'logs':
+      return LogsCollection;
     case 'attendances':
       return AttendancesCollection;
     case 'members':
@@ -78,20 +82,32 @@ function createCollectionMethods(collection) {
         [`${collection}.insert`]: async function (payload = {}) {
           if (!this.userId && !unsafeCollections.includes(collection)) throw new Meteor.Error(401, 'Unauthorized');
           if (validateObject(payload, false)) throw new Meteor.Error(400, 'Invalid payload');
-          return await Collection.insertAsync(payload);
+          const id = await Collection.insertAsync(payload);
+          if (collection !== 'logs') {
+            await createLog(`${collection}.created`, { id, ...payload });
+          }
+          return id;
         },
         [`${collection}.update`]: async function (id = '', data = {}) {
           if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
           if (validateString(id, false)) throw new Meteor.Error(400, 'Invalid id');
           if (validateObject(data, false)) throw new Meteor.Error(400, 'Invalid data');
-          return await Collection.updateAsync({ _id: id }, { $set: data });
+          const result = await Collection.updateAsync({ _id: id }, { $set: data });
+          if (collection !== 'logs') {
+            await createLog(`${collection}.updated`, { id, changes: data });
+          }
+          return result;
         },
         [`${collection}.remove`]: async function (id = '') {
           if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
           if (validateString(id, false)) throw new Meteor.Error(400, 'Invalid id');
           const doc = await Collection.findOneAsync(id);
           if (!doc) throw new Meteor.Error(404, 'Document not found');
-          return await Collection.removeAsync({ _id: id });
+          const result = await Collection.removeAsync({ _id: id });
+          if (collection !== 'logs') {
+            await createLog(`${collection}.deleted`, { id });
+          }
+          return result;
         },
         [`${collection}.count`]: async function (filter = {}) {
           if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
