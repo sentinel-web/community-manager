@@ -56,11 +56,59 @@ imports/helpers/        # Utility functions
 
 Members (Meteor.users), Events, Attendances, Tasks, TaskStatus, Squads, Ranks, Specializations, Medals, EventTypes, Registrations, DiscoveryTypes, Roles, ProfilePictures, Settings, Logs
 
+### Collection Schemas
+
+**Members** (Meteor.users)
+- `username`, `password`, `profile: { name, id (1000-9999), roleId, squadId, rankId, navyRankId, specializationIds[], medalIds[], profilePictureId, discordTag, steamProfileLink, description, entryDate, exitDate, staticAttendancePoints, staticInactivityPoints, hasCustomArmour }`
+
+**Events**
+- `name, start, end, eventType, hosts[], attendees[], isPrivate, color, preset, description`
+
+**Tasks**
+- `name, status (taskStatusId), participants[], priority ('low'|'medium'|'high'), link, description, parent (taskId)`
+
+**Squads**
+- `name, color, image (base64), parentSquadId, shortRangeFrequency, longRangeFrequency, description`
+
+**Ranks**
+- `name, type ('player'|'zeus'), color, previousRankId, nextRankId, description`
+
+**Specializations**
+- `name, color, linkToFile, instructors[], requiredSpecializations[], requiredRankId, description`
+
+**Medals, EventTypes, TaskStatus, DiscoveryTypes**
+- `name, color, description`
+
+**Roles**
+- `name, color, description` + boolean permissions (`dashboard, orbat, logs, settings`) + CRUD permissions (`members, events, tasks, squads, ranks, specializations, medals, eventTypes, taskStatus, registrations, discoveryTypes, roles`)
+
+**Registrations**
+- `name, id (1000-9999), age (min 16), discoveryType, rulesReadAndAccepted, description`
+
+**Attendances** - `{ [eventId]: { [memberId]: points } }`
+**ProfilePictures** - `{ value (base64) }`
+**Settings** - Key-value store
+**Logs** - `{ action, data, createdAt }`
+
 ### UI Components
 
-- **Section** - Generic CRUD wrapper with table, filtering, drawer
-- **CollectionSelect** - Multi-select dropdown with inline create/edit
-- Feature folders in `imports/ui/`: events (calendar/attendance/table views), tasks (Kanban board), orbat (org chart), members, squads, logs, settings, backup
+**Reusable Components**
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| `Section` | `imports/ui/section/` | Generic CRUD page with table, filtering, drawer |
+| `SectionCard` | `imports/ui/section/` | Card wrapper with title and loading state |
+| `CollectionSelect` | `imports/ui/components/` | Multi-select dropdown with inline create/edit |
+| `FormFooter` | `imports/ui/components/` | Submit/cancel buttons for drawer forms |
+| `Table` | `imports/ui/table/` | Data table component |
+| `TableHeader` | `imports/ui/table/header/` | Search input and create button |
+| `TableFooter` | `imports/ui/table/footer/` | Load more button with count |
+| `TableContainer` | `imports/ui/table/body/` | Scrollable table wrapper |
+
+**Feature Folders** in `imports/ui/`:
+- `events/` - Calendar, attendance, table views
+- `tasks/` - Kanban board with drag-and-drop
+- `orbat/` - Organization chart
+- `members/`, `squads/`, `logs/`, `settings/`, `backup/`
 
 ## Key Dependencies
 
@@ -154,6 +202,32 @@ try {
 11. **Fix Review Issues** - Address feedback from review
 12. **Validate Against CLAUDE.md** - Ensure code follows documented patterns; update CLAUDE.md if new patterns emerge
 13. **Create Pull Request** - Include summary of changes and steps for testing/reproduction
+
+## Common Gotchas
+
+**Server-Side**
+- Forgetting to add collection to `getCollection()` switch in `server/crud.lib.js`
+- Using sync methods (`find`, `insert`) instead of async (`findAsync`, `insertAsync`)
+- Using generic `Error` instead of `Meteor.Error(code, message)`
+- Missing permission module mapping in `COLLECTION_TO_MODULE`
+- Forgetting `createLog()` for audit trail on custom methods
+- Not checking `this.userId` before operations
+
+**Client-Side**
+- Missing dependency array in `useFind()`, `useCallback()`, `useMemo()`
+- Forgetting `useSubscribe()` before `useFind()` (data won't load)
+- Not using `App.useApp()` for notifications (won't render in drawer context)
+- Missing PropTypes for component props
+- Using `useEffect` for derived state instead of `useMemo`
+
+**Forms**
+- Forgetting `initialValues={model}` (edit mode won't populate)
+- Missing `valuePropName="checked"` for Switch/Checkbox Form.Items
+- Not handling both create (no `_id`) and update (has `_id`) in `handleFinish`
+
+**Permissions**
+- Adding new CRUD module but forgetting to add to `CRUD_MODULES` array
+- Not passing `permissionModule` prop to Section when collection name differs
 
 ## Code Style
 
