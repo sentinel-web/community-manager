@@ -61,7 +61,7 @@ export default function Logs() {
       e.preventDefault();
       drawer.setDrawerModel(record);
       drawer.setDrawerTitle('View Log');
-      drawer.setDrawerComponent(React.createElement(LogViewer, { setOpen: drawer.setDrawerOpen }));
+      drawer.setDrawerComponent(React.createElement(LogViewer));
       drawer.setDrawerOpen(true);
       drawer.setDrawerExtra(<></>);
     },
