@@ -26,8 +26,10 @@ Participants.propTypes = {
   participants: PropTypes.array,
 };
 
-const getTaskColumns = (handleTaskEdit, handleTaskDelete) => {
-  return [
+const getTaskColumns = (handleTaskEdit, handleTaskDelete, permissions = {}) => {
+  const { canUpdate = true, canDelete = true } = permissions;
+
+  const columns = [
     {
       title: 'Name',
       dataIndex: 'name',
@@ -52,12 +54,19 @@ const getTaskColumns = (handleTaskEdit, handleTaskDelete) => {
       ellipsis: true,
       render: status => (status ? <TaskStatusTag taskStatusId={status} /> : '-'),
     },
-    {
+  ];
+
+  if (canUpdate || canDelete) {
+    columns.push({
       title: 'Actions',
       dataIndex: '_id',
-      render: (id, record) => <TableActions record={record} handleEdit={handleTaskEdit} handleDelete={handleTaskDelete} />,
-    },
-  ];
+      render: (id, record) => (
+        <TableActions record={record} handleEdit={handleTaskEdit} handleDelete={handleTaskDelete} canUpdate={canUpdate} canDelete={canDelete} />
+      ),
+    });
+  }
+
+  return columns;
 };
 
 export default getTaskColumns;

@@ -9,7 +9,7 @@ import RanksCollection from '../../imports/api/collections/ranks.collection';
 import RolesCollection from '../../imports/api/collections/roles.collection';
 import SpecializationsCollection from '../../imports/api/collections/specializations.collection';
 import SquadsCollection from '../../imports/api/collections/squads.collection';
-import { validateObject, validatePublish, validateUserId } from '../main';
+import { validateObject, validatePublish, validateUserId, checkPermission } from '../main';
 import { createLog } from './logs.server';
 
 async function getMemberById(memberId) {
@@ -43,6 +43,11 @@ if (Meteor.isServer) {
       validateUserId(this.userId);
       validateObject(filter, false);
       validateObject(options, false);
+
+      // Check read permission
+      const hasPermission = await checkPermission(this.userId, 'members', 'read');
+      if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+
       return await MembersCollection.find(filter, options).fetchAsync();
     },
     'members.findOne': async function (filter = {}, options = {}) {
@@ -54,6 +59,11 @@ if (Meteor.isServer) {
     'members.insert': async function (payload = {}) {
       validateUserId(this.userId);
       validateObject(payload);
+
+      // Check create permission
+      const hasPermission = await checkPermission(this.userId, 'members', 'create');
+      if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+
       try {
         const memberId = await Accounts.createUserAsync(payload);
         await createLog('member.created', {
@@ -68,6 +78,11 @@ if (Meteor.isServer) {
     'members.update': async function (memberId = '', data = {}) {
       validateUserId(this.userId);
       await getMemberById(memberId);
+
+      // Check update permission
+      const hasPermission = await checkPermission(this.userId, 'members', 'update');
+      if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+
       const selector = { _id: memberId };
       const modifier = { $set: data };
       try {
@@ -84,6 +99,11 @@ if (Meteor.isServer) {
     'members.remove': async function (memberId = '') {
       validateUserId(this.userId);
       await getMemberById(memberId);
+
+      // Check delete permission
+      const hasPermission = await checkPermission(this.userId, 'members', 'delete');
+      if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+
       try {
         const result = await MembersCollection.removeAsync({ _id: memberId });
         await createLog('member.deleted', { id: memberId });

@@ -37,8 +37,10 @@ SpecializationTags.propTypes = {
   specializations: PropTypes.array,
 };
 
-const getSpecializationColumns = (handleEdit, handleDelete) => {
-  return [
+const getSpecializationColumns = (handleEdit, handleDelete, permissions = {}) => {
+  const { canUpdate = true, canDelete = true } = permissions;
+
+  const columns = [
     {
       title: 'Name',
       dataIndex: 'name',
@@ -93,13 +95,20 @@ const getSpecializationColumns = (handleEdit, handleDelete) => {
           '-'
         ),
     },
-    {
+  ];
+
+  if (canUpdate || canDelete) {
+    columns.push({
       title: 'Actions',
       dataIndex: '_id',
       key: '_id',
-      render: (id, record) => <TableActions record={record} handleEdit={handleEdit} handleDelete={handleDelete} />,
-    },
-  ];
+      render: (id, record) => (
+        <TableActions record={record} handleEdit={handleEdit} handleDelete={handleDelete} canUpdate={canUpdate} canDelete={canDelete} />
+      ),
+    });
+  }
+
+  return columns;
 };
 
 export default getSpecializationColumns;

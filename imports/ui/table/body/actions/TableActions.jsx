@@ -2,7 +2,7 @@ import { App, Button, Col, Row } from 'antd';
 import PropTypes from 'prop-types';
 import React, { useCallback } from 'react';
 
-export default function TableActions({ record, handleDelete, handleEdit, extra }) {
+export default function TableActions({ record, handleDelete, handleEdit, extra, canUpdate = true, canDelete = true }) {
   const { modal } = App.useApp();
   const styles = {
     button: {
@@ -24,18 +24,27 @@ export default function TableActions({ record, handleDelete, handleEdit, extra }
     [modal, handleDelete, record]
   );
 
+  // Don't render anything if no actions are available
+  if (!canUpdate && !canDelete && !extra) {
+    return null;
+  }
+
   return (
     <Row gutter={[16, 16]} justify="center">
-      <Col flex="auto">
-        <Button style={styles.button} onClick={e => handleEdit(e, record)}>
-          Edit
-        </Button>
-      </Col>
-      <Col flex="auto">
-        <Button style={styles.button} onClick={e => handleRemove(e, record)} danger>
-          Delete
-        </Button>
-      </Col>
+      {canUpdate && (
+        <Col flex="auto">
+          <Button style={styles.button} onClick={e => handleEdit(e, record)}>
+            Edit
+          </Button>
+        </Col>
+      )}
+      {canDelete && (
+        <Col flex="auto">
+          <Button style={styles.button} onClick={e => handleRemove(e, record)} danger>
+            Delete
+          </Button>
+        </Col>
+      )}
       {extra && React.createElement(extra, { record })}
     </Row>
   );
@@ -45,4 +54,6 @@ TableActions.propTypes = {
   handleDelete: PropTypes.func,
   handleEdit: PropTypes.func,
   extra: PropTypes.any,
+  canUpdate: PropTypes.bool,
+  canDelete: PropTypes.bool,
 };

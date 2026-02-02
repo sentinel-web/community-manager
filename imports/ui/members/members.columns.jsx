@@ -4,8 +4,10 @@ import { SquadTags } from '../squads/squads.columns';
 import TableActions from '../table/body/actions/TableActions';
 import RankTag from './ranks/RankTag';
 
-export default function getMembersColumns(handleEdit, handleDelete) {
-  return [
+export default function getMembersColumns(handleEdit, handleDelete, permissions = {}) {
+  const { canUpdate = true, canDelete = true } = permissions;
+
+  const columns = [
     {
       title: 'Squad',
       dataIndex: 'profile.squadId',
@@ -42,11 +44,19 @@ export default function getMembersColumns(handleEdit, handleDelete) {
       sorter: (a, b) => String(a.profile.name).localeCompare(String(b.profile.name)),
       render: (name, record) => (record.profile?.name ? record.profile.name : '-'),
     },
-    {
+  ];
+
+  // Only add Actions column if user has update or delete permission
+  if (canUpdate || canDelete) {
+    columns.push({
       title: 'Actions',
       dataIndex: '_id',
       key: '_id',
-      render: (_id, record) => <TableActions record={record} handleEdit={handleEdit} handleDelete={handleDelete} />,
-    },
-  ];
+      render: (_id, record) => (
+        <TableActions record={record} handleEdit={handleEdit} handleDelete={handleDelete} canUpdate={canUpdate} canDelete={canDelete} />
+      ),
+    });
+  }
+
+  return columns;
 }
