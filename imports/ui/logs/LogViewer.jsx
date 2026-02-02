@@ -7,7 +7,7 @@ import { DrawerContext } from '../app/App';
 
 const { Text } = Typography;
 
-const LogViewer = ({ setOpen }) => {
+const LogViewer = () => {
   const { drawerModel: log } = useContext(DrawerContext);
   const { message } = App.useApp();
 
@@ -60,8 +60,6 @@ const LogViewer = ({ setOpen }) => {
   return <Descriptions column={1} bordered items={items} />;
 };
 
-LogViewer.propTypes = {
-  setOpen: PropTypes.func,
-};
+LogViewer.propTypes = {};
 
 export default LogViewer;
