@@ -2,6 +2,7 @@ import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
 import MembersCollection from '../imports/api/collections/members.collection';
 import RolesCollection from '../imports/api/collections/roles.collection';
+import './apis/backup.server';
 import './apis/dashboard.server';
 import './apis/logs.server';
 import './apis/members.server';

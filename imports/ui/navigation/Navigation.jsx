@@ -1,6 +1,7 @@
 import {
   CalendarOutlined,
   CheckCircleOutlined,
+  CloudServerOutlined,
   ClusterOutlined,
   DashboardOutlined,
   FileTextOutlined,
@@ -98,6 +99,9 @@ export function getNavigationValue() {
   }
   if (pathname.includes('/settings')) {
     return 'settings';
+  }
+  if (pathname.includes('/backup')) {
+    return 'backup';
   }
   return 'dashboard';
 }
@@ -270,6 +274,13 @@ export default function Navigation() {
         key: 'settings',
         label: 'Settings',
         icon: <SettingOutlined />,
+      });
+    }
+    if (hasAccess(role, 'settings')) {
+      newItems.push({
+        key: 'backup',
+        label: 'Backup',
+        icon: <CloudServerOutlined />,
       });
     }
 
