@@ -59,6 +59,7 @@ const RolesForm = ({ setOpen }) => {
       <RuleInput name="registrations" label="Registrations" />
       <RuleInput name="discoveryTypes" label="Discovery Types" />
       <RuleInput name="roles" label="Roles" />
+      <RuleInput name="logs" label="Logs" />
       <RuleInput name="settings" label="Settings" />
       <FormFooter setOpen={setOpen} />
     </Form>
