@@ -24,6 +24,28 @@ import React, { useCallback, useEffect, useMemo } from 'react';
 import RolesCollection from '../../api/collections/roles.collection';
 import useNavigation from './navigation.hook';
 
+/**
+ * Checks if a role has access to a module.
+ * Handles both boolean permissions (true/false) and CRUD object permissions.
+ * For CRUD modules, access means having at least `read` permission.
+ */
+function hasAccess(role, module) {
+  if (!role) return false;
+
+  const permission = role[module];
+
+  // Boolean permission (true/false)
+  if (permission === true) return true;
+  if (permission === false || permission === undefined) return false;
+
+  // CRUD object permission - check for read access
+  if (typeof permission === 'object' && permission !== null) {
+    return permission.read === true;
+  }
+
+  return false;
+}
+
 export function getNavigationValue() {
   const pathname = window.location.pathname;
   if (pathname === '/') {
@@ -112,138 +134,138 @@ export default function Navigation() {
     if (!role) {
       return [];
     }
-    if (role.dashboard === true) {
+    if (hasAccess(role, 'dashboard')) {
       newItems.push({ key: 'dashboard', label: 'Dashboard', icon: <DashboardOutlined /> });
     }
-    if (role.orbat === true) {
+    if (hasAccess(role, 'orbat')) {
       newItems.push({
         key: 'orbat',
         label: 'Orbat',
         icon: <ClusterOutlined />,
       });
     }
-    if (role.dashboard || role.orbat) {
+    if (hasAccess(role, 'dashboard') || hasAccess(role, 'orbat')) {
       newItems.push({
         key: 'div-0',
         type: 'divider',
       });
     }
-    if (role.events === true) {
+    if (hasAccess(role, 'events')) {
       newItems.push({
         key: 'events',
         label: 'Events',
         icon: <CalendarOutlined />,
       });
     }
-    if (role.eventTypes === true) {
+    if (hasAccess(role, 'eventTypes')) {
       newItems.push({
         key: 'eventTypes',
         label: 'Event Types',
         icon: <TagsOutlined />,
       });
     }
-    if (role.events || role.eventTypes) {
+    if (hasAccess(role, 'events') || hasAccess(role, 'eventTypes')) {
       newItems.push({
         key: 'div-1',
         type: 'divider',
       });
     }
-    if (role.tasks === true) {
+    if (hasAccess(role, 'tasks')) {
       newItems.push({
         key: 'tasks',
         label: 'Tasks',
         icon: <CheckCircleOutlined />,
       });
     }
-    if (role.taskStatus === true) {
+    if (hasAccess(role, 'taskStatus')) {
       newItems.push({
         key: 'taskStatus',
         label: 'Task Statuses',
         icon: <OrderedListOutlined />,
       });
     }
-    if (role.tasks || role.taskStatus) {
+    if (hasAccess(role, 'tasks') || hasAccess(role, 'taskStatus')) {
       newItems.push({
         key: 'div-2',
         type: 'divider',
       });
     }
-    if (role.squads === true) {
+    if (hasAccess(role, 'squads')) {
       newItems.push({
         key: 'squads',
         label: 'Squads',
         icon: <TeamOutlined />,
       });
     }
-    if (role.members === true) {
+    if (hasAccess(role, 'members')) {
       newItems.push({
         key: 'members',
         label: 'Members',
         icon: <UserOutlined />,
       });
     }
-    if (role.ranks === true) {
+    if (hasAccess(role, 'ranks')) {
       newItems.push({
         key: 'ranks',
         label: 'Ranks',
         icon: <IdcardOutlined />,
       });
     }
-    if (role.specializations === true) {
+    if (hasAccess(role, 'specializations')) {
       newItems.push({
         key: 'specializations',
         label: 'Specializations',
         icon: <SolutionOutlined />,
       });
     }
-    if (role.medals === true) {
+    if (hasAccess(role, 'medals')) {
       newItems.push({
         key: 'medals',
         label: 'Medals',
         icon: <TrophyOutlined />,
       });
     }
-    if (role.squads || role.members || role.ranks || role.specializations) {
+    if (hasAccess(role, 'squads') || hasAccess(role, 'members') || hasAccess(role, 'ranks') || hasAccess(role, 'specializations')) {
       newItems.push({
         key: 'div-3',
         type: 'divider',
       });
     }
-    if (role.registrations === true) {
+    if (hasAccess(role, 'registrations')) {
       newItems.push({
         key: 'registrations',
         label: 'Registrations',
         icon: <UserAddOutlined />,
       });
     }
-    if (role.discoveryTypes === true) {
+    if (hasAccess(role, 'discoveryTypes')) {
       newItems.push({
         key: 'discoveryTypes',
         label: 'Discovery Types',
         icon: <TagOutlined />,
       });
     }
-    if (role.registrations || role.discoveryTypes) {
+    if (hasAccess(role, 'registrations') || hasAccess(role, 'discoveryTypes')) {
       newItems.push({
         key: 'div-4',
         type: 'divider',
       });
     }
-    if (role.roles === true) {
+    if (hasAccess(role, 'roles')) {
       newItems.push({
         key: 'roles',
         label: 'Roles',
         icon: <UsergroupAddOutlined />,
       });
     }
-    if (role.logs === true) {
+    if (hasAccess(role, 'logs')) {
       newItems.push({
         key: 'logs',
         label: 'Logs',
         icon: <FileTextOutlined />,
       });
     }
-    if (role.settings === true) {
+    if (hasAccess(role, 'settings')) {
       newItems.push({
         key: 'settings',
         label: 'Settings',

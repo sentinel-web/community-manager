@@ -12,6 +12,158 @@ import './apis/specializations.server';
 import './crud.lib';
 import { createCollectionMethods, createCollectionPublish } from './crud.lib';
 
+// === Permission System ===
+
+// Modules that use boolean permissions (true/false)
+const BOOLEAN_MODULES = ['dashboard', 'orbat', 'logs', 'settings'];
+
+// Modules that use CRUD permissions (read/create/update/delete)
+const CRUD_MODULES = [
+  'members',
+  'events',
+  'tasks',
+  'squads',
+  'ranks',
+  'specializations',
+  'medals',
+  'eventTypes',
+  'taskStatus',
+  'registrations',
+  'discoveryTypes',
+  'roles',
+];
+
+// Map collection names to permission modules
+const COLLECTION_TO_MODULE = {
+  members: 'members',
+  events: 'events',
+  attendances: 'events', // attendances are part of events module
+  tasks: 'tasks',
+  squads: 'squads',
+  ranks: 'ranks',
+  specializations: 'specializations',
+  medals: 'medals',
+  eventTypes: 'eventTypes',
+  taskStatus: 'taskStatus',
+  registrations: 'registrations',
+  discoveryTypes: 'discoveryTypes',
+  roles: 'roles',
+  profilePictures: 'members', // profile pictures are part of members module
+};
+
+// Role cache for performance
+const roleCache = new Map();
+const CACHE_TTL = 60000; // 1 minute
+
+/**
+ * Normalizes role permissions from old boolean format to new CRUD object format.
+ * - Boolean modules remain unchanged (dashboard, orbat, logs, settings)
+ * - CRUD modules: `true` becomes { read: true, create: true, update: true, delete: true }
+ * - CRUD modules: `false` or undefined becomes { read: false, create: false, update: false, delete: false }
+ */
+export function normalizeRolePermissions(role) {
+  if (!role) return null;
+
+  const normalized = { ...role };
+
+  for (const module of CRUD_MODULES) {
+    const permission = role[module];
+    if (permission === true) {
+      // Old format: true means full access
+      normalized[module] = { read: true, create: true, update: true, delete: true };
+    } else if (permission === false || permission === undefined) {
+      // Old format: false or undefined means no access
+      normalized[module] = { read: false, create: false, update: false, delete: false };
+    }
+    // If already an object, leave it as-is
+  }
+
+  return normalized;
+}
+
+/**
+ * Gets a user's role with caching.
+ * Returns the normalized role object.
+ */
+export async function getUserRole(userId) {
+  if (!userId) return null;
+
+  const user = await MembersCollection.findOneAsync(userId);
+  if (!user?.profile?.roleId) return null;
+
+  const roleId = user.profile.roleId;
+  const cacheKey = roleId;
+  const cached = roleCache.get(cacheKey);
+
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.role;
+  }
+
+  const role = await RolesCollection.findOneAsync(roleId);
+  const normalizedRole = normalizeRolePermissions(role);
+
+  roleCache.set(cacheKey, { role: normalizedRole, timestamp: Date.now() });
+
+  return normalizedRole;
+}
+
+/**
+ * Checks if a user has permission for a specific operation on a module.
+ * @param {string} userId - The user's ID
+ * @param {string} module - The permission module (e.g., 'members', 'events')
+ * @param {string} operation - The operation ('read', 'create', 'update', 'delete')
+ * @returns {Promise<boolean>} - Whether the user has permission
+ */
+export async function checkPermission(userId, module, operation) {
+  const role = await getUserRole(userId);
+
+  if (!role) return false;
+
+  // Handle special admin role that has `roles: true`
+  if (role.roles === true) return true;
+
+  const permission = role[module];
+
+  // Boolean modules
+  if (BOOLEAN_MODULES.includes(module)) {
+    return permission === true;
+  }
+
+  // CRUD modules
+  if (typeof permission === 'object' && permission !== null) {
+    return permission[operation] === true;
+  }
+
+  // Fallback for old boolean format on CRUD modules
+  if (permission === true) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Clears the role cache for a specific role or all roles.
+ * Call this when roles are updated.
+ */
+export function clearRoleCache(roleId) {
+  if (roleId) {
+    roleCache.delete(roleId);
+  } else {
+    roleCache.clear();
+  }
+}
+
+/**
+ * Gets the permission module for a collection name.
+ */
+export function getPermissionModule(collectionName) {
+  return COLLECTION_TO_MODULE[collectionName] || null;
+}
+
+// Export constants for use in other modules
+export { BOOLEAN_MODULES, CRUD_MODULES };
+
 async function createTestData() {
   const adminRole = await RolesCollection.findOneAsync({ _id: 'admin' });
   if (!adminRole) await RolesCollection.upsertAsync({ _id: 'admin' }, { _id: 'admin', name: 'admin', roles: true });

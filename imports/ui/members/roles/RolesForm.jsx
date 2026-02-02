@@ -1,11 +1,57 @@
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
-import { App, ColorPicker, Form, Input, Switch } from 'antd';
+import { App, Card, Checkbox, ColorPicker, Form, Input, Space, Switch, Typography } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useMemo } from 'react';
 import { DrawerContext } from '../../app/App';
 import FormFooter from '../../components/FormFooter';
 import { getColorFromValues } from '../../specializations/SpecializationForm';
+
+// Modules that use boolean permissions (true/false)
+const BOOLEAN_MODULES = ['dashboard', 'orbat', 'logs', 'settings'];
+
+// Modules that use CRUD permissions
+const CRUD_MODULES = [
+  { name: 'members', label: 'Members' },
+  { name: 'events', label: 'Events' },
+  { name: 'tasks', label: 'Tasks' },
+  { name: 'squads', label: 'Squads' },
+  { name: 'ranks', label: 'Ranks' },
+  { name: 'specializations', label: 'Specializations' },
+  { name: 'medals', label: 'Medals' },
+  { name: 'eventTypes', label: 'Event Types' },
+  { name: 'taskStatus', label: 'Task Status' },
+  { name: 'registrations', label: 'Registrations' },
+  { name: 'discoveryTypes', label: 'Discovery Types' },
+  { name: 'roles', label: 'Roles' },
+];
+
+/**
+ * Normalizes permission value for form initial values.
+ * Converts old boolean format to CRUD object format.
+ */
+function normalizePermissionForForm(value) {
+  if (value === true) {
+    return { read: true, create: true, update: true, delete: true };
+  }
+  if (value === false || value === undefined) {
+    return { read: false, create: false, update: false, delete: false };
+  }
+  return value;
+}
+
+/**
+ * Prepares model for form initialization by normalizing CRUD permissions.
+ */
+function prepareModelForForm(model) {
+  if (!model) return {};
+
+  const prepared = { ...model };
+  for (const { name } of CRUD_MODULES) {
+    prepared[name] = normalizePermissionForForm(model[name]);
+  }
+  return prepared;
+}
 
 const RolesForm = ({ setOpen }) => {
   const { drawerModel: model } = useContext(DrawerContext);
@@ -33,9 +79,10 @@ const RolesForm = ({ setOpen }) => {
   );
 
   const [form] = Form.useForm();
+  const initialValues = useMemo(() => prepareModelForForm(model), [model]);
 
   return (
-    <Form layout="vertical" form={form} onFinish={handleFinish} initialValues={model}>
+    <Form layout="vertical" form={form} onFinish={handleFinish} initialValues={initialValues}>
       <Form.Item name="name" label="Name" rules={[{ required: true, type: 'string' }]} required>
         <Input placeholder="Enter name" />
       </Form.Item>
@@ -45,22 +92,22 @@ const RolesForm = ({ setOpen }) => {
       <Form.Item name="color" label="Color">
         <ColorPicker format="hex" />
       </Form.Item>
+
+      <Typography.Title level={5} style={{ marginTop: 16 }}>
+        Basic Permissions
+      </Typography.Title>
       <RuleInput name="dashboard" label="Dashboard" />
       <RuleInput name="orbat" label="Orbat" />
-      <RuleInput name="tasks" label="Tasks" />
-      <RuleInput name="taskStatus" label="Task Status" />
-      <RuleInput name="events" label="Events" />
-      <RuleInput name="eventTypes" label="Event Types" />
-      <RuleInput name="squads" label="Squads" />
-      <RuleInput name="members" label="Members" />
-      <RuleInput name="ranks" label="Ranks" />
-      <RuleInput name="specializations" label="Specializations" />
-      <RuleInput name="medals" label="Medals" />
-      <RuleInput name="registrations" label="Registrations" />
-      <RuleInput name="discoveryTypes" label="Discovery Types" />
-      <RuleInput name="roles" label="Roles" />
       <RuleInput name="logs" label="Logs" />
       <RuleInput name="settings" label="Settings" />
+
+      <Typography.Title level={5} style={{ marginTop: 16 }}>
+        CRUD Permissions
+      </Typography.Title>
+      {CRUD_MODULES.map(({ name, label }) => (
+        <CrudPermissionInput key={name} name={name} label={label} />
+      ))}
+
       <FormFooter setOpen={setOpen} />
     </Form>
   );
@@ -71,12 +118,37 @@ RolesForm.propTypes = {
 
 const RuleInput = ({ name, label }) => {
   return (
-    <Form.Item name={name} label={label} rules={[{ required: false, type: 'boolean' }]}>
+    <Form.Item name={name} label={label} rules={[{ required: false, type: 'boolean' }]} valuePropName="checked">
       <Switch checkedChildren={<CheckOutlined />} unCheckedChildren={<CloseOutlined />} />
     </Form.Item>
   );
 };
 RuleInput.propTypes = {
+  name: PropTypes.string,
+  label: PropTypes.string,
+};
+
+const CrudPermissionInput = ({ name, label }) => {
+  return (
+    <Card size="small" title={label} style={{ marginBottom: 16 }}>
+      <Space wrap>
+        <Form.Item name={[name, 'read']} valuePropName="checked" style={{ marginBottom: 0 }}>
+          <Checkbox>Read</Checkbox>
+        </Form.Item>
+        <Form.Item name={[name, 'create']} valuePropName="checked" style={{ marginBottom: 0 }}>
+          <Checkbox>Create</Checkbox>
+        </Form.Item>
+        <Form.Item name={[name, 'update']} valuePropName="checked" style={{ marginBottom: 0 }}>
+          <Checkbox>Update</Checkbox>
+        </Form.Item>
+        <Form.Item name={[name, 'delete']} valuePropName="checked" style={{ marginBottom: 0 }}>
+          <Checkbox>Delete</Checkbox>
+        </Form.Item>
+      </Space>
+    </Card>
+  );
+};
+CrudPermissionInput.propTypes = {
   name: PropTypes.string,
   label: PropTypes.string,
 };

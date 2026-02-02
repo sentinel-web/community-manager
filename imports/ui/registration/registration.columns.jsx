@@ -3,8 +3,10 @@ import TableActions from '../table/body/actions/TableActions';
 import DiscoveryTypeTag from './discovery-types/DiscoveryTypeTag';
 import RegistrationExtra from './RegistrationExtra';
 
-export default function getRegistrationColumns(handleEdit, handleDelete) {
-  return [
+export default function getRegistrationColumns(handleEdit, handleDelete, permissions = {}) {
+  const { canUpdate = true, canDelete = true } = permissions;
+
+  const columns = [
     {
       title: 'Name',
       dataIndex: 'name',
@@ -37,11 +39,25 @@ export default function getRegistrationColumns(handleEdit, handleDelete) {
       ellipsis: true,
       sorter: (a, b) => a.description.localeCompare(b.description),
     },
-    {
+  ];
+
+  if (canUpdate || canDelete) {
+    columns.push({
       title: 'Actions',
       dataIndex: '_id',
       key: '_id',
-      render: (id, record) => <TableActions record={record} handleEdit={handleEdit} handleDelete={handleDelete} extra={RegistrationExtra} />,
-    },
-  ];
+      render: (id, record) => (
+        <TableActions
+          record={record}
+          handleEdit={handleEdit}
+          handleDelete={handleDelete}
+          extra={RegistrationExtra}
+          canUpdate={canUpdate}
+          canDelete={canDelete}
+        />
+      ),
+    });
+  }
+
+  return columns;
 }

@@ -1,5 +1,5 @@
 import { Meteor } from 'meteor/meteor';
-import { validateObject, validateString } from './main';
+import { validateObject, validateString, checkPermission, getPermissionModule, clearRoleCache } from './main';
 import { createLog } from './apis/logs.server';
 
 import AttendancesCollection from '../imports/api/collections/attendances.collection';
@@ -72,16 +72,32 @@ function createCollectionMethods(collection) {
     if (Meteor.isServer) {
       const Collection = getCollection(collection);
       const unsafeCollections = ['registrations'];
+      const permissionModule = getPermissionModule(collection);
+
       Meteor.methods({
         [`${collection}.read`]: async function (filter = {}, options = {}) {
           if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
           if (validateObject(filter, false)) throw new Meteor.Error(400, 'Invalid filter');
           if (validateObject(options, false)) throw new Meteor.Error(400, 'Invalid options');
+
+          // Check read permission
+          if (permissionModule) {
+            const hasPermission = await checkPermission(this.userId, permissionModule, 'read');
+            if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+          }
+
           return await Collection.find(filter, options).fetchAsync();
         },
         [`${collection}.insert`]: async function (payload = {}) {
           if (!this.userId && !unsafeCollections.includes(collection)) throw new Meteor.Error(401, 'Unauthorized');
           if (validateObject(payload, false)) throw new Meteor.Error(400, 'Invalid payload');
+
+          // Check create permission (skip for unsafe collections like registrations)
+          if (permissionModule && this.userId) {
+            const hasPermission = await checkPermission(this.userId, permissionModule, 'create');
+            if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+          }
+
           const id = await Collection.insertAsync(payload);
           if (collection !== 'logs') {
             await createLog(`${collection}.created`, { id, ...payload });
@@ -92,32 +108,72 @@ function createCollectionMethods(collection) {
           if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
           if (validateString(id, false)) throw new Meteor.Error(400, 'Invalid id');
           if (validateObject(data, false)) throw new Meteor.Error(400, 'Invalid data');
+
+          // Check update permission
+          if (permissionModule) {
+            const hasPermission = await checkPermission(this.userId, permissionModule, 'update');
+            if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+          }
+
           const result = await Collection.updateAsync({ _id: id }, { $set: data });
           if (collection !== 'logs') {
             await createLog(`${collection}.updated`, { id, changes: data });
           }
+
+          // Clear role cache when roles are updated
+          if (collection === 'roles') {
+            clearRoleCache(id);
+          }
+
           return result;
         },
         [`${collection}.remove`]: async function (id = '') {
           if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
           if (validateString(id, false)) throw new Meteor.Error(400, 'Invalid id');
+
+          // Check delete permission
+          if (permissionModule) {
+            const hasPermission = await checkPermission(this.userId, permissionModule, 'delete');
+            if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+          }
+
           const doc = await Collection.findOneAsync(id);
           if (!doc) throw new Meteor.Error(404, 'Document not found');
           const result = await Collection.removeAsync({ _id: id });
           if (collection !== 'logs') {
             await createLog(`${collection}.deleted`, { id });
           }
+
+          // Clear role cache when roles are deleted
+          if (collection === 'roles') {
+            clearRoleCache(id);
+          }
+
           return result;
         },
         [`${collection}.count`]: async function (filter = {}) {
           if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
           if (validateObject(filter, false)) throw new Meteor.Error(400, 'Invalid filter');
+
+          // Check read permission for count
+          if (permissionModule) {
+            const hasPermission = await checkPermission(this.userId, permissionModule, 'read');
+            if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+          }
+
           return await Collection.countDocuments(filter);
         },
         [`${collection}.options`]: async function (filter = {}, options = {}) {
           if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
           if (validateObject(filter, false)) throw new Meteor.Error(400, 'Invalid filter');
           if (validateObject(options, false)) throw new Meteor.Error(400, 'Invalid options');
+
+          // Check read permission for options
+          if (permissionModule) {
+            const hasPermission = await checkPermission(this.userId, permissionModule, 'read');
+            if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+          }
+
           return await Collection.find(filter, options).mapAsync(item => {
             const name = item.profile?.name || item.name;
             return { key: item._id, label: name, title: name, value: item._id, raw: item };

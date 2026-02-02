@@ -7,6 +7,28 @@ import Login from '../login/Login';
 import useNavigation from '../navigation/navigation.hook';
 import Suspense from '../suspense/Suspense';
 
+/**
+ * Checks if a role has access to a module.
+ * Handles both boolean permissions (true/false) and CRUD object permissions.
+ * For CRUD modules, access means having at least `read` permission.
+ */
+function checkAccess(role, module) {
+  if (!role) return false;
+
+  const permission = role[module];
+
+  // Boolean permission (true/false)
+  if (permission === true) return true;
+  if (permission === false || permission === undefined) return false;
+
+  // CRUD object permission - check for read access
+  if (typeof permission === 'object' && permission !== null) {
+    return permission.read === true;
+  }
+
+  return false;
+}
+
 const Dashboard = lazy(() => import('../dashboard/Dashboard'));
 const Orbat = lazy(() => import('../orbat/Orbat'));
 const Members = lazy(() => import('../members/Members'));
@@ -37,7 +59,7 @@ export default function Main() {
   const roles = useFind(() => RolesCollection.find({ _id: user?.profile?.roleId ?? null }, { limit: 1 }), [user?.profile?.roleId]);
   const hasAccess = useMemo(() => {
     const role = roles?.[0];
-    return role?.[navigationValue] === true;
+    return checkAccess(role, navigationValue);
   }, [roles, navigationValue]);
 
   if (window.innerWidth < 360) {

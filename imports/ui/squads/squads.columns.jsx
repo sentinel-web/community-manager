@@ -31,8 +31,10 @@ SquadTags.propTypes = {
   squadIds: PropTypes.array,
 };
 
-const getSquadsColumns = (handleEdit, handleDelete) => {
-  return [
+const getSquadsColumns = (handleEdit, handleDelete, permissions = {}) => {
+  const { canUpdate = true, canDelete = true } = permissions;
+
+  const columns = [
     {
       title: 'Image',
       dataIndex: 'image',
@@ -71,13 +73,20 @@ const getSquadsColumns = (handleEdit, handleDelete) => {
       sorter: (a, b) => String(a.longRangeFrequency).localeCompare(String(b.longRangeFrequency)),
       render: longRangeFrequency => longRangeFrequency || '-',
     },
-    {
+  ];
+
+  if (canUpdate || canDelete) {
+    columns.push({
       title: 'Actions',
       dataIndex: 'actions',
       key: 'actions',
-      render: (id, record) => <TableActions record={record} handleEdit={handleEdit} handleDelete={handleDelete} />,
-    },
-  ];
+      render: (id, record) => (
+        <TableActions record={record} handleEdit={handleEdit} handleDelete={handleDelete} canUpdate={canUpdate} canDelete={canDelete} />
+      ),
+    });
+  }
+
+  return columns;
 };
 
 export default getSquadsColumns;

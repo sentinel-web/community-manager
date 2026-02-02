@@ -2,8 +2,10 @@ import { Tag } from 'antd';
 import React from 'react';
 import TableActions from '../../table/body/actions/TableActions';
 
-export default function getDiscoveryTypeColumns(handleDelete, handleEdit) {
-  return [
+export default function getDiscoveryTypeColumns(handleDelete, handleEdit, permissions = {}) {
+  const { canUpdate = true, canDelete = true } = permissions;
+
+  const columns = [
     {
       title: 'Name',
       dataIndex: 'name',
@@ -24,11 +26,18 @@ export default function getDiscoveryTypeColumns(handleDelete, handleEdit) {
       sorter: (a, b) => a.color.localeCompare(b.color),
       render: color => <Tag color={color || 'transparent'}>{color}</Tag>,
     },
-    {
+  ];
+
+  if (canUpdate || canDelete) {
+    columns.push({
       title: 'Actions',
       dataIndex: '_id',
       key: '_id',
-      render: (id, record) => <TableActions record={record} handleEdit={handleEdit} handleDelete={handleDelete} />,
-    },
-  ];
+      render: (id, record) => (
+        <TableActions record={record} handleEdit={handleEdit} handleDelete={handleDelete} canUpdate={canUpdate} canDelete={canDelete} />
+      ),
+    });
+  }
+
+  return columns;
 }
