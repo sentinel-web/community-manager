@@ -10,6 +10,7 @@ import RolesCollection from '../../imports/api/collections/roles.collection';
 import SpecializationsCollection from '../../imports/api/collections/specializations.collection';
 import SquadsCollection from '../../imports/api/collections/squads.collection';
 import { validateObject, validatePublish, validateUserId } from '../main';
+import { createLog } from './logs.server';
 
 async function getMemberById(memberId) {
   validateUserId(memberId);
@@ -54,7 +55,12 @@ if (Meteor.isServer) {
       validateUserId(this.userId);
       validateObject(payload);
       try {
-        return await Accounts.createUserAsync(payload);
+        const memberId = await Accounts.createUserAsync(payload);
+        await createLog('member.created', {
+          id: memberId,
+          username: payload.username,
+        });
+        return memberId;
       } catch (error) {
         throw new Meteor.Error(error.message);
       }
@@ -65,7 +71,12 @@ if (Meteor.isServer) {
       const selector = { _id: memberId };
       const modifier = { $set: data };
       try {
-        return await MembersCollection.updateAsync(selector, modifier);
+        const result = await MembersCollection.updateAsync(selector, modifier);
+        await createLog('member.updated', {
+          id: memberId,
+          changes: data,
+        });
+        return result;
       } catch (error) {
         throw new Meteor.Error(error.message);
       }
@@ -74,7 +85,9 @@ if (Meteor.isServer) {
       validateUserId(this.userId);
       await getMemberById(memberId);
       try {
-        return await MembersCollection.removeAsync({ _id: memberId });
+        const result = await MembersCollection.removeAsync({ _id: memberId });
+        await createLog('member.deleted', { id: memberId });
+        return result;
       } catch (error) {
         throw new Meteor.Error(error.message);
       }

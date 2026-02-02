@@ -3,6 +3,7 @@ import {
   CheckCircleOutlined,
   ClusterOutlined,
   DashboardOutlined,
+  FileTextOutlined,
   IdcardOutlined,
   MenuOutlined,
   OrderedListOutlined,
@@ -69,6 +70,9 @@ export function getNavigationValue() {
   }
   if (pathname.includes('/roles')) {
     return 'roles';
+  }
+  if (pathname.includes('/logs')) {
+    return 'logs';
   }
   if (pathname.includes('/settings')) {
     return 'settings';
@@ -230,6 +234,13 @@ export default function Navigation() {
         key: 'roles',
         label: 'Roles',
         icon: <UsergroupAddOutlined />,
+      });
+    }
+    if (role.logs === true) {
+      newItems.push({
+        key: 'logs',
+        label: 'Logs',
+        icon: <FileTextOutlined />,
       });
     }
     if (role.settings === true) {
