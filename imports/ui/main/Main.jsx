@@ -7,6 +7,11 @@ import Login from '../login/Login';
 import useNavigation from '../navigation/navigation.hook';
 import Suspense from '../suspense/Suspense';
 
+// Map modules to their permission keys (for modules that share permissions)
+const MODULE_PERMISSION_MAP = {
+  backup: 'settings', // Backup uses settings permission
+};
+
 /**
  * Checks if a role has access to a module.
  * Handles both boolean permissions (true/false) and CRUD object permissions.
@@ -15,7 +20,9 @@ import Suspense from '../suspense/Suspense';
 function checkAccess(role, module) {
   if (!role) return false;
 
-  const permission = role[module];
+  // Map module to its permission key
+  const permissionKey = MODULE_PERMISSION_MAP[module] || module;
+  const permission = role[permissionKey];
 
   // Boolean permission (true/false)
   if (permission === true) return true;
@@ -45,6 +52,7 @@ const DiscoveryTypes = lazy(() => import('../registration/discovery-types/Discov
 const Roles = lazy(() => import('../members/roles/Roles'));
 const Logs = lazy(() => import('../logs/Logs'));
 const Settings = lazy(() => import('../settings/Settings'));
+const Backup = lazy(() => import('../backup/Backup'));
 
 export default function Main() {
   const { navigationValue } = useNavigation();
@@ -92,6 +100,7 @@ export default function Main() {
           {hasAccess && navigationValue === 'roles' && <Roles />}
           {hasAccess && navigationValue === 'logs' && <Logs />}
           {hasAccess && navigationValue === 'settings' && <Settings />}
+          {hasAccess && navigationValue === 'backup' && <Backup />}
         </Suspense>
       )}
     </section>
