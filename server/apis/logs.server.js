@@ -1,6 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 import LogsCollection from '../../imports/api/collections/logs.collection';
-import { validateObject, validateString, validateUserId } from '../main';
+import { checkPermission, validateObject, validateString, validateUserId } from '../main';
 
 export async function createLog(action, payload = {}) {
   const now = new Date();
@@ -13,10 +13,16 @@ export async function createLog(action, payload = {}) {
 }
 
 if (Meteor.isServer) {
-  Meteor.publish('logs', function (filter = {}, options = {}) {
+  Meteor.publish('logs', async function (filter = {}, options = {}) {
     validateUserId(this.userId);
     validateObject(filter, false);
     validateObject(options, false);
+
+    const hasPermission = await checkPermission(this.userId, 'logs', 'read');
+    if (!hasPermission) {
+      throw new Meteor.Error(403, 'Permission denied');
+    }
+
     return LogsCollection.find(filter, options);
   });
 
@@ -25,6 +31,12 @@ if (Meteor.isServer) {
       validateUserId(this.userId);
       validateObject(filter, false);
       validateObject(options, false);
+
+      const hasPermission = await checkPermission(this.userId, 'logs', 'read');
+      if (!hasPermission) {
+        throw new Meteor.Error(403, 'Permission denied');
+      }
+
       return await LogsCollection.find(filter, options).fetchAsync();
     },
     'logs.insert': async function (payload = {}) {
@@ -41,6 +53,12 @@ if (Meteor.isServer) {
     'logs.remove': async function (id = '') {
       validateUserId(this.userId);
       validateString(id, false);
+
+      const hasPermission = await checkPermission(this.userId, 'logs', 'delete');
+      if (!hasPermission) {
+        throw new Meteor.Error(403, 'Permission denied');
+      }
+
       const doc = await LogsCollection.findOneAsync(id);
       if (!doc) throw new Meteor.Error(404, 'Log not found');
       return await LogsCollection.removeAsync({ _id: id });
@@ -48,6 +66,12 @@ if (Meteor.isServer) {
     'logs.count': async function (filter = {}) {
       validateUserId(this.userId);
       validateObject(filter, false);
+
+      const hasPermission = await checkPermission(this.userId, 'logs', 'read');
+      if (!hasPermission) {
+        throw new Meteor.Error(403, 'Permission denied');
+      }
+
       return await LogsCollection.countDocuments(filter);
     },
   });
