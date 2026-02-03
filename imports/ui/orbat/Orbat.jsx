@@ -111,7 +111,17 @@ export default function Orbat() {
 const ORBAT_Label = ({ option }) => {
   const [items, setItems] = useState([]);
   useEffect(() => {
-    Meteor.callAsync('orbat.popover.items', option.id).then(setItems).catch(console.error);
+    let isMounted = true;
+    Meteor.callAsync('orbat.popover.items', option.id)
+      .then(data => {
+        if (isMounted) setItems(data);
+      })
+      .catch(error => {
+        if (isMounted) console.error('Failed to load popover items:', error);
+      });
+    return () => {
+      isMounted = false;
+    };
   }, [option.id]);
   const hoverStyle = { cursor: 'pointer' };
 
