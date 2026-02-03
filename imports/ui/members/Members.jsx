@@ -4,6 +4,11 @@ import Section from '../section/Section';
 import MemberForm from './MemberForm';
 import getMembersColumns from './members.columns';
 
+/**
+ * Members management page component.
+ * Displays a searchable table of community members with CRUD operations.
+ * No props - uses Section component for data fetching and display.
+ */
 export default function Members() {
   const filterFactory = useCallback(
     string => ({

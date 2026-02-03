@@ -1,7 +1,12 @@
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
+import AttendancesCollection from '../imports/api/collections/attendances.collection';
+import EventsCollection from '../imports/api/collections/events.collection';
+import LogsCollection from '../imports/api/collections/logs.collection';
 import MembersCollection from '../imports/api/collections/members.collection';
+import RegistrationsCollection from '../imports/api/collections/registrations.collection';
 import RolesCollection from '../imports/api/collections/roles.collection';
+import TasksCollection from '../imports/api/collections/tasks.collection';
 import './apis/backup.server';
 import './apis/dashboard.server';
 import './apis/logs.server';
@@ -55,6 +60,26 @@ const COLLECTION_TO_MODULE = {
 // Role cache for performance
 const roleCache = new Map();
 const CACHE_TTL = 60000; // 1 minute
+const CACHE_CLEANUP_INTERVAL = 300000; // 5 minutes
+const CACHE_MAX_SIZE = 1000; // Maximum number of entries
+
+/**
+ * Cleans up expired entries from the role cache.
+ * Runs periodically to prevent unbounded memory growth.
+ */
+function cleanupRoleCache() {
+  const now = Date.now();
+  for (const [key, value] of roleCache.entries()) {
+    if (now - value.timestamp >= CACHE_TTL) {
+      roleCache.delete(key);
+    }
+  }
+}
+
+// Start periodic cache cleanup on server
+if (Meteor.isServer) {
+  Meteor.setInterval(cleanupRoleCache, CACHE_CLEANUP_INTERVAL);
+}
 
 /**
  * Normalizes role permissions from old boolean format to new CRUD object format.
@@ -102,6 +127,19 @@ export async function getUserRole(userId) {
 
   const role = await RolesCollection.findOneAsync(roleId);
   const normalizedRole = normalizeRolePermissions(role);
+
+  // Evict oldest entries if cache exceeds max size
+  if (roleCache.size >= CACHE_MAX_SIZE) {
+    let oldestKey = null;
+    let oldestTime = Infinity;
+    for (const [key, value] of roleCache.entries()) {
+      if (value.timestamp < oldestTime) {
+        oldestTime = value.timestamp;
+        oldestKey = key;
+      }
+    }
+    if (oldestKey) roleCache.delete(oldestKey);
+  }
 
   roleCache.set(cacheKey, { role: normalizedRole, timestamp: Date.now() });
 
@@ -179,6 +217,34 @@ async function createTestData() {
   await Accounts.createUserAsync({ username: 'admin', password: 'admin', profile: { name: 'Admin', roleId: 'admin' } });
 }
 
+/**
+ * Creates database indexes for common queries.
+ * Indexes improve query performance by avoiding full collection scans.
+ * createIndex() is idempotent - safe to call on every startup.
+ */
+async function createDatabaseIndexes() {
+  // Members (Meteor.users) indexes
+  await MembersCollection.rawCollection().createIndex({ 'profile.squadId': 1 });
+  await MembersCollection.rawCollection().createIndex({ 'profile.rankId': 1 });
+  await MembersCollection.rawCollection().createIndex({ username: 1 });
+
+  // Attendances indexes
+  await AttendancesCollection.rawCollection().createIndex({ eventId: 1 });
+
+  // Logs indexes
+  await LogsCollection.rawCollection().createIndex({ createdAt: -1 });
+  await LogsCollection.rawCollection().createIndex({ action: 1 });
+
+  // Events indexes
+  await EventsCollection.rawCollection().createIndex({ eventType: 1 });
+
+  // Tasks indexes
+  await TasksCollection.rawCollection().createIndex({ status: 1 });
+
+  // Registrations indexes
+  await RegistrationsCollection.rawCollection().createIndex({ discoveryType: 1 });
+}
+
 if (Meteor.isServer) {
   Meteor.startup(async () => {
     // Only create test data in development environments
@@ -186,6 +252,7 @@ if (Meteor.isServer) {
     if (process.env.NODE_ENV !== 'production') {
       await createTestData();
     }
+    await createDatabaseIndexes();
   });
 }
 
