@@ -67,14 +67,15 @@ function createCollectionPublish(collection) {
       if (validateObject(filter, false)) return [];
       if (validateObject(options, false)) return [];
 
-      // Apply default limit if none specified, cap at maximum
-      if (!options.limit) {
-        options.limit = DEFAULT_PUBLISH_LIMIT;
-      } else if (options.limit > MAX_PUBLISH_LIMIT) {
-        options.limit = MAX_PUBLISH_LIMIT;
+      // Apply default limit if none specified, cap at maximum (immutable)
+      const limitedOptions = { ...options };
+      if (!limitedOptions.limit) {
+        limitedOptions.limit = DEFAULT_PUBLISH_LIMIT;
+      } else if (limitedOptions.limit > MAX_PUBLISH_LIMIT) {
+        limitedOptions.limit = MAX_PUBLISH_LIMIT;
       }
 
-      return Collection.find(filter, options);
+      return Collection.find(filter, limitedOptions);
     });
   }
 }
@@ -194,7 +195,7 @@ function createCollectionMethods(collection) {
       });
     }
   } catch (error) {
-    console.error(error);
+    createLog('crud.methodCreationError', { collection, error: error.message });
   }
 }
 
