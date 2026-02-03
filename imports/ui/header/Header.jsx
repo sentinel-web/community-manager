@@ -2,6 +2,7 @@ import { Col, Grid, Row } from 'antd';
 import React from 'react';
 import Logo from '../logo/Logo';
 import Navigation from '../navigation/Navigation';
+import LanguageSelector from '../components/LanguageSelector';
 import useSettings from '../settings/settings.hook';
 import Title from '../title/Title';
 
@@ -22,6 +23,9 @@ export default function Header() {
             </Col>
           )}
         </Row>
+      </Col>
+      <Col>
+        <LanguageSelector />
       </Col>
       <Col>
         <Navigation />
