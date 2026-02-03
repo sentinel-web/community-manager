@@ -203,11 +203,17 @@ export function getPermissionModule(collectionName) {
 // Export constants for use in other modules
 export { BOOLEAN_MODULES, CRUD_MODULES };
 
+/**
+ * Creates test data for development environments only.
+ * WARNING: This creates an admin user with default credentials.
+ * Never run in production - gated by NODE_ENV check.
+ */
 async function createTestData() {
   const adminRole = await RolesCollection.findOneAsync({ _id: 'admin' });
   if (!adminRole) await RolesCollection.upsertAsync({ _id: 'admin' }, { _id: 'admin', name: 'admin', roles: true });
   const user = await MembersCollection.findOneAsync({ username: 'admin' });
   if (user) return;
+  console.warn('[SECURITY] Creating default admin user with test credentials. This should only happen in development.');
   await Accounts.createUserAsync({ username: 'admin', password: 'admin', profile: { name: 'Admin', roleId: 'admin' } });
 }
 
@@ -241,8 +247,12 @@ async function createDatabaseIndexes() {
 
 if (Meteor.isServer) {
   Meteor.startup(async () => {
+    // Only create test data in development environments
+    // In production, admin users must be created manually or via secure setup
+    if (process.env.NODE_ENV !== 'production') {
+      await createTestData();
+    }
     await createDatabaseIndexes();
-    await createTestData();
   });
 }
 
