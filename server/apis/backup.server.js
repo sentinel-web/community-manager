@@ -3,6 +3,7 @@ import { DDPRateLimiter } from 'meteor/ddp-rate-limiter';
 import { checkPermission, validateUserId } from '../main';
 import { getCollection } from '../crud.lib';
 import { createLog } from './logs.server';
+import { RATE_LIMITS } from '../config';
 
 // Collections to backup (all data collections)
 const BACKUP_COLLECTIONS = [
@@ -309,37 +310,34 @@ if (Meteor.isServer) {
     },
   });
 
-  // Rate limiting for backup operations
-  // Limit backup.create to 5 calls per minute per user
+  // Rate limiting for backup operations (configurable via Meteor.settings)
   DDPRateLimiter.addRule(
     {
       type: 'method',
       name: 'backup.create',
       userId: () => true,
     },
-    5,
-    60000
+    RATE_LIMITS.backup.create.count,
+    RATE_LIMITS.backup.create.intervalMs
   );
 
-  // Limit backup.restore to 2 calls per minute per user
   DDPRateLimiter.addRule(
     {
       type: 'method',
       name: 'backup.restore',
       userId: () => true,
     },
-    2,
-    60000
+    RATE_LIMITS.backup.restore.count,
+    RATE_LIMITS.backup.restore.intervalMs
   );
 
-  // Limit backup.createQuick to 5 calls per minute per user (same as create)
   DDPRateLimiter.addRule(
     {
       type: 'method',
       name: 'backup.createQuick',
       userId: () => true,
     },
-    5,
-    60000
+    RATE_LIMITS.backup.createQuick.count,
+    RATE_LIMITS.backup.createQuick.intervalMs
   );
 }
