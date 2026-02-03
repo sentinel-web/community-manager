@@ -1,0 +1,127 @@
+{
+  "navigation": {
+    "title": "Navigation",
+    "dashboard": "Dashboard",
+    "orbat": "Orbat",
+    "events": "Ereignisse",
+    "eventTypes": "Ereignistypen",
+    "tasks": "Aufgaben",
+    "taskStatus": "Aufgabenstatus",
+    "squads": "Trupps",
+    "members": "Mitglieder",
+    "ranks": "Ränge",
+    "specializations": "Spezialisierungen",
+    "medals": "Auszeichnungen",
+    "registrations": "Bewerbungen",
+    "discoveryTypes": "Entdeckungsarten",
+    "roles": "Rollen",
+    "logs": "Protokolle",
+    "settings": "Einstellungen",
+    "backup": "Sicherung"
+  },
+  "common": {
+    "create": "Erstellen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "search": "Suchen",
+    "loading": "Laden...",
+    "noData": "Keine Daten",
+    "loadMore": "Mehr laden",
+    "actions": "Aktionen",
+    "name": "Name",
+    "description": "Beschreibung",
+    "color": "Farbe",
+    "status": "Status",
+    "date": "Datum",
+    "yes": "Ja",
+    "no": "Nein",
+    "confirm": "Bestätigen",
+    "success": "Erfolg",
+    "error": "Fehler",
+    "warning": "Warnung",
+    "language": "Sprache"
+  },
+  "auth": {
+    "login": "Anmelden",
+    "logout": "Abmelden",
+    "username": "Benutzername",
+    "password": "Passwort",
+    "loginButton": "Anmelden",
+    "logoutButton": "Abmelden"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "totalMembers": "Gesamtmitglieder",
+    "activeEvents": "Aktive Ereignisse",
+    "openTasks": "Offene Aufgaben",
+    "pendingRegistrations": "Ausstehende Bewerbungen"
+  },
+  "events": {
+    "title": "Ereignisse",
+    "calendar": "Kalender",
+    "table": "Tabelle",
+    "newEvent": "Neues Ereignis",
+    "eventName": "Ereignisname",
+    "startDate": "Startdatum",
+    "endDate": "Enddatum",
+    "eventType": "Ereignistyp",
+    "hosts": "Gastgeber",
+    "attendees": "Teilnehmer",
+    "private": "Privat",
+    "attendance": "Anwesenheit"
+  },
+  "tasks": {
+    "title": "Aufgaben",
+    "newTask": "Neue Aufgabe",
+    "taskName": "Aufgabenname",
+    "priority": "Priorität",
+    "high": "Hoch",
+    "medium": "Mittel",
+    "low": "Niedrig",
+    "participants": "Teilnehmer",
+    "link": "Link"
+  },
+  "members": {
+    "title": "Mitglieder",
+    "newMember": "Neues Mitglied",
+    "profile": "Profil",
+    "squad": "Trupp",
+    "rank": "Rang",
+    "specializations": "Spezialisierungen",
+    "medals": "Auszeichnungen",
+    "entryDate": "Eintrittsdatum",
+    "exitDate": "Austrittsdatum",
+    "discordTag": "Discord Tag",
+    "steamProfile": "Steam-Profil"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "general": "Allgemein",
+    "appearance": "Erscheinungsbild",
+    "language": "Sprache",
+    "selectLanguage": "Sprache auswählen"
+  },
+  "backup": {
+    "title": "Sicherung",
+    "create": "Sicherung erstellen",
+    "restore": "Sicherung wiederherstellen",
+    "download": "Herunterladen",
+    "upload": "Hochladen"
+  },
+  "validation": {
+    "required": "Dieses Feld ist erforderlich",
+    "minLength": "Mindestens {{min}} Zeichen",
+    "maxLength": "Maximal {{max}} Zeichen",
+    "invalidEmail": "Ungültige E-Mail-Adresse",
+    "invalidNumber": "Ungültige Zahl"
+  },
+  "messages": {
+    "createSuccess": "Erfolgreich erstellt",
+    "updateSuccess": "Erfolgreich aktualisiert",
+    "deleteSuccess": "Erfolgreich gelöscht",
+    "deleteConfirm": "Möchten Sie diesen Eintrag wirklich löschen?",
+    "operationFailed": "Vorgang fehlgeschlagen"
+  }
+}
