@@ -54,7 +54,7 @@ imports/helpers/        # Utility functions
 
 ### Collections
 
-Members (Meteor.users), Events, Attendances, Tasks, TaskStatus, Squads, Ranks, Specializations, Medals, EventTypes, Registrations, DiscoveryTypes, Roles, ProfilePictures, Settings, Logs
+Members (Meteor.users), Events, Attendances, Tasks, TaskStatus, Squads, Ranks, Specializations, Medals, EventTypes, Registrations, DiscoveryTypes, Roles, ProfilePictures, Settings, Logs, Questionnaires
 
 ### Collection Schemas
 
@@ -80,10 +80,14 @@ Members (Meteor.users), Events, Attendances, Tasks, TaskStatus, Squads, Ranks, S
 - `name, color, description`
 
 **Roles**
-- `name, color, description` + boolean permissions (`dashboard, orbat, logs, settings`) + CRUD permissions (`members, events, tasks, squads, ranks, specializations, medals, eventTypes, taskStatus, registrations, discoveryTypes, roles`)
+- `name, color, description` + boolean permissions (`dashboard, orbat, logs, settings`) + CRUD permissions (`members, events, tasks, squads, ranks, specializations, medals, eventTypes, taskStatus, registrations, discoveryTypes, roles, questionnaires`)
 
 **Registrations**
 - `name, id (1000-9999), age (min 16), discoveryType, rulesReadAndAccepted, description`
+
+**Questionnaires**
+- `name, description, status ('draft'|'active'|'closed'), questions[], createdAt, updatedAt`
+- `questions[]: { text, type ('text'|'textarea'|'number'|'select'|'multiselect'|'rating'), required, options[] }`
 
 **Attendances** - `{ [eventId]: { [memberId]: points } }`
 **ProfilePictures** - `{ value (base64) }`

@@ -5,6 +5,7 @@ import {
   ClusterOutlined,
   DashboardOutlined,
   FileTextOutlined,
+  FormOutlined,
   IdcardOutlined,
   MenuOutlined,
   OrderedListOutlined,
@@ -102,6 +103,9 @@ export function getNavigationValue() {
   }
   if (pathname.includes('/backup')) {
     return 'backup';
+  }
+  if (pathname.includes('/questionnaires')) {
+    return 'questionnaires';
   }
   return 'dashboard';
 }
@@ -252,6 +256,19 @@ export default function Navigation() {
     if (hasAccess(role, 'registrations') || hasAccess(role, 'discoveryTypes')) {
       newItems.push({
         key: 'div-4',
+        type: 'divider',
+      });
+    }
+    if (hasAccess(role, 'questionnaires')) {
+      newItems.push({
+        key: 'questionnaires',
+        label: 'Questionnaires',
+        icon: <FormOutlined />,
+      });
+    }
+    if (hasAccess(role, 'questionnaires')) {
+      newItems.push({
+        key: 'div-5',
         type: 'divider',
       });
     }

@@ -32,6 +32,7 @@ const CRUD_MODULES = [
   'registrations',
   'discoveryTypes',
   'roles',
+  'questionnaires',
 ];
 
 // Map collection names to permission modules
@@ -50,6 +51,7 @@ const COLLECTION_TO_MODULE = {
   discoveryTypes: 'discoveryTypes',
   roles: 'roles',
   profilePictures: 'members', // profile pictures are part of members module
+  questionnaires: 'questionnaires',
 };
 
 // Role cache for performance
@@ -195,6 +197,7 @@ const collectionNames = [
   // 'settings', // ! handled separately
   'roles',
   'profilePictures',
+  'questionnaires',
 ];
 
 if (Meteor.isServer) {
