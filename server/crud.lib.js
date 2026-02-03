@@ -181,8 +181,9 @@ function createCollectionMethods(collection) {
         },
       });
     }
-  } catch {
-    // Collection method creation failed silently - error will surface when method is called
+  } catch (error) {
+    // Log error for debugging - method registration failures are critical
+    createLog('crud.methodCreationError', { collection, error: error.message });
   }
 }
 

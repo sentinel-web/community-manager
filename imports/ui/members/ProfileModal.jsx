@@ -8,7 +8,7 @@ export default function ProfileModal({ showProfile = false, toggleProfile = () =
   const [profileStats, setProfileStats] = useState(null);
   useEffect(() => {
     Meteor.callAsync('members.profileStats').then(setProfileStats);
-  });
+  }, []);
 
   return (
     <Modal title="Profile" open={showProfile} onCancel={toggleProfile} width={window.innerWidth * 0.75} footer={null} centered>
