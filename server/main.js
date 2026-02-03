@@ -1,7 +1,12 @@
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
+import AttendancesCollection from '../imports/api/collections/attendances.collection';
+import EventsCollection from '../imports/api/collections/events.collection';
+import LogsCollection from '../imports/api/collections/logs.collection';
 import MembersCollection from '../imports/api/collections/members.collection';
+import RegistrationsCollection from '../imports/api/collections/registrations.collection';
 import RolesCollection from '../imports/api/collections/roles.collection';
+import TasksCollection from '../imports/api/collections/tasks.collection';
 import './apis/backup.server';
 import './apis/dashboard.server';
 import './apis/logs.server';
@@ -173,8 +178,37 @@ async function createTestData() {
   await Accounts.createUserAsync({ username: 'admin', password: 'admin', profile: { name: 'Admin', roleId: 'admin' } });
 }
 
+/**
+ * Creates database indexes for common queries.
+ * Indexes improve query performance by avoiding full collection scans.
+ * createIndex() is idempotent - safe to call on every startup.
+ */
+async function createDatabaseIndexes() {
+  // Members (Meteor.users) indexes
+  await MembersCollection.rawCollection().createIndex({ 'profile.squadId': 1 });
+  await MembersCollection.rawCollection().createIndex({ 'profile.rankId': 1 });
+  await MembersCollection.rawCollection().createIndex({ username: 1 });
+
+  // Attendances indexes
+  await AttendancesCollection.rawCollection().createIndex({ eventId: 1 });
+
+  // Logs indexes
+  await LogsCollection.rawCollection().createIndex({ createdAt: -1 });
+  await LogsCollection.rawCollection().createIndex({ action: 1 });
+
+  // Events indexes
+  await EventsCollection.rawCollection().createIndex({ eventType: 1 });
+
+  // Tasks indexes
+  await TasksCollection.rawCollection().createIndex({ status: 1 });
+
+  // Registrations indexes
+  await RegistrationsCollection.rawCollection().createIndex({ discoveryType: 1 });
+}
+
 if (Meteor.isServer) {
   Meteor.startup(async () => {
+    await createDatabaseIndexes();
     await createTestData();
   });
 }
