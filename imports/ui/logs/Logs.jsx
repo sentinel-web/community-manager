@@ -12,6 +12,12 @@ import Table from '../table/Table';
 import getLogsColumns from './logs.columns';
 import LogViewer from './LogViewer';
 
+/**
+ * Logs management page component.
+ * Displays a filterable table of audit logs with view and delete actions.
+ * No props - fetches data internally via Meteor subscriptions.
+ */
+
 const { RangePicker } = DatePicker;
 
 function buildFilter(actionInput, dateRange) {
