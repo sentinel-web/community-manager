@@ -29,8 +29,7 @@ const SquadsForm = ({ setOpen, useSubdrawer = false }) => {
       const base64 = await turnImageFileToBase64(file);
       const data = await turnBase64ToImage(base64);
       setImageSrc(data.src);
-    } catch (error) {
-      console.error(error);
+    } catch {
       setImageSrc(null);
     }
   };
@@ -49,9 +48,7 @@ const SquadsForm = ({ setOpen, useSubdrawer = false }) => {
       .then(() => {
         setOpen(false);
       })
-      .catch(error => {
-        console.error(error);
-      });
+      .catch(() => {});
   };
 
   return (

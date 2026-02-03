@@ -17,8 +17,7 @@ export default function Orbat() {
         setSquads(squads);
         setReady(true);
       })
-      .catch(error => {
-        console.error(error);
+      .catch(() => {
         setReady(true);
       });
   }, []);
@@ -111,7 +110,7 @@ export default function Orbat() {
 const ORBAT_Label = ({ option }) => {
   const [items, setItems] = useState([]);
   useEffect(() => {
-    Meteor.callAsync('orbat.popover.items', option.id).then(setItems).catch(console.error);
+    Meteor.callAsync('orbat.popover.items', option.id).then(setItems).catch(() => {});
   }, [option.id]);
   const hoverStyle = { cursor: 'pointer' };
 

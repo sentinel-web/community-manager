@@ -10,7 +10,7 @@ export default function Dashboard() {
     setLoading(true);
     Meteor.callAsync('dashboard.stats')
       .then(setStats)
-      .catch(console.error)
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
   useEffect(() => {

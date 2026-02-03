@@ -15,7 +15,7 @@ const SpecializationTags = ({ specializations }) => {
         const data = res.filter(option => specializations.includes(option.value)).map(option => option);
         setValues(data);
       })
-      .catch(console.error);
+      .catch(() => {});
   }, [specializations]);
 
   if (!Array.isArray(values)) return values;

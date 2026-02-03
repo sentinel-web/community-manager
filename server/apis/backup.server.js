@@ -57,7 +57,7 @@ if (Meteor.isServer) {
           backup.meta.collectionCounts[collectionName] = documents.length;
           backup.meta.totalDocuments += documents.length;
         } catch (error) {
-          console.error(`Error exporting collection ${collectionName}:`, error);
+          await createLog('backup.export.error', { collection: collectionName, error: error.message });
           backup.collections[collectionName] = [];
           backup.meta.collectionCounts[collectionName] = 0;
         }
@@ -70,7 +70,7 @@ if (Meteor.isServer) {
         backup.meta.collectionCounts.settings = settings.length;
         backup.meta.totalDocuments += settings.length;
       } catch (error) {
-        console.error('Error exporting settings collection:', error);
+        await createLog('backup.export.error', { collection: 'settings', error: error.message });
         backup.collections.settings = [];
         backup.meta.collectionCounts.settings = 0;
       }
@@ -82,7 +82,7 @@ if (Meteor.isServer) {
         backup.meta.collectionCounts.users = users.length;
         backup.meta.totalDocuments += users.length;
       } catch (error) {
-        console.error('Error exporting users collection:', error);
+        await createLog('backup.export.error', { collection: 'users', error: error.message });
         backup.collections.users = [];
         backup.meta.collectionCounts.users = 0;
       }
@@ -126,7 +126,7 @@ if (Meteor.isServer) {
           backup.meta.collectionCounts[collectionName] = documents.length;
           backup.meta.totalDocuments += documents.length;
         } catch (error) {
-          console.error(`Error exporting collection ${collectionName}:`, error);
+          await createLog('backup.export.error', { collection: collectionName, error: error.message });
           backup.collections[collectionName] = [];
           backup.meta.collectionCounts[collectionName] = 0;
         }
@@ -138,7 +138,7 @@ if (Meteor.isServer) {
         backup.meta.collectionCounts.settings = settings.length;
         backup.meta.totalDocuments += settings.length;
       } catch (error) {
-        console.error('Error exporting settings collection:', error);
+        await createLog('backup.export.error', { collection: 'settings', error: error.message });
         backup.collections.settings = [];
         backup.meta.collectionCounts.settings = 0;
       }
@@ -149,7 +149,7 @@ if (Meteor.isServer) {
         backup.meta.collectionCounts.users = users.length;
         backup.meta.totalDocuments += users.length;
       } catch (error) {
-        console.error('Error exporting users collection:', error);
+        await createLog('backup.export.error', { collection: 'users', error: error.message });
         backup.collections.users = [];
         backup.meta.collectionCounts.users = 0;
       }
@@ -187,7 +187,7 @@ if (Meteor.isServer) {
         try {
           safetyBackup = await Meteor.callAsync('backup.createQuick');
         } catch (error) {
-          console.error('Failed to create safety backup:', error);
+          await createLog('backup.safety.error', { error: error.message });
           throw new Meteor.Error(500, 'Failed to create safety backup before restore. Aborting restore.');
         }
       }
@@ -213,7 +213,7 @@ if (Meteor.isServer) {
             }
             results.restored[collectionName] = documents.length;
           } catch (error) {
-            console.error(`Error restoring collection ${collectionName}:`, error);
+            await createLog('backup.restore.error', { collection: collectionName, error: error.message });
             results.errors.push({ collection: collectionName, error: error.message });
           }
         }
@@ -228,7 +228,7 @@ if (Meteor.isServer) {
           }
           results.restored.settings = backupData.collections.settings.length;
         } catch (error) {
-          console.error('Error restoring settings collection:', error);
+          await createLog('backup.restore.error', { collection: 'settings', error: error.message });
           results.errors.push({ collection: 'settings', error: error.message });
         }
       }
@@ -253,7 +253,7 @@ if (Meteor.isServer) {
           }
           results.restored.users = backupData.collections.users.length;
         } catch (error) {
-          console.error('Error restoring users collection:', error);
+          await createLog('backup.restore.error', { collection: 'users', error: error.message });
           results.errors.push({ collection: 'users', error: error.message });
         }
       }

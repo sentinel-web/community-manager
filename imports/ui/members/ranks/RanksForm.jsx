@@ -43,7 +43,6 @@ export default function RanksForm({ setOpen, useSubdrawer }) {
           message.success(`Rank ${model?._id ? 'updated' : 'created'} successfully`);
         })
         .catch(error => {
-          console.error(error);
           notification.error({
             message: error.error,
             description: error.message,

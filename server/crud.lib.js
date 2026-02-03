@@ -181,8 +181,8 @@ function createCollectionMethods(collection) {
         },
       });
     }
-  } catch (error) {
-    console.error(error);
+  } catch {
+    // Collection method creation failed silently - error will surface when method is called
   }
 }
 
