@@ -117,15 +117,15 @@ if (Meteor.isServer) {
 
       const members = await MembersCollection.find({}, { fields: { 'profile.rankId': 1, 'profile.id': 1, 'profile.name': 1 } }).fetchAsync();
 
-      const options = [];
+      // Batch load all ranks to avoid N+1 queries
+      const rankIds = [...new Set(members.map(m => m.profile?.rankId).filter(Boolean))];
+      const ranks = await RanksCollection.find({ _id: { $in: rankIds } }).fetchAsync();
+      const rankNameById = new Map(ranks.map(r => [r._id, r.name]));
 
-      for (const member of members) {
-        const rankName = await getRankName(member.profile?.rankId);
-        options.push({
-          label: getFullName(rankName, member.profile?.id, member.profile?.name),
-          value: member._id,
-        });
-      }
+      const options = members.map(member => ({
+        label: getFullName(rankNameById.get(member.profile?.rankId), member.profile?.id, member.profile?.name),
+        value: member._id,
+      }));
 
       return options;
     },
@@ -135,11 +135,15 @@ if (Meteor.isServer) {
       validateObject(options, false);
       try {
         const members = await MembersCollection.find(filter, options).fetchAsync();
-        const names = [];
-        for (const member of members) {
-          const rankName = await getRankName(member.profile?.rankId);
-          names.push(getFullName(rankName, member.profile?.id, member.profile?.name));
-        }
+
+        // Batch load all ranks to avoid N+1 queries
+        const rankIds = [...new Set(members.map(m => m.profile?.rankId).filter(Boolean))];
+        const ranks = await RanksCollection.find({ _id: { $in: rankIds } }).fetchAsync();
+        const rankNameById = new Map(ranks.map(r => [r._id, r.name]));
+
+        const names = members.map(member =>
+          getFullName(rankNameById.get(member.profile?.rankId), member.profile?.id, member.profile?.name)
+        );
         return names.join(', ');
       } catch (error) {
         throw new Meteor.Error(error.message);
