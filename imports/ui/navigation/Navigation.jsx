@@ -266,7 +266,7 @@ export default function Navigation() {
         icon: <FormOutlined />,
       });
     }
-    if (hasAccess(role, 'questionnaires')) {
+    if (hasAccess(role, 'questionnaires') || hasAccess(role, 'roles') || hasAccess(role, 'logs') || hasAccess(role, 'settings')) {
       newItems.push({
         key: 'div-5',
         type: 'divider',
