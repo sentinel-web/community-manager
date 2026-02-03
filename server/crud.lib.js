@@ -56,12 +56,24 @@ export function getCollection(collection) {
   }
 }
 
+// Default limit for publications to prevent memory exhaustion
+const DEFAULT_PUBLISH_LIMIT = 100;
+const MAX_PUBLISH_LIMIT = 1000;
+
 function createCollectionPublish(collection) {
   if (Meteor.isServer) {
     const Collection = getCollection(collection);
     Meteor.publish(collection, (filter = {}, options = {}) => {
       if (validateObject(filter, false)) return [];
       if (validateObject(options, false)) return [];
+
+      // Apply default limit if none specified, cap at maximum
+      if (!options.limit) {
+        options.limit = DEFAULT_PUBLISH_LIMIT;
+      } else if (options.limit > MAX_PUBLISH_LIMIT) {
+        options.limit = MAX_PUBLISH_LIMIT;
+      }
+
       return Collection.find(filter, options);
     });
   }
