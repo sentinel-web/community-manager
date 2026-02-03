@@ -12,6 +12,7 @@ import './apis/settings.server';
 import './apis/specializations.server';
 import './crud.lib';
 import { createCollectionMethods, createCollectionPublish } from './crud.lib';
+import { CACHE } from './config';
 
 // === Permission System ===
 
@@ -52,9 +53,8 @@ const COLLECTION_TO_MODULE = {
   profilePictures: 'members', // profile pictures are part of members module
 };
 
-// Role cache for performance
+// Role cache for performance (TTL configurable via Meteor.settings)
 const roleCache = new Map();
-const CACHE_TTL = 60000; // 1 minute
 
 /**
  * Normalizes role permissions from old boolean format to new CRUD object format.
@@ -96,7 +96,7 @@ export async function getUserRole(userId) {
   const cacheKey = roleId;
   const cached = roleCache.get(cacheKey);
 
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+  if (cached && Date.now() - cached.timestamp < CACHE.roleTtlMs) {
     return cached.role;
   }
 
