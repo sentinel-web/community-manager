@@ -12,7 +12,7 @@ npm run update         # Update all Meteor/npm packages and fix vulnerabilities
 npm run visualize      # Analyze production bundle size
 ```
 
-Test user auto-created on first run: `admin` / `admin`
+Test user auto-created in development mode only: `admin` / `admin` (requires `NODE_ENV !== 'production'`)
 
 ## Architecture
 
