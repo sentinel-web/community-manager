@@ -55,6 +55,26 @@ const COLLECTION_TO_MODULE = {
 // Role cache for performance
 const roleCache = new Map();
 const CACHE_TTL = 60000; // 1 minute
+const CACHE_CLEANUP_INTERVAL = 300000; // 5 minutes
+const CACHE_MAX_SIZE = 1000; // Maximum number of entries
+
+/**
+ * Cleans up expired entries from the role cache.
+ * Runs periodically to prevent unbounded memory growth.
+ */
+function cleanupRoleCache() {
+  const now = Date.now();
+  for (const [key, value] of roleCache.entries()) {
+    if (now - value.timestamp >= CACHE_TTL) {
+      roleCache.delete(key);
+    }
+  }
+}
+
+// Start periodic cache cleanup on server
+if (Meteor.isServer) {
+  Meteor.setInterval(cleanupRoleCache, CACHE_CLEANUP_INTERVAL);
+}
 
 /**
  * Normalizes role permissions from old boolean format to new CRUD object format.
@@ -102,6 +122,19 @@ export async function getUserRole(userId) {
 
   const role = await RolesCollection.findOneAsync(roleId);
   const normalizedRole = normalizeRolePermissions(role);
+
+  // Evict oldest entries if cache exceeds max size
+  if (roleCache.size >= CACHE_MAX_SIZE) {
+    let oldestKey = null;
+    let oldestTime = Infinity;
+    for (const [key, value] of roleCache.entries()) {
+      if (value.timestamp < oldestTime) {
+        oldestTime = value.timestamp;
+        oldestKey = key;
+      }
+    }
+    if (oldestKey) roleCache.delete(oldestKey);
+  }
 
   roleCache.set(cacheKey, { role: normalizedRole, timestamp: Date.now() });
 
