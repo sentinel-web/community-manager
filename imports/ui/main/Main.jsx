@@ -3,6 +3,7 @@ import { Meteor } from 'meteor/meteor';
 import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
 import React, { lazy, useMemo } from 'react';
 import RolesCollection from '../../api/collections/roles.collection';
+import { isDeviceUnsupported } from '../../config';
 import Login from '../login/Login';
 import useNavigation from '../navigation/navigation.hook';
 import Suspense from '../suspense/Suspense';
@@ -70,7 +71,7 @@ export default function Main() {
     return checkAccess(role, navigationValue);
   }, [roles, navigationValue]);
 
-  if (window.innerWidth < 360) {
+  if (isDeviceUnsupported(window.innerWidth)) {
     return (
       <section className="container">
         <Result status="500" title="406 - Not supported" subTitle="Sorry, this device is not supported." />
