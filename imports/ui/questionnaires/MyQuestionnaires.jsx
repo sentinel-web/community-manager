@@ -1,5 +1,5 @@
-import { CheckCircleOutlined, ClockCircleOutlined, FormOutlined } from '@ant-design/icons';
-import { App, Button, Card, Col, Empty, Row, Space, Spin, Tag, Tooltip, Typography } from 'antd';
+import { CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined, FormOutlined } from '@ant-design/icons';
+import { App, Button, Card, Col, Empty, Popconfirm, Row, Space, Spin, Tag, Tooltip, Typography } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useEffect, useState } from 'react';
@@ -57,6 +57,22 @@ export default function MyQuestionnaires() {
     [drawer, loadQuestionnaires]
   );
 
+  const handleRevoke = useCallback(
+    async responseId => {
+      try {
+        await Meteor.callAsync('questionnaireResponses.revoke', responseId);
+        notification.success({ message: 'Response revoked successfully' });
+        loadQuestionnaires();
+      } catch (error) {
+        notification.error({
+          message: error.error,
+          description: error.message,
+        });
+      }
+    },
+    [notification, loadQuestionnaires]
+  );
+
   return (
     <SectionCard title="My Questionnaires" ready={!loading}>
       {loading ? (
@@ -69,7 +85,7 @@ export default function MyQuestionnaires() {
         <Row gutter={[16, 16]}>
           {questionnaires.map(questionnaire => (
             <Col xs={24} sm={12} lg={8} key={questionnaire._id}>
-              <QuestionnaireCard questionnaire={questionnaire} onFillOut={handleFillOut} />
+              <QuestionnaireCard questionnaire={questionnaire} onFillOut={handleFillOut} onRevoke={handleRevoke} />
             </Col>
           ))}
         </Row>
@@ -78,9 +94,11 @@ export default function MyQuestionnaires() {
   );
 }
 
-const QuestionnaireCard = ({ questionnaire, onFillOut }) => {
-  const { name, description, questionCount, canRespond, responseReason, nextAllowedDate, responseCount, allowAnonymous, interval } = questionnaire;
+const QuestionnaireCard = ({ questionnaire, onFillOut, onRevoke }) => {
+  const { name, description, questionCount, canRespond, responseReason, nextAllowedDate, responseCount, allowAnonymous, interval, latestResponseId } =
+    questionnaire;
   const intervalLabel = INTERVAL_LABELS[interval] || INTERVAL_LABELS.once;
+  const canRevoke = !allowAnonymous && latestResponseId && !canRespond;
 
   const renderAction = () => {
     if (canRespond) {
@@ -112,6 +130,24 @@ const QuestionnaireCard = ({ questionnaire, onFillOut }) => {
     );
   };
 
+  const renderRevokeAction = () => {
+    if (!canRevoke) return null;
+    return (
+      <Popconfirm
+        key="revoke"
+        title="Revoke response"
+        description="Are you sure you want to revoke your response?"
+        onConfirm={() => onRevoke(latestResponseId)}
+        okText="Yes"
+        cancelText="No"
+      >
+        <Button danger icon={<DeleteOutlined />}>
+          Revoke
+        </Button>
+      </Popconfirm>
+    );
+  };
+
   const renderTags = () => {
     const tags = [];
     if (allowAnonymous) tags.push(<Tag key="anon" color="blue">Anonymous</Tag>);
@@ -119,8 +155,10 @@ const QuestionnaireCard = ({ questionnaire, onFillOut }) => {
     return tags.length > 0 ? <Space size={4}>{tags}</Space> : null;
   };
 
+  const actions = [renderAction(), renderRevokeAction()].filter(Boolean);
+
   return (
-    <Card title={name} extra={renderTags()} actions={[renderAction()]}>
+    <Card title={name} extra={renderTags()} actions={actions}>
       <Space direction="vertical" style={{ width: '100%' }}>
         {description && (
           <Text type="secondary" ellipsis={{ rows: 2 }}>
@@ -151,6 +189,8 @@ QuestionnaireCard.propTypes = {
     responseCount: PropTypes.number,
     allowAnonymous: PropTypes.bool,
     interval: PropTypes.string,
+    latestResponseId: PropTypes.string,
   }).isRequired,
   onFillOut: PropTypes.func.isRequired,
+  onRevoke: PropTypes.func.isRequired,
 };

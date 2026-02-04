@@ -189,13 +189,20 @@ if (Meteor.isServer) {
         activeQuestionnaires.map(async questionnaire => {
           const { canRespond, reason, nextAllowedDate } = await canUserRespond(questionnaire, this.userId);
 
-          // Get total response count for this user
-          const responseCount = questionnaire.allowAnonymous
-            ? 0
-            : await QuestionnaireResponsesCollection.countDocuments({
-                questionnaireId: questionnaire._id,
-                respondentId: this.userId,
-              });
+          // Get total response count and latest response for this user
+          let responseCount = 0;
+          let latestResponseId = null;
+          if (!questionnaire.allowAnonymous) {
+            responseCount = await QuestionnaireResponsesCollection.countDocuments({
+              questionnaireId: questionnaire._id,
+              respondentId: this.userId,
+            });
+            const latestResponse = await QuestionnaireResponsesCollection.findOneAsync(
+              { questionnaireId: questionnaire._id, respondentId: this.userId },
+              { sort: { submittedAt: -1 }, fields: { _id: 1 } }
+            );
+            latestResponseId = latestResponse?._id || null;
+          }
 
           return {
             ...questionnaire,
@@ -203,6 +210,7 @@ if (Meteor.isServer) {
             responseReason: reason,
             nextAllowedDate,
             responseCount,
+            latestResponseId,
             questionCount: questionnaire.questions?.length || 0,
           };
         })
@@ -250,6 +258,59 @@ if (Meteor.isServer) {
       if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
 
       return await QuestionnaireResponsesCollection.countDocuments({ questionnaireId });
+    },
+
+    'questionnaireResponses.revoke': async function (responseId) {
+      if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
+      validateString(responseId, false);
+
+      const hasPermission = await checkPermission(this.userId, 'questionnaires', 'read');
+      if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+
+      const response = await QuestionnaireResponsesCollection.findOneAsync(responseId);
+      if (!response) throw new Meteor.Error(404, 'Response not found');
+
+      // Only allow users to revoke their own responses
+      if (response.respondentId !== this.userId) {
+        throw new Meteor.Error(403, 'You can only revoke your own responses');
+      }
+
+      // Anonymous responses cannot be revoked (no way to verify ownership)
+      if (!response.respondentId) {
+        throw new Meteor.Error(400, 'Anonymous responses cannot be revoked');
+      }
+
+      await QuestionnaireResponsesCollection.removeAsync(responseId);
+      await createLog('questionnaireResponses.revoked', {
+        id: responseId,
+        questionnaireId: response.questionnaireId,
+        respondentId: response.respondentId,
+      });
+
+      return true;
+    },
+
+    'questionnaireResponses.setIgnored': async function (responseId, ignored) {
+      if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
+      validateString(responseId, false);
+
+      // Require update permission for ignoring responses
+      const hasPermission = await checkPermission(this.userId, 'questionnaires', 'update');
+      if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+
+      const response = await QuestionnaireResponsesCollection.findOneAsync(responseId);
+      if (!response) throw new Meteor.Error(404, 'Response not found');
+
+      await QuestionnaireResponsesCollection.updateAsync(responseId, {
+        $set: { ignored: !!ignored },
+      });
+      await createLog('questionnaireResponses.ignored', {
+        id: responseId,
+        questionnaireId: response.questionnaireId,
+        ignored: !!ignored,
+      });
+
+      return true;
     },
   });
 }

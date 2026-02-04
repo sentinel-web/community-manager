@@ -1,15 +1,20 @@
-import { EyeOutlined } from '@ant-design/icons';
-import { Button, Tag, Tooltip } from 'antd';
+import { EyeInvisibleOutlined, EyeOutlined } from '@ant-design/icons';
+import { Button, Space, Tag, Tooltip } from 'antd';
 import React from 'react';
 
-const getQuestionnaireResponseColumns = handleViewDetails => {
+const getQuestionnaireResponseColumns = (handleViewDetails, handleToggleIgnored = null, canUpdate = false) => {
   return [
     {
       title: 'Respondent',
       dataIndex: 'respondentName',
       key: 'respondentName',
       ellipsis: true,
-      render: (name, record) => (record.respondentId ? name : <Tag color="blue">Anonymous</Tag>),
+      render: (name, record) => (
+        <Space>
+          {record.respondentId ? name : <Tag color="blue">Anonymous</Tag>}
+          {record.ignored && <Tag color="orange">Ignored</Tag>}
+        </Space>
+      ),
     },
     {
       title: 'Submitted At',
@@ -35,9 +40,21 @@ const getQuestionnaireResponseColumns = handleViewDetails => {
       dataIndex: '_id',
       key: 'actions',
       render: (id, record) => (
-        <Tooltip title="View Details">
-          <Button type="text" icon={<EyeOutlined />} onClick={e => handleViewDetails(e, record)} />
-        </Tooltip>
+        <Space>
+          <Tooltip title="View Details">
+            <Button type="text" icon={<EyeOutlined />} onClick={e => handleViewDetails(e, record)} />
+          </Tooltip>
+          {canUpdate && handleToggleIgnored && (
+            <Tooltip title={record.ignored ? 'Unignore' : 'Ignore'}>
+              <Button
+                type="text"
+                danger={!record.ignored}
+                icon={<EyeInvisibleOutlined />}
+                onClick={e => handleToggleIgnored(e, record)}
+              />
+            </Tooltip>
+          )}
+        </Space>
       ),
     },
   ];
