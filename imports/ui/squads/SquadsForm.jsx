@@ -1,4 +1,4 @@
-import { Col, ColorPicker, Form, Input, Row, Upload } from 'antd';
+import { App, Col, ColorPicker, Form, Input, Row, Upload } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useContext, useEffect, useMemo, useState } from 'react';
@@ -9,6 +9,7 @@ import { getColorFromValues } from '../specializations/SpecializationForm';
 import SquadsSelect from './SquadsSelect';
 
 const SquadsForm = ({ setOpen, useSubdrawer = false }) => {
+  const { message, notification } = App.useApp();
   const drawer = useContext(DrawerContext);
   const subdrawer = useContext(SubdrawerContext);
 
@@ -47,8 +48,14 @@ const SquadsForm = ({ setOpen, useSubdrawer = false }) => {
     Meteor.callAsync(Meteor.user() && model?._id ? 'squads.update' : 'squads.insert', ...args)
       .then(() => {
         setOpen(false);
+        message.success(`Squad ${model?._id ? 'updated' : 'created'} successfully`);
       })
-      .catch(() => {});
+      .catch(error => {
+        notification.error({
+          message: error.error,
+          description: error.message,
+        });
+      });
   };
 
   return (

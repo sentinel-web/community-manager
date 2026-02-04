@@ -1,4 +1,4 @@
-import { Card, Descriptions, Empty, Popover, Typography } from 'antd';
+import { App, Card, Descriptions, Empty, Popover, Typography } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -6,6 +6,7 @@ import { Tree, TreeNode } from 'react-organizational-chart';
 import { turnBase64ToImage } from '../profile-picture-input/ProfilePictureInput';
 
 export default function Orbat() {
+  const { message } = App.useApp();
   const [ready, setReady] = useState(true);
   const [squads, setSquads] = useState([]);
   const [options, setOptions] = useState([]);
@@ -18,9 +19,10 @@ export default function Orbat() {
         setReady(true);
       })
       .catch(() => {
+        message.error('Failed to load ORBAT data');
         setReady(true);
       });
-  }, []);
+  }, [message]);
 
   const findParentRecursive = useCallback((options, parentId) => {
     if (!parentId) {

@@ -1,18 +1,21 @@
-import { Button, Card, Col, Collapse, Descriptions, Row, Statistic, Typography } from 'antd';
+import { App, Button, Card, Col, Collapse, Descriptions, Row, Statistic, Typography } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 export default function Dashboard() {
+  const { message } = App.useApp();
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(false);
   const fetchStats = useCallback(function () {
     setLoading(true);
     Meteor.callAsync('dashboard.stats')
       .then(setStats)
-      .catch(() => {})
+      .catch(() => {
+        message.error('Failed to load dashboard stats');
+      })
       .finally(() => setLoading(false));
-  }, []);
+  }, [message]);
   useEffect(() => {
     fetchStats();
   }, []);
