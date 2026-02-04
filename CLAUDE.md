@@ -136,6 +136,27 @@ Members (Meteor.users), Events, Attendances, Tasks, TaskStatus, Squads, Ranks, S
 - `orbat/` - Organization chart
 - `members/`, `squads/`, `logs/`, `settings/`, `backup/`
 
+## Deployment
+
+**Docker with Traefik** (production)
+```bash
+# Required environment variables
+ROOT_URL=https://yourdomain.com
+DOMAIN=yourdomain.com
+MONGO_URL=mongodb://mongo:27017/community-manager  # default
+
+# Optional Traefik settings
+TRAEFIK_ENTRYPOINT=websecure                       # default
+TRAEFIK_CERTRESOLVER=letsencrypt                   # default
+
+# Build and run
+docker compose up -d
+```
+
+- Multi-stage Dockerfile: builds Meteor app, runs on Node 20
+- Requires external `traefik` network (assumes Traefik reverse proxy)
+- MongoDB 7 with health checks and persistent volume
+
 ## Key Dependencies
 
 - **react-beautiful-dnd** - Drag-and-drop for Kanban task board
@@ -228,6 +249,36 @@ try {
 11. **Fix Review Issues** - Address feedback from review
 12. **Validate Against CLAUDE.md** - Ensure code follows documented patterns; update CLAUDE.md if new patterns emerge
 13. **Create Pull Request** - Include summary of changes and steps for testing/reproduction
+
+## Claude Code Skills
+
+Custom skills in `.claude/skills/` automate common development tasks:
+
+**Workflow Skills**
+| Skill | Purpose |
+|-------|---------|
+| `/issue` | Fetch and analyze a GitHub issue to start work |
+| `/plan` | Create or refine an implementation plan |
+| `/branch` | Create a properly named branch from the current issue |
+| `/commit` | Create a commit with clean, descriptive message |
+| `/pr` | Create a pull request with summary and testing steps |
+| `/review` | Run code review against coding guidelines |
+| `/validate` | Validate code against CLAUDE.md patterns |
+| `/test` | Run tests, analyze failures, suggest fixes |
+
+**Scaffolding Skills**
+| Skill | Purpose |
+|-------|---------|
+| `/collection` | Scaffold a new MongoDB collection with all registrations |
+| `/component` | Scaffold a React component following project patterns |
+| `/form` | Scaffold an Ant Design form with drawer integration |
+| `/section` | Scaffold a full Section page (collection, form, columns, page) |
+
+**Debugging Skills**
+| Skill | Purpose |
+|-------|---------|
+| `/logs` | Check recent audit logs for debugging |
+| `/permissions` | Show permission structure for a module |
 
 ## Common Gotchas
 
