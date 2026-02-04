@@ -214,8 +214,8 @@ export { BOOLEAN_MODULES, CRUD_MODULES };
  * Never run in production - gated by NODE_ENV check.
  */
 async function createTestData() {
-  const adminRole = await RolesCollection.findOneAsync({ _id: 'admin' });
-  if (!adminRole) await RolesCollection.upsertAsync({ _id: 'admin' }, { _id: 'admin', name: 'admin', roles: true });
+  // Always ensure admin role has full permissions (idempotent)
+  await RolesCollection.upsertAsync({ _id: 'admin' }, { $set: { name: 'admin', roles: true } });
   const user = await MembersCollection.findOneAsync({ username: 'admin' });
   if (user) return;
   console.warn('[SECURITY] Creating default admin user with test credentials. This should only happen in development.');
