@@ -110,7 +110,7 @@ export function getNavigationValue() {
 export default function Navigation() {
   const breakpoints = Grid.useBreakpoint();
   const user = useTracker(() => Meteor.user(), []);
-  const t = useTranslation();
+  const { t } = useTranslation();
 
   const { navigationValue, setNavigationValue } = useNavigation();
   useEffect(() => {

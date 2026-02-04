@@ -2,10 +2,12 @@ import { Button, Card, Col, Collapse, Descriptions, Row, Statistic, Typography }
 import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from '../../i18n/LanguageContext';
 
 export default function Dashboard() {
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(false);
+  const { t } = useTranslation();
   const fetchStats = useCallback(function () {
     setLoading(true);
     Meteor.callAsync('dashboard.stats')
@@ -24,11 +26,11 @@ export default function Dashboard() {
       title={
         <Row justify="space-between" align="middle">
           <Col>
-            <Typography.Title level={3}>Dashboard</Typography.Title>
+            <Typography.Title level={3}>{t('dashboard.title')}</Typography.Title>
           </Col>
           <Col>
             <Button disabled={loading} onClick={fetchStats} type="primary">
-              Refresh
+              {t('dashboard.refresh')}
             </Button>
           </Col>
         </Row>
@@ -39,29 +41,30 @@ export default function Dashboard() {
         items={[
           {
             key: '1',
-            label: 'Your Profile',
-            children: <ProfileStats profileStats={stats.profile} />,
+            label: t('dashboard.yourProfile'),
+            children: <ProfileStats profileStats={stats.profile} t={t} />,
           },
           {
             key: '2',
-            label: 'Collection Stats',
+            label: t('dashboard.collectionStats'),
             children: (
               <Row gutter={[16, 16]}>
                 {Object.entries(stats)
                   .filter(([key]) => key !== 'profile')
                   .map(([key, value]) => {
+                    const translateStatKey = k => t(`dashboard.stats.${k}`) || k;
                     return typeof value === 'object' ? (
                       Object.keys(value).map(childKey => (
                         <Col xs={24} md={12} lg={8} xxl={6} key={childKey}>
                           <Card variant="outlined">
-                            <Statistic title={`${key}: ${childKey}`} value={value[childKey]} />
+                            <Statistic title={`${translateStatKey(key)}: ${childKey}`} value={value[childKey]} />
                           </Card>
                         </Col>
                       ))
                     ) : (
                       <Col xs={24} md={12} lg={8} xxl={6} key={key}>
                         <Card variant="outlined">
-                          <Statistic title={key} value={value} />
+                          <Statistic title={translateStatKey(key)} value={value} />
                         </Card>
                       </Col>
                     );
@@ -75,9 +78,14 @@ export default function Dashboard() {
   );
 }
 
-export function ProfileStats({ profileStats }) {
+export function ProfileStats({ profileStats, t }) {
   const fullWidthKeys = useMemo(() => ['description', 'specializations', 'medals'], []);
   const oneThirdWidthKeys = useMemo(() => ['rank', 'id', 'name', 'entry date', 'squad', 'role', 'attendance points', 'inactivity points'], []);
+
+  const translateLabel = useCallback(
+    key => (t ? t(`dashboard.profileLabels.${key}`) : key),
+    [t]
+  );
 
   return (
     <Row gutter={[16, 16]} justify="center" align="middle">
@@ -105,7 +113,7 @@ export function ProfileStats({ profileStats }) {
           items={Object.entries(profileStats ?? {})
             .filter(([key]) => oneThirdWidthKeys.includes(key))
             .map(([key, value]) => ({
-              label: key,
+              label: translateLabel(key),
               children: value,
             }))}
           bordered
@@ -122,7 +130,7 @@ export function ProfileStats({ profileStats }) {
           items={Object.entries(profileStats ?? {})
             .filter(([key]) => fullWidthKeys.includes(key))
             .map(([key, value]) => ({
-              label: key,
+              label: translateLabel(key),
               children: value,
             }))}
           bordered
@@ -133,4 +141,5 @@ export function ProfileStats({ profileStats }) {
 }
 ProfileStats.propTypes = {
   profileStats: PropTypes.object,
+  t: PropTypes.func,
 };

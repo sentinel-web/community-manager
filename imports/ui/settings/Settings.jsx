@@ -4,6 +4,7 @@ import Dragger from 'antd/es/upload/Dragger';
 import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useCallback, useState } from 'react';
+import { useTranslation } from '../../i18n/LanguageContext';
 import Logo from '../logo/Logo';
 import SectionCard from '../section/SectionCard';
 import useSettings from './settings.hook';
@@ -51,6 +52,7 @@ async function turnImageFileIntoWebp(file) {
 
 export default function Settings() {
   const { ready, communityTitle, communityLogo, communityColor, communityNameBlackList, communityIdBlackList } = useSettings();
+  const { t } = useTranslation();
 
   async function handleChange(e, key) {
     const value = await getEventValue(key, e);
@@ -60,26 +62,26 @@ export default function Settings() {
   }
 
   return (
-    <SectionCard title="Settings" ready={ready}>
+    <SectionCard title={t('settings.title')} ready={ready}>
       <Row gutter={[16, 16]}>
         <Col span={24}>
           <Row gutter={[16, 16]}>
             <Col span={24}>
               <Row gutter={[16, 16]}>
                 <Col span={24}>
-                  <CommunityLogoSettings communityLogo={communityLogo} handleChange={handleChange} />
+                  <CommunityLogoSettings communityLogo={communityLogo} handleChange={handleChange} t={t} />
                 </Col>
                 <Col xs={24} lg={12}>
-                  <CommunityTitleSettings communityTitle={communityTitle} handleChange={handleChange} />
+                  <CommunityTitleSettings communityTitle={communityTitle} handleChange={handleChange} t={t} />
                 </Col>
                 <Col xs={24} lg={12}>
-                  <CommunityColorSettings communityColor={communityColor} handleChange={handleChange} />
+                  <CommunityColorSettings communityColor={communityColor} handleChange={handleChange} t={t} />
                 </Col>
                 <Col xs={24} lg={12}>
-                  <CommunityNameBlackListSettings communityNameBlackList={communityNameBlackList} handleChange={handleChange} />
+                  <CommunityNameBlackListSettings communityNameBlackList={communityNameBlackList} handleChange={handleChange} t={t} />
                 </Col>
                 <Col xs={24} lg={12}>
-                  <CommunityIdBlackListSettings communityIdBlackList={communityIdBlackList} handleChange={handleChange} />
+                  <CommunityIdBlackListSettings communityIdBlackList={communityIdBlackList} handleChange={handleChange} t={t} />
                 </Col>
               </Row>
             </Col>
@@ -101,7 +103,7 @@ SettingTitle.propTypes = {
   title: PropTypes.string,
 };
 
-function CommunityNameBlackListSettings({ communityNameBlackList, handleChange }) {
+function CommunityNameBlackListSettings({ communityNameBlackList, handleChange, t }) {
   const [value, setValue] = useState('');
 
   const handleClick = useCallback(() => {
@@ -122,14 +124,14 @@ function CommunityNameBlackListSettings({ communityNameBlackList, handleChange }
 
   return (
     <Row gutter={[16, 16]}>
-      <SettingTitle title="Member Name Black List" />
+      <SettingTitle title={t('settings.memberNameBlacklist')} />
       <Col span={24}>
         <Row gutter={[16, 16]}>
           <Col flex="auto">
             <Input
               value={value}
               style={{ width: '100%' }}
-              placeholder="Enter new black listed name"
+              placeholder={t('settings.enterBlacklistedName')}
               onKeyDown={e => {
                 if (e.key === 'Enter') {
                   handleClick();
@@ -160,9 +162,10 @@ function CommunityNameBlackListSettings({ communityNameBlackList, handleChange }
 CommunityNameBlackListSettings.propTypes = {
   communityNameBlackList: PropTypes.array,
   handleChange: PropTypes.func,
+  t: PropTypes.func,
 };
 
-function CommunityIdBlackListSettings({ communityIdBlackList, handleChange }) {
+function CommunityIdBlackListSettings({ communityIdBlackList, handleChange, t }) {
   const [value, setValue] = useState('');
 
   const handleClick = useCallback(() => {
@@ -183,14 +186,14 @@ function CommunityIdBlackListSettings({ communityIdBlackList, handleChange }) {
 
   return (
     <Row gutter={[16, 16]}>
-      <SettingTitle title="Member ID Black List" />
+      <SettingTitle title={t('settings.memberIdBlacklist')} />
       <Col span={24}>
         <Row gutter={[16, 16]}>
           <Col flex="auto">
             <Input
               value={value}
               style={{ width: '100%' }}
-              placeholder="Enter new black listed id"
+              placeholder={t('settings.enterBlacklistedId')}
               onKeyDown={e => {
                 if (e.key === 'Enter') {
                   handleClick();
@@ -221,14 +224,15 @@ function CommunityIdBlackListSettings({ communityIdBlackList, handleChange }) {
 CommunityIdBlackListSettings.propTypes = {
   communityIdBlackList: PropTypes.array,
   handleChange: PropTypes.func,
+  t: PropTypes.func,
 };
 
-function CommunityTitleSettings({ communityTitle, handleChange }) {
+function CommunityTitleSettings({ communityTitle, handleChange, t }) {
   return (
     <Row gutter={[16, 16]}>
-      <SettingTitle title="Community Title" />
+      <SettingTitle title={t('settings.communityTitle')} />
       <Col span={24}>
-        <Input placeholder="Enter title" value={communityTitle} onChange={e => handleChange(e, 'community-title')} />
+        <Input placeholder={t('settings.enterTitle')} value={communityTitle} onChange={e => handleChange(e, 'community-title')} />
       </Col>
     </Row>
   );
@@ -236,12 +240,13 @@ function CommunityTitleSettings({ communityTitle, handleChange }) {
 CommunityTitleSettings.propTypes = {
   communityTitle: PropTypes.string,
   handleChange: PropTypes.func,
+  t: PropTypes.func,
 };
 
-function CommunityLogoSettings({ communityLogo, handleChange }) {
+function CommunityLogoSettings({ communityLogo, handleChange, t }) {
   return (
     <Row gutter={[16, 16]}>
-      <SettingTitle title="Community Logo" />
+      <SettingTitle title={t('settings.communityLogo')} />
       <Col span={24}>
         <Dragger
           beforeUpload={file => handleChange(file, 'community-logo')}
@@ -259,12 +264,13 @@ function CommunityLogoSettings({ communityLogo, handleChange }) {
 CommunityLogoSettings.propTypes = {
   communityLogo: PropTypes.string,
   handleChange: PropTypes.func,
+  t: PropTypes.func,
 };
 
-function CommunityColorSettings({ communityColor, handleChange }) {
+function CommunityColorSettings({ communityColor, handleChange, t }) {
   return (
     <Row gutter={[16, 16]}>
-      <SettingTitle title="Community Color" />
+      <SettingTitle title={t('settings.communityColor')} />
       <Col span={24}>
         <ColorPicker defaultValue={communityColor} onChange={color => handleChange(color, 'community-color')} />
       </Col>
@@ -274,4 +280,5 @@ function CommunityColorSettings({ communityColor, handleChange }) {
 CommunityColorSettings.propTypes = {
   communityColor: PropTypes.string,
   handleChange: PropTypes.func,
+  t: PropTypes.func,
 };

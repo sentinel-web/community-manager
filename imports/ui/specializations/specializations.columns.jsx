@@ -37,12 +37,12 @@ SpecializationTags.propTypes = {
   specializations: PropTypes.array,
 };
 
-const getSpecializationColumns = (handleEdit, handleDelete, permissions = {}) => {
+const getSpecializationColumns = (handleEdit, handleDelete, permissions = {}, t = k => k) => {
   const { canUpdate = true, canDelete = true } = permissions;
 
   const columns = [
     {
-      title: 'Name',
+      title: t('common.name'),
       dataIndex: 'name',
       key: 'name',
       ellipsis: true,
@@ -50,7 +50,7 @@ const getSpecializationColumns = (handleEdit, handleDelete, permissions = {}) =>
       render: (name, record) => (name ? record.color ? <Tag color={record.color}>{name}</Tag> : <Tag>{name}</Tag> : '-'),
     },
     {
-      title: 'Instructors',
+      title: t('columns.instructors'),
       dataIndex: 'instructors',
       key: 'instructors',
       ellipsis: true,
@@ -62,14 +62,14 @@ const getSpecializationColumns = (handleEdit, handleDelete, permissions = {}) =>
       render: instructors => (instructors ? <Participants participants={instructors} /> : '-'),
     },
     {
-      title: 'Required Rank',
+      title: t('columns.requiredRank'),
       dataIndex: 'requiredRankId',
       key: 'requiredRankId',
       ellipsis: true,
       render: requiredRankId => (requiredRankId ? <RankTag rankId={requiredRankId} /> : '-'),
     },
     {
-      title: 'Required Specializations',
+      title: t('columns.requiredSpecializations'),
       dataIndex: 'requiredSpecializations',
       key: 'requiredSpecializations',
       ellipsis: true,
@@ -81,7 +81,7 @@ const getSpecializationColumns = (handleEdit, handleDelete, permissions = {}) =>
       render: requiredSpecializations => (requiredSpecializations ? <SpecializationTags specializations={requiredSpecializations} /> : '-'),
     },
     {
-      title: 'Link to File',
+      title: t('columns.linkToFile'),
       dataIndex: 'linkToFile',
       key: 'linkToFile',
       ellipsis: true,
@@ -89,7 +89,7 @@ const getSpecializationColumns = (handleEdit, handleDelete, permissions = {}) =>
       render: linkToFile =>
         linkToFile ? (
           <a href={linkToFile} target="_blank" rel="noreferrer" title={linkToFile}>
-            Link
+            {t('columns.link')}
           </a>
         ) : (
           '-'
@@ -99,7 +99,7 @@ const getSpecializationColumns = (handleEdit, handleDelete, permissions = {}) =>
 
   if (canUpdate || canDelete) {
     columns.push({
-      title: 'Actions',
+      title: t('common.actions'),
       dataIndex: '_id',
       key: '_id',
       render: (id, record) => (

@@ -5,6 +5,7 @@ import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
 import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useMemo, useState } from 'react';
 import { DrawerContext, SubdrawerContext } from '../app/App';
+import { useTranslation } from '/imports/i18n/LanguageContext';
 
 const empty = <></>;
 
@@ -24,6 +25,7 @@ const CollectionSelect = ({
   const { modal } = App.useApp();
   const drawer = useContext(DrawerContext);
   const subdrawer = useContext(SubdrawerContext);
+  const { t } = useTranslation();
   const [limit, setLimit] = useState(20);
   const [searchValue, setSearchValue] = useState('');
   const [value, setValue] = useState(Array.isArray(defaultValue) ? defaultValue : defaultValue || []);
@@ -45,25 +47,25 @@ const CollectionSelect = ({
 
   const handleCreate = useCallback(() => {
     const usedDrawer = !drawer.drawerOpen ? drawer : subdrawer;
-    usedDrawer.setDrawerTitle(`Create ${label}`);
+    usedDrawer.setDrawerTitle(`${t('common.create')} ${label}`);
     usedDrawer.setDrawerModel({});
     usedDrawer.setDrawerComponent(React.createElement(FormComponent, { setOpen: usedDrawer.setDrawerOpen, useSubdrawer: drawer.drawerOpen }));
     usedDrawer.setDrawerExtra(extra);
     usedDrawer.setDrawerOpen(true);
-  }, [drawer, subdrawer, FormComponent, label]);
+  }, [drawer, subdrawer, FormComponent, label, t]);
 
   const handleEdit = useCallback(
     (e, raw) => {
       e.preventDefault();
       e.stopPropagation();
       const usedDrawer = !drawer.drawerOpen ? drawer : subdrawer;
-      usedDrawer.setDrawerTitle(`Edit ${label}`);
+      usedDrawer.setDrawerTitle(`${t('common.edit')} ${label}`);
       usedDrawer.setDrawerModel(raw);
       usedDrawer.setDrawerComponent(React.createElement(FormComponent, { setOpen: usedDrawer.setDrawerOpen, useSubdrawer: drawer.drawerOpen }));
       usedDrawer.setDrawerExtra(extra);
       usedDrawer.setDrawerOpen(true);
     },
-    [drawer, subdrawer, collection, label, FormComponent]
+    [drawer, subdrawer, collection, label, FormComponent, t]
   );
 
   const handleDelete = useCallback(
@@ -71,35 +73,40 @@ const CollectionSelect = ({
       e.preventDefault();
       e.stopPropagation();
       modal.confirm({
-        title: `Are you sure you want to delete this ${label}?`,
-        okText: 'Delete',
+        title: t('messages.deleteConfirm'),
+        okText: t('common.delete'),
+        cancelText: t('common.cancel'),
+        okType: 'danger',
         onOk: () => {
           Meteor.callAsync(`${subscription}.remove`, value);
         },
       });
     },
-    [modal, subscription, label]
+    [modal, subscription, t]
   );
 
-  const renderPopup = menu => {
-    return (
-      <Row>
-        <Col span={24}>{menu}</Col>
-        <Col span={24}>
-          <Divider size="small" />
-        </Col>
-        <Col span={24}>
-          <Row justify="center">
-            <Col>
-              <Button disabled={options.length < limit} onClick={() => setLimit(prev => prev + 10)}>
-                Load more
-              </Button>
-            </Col>
-          </Row>
-        </Col>
-      </Row>
-    );
-  };
+  const renderPopup = useCallback(
+    menu => {
+      return (
+        <Row>
+          <Col span={24}>{menu}</Col>
+          <Col span={24}>
+            <Divider size="small" />
+          </Col>
+          <Col span={24}>
+            <Row justify="center">
+              <Col>
+                <Button disabled={options.length < limit} onClick={() => setLimit(prev => prev + 10)}>
+                  {t('common.loadMore')}
+                </Button>
+              </Col>
+            </Row>
+          </Col>
+        </Row>
+      );
+    },
+    [options.length, limit, t]
+  );
 
   const renderOption = item => {
     const { value, label, data } = item;

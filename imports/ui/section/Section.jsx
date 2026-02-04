@@ -4,6 +4,7 @@ import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
 import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import RolesCollection from '../../api/collections/roles.collection';
+import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
 import TableContainer from '../table/body/TableContainer';
 import TableFooter from '../table/footer/TableFooter';
@@ -67,6 +68,7 @@ export default function Section({
   const datasource = useFind(() => Collection?.find?.(filter, options) || [], [Collection, filter, options]);
   const drawer = useContext(DrawerContext);
   const { notification, message } = App.useApp();
+  const { t } = useTranslation();
 
   // Get user's role for permission checks
   const user = useTracker(() => Meteor.user(), []);
@@ -91,23 +93,23 @@ export default function Section({
   );
 
   const handleCreate = useCallback(() => {
-    drawer.setDrawerTitle(`Create entry`);
+    drawer.setDrawerTitle(t('common.createEntry'));
     drawer.setDrawerModel({});
     drawer.setDrawerComponent(React.createElement(FormComponent, { setOpen: drawer.setDrawerOpen }));
     drawer.setDrawerOpen(true);
     drawer.setDrawerExtra(extra);
-  }, [drawer]);
+  }, [drawer, t]);
 
   const handleEdit = useCallback(
     (e, record) => {
       e.preventDefault();
       drawer.setDrawerModel(record);
-      drawer.setDrawerTitle(`Edit entry`);
+      drawer.setDrawerTitle(t('common.editEntry'));
       drawer.setDrawerComponent(React.createElement(FormComponent, { setOpen: drawer.setDrawerOpen }));
       drawer.setDrawerOpen(true);
       drawer.setDrawerExtra(extra);
     },
-    [drawer, FormComponent, extra]
+    [drawer, FormComponent, extra, t]
   );
 
   const handleDelete = useCallback(
@@ -115,7 +117,7 @@ export default function Section({
       e.preventDefault();
       try {
         await Meteor.callAsync(`${collectionName}.remove`, record._id);
-        message.success(`Entry deleted`);
+        message.success(t('messages.deleteSuccess'));
       } catch (error) {
         notification.error({
           message: error.error,
@@ -123,12 +125,12 @@ export default function Section({
         });
       }
     },
-    [notification, message, collectionName]
+    [notification, message, collectionName, t]
   );
 
   const columns = useMemo(
-    () => columnsFactory(handleEdit, handleDelete, permissions),
-    [handleEdit, handleDelete, columnsFactory, permissions]
+    () => columnsFactory(handleEdit, handleDelete, permissions, t),
+    [handleEdit, handleDelete, columnsFactory, permissions, t]
   );
 
   const handleLoadMore = useCallback(() => {

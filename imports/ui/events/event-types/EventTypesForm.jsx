@@ -2,11 +2,13 @@ import { App, ColorPicker, Form, Input } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from '/imports/i18n/LanguageContext';
 import { DrawerContext, SubdrawerContext } from '../../app/App';
 import FormFooter from '../../components/FormFooter';
 import { getColorFromValues } from '../../specializations/SpecializationForm';
 
 export default function EventTypesForm({ setOpen, useSubdrawer }) {
+  const { t } = useTranslation();
   const [form] = Form.useForm();
   const { message, notification } = App.useApp();
   const [loading, setLoading] = useState(false);
@@ -37,7 +39,7 @@ export default function EventTypesForm({ setOpen, useSubdrawer }) {
         .then(() => {
           setOpen(false);
           form.resetFields();
-          message.success(`Event type ${model?._id ? 'updated' : 'created'} successfully`);
+          message.success(model?._id ? t('messages.eventTypeUpdated') : t('messages.eventTypeCreated'));
         })
         .catch(error => {
           console.error(error);
@@ -48,18 +50,18 @@ export default function EventTypesForm({ setOpen, useSubdrawer }) {
         })
         .finally(() => setLoading(false));
     },
-    [setOpen, form, model, message, notification]
+    [setOpen, form, model, message, notification, t]
   );
 
   return (
     <Form form={form} layout="vertical" onFinish={handleSubmit} disabled={loading}>
-      <Form.Item name="name" label="Name" rules={[{ required: true, type: 'string' }]} required>
-        <Input placeholder="Enter name" />
+      <Form.Item name="name" label={t('common.name')} rules={[{ required: true, type: 'string' }]} required>
+        <Input placeholder={t('forms.placeholders.enterName')} />
       </Form.Item>
-      <Form.Item name="description" label="Description" rules={[{ required: false, type: 'string' }]}>
-        <Input.TextArea autoSize placeholder="Enter description" />
+      <Form.Item name="description" label={t('common.description')} rules={[{ required: false, type: 'string' }]}>
+        <Input.TextArea autoSize placeholder={t('forms.placeholders.enterDescription')} />
       </Form.Item>
-      <Form.Item name="color" label="Color">
+      <Form.Item name="color" label={t('common.color')}>
         <ColorPicker format="hex" />
       </Form.Item>
       <FormFooter setOpen={setOpen} />

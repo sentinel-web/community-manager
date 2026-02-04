@@ -2,12 +2,14 @@ import { App, ColorPicker, Form, Input, Select } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from '/imports/i18n/LanguageContext';
 import { DrawerContext, SubdrawerContext } from '../../app/App';
 import FormFooter from '../../components/FormFooter';
 import { getColorFromValues } from '../../specializations/SpecializationForm';
 import RanksSelect from './RanksSelect';
 
 export default function RanksForm({ setOpen, useSubdrawer }) {
+  const { t } = useTranslation();
   const [form] = Form.useForm();
   const { message, notification } = App.useApp();
   const [loading, setLoading] = useState(false);
@@ -40,7 +42,7 @@ export default function RanksForm({ setOpen, useSubdrawer }) {
         .then(() => {
           setOpen(false);
           form.resetFields();
-          message.success(`Rank ${model?._id ? 'updated' : 'created'} successfully`);
+          message.success(model?._id ? t('messages.rankUpdated') : t('messages.rankCreated'));
         })
         .catch(error => {
           console.error(error);
@@ -51,31 +53,31 @@ export default function RanksForm({ setOpen, useSubdrawer }) {
         })
         .finally(() => setLoading(false));
     },
-    [setOpen, form, model, message, notification]
+    [setOpen, form, model, message, notification, t]
   );
 
   return (
     <Form form={form} layout="vertical" onFinish={handleSubmit} disabled={loading}>
-      <Form.Item name="name" label="Name" rules={[{ required: true, type: 'string' }]} required>
-        <Input placeholder="Enter name" />
+      <Form.Item name="name" label={t('common.name')} rules={[{ required: true, type: 'string' }]} required>
+        <Input placeholder={t('forms.placeholders.enterName')} />
       </Form.Item>
-      <Form.Item name="type" label="Type" rules={[{ required: true, type: 'string' }]} required>
+      <Form.Item name="type" label={t('members.type')} rules={[{ required: true, type: 'string' }]} required>
         <Select
-          placeholder="Select type"
+          placeholder={t('common.selectType')}
           options={[
-            { label: 'Player Rank', value: 'player' },
-            { label: 'Zeus Rank', value: 'zeus' },
+            { label: t('members.playerRank'), value: 'player' },
+            { label: t('members.zeusRank'), value: 'zeus' },
           ]}
         />
       </Form.Item>
-      <Form.Item name="description" label="Description" rules={[{ required: false, type: 'string' }]}>
-        <Input.TextArea autoSize placeholder="Enter description" />
+      <Form.Item name="description" label={t('common.description')} rules={[{ required: false, type: 'string' }]}>
+        <Input.TextArea autoSize placeholder={t('forms.placeholders.enterDescription')} />
       </Form.Item>
-      <Form.Item name="color" label="Color">
+      <Form.Item name="color" label={t('common.color')}>
         <ColorPicker format="hex" />
       </Form.Item>
-      <RanksSelect name="previousRankId" label="Previous Rank" rules={[{ required: false, type: 'string' }]} defaultValue={model?.previousRankId} />
-      <RanksSelect name="nextRankId" label="Next Rank" rules={[{ required: false, type: 'string' }]} defaultValue={model?.nextRankId} />
+      <RanksSelect name="previousRankId" label={t('members.previousRank')} rules={[{ required: false, type: 'string' }]} defaultValue={model?.previousRankId} />
+      <RanksSelect name="nextRankId" label={t('members.nextRank')} rules={[{ required: false, type: 'string' }]} defaultValue={model?.nextRankId} />
       <FormFooter setOpen={setOpen} />
     </Form>
   );

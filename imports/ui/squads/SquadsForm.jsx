@@ -2,6 +2,7 @@ import { Col, ColorPicker, Form, Input, Row, Upload } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useContext, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from '/imports/i18n/LanguageContext';
 import { DrawerContext, SubdrawerContext } from '../app/App';
 import FormFooter from '../components/FormFooter';
 import { turnBase64ToImage, turnImageFileToBase64 } from '../profile-picture-input/ProfilePictureInput';
@@ -9,6 +10,7 @@ import { getColorFromValues } from '../specializations/SpecializationForm';
 import SquadsSelect from './SquadsSelect';
 
 const SquadsForm = ({ setOpen, useSubdrawer = false }) => {
+  const { t } = useTranslation();
   const drawer = useContext(DrawerContext);
   const subdrawer = useContext(SubdrawerContext);
 
@@ -56,7 +58,7 @@ const SquadsForm = ({ setOpen, useSubdrawer = false }) => {
 
   return (
     <Form layout="vertical" initialValues={model} onFinish={handleFinish}>
-      <Form.Item label="Squad Logo" name="image" rules={[{ required: false }]}>
+      <Form.Item label={t('squads.logo')} name="image" rules={[{ required: false }]}>
         <Upload.Dragger
           fileList={file ? [file] : []}
           accept="image/*"
@@ -64,30 +66,30 @@ const SquadsForm = ({ setOpen, useSubdrawer = false }) => {
           customRequest={handleCustomRequest}
           showUploadList={false}
         >
-          {imageSrc ? <img style={{ maxHeight: 140, aspectRatio: '1 / 1' }} src={imageSrc} alt="avatar" /> : <>Drag and drop or click to upload</>}
+          {imageSrc ? <img style={{ maxHeight: 140, aspectRatio: '1 / 1' }} src={imageSrc} alt="avatar" /> : <>{t('squads.dragOrClick')}</>}
         </Upload.Dragger>
       </Form.Item>
       <Row gutter={[16, 16]} align="middle" justify="space-between">
         <Col flex="auto">
-          <Form.Item label="Name" name="name" rules={[{ required: true, type: 'string' }]} required>
-            <Input placeholder="Enter name" />
+          <Form.Item label={t('common.name')} name="name" rules={[{ required: true, type: 'string' }]} required>
+            <Input placeholder={t('forms.placeholders.enterName')} />
           </Form.Item>
         </Col>
         <Col>
-          <Form.Item label="Color" name="color" rules={[{ required: false }]}>
+          <Form.Item label={t('common.color')} name="color" rules={[{ required: false }]}>
             <ColorPicker />
           </Form.Item>
         </Col>
       </Row>
-      <SquadsSelect label="Parent Squad" name="parentSquadId" rules={[{ required: false, type: 'string' }]} defaultValue={model.parentSquadId} />
-      <Form.Item label="Short Range Frequency" name="shortRangeFrequency" rules={[{ required: false, type: 'string' }]}>
-        <Input placeholder="Enter short range frequency" />
+      <SquadsSelect label={t('squads.parentSquad')} name="parentSquadId" rules={[{ required: false, type: 'string' }]} defaultValue={model.parentSquadId} />
+      <Form.Item label={t('squads.shortRangeFrequency')} name="shortRangeFrequency" rules={[{ required: false, type: 'string' }]}>
+        <Input placeholder={t('forms.placeholders.enterShortRangeFrequency')} />
       </Form.Item>
-      <Form.Item label="Long Range Frequency" name="longRangeFrequency" rules={[{ required: false, type: 'string' }]}>
-        <Input placeholder="Enter long range frequency" />
+      <Form.Item label={t('squads.longRangeFrequency')} name="longRangeFrequency" rules={[{ required: false, type: 'string' }]}>
+        <Input placeholder={t('forms.placeholders.enterLongRangeFrequency')} />
       </Form.Item>
-      <Form.Item label="Description" name="description" rules={[{ required: false, type: 'string' }]}>
-        <Input.TextArea autoSize placeholder="Enter description" />
+      <Form.Item label={t('common.description')} name="description" rules={[{ required: false, type: 'string' }]}>
+        <Input.TextArea autoSize placeholder={t('forms.placeholders.enterDescription')} />
       </Form.Item>
       <FormFooter setOpen={setOpen} />
     </Form>

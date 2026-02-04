@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import React, { useCallback, useMemo, useState } from 'react';
 import EventTypesCollection from '../../api/collections/eventTypes.collection';
 import EventsCollection from '../../api/collections/events.collection';
+import { useTranslation } from '../../i18n/LanguageContext';
 import CollectionSelect from '../components/CollectionSelect';
 import Section from '../section/Section';
 import EventAttendance from './EventAttendance';
@@ -16,6 +17,7 @@ export default function Events() {
   const [viewType, setViewType] = useState('calendar');
   const [dateRange, setDateRange] = useState([dayjs().startOf('month'), dayjs().endOf('month')]);
   const [eventTypes, setEventTypes] = useState([]);
+  const { t } = useTranslation();
   const customView = useMemo(() => {
     switch (viewType) {
       case 'calendar':
@@ -52,7 +54,7 @@ export default function Events() {
 
   return (
     <Section
-      title="Events"
+      title={t('events.title')}
       collectionName="events"
       customView={customView}
       Collection={EventsCollection}
@@ -68,7 +70,7 @@ export default function Events() {
               collection={EventTypesCollection}
               defaultValue={eventTypes}
               onChange={setEventTypes}
-              placeholder="Filter by type"
+              placeholder={t('events.filterByType')}
               mode="multiple"
               subscription="eventTypes"
             />
@@ -79,7 +81,7 @@ export default function Events() {
             </Col>
           )}
           <Col>
-            <ViewTypeSelector viewType={viewType} handleChange={handleViewTypeChange} />
+            <ViewTypeSelector viewType={viewType} handleChange={handleViewTypeChange} t={t} />
           </Col>
         </>
       }
@@ -87,15 +89,16 @@ export default function Events() {
   );
 }
 
-const ViewTypeSelector = ({ viewType, handleChange }) => {
+const ViewTypeSelector = ({ viewType, handleChange, t }) => {
   const viewTypes = useMemo(() => [
-    { value: 'calendar', label: 'Calendar' },
-    { value: 'attendance', label: 'Attendance' },
-    { value: 'table', label: 'Table' },
-  ]);
+    { value: 'calendar', label: t('events.calendar') },
+    { value: 'attendance', label: t('events.attendance') },
+    { value: 'table', label: t('events.table') },
+  ], [t]);
   return <Select style={{ minWidth: 125 }} value={viewType} onChange={handleChange} options={viewTypes} optionFilterProp="label" showSearch />;
 };
 ViewTypeSelector.propTypes = {
   viewType: PropTypes.string,
   handleChange: PropTypes.func,
+  t: PropTypes.func,
 };

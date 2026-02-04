@@ -2,40 +2,40 @@ import { Tag } from 'antd';
 import React from 'react';
 import TableActions from '../../table/body/actions/TableActions';
 
-const getRankColumns = (handleEdit, handleDelete, permissions = {}) => {
+const getRankColumns = (handleEdit, handleDelete, permissions = {}, t = k => k) => {
   const { canUpdate = true, canDelete = true } = permissions;
 
   const columns = [
     {
-      title: 'Name',
+      title: t('common.name'),
       dataIndex: 'name',
       key: 'name',
       ellipsis: true,
       sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
     },
     {
-      title: 'Type',
+      title: t('columns.type'),
       dataIndex: 'type',
       key: 'type',
       ellipsis: true,
       sorter: (a, b) => (a.type || '').localeCompare(b.type || ''),
       render: type => {
         const typeMap = {
-          player: 'Player',
-          zeus: 'Zeus',
+          player: t('columns.player'),
+          zeus: t('columns.zeus'),
         };
         return <Tag>{typeMap[type] || type}</Tag>;
       },
     },
     {
-      title: 'Description',
+      title: t('common.description'),
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
       sorter: (a, b) => (a.description || '').localeCompare(b.description || ''),
     },
     {
-      title: 'Color',
+      title: t('common.color'),
       dataIndex: 'color',
       key: 'color',
       ellipsis: true,
@@ -46,7 +46,7 @@ const getRankColumns = (handleEdit, handleDelete, permissions = {}) => {
 
   if (canUpdate || canDelete) {
     columns.push({
-      title: 'Actions',
+      title: t('common.actions'),
       dataIndex: '_id',
       key: '_id',
       render: (id, record) => (

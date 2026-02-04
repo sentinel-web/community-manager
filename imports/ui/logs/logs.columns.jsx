@@ -3,10 +3,10 @@ import dayjs from 'dayjs';
 import React from 'react';
 import LogTableActions from './LogTableActions';
 
-const getLogsColumns = (handleView, handleDelete) => {
+const getLogsColumns = (handleView, handleDelete, t = k => k) => {
   return [
     {
-      title: 'Timestamp',
+      title: t('columns.timestamp'),
       dataIndex: 'timestamp',
       key: 'timestamp',
       ellipsis: true,
@@ -15,7 +15,7 @@ const getLogsColumns = (handleView, handleDelete) => {
       render: timestamp => (timestamp ? dayjs(timestamp).format('YYYY-MM-DD HH:mm:ss') : '-'),
     },
     {
-      title: 'Action',
+      title: t('columns.action'),
       dataIndex: 'action',
       key: 'action',
       ellipsis: true,
@@ -23,7 +23,7 @@ const getLogsColumns = (handleView, handleDelete) => {
       render: action => <Tag>{action}</Tag>,
     },
     {
-      title: 'Payload',
+      title: t('columns.payload'),
       dataIndex: 'payload',
       key: 'payload',
       ellipsis: true,
@@ -34,7 +34,7 @@ const getLogsColumns = (handleView, handleDelete) => {
       },
     },
     {
-      title: 'Actions',
+      title: t('common.actions'),
       dataIndex: '_id',
       key: '_id',
       render: (id, record) => <LogTableActions record={record} handleView={handleView} handleDelete={handleDelete} />,

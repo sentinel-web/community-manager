@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import JSZip from 'jszip';
 import { Meteor } from 'meteor/meteor';
 import React, { useCallback, useState } from 'react';
+import { useTranslation } from '../../i18n/LanguageContext';
 import SectionCard from '../section/SectionCard';
 
 // Maximum backup file size: 50MB
@@ -18,6 +19,7 @@ export default function Backup() {
   const [restoring, setRestoring] = useState(false);
   const [createSafetyBackup, setCreateSafetyBackup] = useState(true);
   const [safetyBackupData, setSafetyBackupData] = useState(null);
+  const { t } = useTranslation();
 
   const handleBackup = useCallback(async () => {
     setLoading(true);
@@ -40,18 +42,18 @@ export default function Backup() {
       a.download = `backup-${dayjs().format('YYYY-MM-DD-HHmmss')}.zip`;
       a.click();
       URL.revokeObjectURL(url);
-      message.success('Backup downloaded successfully');
+      message.success(t('backup.backupDownloaded'));
     } catch (error) {
-      message.error(error.reason || error.message || 'Failed to create backup');
+      message.error(error.reason || error.message || t('backup.backupFailed'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const handleFileUpload = useCallback(async file => {
     // Validate file size
     if (file.size > MAX_BACKUP_SIZE) {
-      message.error(`Backup file too large. Maximum size is 50MB.`);
+      message.error(t('backup.fileTooLarge'));
       return false;
     }
 
@@ -65,7 +67,7 @@ export default function Backup() {
         const jsonFile = zip.file('backup.json');
 
         if (!jsonFile) {
-          message.error('Invalid backup archive. Missing backup.json file.');
+          message.error(t('backup.invalidArchive'));
           return false;
         }
 
@@ -76,7 +78,7 @@ export default function Backup() {
         const text = await file.text();
         data = JSON.parse(text);
       } else {
-        message.error('Invalid file type. Please upload a .zip or .json backup file.');
+        message.error(t('backup.invalidFileType'));
         return false;
       }
 
@@ -93,13 +95,13 @@ export default function Backup() {
       setRestoreModalOpen(true);
     } catch (error) {
       if (error instanceof SyntaxError) {
-        message.error('Invalid backup file. JSON parsing failed.');
+        message.error(t('backup.invalidBackupJson'));
       } else {
-        message.error(error.reason || error.message || 'Failed to read backup file');
+        message.error(error.reason || error.message || t('backup.fileReadFailed'));
       }
     }
     return false; // Prevent default upload behavior
-  }, []);
+  }, [t]);
 
   const handleRestore = useCallback(async () => {
     if (!backupData) return;
@@ -109,7 +111,7 @@ export default function Backup() {
       const result = await Meteor.callAsync('backup.restore', backupData, { createSafetyBackup });
 
       if (result.success) {
-        message.success('Backup restored successfully');
+        message.success(t('backup.restoreSuccess'));
         // Store safety backup for download if one was created
         if (result.safetyBackup) {
           setSafetyBackupData(result.safetyBackup);
@@ -119,17 +121,17 @@ export default function Backup() {
           setValidationResult(null);
         }
       } else {
-        message.warning(`Restore completed with ${result.errors.length} error(s)`);
+        message.warning(t('backup.restoreWithErrors', { count: result.errors.length }));
         if (result.safetyBackup) {
           setSafetyBackupData(result.safetyBackup);
         }
       }
     } catch (error) {
-      message.error(error.reason || error.message || 'Failed to restore backup');
+      message.error(error.reason || error.message || t('backup.restoreFailed'));
     } finally {
       setRestoring(false);
     }
-  }, [backupData, createSafetyBackup]);
+  }, [backupData, createSafetyBackup, t]);
 
   const handleCancelRestore = useCallback(() => {
     setRestoreModalOpen(false);
@@ -158,11 +160,11 @@ export default function Backup() {
       a.download = `safety-backup-${dayjs().format('YYYY-MM-DD-HHmmss')}.zip`;
       a.click();
       URL.revokeObjectURL(url);
-      message.success('Safety backup downloaded');
+      message.success(t('backup.safetyBackupDownloaded'));
     } catch (error) {
-      message.error('Failed to download safety backup');
+      message.error(t('backup.safetyBackupFailed'));
     }
-  }, [safetyBackupData]);
+  }, [safetyBackupData, t]);
 
   const handleCloseSafetyBackupModal = useCallback(() => {
     setSafetyBackupData(null);
@@ -173,13 +175,13 @@ export default function Backup() {
   }, []);
 
   return (
-    <SectionCard title="Backup & Recovery" ready={true}>
+    <SectionCard title={t('backup.title')} ready={true}>
       <Row gutter={[24, 24]}>
         <Col xs={24} lg={12}>
-          <BackupSection loading={loading} onBackup={handleBackup} />
+          <BackupSection loading={loading} onBackup={handleBackup} t={t} />
         </Col>
         <Col xs={24} lg={12}>
-          <RestoreSection onFileUpload={handleFileUpload} />
+          <RestoreSection onFileUpload={handleFileUpload} t={t} />
         </Col>
       </Row>
 
@@ -191,54 +193,54 @@ export default function Backup() {
         onCreateSafetyBackupChange={setCreateSafetyBackup}
         onConfirm={handleRestore}
         onCancel={handleCancelRestore}
+        t={t}
       />
 
       <SafetyBackupModal
         open={!!safetyBackupData}
         onDownload={handleDownloadSafetyBackup}
         onClose={handleCloseSafetyBackupModal}
+        t={t}
       />
     </SectionCard>
   );
 }
 
-function BackupSection({ loading, onBackup }) {
+function BackupSection({ loading, onBackup, t }) {
   return (
     <Row gutter={[16, 16]}>
       <Col span={24}>
         <Typography.Title level={3}>
-          <CloudDownloadOutlined /> Create Backup
+          <CloudDownloadOutlined /> {t('backup.createBackup')}
         </Typography.Title>
       </Col>
       <Col span={24}>
-        <Typography.Paragraph>
-          Download a complete backup of all your data as a JSON file. This includes users, events, tasks, settings, and all other data.
-        </Typography.Paragraph>
+        <Typography.Paragraph>{t('backup.backupDescription')}</Typography.Paragraph>
       </Col>
       <Col span={24}>
         <Button type="primary" size="large" icon={<CloudDownloadOutlined />} loading={loading} onClick={onBackup}>
-          {loading ? 'Creating Backup...' : 'Download Backup'}
+          {loading ? t('backup.creatingBackup') : t('backup.downloadBackup')}
         </Button>
       </Col>
     </Row>
   );
 }
 
-function RestoreSection({ onFileUpload }) {
+function RestoreSection({ onFileUpload, t }) {
   return (
     <Row gutter={[16, 16]}>
       <Col span={24}>
         <Typography.Title level={3}>
-          <CloudUploadOutlined /> Restore from Backup
+          <CloudUploadOutlined /> {t('backup.restoreFromBackup')}
         </Typography.Title>
       </Col>
       <Col span={24}>
-        <Typography.Paragraph>Upload a backup file to restore your data. This will replace all existing data with the backup data.</Typography.Paragraph>
+        <Typography.Paragraph>{t('backup.restoreDescription')}</Typography.Paragraph>
       </Col>
       <Col span={24}>
         <Alert
-          message="Warning"
-          description="Restoring a backup will replace all existing data. Make sure to create a backup of your current data before restoring."
+          message={t('backup.restoreWarning')}
+          description={t('backup.restoreWarningDescription')}
           type="warning"
           showIcon
           icon={<WarningOutlined />}
@@ -249,62 +251,63 @@ function RestoreSection({ onFileUpload }) {
           <p className="ant-upload-drag-icon">
             <InboxOutlined />
           </p>
-          <p className="ant-upload-text">Click or drag backup file to this area</p>
-          <p className="ant-upload-hint">Supports .zip (recommended) and .json backup files</p>
+          <p className="ant-upload-text">{t('backup.dragDropText')}</p>
+          <p className="ant-upload-hint">{t('backup.dragDropHint')}</p>
         </Dragger>
       </Col>
     </Row>
   );
 }
 
-function RestoreConfirmModal({ open, validationResult, restoring, createSafetyBackup, onCreateSafetyBackupChange, onConfirm, onCancel }) {
+function RestoreConfirmModal({ open, validationResult, restoring, createSafetyBackup, onCreateSafetyBackupChange, onConfirm, onCancel, t }) {
   return (
     <Modal
       title={
         <Space>
           <WarningOutlined style={{ color: '#faad14' }} />
-          Confirm Restore
+          {t('backup.confirmRestore')}
         </Space>
       }
       open={open}
       onOk={onConfirm}
       onCancel={onCancel}
       confirmLoading={restoring}
-      okText="Restore"
+      okText={t('backup.restoreButton')}
+      cancelText={t('common.cancel')}
       okButtonProps={{ danger: true }}
       width={600}
     >
       <Row gutter={[16, 16]}>
         <Col span={24}>
-          <Alert message="This action will replace all existing data with the backup data." type="warning" showIcon />
+          <Alert message={t('backup.restoreReplaceWarning')} type="warning" showIcon />
         </Col>
         <Col span={24}>
           <Checkbox checked={createSafetyBackup} onChange={e => onCreateSafetyBackupChange(e.target.checked)}>
             <Space>
               <SafetyOutlined />
-              Create safety backup before restore (recommended)
+              {t('backup.createSafetyBackup')}
             </Space>
           </Checkbox>
           <Typography.Text type="secondary" style={{ display: 'block', marginLeft: 24, marginTop: 4 }}>
-            A backup of current data will be created and available for download after restore completes.
+            {t('backup.safetyBackupDescription')}
           </Typography.Text>
         </Col>
         {validationResult && (
           <Col span={24}>
-            <Typography.Title level={5}>Backup Details</Typography.Title>
+            <Typography.Title level={5}>{t('backup.backupDetails')}</Typography.Title>
             <Descriptions bordered size="small" column={1}>
-              <Descriptions.Item label="Version">{validationResult.version}</Descriptions.Item>
-              <Descriptions.Item label="Created">{validationResult.timestamp ? dayjs(validationResult.timestamp).format('YYYY-MM-DD HH:mm:ss') : 'Unknown'}</Descriptions.Item>
-              <Descriptions.Item label="Total Documents">{validationResult.meta?.totalDocuments || 0}</Descriptions.Item>
+              <Descriptions.Item label={t('backup.version')}>{validationResult.version}</Descriptions.Item>
+              <Descriptions.Item label={t('backup.created')}>{validationResult.timestamp ? dayjs(validationResult.timestamp).format('YYYY-MM-DD HH:mm:ss') : 'Unknown'}</Descriptions.Item>
+              <Descriptions.Item label={t('backup.totalDocuments')}>{validationResult.meta?.totalDocuments || 0}</Descriptions.Item>
             </Descriptions>
           </Col>
         )}
         {validationResult?.meta?.collectionCounts && (
           <Col span={24}>
-            <Typography.Title level={5}>Collection Counts</Typography.Title>
+            <Typography.Title level={5}>{t('backup.collectionCounts')}</Typography.Title>
             <Descriptions bordered size="small" column={2}>
               {Object.entries(validationResult.meta.collectionCounts).map(([name, count]) => (
-                <Descriptions.Item key={name} label={name}>
+                <Descriptions.Item key={name} label={t(`collections.${name}`) || name}>
                   {count}
                 </Descriptions.Item>
               ))}
@@ -314,7 +317,7 @@ function RestoreConfirmModal({ open, validationResult, restoring, createSafetyBa
         {restoring && (
           <Col span={24}>
             <Progress percent={100} status="active" showInfo={false} />
-            <Typography.Text type="secondary">{createSafetyBackup ? 'Creating safety backup and restoring data...' : 'Restoring data...'}</Typography.Text>
+            <Typography.Text type="secondary">{createSafetyBackup ? t('backup.restoringWithSafety') : t('backup.restoringData')}</Typography.Text>
           </Col>
         )}
       </Row>
@@ -322,35 +325,33 @@ function RestoreConfirmModal({ open, validationResult, restoring, createSafetyBa
   );
 }
 
-function SafetyBackupModal({ open, onDownload, onClose }) {
+function SafetyBackupModal({ open, onDownload, onClose, t }) {
   return (
     <Modal
       title={
         <Space>
           <SafetyOutlined style={{ color: '#52c41a' }} />
-          Restore Complete
+          {t('backup.restoreComplete')}
         </Space>
       }
       open={open}
       onCancel={onClose}
       footer={[
         <Button key="close" onClick={onClose}>
-          Close
+          {t('backup.close')}
         </Button>,
         <Button key="download" type="primary" icon={<CloudDownloadOutlined />} onClick={onDownload}>
-          Download Safety Backup
+          {t('backup.downloadSafetyBackup')}
         </Button>,
       ]}
       width={500}
     >
       <Row gutter={[16, 16]}>
         <Col span={24}>
-          <Alert message="Restore completed successfully!" description="A safety backup of your previous data was created before the restore. You can download it now for safekeeping." type="success" showIcon />
+          <Alert message={t('backup.restoreSuccessMessage')} description={t('backup.restoreSuccessDescription')} type="success" showIcon />
         </Col>
         <Col span={24}>
-          <Typography.Text type="secondary">
-            This safety backup contains all your data from before the restore. We recommend downloading it in case you need to revert your changes.
-          </Typography.Text>
+          <Typography.Text type="secondary">{t('backup.safetyBackupNote')}</Typography.Text>
         </Col>
       </Row>
     </Modal>

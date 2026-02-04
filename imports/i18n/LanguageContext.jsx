@@ -89,11 +89,11 @@ export function useLanguage() {
 
 /**
  * Hook for translations only (shorthand)
- * @returns {function} Translation function t(key, params)
+ * @returns {{ t: function }} Object containing translation function t(key, params)
  */
 export function useTranslation() {
   const { t } = useLanguage();
-  return t;
+  return { t };
 }
 
 export default LanguageContext;
