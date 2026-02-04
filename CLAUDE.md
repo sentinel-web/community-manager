@@ -62,7 +62,7 @@ settings.example.json   # Example configuration overrides
 
 ### Collections
 
-Members (Meteor.users), Events, Attendances, Tasks, TaskStatus, Squads, Ranks, Specializations, Medals, EventTypes, Registrations, DiscoveryTypes, Roles, ProfilePictures, Settings, Logs, Questionnaires
+Members (Meteor.users), Events, Attendances, Tasks, TaskStatus, Squads, Ranks, Specializations, Medals, EventTypes, Registrations, DiscoveryTypes, Roles, ProfilePictures, Settings, Logs, Questionnaires, QuestionnaireResponses
 
 ### Collection Schemas
 
@@ -94,8 +94,12 @@ Members (Meteor.users), Events, Attendances, Tasks, TaskStatus, Squads, Ranks, S
 - `name, id (1000-9999), age (min 16), discoveryType, rulesReadAndAccepted, description`
 
 **Questionnaires**
-- `name, description, status ('draft'|'active'|'closed'), questions[], createdAt, updatedAt`
+- `name, description, status ('draft'|'active'|'closed'), allowAnonymous, interval ('once'|'daily'|'weekly'|'monthly'|'unlimited'), questions[], createdAt, updatedAt`
 - `questions[]: { text, type ('text'|'textarea'|'number'|'select'|'multiselect'|'rating'), required, options[] }`
+
+**QuestionnaireResponses**
+- `questionnaireId, respondentId (null if anonymous), answers[], submittedAt, createdAt`
+- `answers[]: { questionIndex, questionText, questionType, value }`
 
 **Attendances** - `{ [eventId]: { [memberId]: points } }`
 **ProfilePictures** - `{ value (base64) }`
