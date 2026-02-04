@@ -14,7 +14,7 @@ export const SquadTags = ({ squadIds }) => {
         const squadNames = options.filter(option => squadIds.includes(option.value)).map(option => option);
         setSquadNames(squadNames);
       })
-      .catch(console.error);
+      .catch(() => {});
   }, [squadIds]);
 
   return (

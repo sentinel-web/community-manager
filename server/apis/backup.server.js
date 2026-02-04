@@ -3,6 +3,22 @@ import { DDPRateLimiter } from 'meteor/ddp-rate-limiter';
 import { checkPermission, validateUserId } from '../main';
 import { getCollection } from '../crud.lib';
 import { createLog } from './logs.server';
+import { RATE_LIMITS } from '../config';
+
+/**
+ * Backup system for community-manager.
+ *
+ * NOTE: Backup operations intentionally load full collections into memory.
+ * This is by design because:
+ * 1. Backups must capture complete data to ensure restore integrity
+ * 2. Operations are protected by settings permission and rate limiting
+ * 3. Community manager collections are typically small (hundreds to low thousands)
+ * 4. Rate limiting prevents abuse (5 backups/min, 2 restores/min)
+ *
+ * For very large deployments, consider:
+ * - MongoDB's native mongodump/mongorestore for production backups
+ * - Implementing streaming export with cursor iteration
+ */
 
 // Collections to backup (all data collections)
 const BACKUP_COLLECTIONS = [
@@ -57,7 +73,7 @@ if (Meteor.isServer) {
           backup.meta.collectionCounts[collectionName] = documents.length;
           backup.meta.totalDocuments += documents.length;
         } catch (error) {
-          console.error(`Error exporting collection ${collectionName}:`, error);
+          await createLog('backup.export.error', { collection: collectionName, error: error.message });
           backup.collections[collectionName] = [];
           backup.meta.collectionCounts[collectionName] = 0;
         }
@@ -70,7 +86,7 @@ if (Meteor.isServer) {
         backup.meta.collectionCounts.settings = settings.length;
         backup.meta.totalDocuments += settings.length;
       } catch (error) {
-        console.error('Error exporting settings collection:', error);
+        await createLog('backup.export.error', { collection: 'settings', error: error.message });
         backup.collections.settings = [];
         backup.meta.collectionCounts.settings = 0;
       }
@@ -82,7 +98,7 @@ if (Meteor.isServer) {
         backup.meta.collectionCounts.users = users.length;
         backup.meta.totalDocuments += users.length;
       } catch (error) {
-        console.error('Error exporting users collection:', error);
+        await createLog('backup.export.error', { collection: 'users', error: error.message });
         backup.collections.users = [];
         backup.meta.collectionCounts.users = 0;
       }
@@ -126,7 +142,7 @@ if (Meteor.isServer) {
           backup.meta.collectionCounts[collectionName] = documents.length;
           backup.meta.totalDocuments += documents.length;
         } catch (error) {
-          console.error(`Error exporting collection ${collectionName}:`, error);
+          await createLog('backup.export.error', { collection: collectionName, error: error.message });
           backup.collections[collectionName] = [];
           backup.meta.collectionCounts[collectionName] = 0;
         }
@@ -138,7 +154,7 @@ if (Meteor.isServer) {
         backup.meta.collectionCounts.settings = settings.length;
         backup.meta.totalDocuments += settings.length;
       } catch (error) {
-        console.error('Error exporting settings collection:', error);
+        await createLog('backup.export.error', { collection: 'settings', error: error.message });
         backup.collections.settings = [];
         backup.meta.collectionCounts.settings = 0;
       }
@@ -149,7 +165,7 @@ if (Meteor.isServer) {
         backup.meta.collectionCounts.users = users.length;
         backup.meta.totalDocuments += users.length;
       } catch (error) {
-        console.error('Error exporting users collection:', error);
+        await createLog('backup.export.error', { collection: 'users', error: error.message });
         backup.collections.users = [];
         backup.meta.collectionCounts.users = 0;
       }
@@ -187,7 +203,7 @@ if (Meteor.isServer) {
         try {
           safetyBackup = await Meteor.callAsync('backup.createQuick');
         } catch (error) {
-          console.error('Failed to create safety backup:', error);
+          await createLog('backup.safety.error', { error: error.message });
           throw new Meteor.Error(500, 'Failed to create safety backup before restore. Aborting restore.');
         }
       }
@@ -213,7 +229,7 @@ if (Meteor.isServer) {
             }
             results.restored[collectionName] = documents.length;
           } catch (error) {
-            console.error(`Error restoring collection ${collectionName}:`, error);
+            await createLog('backup.restore.error', { collection: collectionName, error: error.message });
             results.errors.push({ collection: collectionName, error: error.message });
           }
         }
@@ -228,7 +244,7 @@ if (Meteor.isServer) {
           }
           results.restored.settings = backupData.collections.settings.length;
         } catch (error) {
-          console.error('Error restoring settings collection:', error);
+          await createLog('backup.restore.error', { collection: 'settings', error: error.message });
           results.errors.push({ collection: 'settings', error: error.message });
         }
       }
@@ -253,7 +269,7 @@ if (Meteor.isServer) {
           }
           results.restored.users = backupData.collections.users.length;
         } catch (error) {
-          console.error('Error restoring users collection:', error);
+          await createLog('backup.restore.error', { collection: 'users', error: error.message });
           results.errors.push({ collection: 'users', error: error.message });
         }
       }
@@ -309,37 +325,34 @@ if (Meteor.isServer) {
     },
   });
 
-  // Rate limiting for backup operations
-  // Limit backup.create to 5 calls per minute per user
+  // Rate limiting for backup operations (configurable via Meteor.settings)
   DDPRateLimiter.addRule(
     {
       type: 'method',
       name: 'backup.create',
       userId: () => true,
     },
-    5,
-    60000
+    RATE_LIMITS.backup.create.count,
+    RATE_LIMITS.backup.create.intervalMs
   );
 
-  // Limit backup.restore to 2 calls per minute per user
   DDPRateLimiter.addRule(
     {
       type: 'method',
       name: 'backup.restore',
       userId: () => true,
     },
-    2,
-    60000
+    RATE_LIMITS.backup.restore.count,
+    RATE_LIMITS.backup.restore.intervalMs
   );
 
-  // Limit backup.createQuick to 5 calls per minute per user (same as create)
   DDPRateLimiter.addRule(
     {
       type: 'method',
       name: 'backup.createQuick',
       userId: () => true,
     },
-    5,
-    60000
+    RATE_LIMITS.backup.createQuick.count,
+    RATE_LIMITS.backup.createQuick.intervalMs
   );
 }

@@ -32,7 +32,6 @@ export default function ProfilePictureInput({ fileList, setFileList, form, profi
     setImageSrc(base64);
     Meteor.callAsync('profilePictures.insert', { value: base64 })
       .catch(error => {
-        console.error(error);
         notification.error({
           message: error.error,
           description: error.message,
@@ -54,7 +53,6 @@ export default function ProfilePictureInput({ fileList, setFileList, form, profi
           }
         })
         .catch(error => {
-          console.error(error);
           notification.error({
             message: error.error,
             description: error.message,

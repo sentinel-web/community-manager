@@ -17,7 +17,8 @@
     "roles": "Rollen",
     "logs": "Protokolle",
     "settings": "Einstellungen",
-    "backup": "Sicherung"
+    "backup": "Sicherung",
+    "questionnaires": "Fragebögen"
   },
   "common": {
     "create": "Erstellen",
@@ -362,7 +363,9 @@
     "discoveryTypeCreated": "Entdeckungsart erfolgreich erstellt",
     "discoveryTypeUpdated": "Entdeckungsart erfolgreich aktualisiert",
     "specializationCreated": "Spezialisierung erstellt",
-    "specializationUpdated": "Spezialisierung aktualisiert"
+    "specializationUpdated": "Spezialisierung aktualisiert",
+    "squadCreated": "Trupp erstellt",
+    "squadUpdated": "Trupp aktualisiert"
   },
   "forms": {
     "sections": {

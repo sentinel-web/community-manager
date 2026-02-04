@@ -17,7 +17,8 @@
     "roles": "Roles",
     "logs": "Logs",
     "settings": "Settings",
-    "backup": "Backup"
+    "backup": "Backup",
+    "questionnaires": "Questionnaires"
   },
   "common": {
     "create": "Create",
@@ -362,7 +363,9 @@
     "discoveryTypeCreated": "Discovery type created successfully",
     "discoveryTypeUpdated": "Discovery type updated successfully",
     "specializationCreated": "Specialization created",
-    "specializationUpdated": "Specialization updated"
+    "specializationUpdated": "Specialization updated",
+    "squadCreated": "Squad created",
+    "squadUpdated": "Squad updated"
   },
   "forms": {
     "sections": {

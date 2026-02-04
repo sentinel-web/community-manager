@@ -43,7 +43,6 @@ export default function MedalsForm({ setOpen, useSubdrawer }) {
           message.success(model?._id ? t('messages.medalUpdated') : t('messages.medalCreated'));
         })
         .catch(error => {
-          console.error(error);
           notification.error({
             message: error.error,
             description: error.message,

@@ -2,6 +2,16 @@ import { Tag } from 'antd';
 import React from 'react';
 import TableActions from '../../table/body/actions/TableActions';
 
+/**
+ * Factory function to generate table columns for ranks.
+ * @param {function} handleEdit - Callback function to handle editing a rank. Called with (event, record).
+ * @param {function} handleDelete - Callback function to handle deleting a rank. Called with (event, record).
+ * @param {object} [permissions={}] - Permission flags for the current user.
+ * @param {boolean} [permissions.canUpdate=true] - Whether the user can update ranks.
+ * @param {boolean} [permissions.canDelete=true] - Whether the user can delete ranks.
+ * @param {function} [t=k=>k] - Translation function for i18n.
+ * @returns {Array} Array of column configuration objects for Ant Design Table.
+ */
 const getRankColumns = (handleEdit, handleDelete, permissions = {}, t = k => k) => {
   const { canUpdate = true, canDelete = true } = permissions;
 

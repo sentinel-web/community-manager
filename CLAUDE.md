@@ -12,7 +12,7 @@ npm run update         # Update all Meteor/npm packages and fix vulnerabilities
 npm run visualize      # Analyze production bundle size
 ```
 
-Test user auto-created on first run: `admin` / `admin`
+Test user auto-created in development mode only: `admin` / `admin` (requires `NODE_ENV !== 'production'`)
 
 ## Architecture
 
@@ -25,10 +25,13 @@ client/main.jsx         # Client entry point
 server/main.js          # Server setup, permissions, validation, test data
 server/apis/            # API implementations (members, events, backup, logs, etc.)
 server/crud.lib.js      # Generic CRUD method/publish generator
+server/config.js        # Server settings with Meteor.settings overrides
 imports/api/collections/  # MongoDB collection definitions (16 collections)
 imports/ui/             # React components organized by feature
 imports/i18n/           # Localization (i18n) - LanguageContext, locales/
 imports/helpers/        # Utility functions
+imports/config.js       # UI constants (breakpoints, layout ratios)
+settings.example.json   # Example configuration overrides
 ```
 
 ### Key Patterns
@@ -41,8 +44,13 @@ imports/helpers/        # Utility functions
 
 **CRUD Generation** (`server/crud.lib.js`)
 - `createCollectionMethods(collectionName)` - generates standard methods: `.read`, `.insert`, `.update`, `.delete`, `.count`, `.options`
-- `createCollectionPublish(collectionName)` - generates reactive publications
+- `createCollectionPublish(collectionName)` - generates reactive publications (requires authentication)
 - All operations include permission checks and audit logging
+
+**Configuration** (`server/config.js`, `imports/config.js`)
+- Server settings (rate limits, cache TTL) configurable via `Meteor.settings` or `settings.json`
+- UI constants (breakpoints, layout ratios) in `imports/config.js`
+- See `settings.example.json` for available overrides
 
 **State Management**
 - React Context: NavigationContext, ThemeContext, DrawerContext, SubdrawerContext, LanguageContext
@@ -64,7 +72,7 @@ imports/helpers/        # Utility functions
 
 ### Collections
 
-Members (Meteor.users), Events, Attendances, Tasks, TaskStatus, Squads, Ranks, Specializations, Medals, EventTypes, Registrations, DiscoveryTypes, Roles, ProfilePictures, Settings, Logs
+Members (Meteor.users), Events, Attendances, Tasks, TaskStatus, Squads, Ranks, Specializations, Medals, EventTypes, Registrations, DiscoveryTypes, Roles, ProfilePictures, Settings, Logs, Questionnaires, QuestionnaireResponses
 
 ### Collection Schemas
 
@@ -90,10 +98,18 @@ Members (Meteor.users), Events, Attendances, Tasks, TaskStatus, Squads, Ranks, S
 - `name, color, description`
 
 **Roles**
-- `name, color, description` + boolean permissions (`dashboard, orbat, logs, settings`) + CRUD permissions (`members, events, tasks, squads, ranks, specializations, medals, eventTypes, taskStatus, registrations, discoveryTypes, roles`)
+- `name, color, description` + boolean permissions (`dashboard, orbat, logs, settings`) + CRUD permissions (`members, events, tasks, squads, ranks, specializations, medals, eventTypes, taskStatus, registrations, discoveryTypes, roles, questionnaires`)
 
 **Registrations**
 - `name, id (1000-9999), age (min 16), discoveryType, rulesReadAndAccepted, description`
+
+**Questionnaires**
+- `name, description, status ('draft'|'active'|'closed'), allowAnonymous, interval ('once'|'daily'|'weekly'|'monthly'|'unlimited'), questions[], createdAt, updatedAt`
+- `questions[]: { text, type ('text'|'textarea'|'number'|'select'|'multiselect'|'rating'), required, options[] }`
+
+**QuestionnaireResponses**
+- `questionnaireId, respondentId (null if anonymous), answers[], ignored, submittedAt, createdAt`
+- `answers[]: { questionIndex, questionText, questionType, value }`
 
 **Attendances** - `{ [eventId]: { [memberId]: points } }`
 **ProfilePictures** - `{ value (base64) }`
