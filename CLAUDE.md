@@ -98,7 +98,7 @@ Members (Meteor.users), Events, Attendances, Tasks, TaskStatus, Squads, Ranks, S
 - `questions[]: { text, type ('text'|'textarea'|'number'|'select'|'multiselect'|'rating'), required, options[] }`
 
 **QuestionnaireResponses**
-- `questionnaireId, respondentId (null if anonymous), answers[], submittedAt, createdAt`
+- `questionnaireId, respondentId (null if anonymous), answers[], ignored, submittedAt, createdAt`
 - `answers[]: { questionIndex, questionText, questionType, value }`
 
 **Attendances** - `{ [eventId]: { [memberId]: points } }`
