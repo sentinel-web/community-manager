@@ -71,8 +71,8 @@ function createCollectionPublish(collection) {
     const Collection = getCollection(collection);
     Meteor.publish(collection, function (filter = {}, options = {}) {
       if (!this.userId) return this.ready();
-      if (validateObject(filter, false)) return [];
-      if (validateObject(options, false)) return [];
+      if (validateObject(filter, false)) return this.ready();
+      if (validateObject(options, false)) return this.ready();
 
       // Apply default limit if none specified, cap at maximum (immutable)
       const limitedOptions = { ...options };

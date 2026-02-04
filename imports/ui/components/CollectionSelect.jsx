@@ -181,17 +181,19 @@ const CollectionSelect = ({
   );
 };
 CollectionSelect.propTypes = {
-  defaultValue: PropTypes.any,
+  defaultValue: PropTypes.oneOfType([PropTypes.string, PropTypes.arrayOf(PropTypes.string)]),
   onChange: PropTypes.func,
   placeholder: PropTypes.string,
-  mode: PropTypes.string,
-  collection: PropTypes.object,
+  mode: PropTypes.oneOf(['multiple', 'tags']),
+  collection: PropTypes.shape({
+    find: PropTypes.func,
+  }),
   name: PropTypes.string,
   label: PropTypes.string,
-  rules: PropTypes.array,
-  FormComponent: PropTypes.any,
-  subscription: PropTypes.object,
-  extra: PropTypes.any,
+  rules: PropTypes.arrayOf(PropTypes.object),
+  FormComponent: PropTypes.elementType,
+  subscription: PropTypes.string,
+  extra: PropTypes.node,
 };
 
 export default CollectionSelect;

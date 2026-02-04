@@ -188,7 +188,7 @@ if (Meteor.isServer) {
 
       let inactivityPoints = user.profile?.staticInactivityPoints || 0;
       let attendancePoints = user.profile?.staticAttendancePoints || 0;
-      await AttendancesCollection.find().forEachAsync(attendance => {
+      await AttendancesCollection.find({ [user._id]: { $exists: true } }).forEachAsync(attendance => {
         if (attendance[user._id] === -1) {
           inactivityPoints += 1;
         }

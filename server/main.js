@@ -321,7 +321,7 @@ function validateOptionalNumber(number) {
 }
 
 function validateRequiredNumber(number) {
-  if (!number || typeof number !== 'number') {
+  if (typeof number !== 'number') {
     throw new Meteor.Error('validateRequiredNumber', 'Invalid number', JSON.stringify(number));
   }
 }
@@ -341,7 +341,7 @@ function validateOptionalBoolean(boolean) {
 }
 
 function validateRequiredBoolean(boolean) {
-  if (!boolean || typeof boolean !== 'boolean') {
+  if (typeof boolean !== 'boolean') {
     throw new Meteor.Error('validateRequiredBoolean', 'Invalid boolean', JSON.stringify(boolean));
   }
 }

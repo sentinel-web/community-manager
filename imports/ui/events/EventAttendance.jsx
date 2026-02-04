@@ -1,5 +1,5 @@
 import { EditFilled, SaveFilled } from '@ant-design/icons';
-import { Button, Col, Row, Select, Tag } from 'antd';
+import { App, Button, Col, Row, Select, Tag } from 'antd';
 import dayjs from 'dayjs';
 import { Meteor } from 'meteor/meteor';
 import { useFind, useSubscribe } from 'meteor/react-meteor-data';
@@ -58,6 +58,7 @@ AttendanceOption.propTypes = {
 
 function AttendanceSelect({ value, eventId, memberId, setEditting }) {
   const { t } = useTranslation();
+  const { notification } = App.useApp();
   const handleChange = newValue => {
     if (value === newValue) return;
     Meteor.callAsync('attendances.read', { eventId }, { limit: 1 })
@@ -66,8 +67,11 @@ function AttendanceSelect({ value, eventId, memberId, setEditting }) {
         const args = res.length ? [res[0]._id, { [memberId]: newValue }] : [{ eventId, [memberId]: newValue }];
         return Meteor.callAsync(endpoint, ...args);
       })
-      .catch(() => {
-        // Error handled silently - attendance update failed
+      .catch(error => {
+        notification.error({
+          message: t('common.error'),
+          description: error.reason || error.message,
+        });
       });
   };
 
@@ -107,7 +111,7 @@ AttendanceSelect.propTypes = {
 
 function AttendanceRender({ value, eventId, memberId }) {
   const [editting, setEditting] = useState(false);
-  return editting || value == null ? (
+  return editting || value === null || value === undefined ? (
     <AttendanceSelect value={value} eventId={eventId} memberId={memberId} setEditting={setEditting} />
   ) : (
     <AttendanceOption value={value} setEditting={setEditting} />
@@ -164,8 +168,21 @@ export default function EventAttendance({ datasource }) {
   // Attendance grid needs all members and attendances for the selected events
   useSubscribe('attendances', { eventId: { $in: datasource.map(event => event._id) } }, { limit: 1000 });
   const attendances = useFind(() => AttendancesCollection.find({ eventId: { $in: datasource.map(event => event._id) } }), [datasource]);
-  useSubscribe('members', {}, { limit: 1000 });
-  const members = useFind(() => MembersCollection.find({}, { sort: { squadId: 1, rankId: 1 } }), []);
+
+  // Get unique attendee IDs from datasource events to filter members subscription
+  const attendeeIds = useMemo(() => {
+    const ids = new Set();
+    datasource.forEach(event => {
+      (event.attendees || []).forEach(id => ids.add(id));
+      (event.hosts || []).forEach(id => ids.add(id));
+    });
+    return [...ids];
+  }, [datasource]);
+  useSubscribe('members', attendeeIds.length ? { _id: { $in: attendeeIds } } : {}, {});
+  const members = useFind(
+    () => MembersCollection.find(attendeeIds.length ? { _id: { $in: attendeeIds } } : {}, { sort: { squadId: 1, rankId: 1 } }),
+    [attendeeIds]
+  );
   useSubscribe('ranks', {}, {});
   const ranks = useFind(() => RanksCollection.find({}), []);
 

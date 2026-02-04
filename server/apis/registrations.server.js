@@ -23,7 +23,7 @@ if (Meteor.isServer) {
       const matchingRegistrations = await RegistrationsCollection.findOneAsync(registrationFilter);
       return !(matchingMembers || matchingRegistrations);
     },
-    'registrations.validateName': async function (name = '', excludeid = false) {
+    'registrations.validateName': async function (name = '', excludeId = false) {
       if (!name || typeof name !== 'string') {
         throw new Meteor.Error('invalid-name', 'Invalid name', name);
       }
@@ -31,7 +31,7 @@ if (Meteor.isServer) {
       const filter = {
         $and: [{ 'profile.name': name }],
       };
-      if (this.userId && excludeid) {
+      if (this.userId && excludeId) {
         filter.$and.push({ 'profile.name': { $ne: name } });
       }
       const matchingMembers = await MembersCollection.findOneAsync(filter);
@@ -39,8 +39,8 @@ if (Meteor.isServer) {
       const registrationFilter = {
         $and: [{ name: name }],
       };
-      if (this.userId && excludeid) {
-        registrationFilter.$and.push({ _id: { $ne: excludeid } });
+      if (this.userId && excludeId) {
+        registrationFilter.$and.push({ _id: { $ne: excludeId } });
       }
       const matchingRegistrations = await RegistrationsCollection.findOneAsync(registrationFilter);
       return !(matchingMembers || matchingRegistrations);
