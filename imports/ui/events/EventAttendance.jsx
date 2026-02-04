@@ -4,24 +4,22 @@ import dayjs from 'dayjs';
 import { Meteor } from 'meteor/meteor';
 import { useFind, useSubscribe } from 'meteor/react-meteor-data';
 import PropTypes from 'prop-types';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import AttendancesCollection from '../../api/collections/attendances.collection';
 import MembersCollection from '../../api/collections/members.collection';
+import RanksCollection from '../../api/collections/ranks.collection';
 import { useTranslation } from '../../i18n/LanguageContext';
 import TableContainer from '../table/body/TableContainer';
 import Table from '../table/Table';
 
-function MemberName({ memberId }) {
-  const [name, setName] = useState('loading...');
-  useEffect(() => {
-    Meteor.callAsync('members.read', { _id: memberId }, { limit: 1 }).then(members => {
-      Meteor.callAsync('ranks.read', { _id: members?.[0]?.profile?.rankId ?? null }, { limit: 1 }).then(ranks => {
-        setName(`${ranks?.[0]?.name ?? ''}-${members?.[0]?.profile?.id ?? ''} "${members?.[0]?.profile?.name ?? ''}"`);
-      });
-    });
-  }, [memberId]);
-  return name;
+function MemberName({ memberId, memberNameMap }) {
+  // Use pre-computed name from parent to avoid N+1 queries
+  return memberNameMap.get(memberId) || 'Unknown';
 }
+MemberName.propTypes = {
+  memberId: PropTypes.string,
+  memberNameMap: PropTypes.instanceOf(Map),
+};
 
 function AttendanceOption({ value, setEditting }) {
   const { t } = useTranslation();
@@ -62,13 +60,15 @@ function AttendanceSelect({ value, eventId, memberId, setEditting }) {
   const { t } = useTranslation();
   const handleChange = newValue => {
     if (value === newValue) return;
-    Meteor.callAsync('attendances.read', { eventId }, { limit: 1 }).then(res => {
-      const endpoint = res.length ? 'attendances.update' : 'attendances.insert';
-      const args = res.length ? [res[0]._id, { [memberId]: newValue }] : [{ eventId, [memberId]: newValue }];
-      Meteor.callAsync(endpoint, ...args)
-        .then(console.log)
-        .catch(console.error);
-    });
+    Meteor.callAsync('attendances.read', { eventId }, { limit: 1 })
+      .then(res => {
+        const endpoint = res.length ? 'attendances.update' : 'attendances.insert';
+        const args = res.length ? [res[0]._id, { [memberId]: newValue }] : [{ eventId, [memberId]: newValue }];
+        return Meteor.callAsync(endpoint, ...args);
+      })
+      .catch(() => {
+        // Error handled silently - attendance update failed
+      });
   };
 
   const options = useMemo(
@@ -119,14 +119,14 @@ AttendanceRender.propTypes = {
   memberId: PropTypes.string,
 };
 
-function transformEventsIntoColumns(events, t) {
+function transformEventsIntoColumns(events, memberNameMap, t) {
   const columns = [
     {
       title: t('common.name'),
       dataIndex: 'memberId',
       key: 'memberId',
       ellipsis: true,
-      render: memberId => <MemberName memberId={memberId} />,
+      render: memberId => <MemberName memberId={memberId} memberNameMap={memberNameMap} />,
     },
     {
       title: t('events.inactivityPoints'),
@@ -161,11 +161,28 @@ function transformEventsIntoColumns(events, t) {
 
 export default function EventAttendance({ datasource }) {
   const { t } = useTranslation();
-  const columns = useMemo(() => transformEventsIntoColumns(datasource, t), [datasource, t]);
-  useSubscribe('attendances', { eventId: { $in: datasource.map(event => event._id) } });
+  // Attendance grid needs all members and attendances for the selected events
+  useSubscribe('attendances', { eventId: { $in: datasource.map(event => event._id) } }, { limit: 1000 });
   const attendances = useFind(() => AttendancesCollection.find({ eventId: { $in: datasource.map(event => event._id) } }), [datasource]);
-  useSubscribe('members', {}, {});
+  useSubscribe('members', {}, { limit: 1000 });
   const members = useFind(() => MembersCollection.find({}, { sort: { squadId: 1, rankId: 1 } }), []);
+  useSubscribe('ranks', {}, {});
+  const ranks = useFind(() => RanksCollection.find({}), []);
+
+  // Pre-compute member names with ranks to avoid N+1 queries per row
+  const memberNameMap = useMemo(() => {
+    const rankNameById = new Map(ranks.map(r => [r._id, r.name]));
+    return new Map(
+      members.map(m => {
+        const rankName = rankNameById.get(m.profile?.rankId) ?? '';
+        const id = m.profile?.id ?? '';
+        const name = m.profile?.name ?? '';
+        return [m._id, `${rankName}-${id} "${name}"`];
+      })
+    );
+  }, [members, ranks]);
+
+  const columns = useMemo(() => transformEventsIntoColumns(datasource, memberNameMap, t), [datasource, memberNameMap, t]);
   const rows = useMemo(() => {
     return members.map(member => {
       return {

@@ -3,6 +3,7 @@ import { Meteor } from 'meteor/meteor';
 import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
 import React, { lazy, useMemo } from 'react';
 import RolesCollection from '../../api/collections/roles.collection';
+import { isDeviceUnsupported } from '../../config';
 import Login from '../login/Login';
 import useNavigation from '../navigation/navigation.hook';
 import Suspense from '../suspense/Suspense';
@@ -10,6 +11,7 @@ import Suspense from '../suspense/Suspense';
 // Map modules to their permission keys (for modules that share permissions)
 const MODULE_PERMISSION_MAP = {
   backup: 'settings', // Backup uses settings permission
+  myQuestionnaires: 'questionnaires', // My Questionnaires uses questionnaires permission
 };
 
 /**
@@ -53,6 +55,8 @@ const Roles = lazy(() => import('../members/roles/Roles'));
 const Logs = lazy(() => import('../logs/Logs'));
 const Settings = lazy(() => import('../settings/Settings'));
 const Backup = lazy(() => import('../backup/Backup'));
+const Questionnaires = lazy(() => import('../questionnaires/Questionnaires'));
+const MyQuestionnaires = lazy(() => import('../questionnaires/MyQuestionnaires'));
 
 export default function Main() {
   const { navigationValue } = useNavigation();
@@ -70,7 +74,7 @@ export default function Main() {
     return checkAccess(role, navigationValue);
   }, [roles, navigationValue]);
 
-  if (window.innerWidth < 360) {
+  if (isDeviceUnsupported(window.innerWidth)) {
     return (
       <section className="container">
         <Result status="500" title="406 - Not supported" subTitle="Sorry, this device is not supported." />
@@ -101,6 +105,8 @@ export default function Main() {
           {hasAccess && navigationValue === 'logs' && <Logs />}
           {hasAccess && navigationValue === 'settings' && <Settings />}
           {hasAccess && navigationValue === 'backup' && <Backup />}
+          {hasAccess && navigationValue === 'questionnaires' && <Questionnaires />}
+          {hasAccess && navigationValue === 'myQuestionnaires' && <MyQuestionnaires />}
         </Suspense>
       )}
     </section>

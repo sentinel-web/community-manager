@@ -5,6 +5,7 @@ import {
   ClusterOutlined,
   DashboardOutlined,
   FileTextOutlined,
+  FormOutlined,
   IdcardOutlined,
   MenuOutlined,
   OrderedListOutlined,
@@ -30,6 +31,9 @@ import { useTranslation } from '../../i18n/LanguageContext';
  * Checks if a role has access to a module.
  * Handles both boolean permissions (true/false) and CRUD object permissions.
  * For CRUD modules, access means having at least `read` permission.
+ * @param {object} role - The role object containing permission definitions.
+ * @param {string} module - The module name to check access for.
+ * @returns {boolean} True if the role has access to the module.
  */
 function hasAccess(role, module) {
   if (!role) return false;
@@ -48,6 +52,11 @@ function hasAccess(role, module) {
   return false;
 }
 
+/**
+ * Determines the current navigation value based on the URL pathname.
+ * Parses window.location.pathname to identify which section is active.
+ * @returns {string} The navigation key corresponding to the current route (e.g., 'dashboard', 'events', 'members').
+ */
 export function getNavigationValue() {
   const pathname = window.location.pathname;
   if (pathname === '/') {
@@ -104,9 +113,20 @@ export function getNavigationValue() {
   if (pathname.includes('/backup')) {
     return 'backup';
   }
+  if (pathname.includes('/questionnaires')) {
+    return 'questionnaires';
+  }
+  if (pathname.includes('/myQuestionnaires')) {
+    return 'myQuestionnaires';
+  }
   return 'dashboard';
 }
 
+/**
+ * Navigation dropdown component.
+ * Renders a dropdown menu with navigation items based on user permissions.
+ * No props - uses Meteor reactive data and NavigationContext internally.
+ */
 export default function Navigation() {
   const breakpoints = Grid.useBreakpoint();
   const user = useTracker(() => Meteor.user(), []);
@@ -254,6 +274,24 @@ export default function Navigation() {
     if (hasAccess(role, 'registrations') || hasAccess(role, 'discoveryTypes')) {
       newItems.push({
         key: 'div-4',
+        type: 'divider',
+      });
+    }
+    if (hasAccess(role, 'questionnaires')) {
+      newItems.push({
+        key: 'myQuestionnaires',
+        label: 'My Questionnaires',
+        icon: <FormOutlined />,
+      });
+      newItems.push({
+        key: 'questionnaires',
+        label: 'Manage Questionnaires',
+        icon: <FormOutlined />,
+      });
+    }
+    if (hasAccess(role, 'questionnaires') || hasAccess(role, 'roles') || hasAccess(role, 'logs') || hasAccess(role, 'settings')) {
+      newItems.push({
+        key: 'div-5',
         type: 'divider',
       });
     }

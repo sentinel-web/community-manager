@@ -34,7 +34,6 @@ const ConfirmModal = ({ open, setOpen, record }) => {
       message.success(t('registrations.memberCreated'));
       setOpen(false);
     } catch (error) {
-      console.error(error);
       notification.error({
         message: error.error,
         description: error.message,

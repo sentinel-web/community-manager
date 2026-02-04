@@ -42,7 +42,6 @@ export default function EventTypesForm({ setOpen, useSubdrawer }) {
           message.success(model?._id ? t('messages.eventTypeUpdated') : t('messages.eventTypeCreated'));
         })
         .catch(error => {
-          console.error(error);
           notification.error({
             message: error.error,
             description: error.message,

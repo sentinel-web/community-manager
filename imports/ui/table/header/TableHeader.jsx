@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import React from 'react';
 import { useTranslation } from '../../../i18n/LanguageContext';
 
-export default function TableHeader({ handleChange = console.warn, value = '', handleCreate = console.warn, extra = <></>, canCreate = true }) {
+export default function TableHeader({ handleChange = () => {}, value = '', handleCreate = () => {}, extra = <></>, canCreate = true }) {
   const { t } = useTranslation();
 
   return (

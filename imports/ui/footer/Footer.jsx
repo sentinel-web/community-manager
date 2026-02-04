@@ -28,9 +28,7 @@ export default function Footer() {
             setImageSrc(res[0].value);
           }
         })
-        .catch(error => {
-          console.error(error);
-        });
+        .catch(() => {});
     } else {
       setImageSrc(null);
     }
@@ -40,7 +38,6 @@ export default function Footer() {
     function handleSubmit({ oldPassword, newPassword }) {
       Accounts.changePassword(oldPassword, newPassword, error => {
         if (error) {
-          console.error(error);
           message.error({ content: error.message });
         } else {
           Modal.destroyAll();

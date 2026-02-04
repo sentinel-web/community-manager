@@ -17,7 +17,8 @@
     "roles": "Rôles",
     "logs": "Journaux",
     "settings": "Paramètres",
-    "backup": "Sauvegarde"
+    "backup": "Sauvegarde",
+    "questionnaires": "Questionnaires"
   },
   "common": {
     "create": "Créer",
@@ -362,7 +363,9 @@
     "discoveryTypeCreated": "Type de découverte créé avec succès",
     "discoveryTypeUpdated": "Type de découverte mis à jour avec succès",
     "specializationCreated": "Spécialisation créée",
-    "specializationUpdated": "Spécialisation mise à jour"
+    "specializationUpdated": "Spécialisation mise à jour",
+    "squadCreated": "Escouade créée",
+    "squadUpdated": "Escouade mise à jour"
   },
   "forms": {
     "sections": {

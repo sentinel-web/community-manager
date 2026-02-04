@@ -2,6 +2,16 @@ import { Tag } from 'antd';
 import React from 'react';
 import TableActions from '../../table/body/actions/TableActions';
 
+/**
+ * Factory function to generate table columns for medals.
+ * @param {function} handleEdit - Callback function to handle editing a medal. Called with (event, record).
+ * @param {function} handleDelete - Callback function to handle deleting a medal. Called with (event, record).
+ * @param {object} [permissions={}] - Permission flags for the current user.
+ * @param {boolean} [permissions.canUpdate=true] - Whether the user can update medals.
+ * @param {boolean} [permissions.canDelete=true] - Whether the user can delete medals.
+ * @param {function} [t=k=>k] - Translation function for i18n.
+ * @returns {Array} Array of column configuration objects for Ant Design Table.
+ */
 const getMedalColumns = (handleEdit, handleDelete, permissions = {}, t = k => k) => {
   const { canUpdate = true, canDelete = true } = permissions;
 

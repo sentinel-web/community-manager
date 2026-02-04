@@ -4,6 +4,16 @@ import { SquadTags } from '../squads/squads.columns';
 import TableActions from '../table/body/actions/TableActions';
 import RankTag from './ranks/RankTag';
 
+/**
+ * Factory function to generate table columns for members.
+ * @param {function} handleEdit - Callback function to handle editing a member. Called with (event, record).
+ * @param {function} handleDelete - Callback function to handle deleting a member. Called with (event, record).
+ * @param {object} [permissions={}] - Permission flags for the current user.
+ * @param {boolean} [permissions.canUpdate=true] - Whether the user can update members.
+ * @param {boolean} [permissions.canDelete=true] - Whether the user can delete members.
+ * @param {function} [t=k=>k] - Translation function for i18n.
+ * @returns {Array} Array of column configuration objects for Ant Design Table.
+ */
 export default function getMembersColumns(handleEdit, handleDelete, permissions = {}, t = k => k) {
   const { canUpdate = true, canDelete = true } = permissions;
 

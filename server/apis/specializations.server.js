@@ -8,13 +8,9 @@ if (Meteor.isServer) {
       validateUserId(this.userId);
       validateArrayOfStrings(specializations, false);
       try {
-        const names = [];
-        for (const specialization of specializations) {
-          const foundSpecialization = await SpecializationsCollection.findOneAsync(specialization);
-          if (foundSpecialization) {
-            names.push(foundSpecialization.name);
-          }
-        }
+        // Use batch query instead of N+1 individual queries
+        const foundSpecializations = await SpecializationsCollection.find({ _id: { $in: specializations } }).fetchAsync();
+        const names = foundSpecializations.map(s => s.name);
         return names.join(', ');
       } catch (error) {
         throw new Meteor.Error(error.message);
