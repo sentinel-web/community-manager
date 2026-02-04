@@ -57,13 +57,15 @@ AttendanceOption.propTypes = {
 function AttendanceSelect({ value, eventId, memberId, setEditting }) {
   const handleChange = newValue => {
     if (value === newValue) return;
-    Meteor.callAsync('attendances.read', { eventId }, { limit: 1 }).then(res => {
-      const endpoint = res.length ? 'attendances.update' : 'attendances.insert';
-      const args = res.length ? [res[0]._id, { [memberId]: newValue }] : [{ eventId, [memberId]: newValue }];
-      Meteor.callAsync(endpoint, ...args)
-        .then(console.log)
-        .catch(console.error);
-    });
+    Meteor.callAsync('attendances.read', { eventId }, { limit: 1 })
+      .then(res => {
+        const endpoint = res.length ? 'attendances.update' : 'attendances.insert';
+        const args = res.length ? [res[0]._id, { [memberId]: newValue }] : [{ eventId, [memberId]: newValue }];
+        return Meteor.callAsync(endpoint, ...args);
+      })
+      .catch(() => {
+        // Error handled silently - attendance update failed
+      });
   };
 
   return (

@@ -54,7 +54,9 @@ if (Meteor.isServer) {
       validateUserId(this.userId);
       validateObject(filter, false);
       validateObject(options, false);
-      return await MembersCollection.findOneAsync(filter, options);
+      const member = await MembersCollection.findOneAsync(filter, options);
+      if (!member) throw new Meteor.Error(404, 'Member not found');
+      return member;
     },
     'members.insert': async function (payload = {}) {
       validateUserId(this.userId);
