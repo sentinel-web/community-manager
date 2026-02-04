@@ -19,6 +19,26 @@ A web application for managing ArmA III communities. Built with Meteor.js, React
 
 ## Quick Start
 
+### Automated Setup (Recommended)
+
+**Linux / macOS:**
+```bash
+git clone https://github.com/sentinel-web/community-manager.git
+cd community-manager
+./setup.sh
+```
+
+**Windows (PowerShell as Administrator):**
+```powershell
+git clone https://github.com/sentinel-web/community-manager.git
+cd community-manager
+.\setup.ps1
+```
+
+The setup script will install Node.js, Meteor.js, and project dependencies automatically.
+
+### Manual Setup
+
 ```bash
 git clone https://github.com/sentinel-web/community-manager.git
 cd community-manager
