@@ -183,7 +183,8 @@ function createCollectionMethods(collection) {
       });
     }
   } catch (error) {
-    console.error(error);
+    // Log error for debugging - method registration failures are critical
+    createLog('crud.methodCreationError', { collection, error: error.message });
   }
 }
 

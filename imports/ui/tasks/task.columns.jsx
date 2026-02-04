@@ -17,7 +17,7 @@ export const Participants = ({ participants }) => {
         if (!res?.length) setValue('-');
         else setValue(res);
       })
-      .catch(error => console.error(error));
+      .catch(() => {});
   }, [participants]);
 
   return <>{value}</>;

@@ -5,11 +5,11 @@ import React, { useEffect, useState } from 'react';
 import { getModalWidth } from '../../config';
 import { ProfileStats } from '../dashboard/Dashboard';
 
-export default function ProfileModal({ showProfile = false, toggleProfile = console.warn }) {
+export default function ProfileModal({ showProfile = false, toggleProfile = () => {} }) {
   const [profileStats, setProfileStats] = useState(null);
   useEffect(() => {
-    Meteor.callAsync('members.profileStats').then(setProfileStats).catch(console.error);
-  });
+    Meteor.callAsync('members.profileStats').then(setProfileStats);
+  }, []);
 
   return (
     <Modal title="Profile" open={showProfile} onCancel={toggleProfile} width={getModalWidth(window.innerWidth)} footer={null} centered>

@@ -38,7 +38,7 @@ const TaskForm = ({ setOpen }) => {
   useEffect(() => {
     Meteor.callAsync('members.options')
       .then(res => setParticipantOptions(res))
-      .catch(console.error);
+      .catch(() => {});
   }, []);
 
   const [form] = Form.useForm();

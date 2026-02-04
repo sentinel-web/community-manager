@@ -62,8 +62,7 @@ const EventCalendar = ({ datasource, setFilter }) => {
     return { style: { backgroundColor: backgroundColor, color: textColor } };
   };
 
-  const draggableAccessor = event => {
-    console.log('draggableAccessor', event);
+  const draggableAccessor = () => {
     return true;
   };
 

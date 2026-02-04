@@ -44,8 +44,7 @@ export default function RegistrationForm({ setOpen }) {
         setNameError(result ? 'success' : 'error');
         setDisableSubmit(!result);
       })
-      .catch(error => {
-        console.error(error);
+      .catch(() => {
         setNameError('warning');
       });
   }, [form.getFieldValue, model?._id]);
@@ -58,8 +57,7 @@ export default function RegistrationForm({ setOpen }) {
         setIdError(result ? 'success' : 'error');
         setDisableSubmit(!result);
       })
-      .catch(error => {
-        console.error(error);
+      .catch(() => {
         setIdError('warning');
       });
   }, [form.getFieldValue, model?._id]);
@@ -76,7 +74,6 @@ export default function RegistrationForm({ setOpen }) {
           message.success('Registration successful');
         })
         .catch(error => {
-          console.error(error);
           notification.error({
             message: error.error,
             description: error.message,
