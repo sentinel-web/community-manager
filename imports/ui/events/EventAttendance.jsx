@@ -153,9 +153,10 @@ function transformEventsIntoColumns(events) {
 
 export default function EventAttendance({ datasource }) {
   const columns = useMemo(() => transformEventsIntoColumns(datasource), [datasource]);
-  useSubscribe('attendances', { eventId: { $in: datasource.map(event => event._id) } });
+  // Attendance grid needs all members and attendances for the selected events
+  useSubscribe('attendances', { eventId: { $in: datasource.map(event => event._id) } }, { limit: 1000 });
   const attendances = useFind(() => AttendancesCollection.find({ eventId: { $in: datasource.map(event => event._id) } }), [datasource]);
-  useSubscribe('members', {}, {});
+  useSubscribe('members', {}, { limit: 1000 });
   const members = useFind(() => MembersCollection.find({}, { sort: { squadId: 1, rankId: 1 } }), []);
   const rows = useMemo(() => {
     return members.map(member => {
