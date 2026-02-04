@@ -54,6 +54,7 @@ const Roles = lazy(() => import('../members/roles/Roles'));
 const Logs = lazy(() => import('../logs/Logs'));
 const Settings = lazy(() => import('../settings/Settings'));
 const Backup = lazy(() => import('../backup/Backup'));
+const Questionnaires = lazy(() => import('../questionnaires/Questionnaires'));
 
 export default function Main() {
   const { navigationValue } = useNavigation();
@@ -102,6 +103,7 @@ export default function Main() {
           {hasAccess && navigationValue === 'logs' && <Logs />}
           {hasAccess && navigationValue === 'settings' && <Settings />}
           {hasAccess && navigationValue === 'backup' && <Backup />}
+          {hasAccess && navigationValue === 'questionnaires' && <Questionnaires />}
         </Suspense>
       )}
     </section>
