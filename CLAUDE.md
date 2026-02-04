@@ -226,8 +226,9 @@ try {
 ### Testing
 
 - Tests in `tests/` directory, imported through `tests/main.js`
-- Use Mocha/Chai syntax
+- Use Mocha with Node.js native `assert` module
 - Run with `npm test` (once) or `npm run test-app` (watch mode)
+- See [TESTING.md](TESTING.md) for comprehensive testing strategy and best practices
 
 ### Git
 
