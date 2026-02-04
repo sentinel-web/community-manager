@@ -1,9 +1,7 @@
-import { App, Col, Empty, Row, Spin, Typography } from 'antd';
+import { App, Empty, Row, Spin, Typography } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { DrawerContext, SubdrawerContext } from '../app/App';
-import SectionCard from '../section/SectionCard';
 import TableContainer from '../table/body/TableContainer';
 import TableFooter from '../table/footer/TableFooter';
 import Table from '../table/Table';
