@@ -225,9 +225,9 @@ async function createTestData() {
  */
 async function createDatabaseIndexes() {
   // Members (Meteor.users) indexes
+  // Note: Meteor already creates a unique, sparse index on 'username'
   await MembersCollection.rawCollection().createIndex({ 'profile.squadId': 1 });
   await MembersCollection.rawCollection().createIndex({ 'profile.rankId': 1 });
-  await MembersCollection.rawCollection().createIndex({ username: 1 });
 
   // Attendances indexes
   await AttendancesCollection.rawCollection().createIndex({ eventId: 1 });
