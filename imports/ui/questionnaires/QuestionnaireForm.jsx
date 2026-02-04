@@ -1,5 +1,5 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { App, Button, Card, Form, Input, Select, Space } from 'antd';
+import { App, Button, Card, Form, Input, Select, Space, Switch } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useMemo } from 'react';
@@ -13,6 +13,14 @@ const QUESTION_TYPES = [
   { value: 'select', label: 'Single Choice' },
   { value: 'multiselect', label: 'Multiple Choice' },
   { value: 'rating', label: 'Rating (1-5)' },
+];
+
+const INTERVAL_OPTIONS = [
+  { value: 'once', label: 'Once (one response only)' },
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'unlimited', label: 'Unlimited' },
 ];
 
 const QuestionnaireForm = ({ setOpen }) => {
@@ -64,6 +72,22 @@ const QuestionnaireForm = ({ setOpen }) => {
             { value: 'closed', label: 'Closed' },
           ]}
         />
+      </Form.Item>
+      <Form.Item
+        label="Allow Anonymous Responses"
+        name="allowAnonymous"
+        valuePropName="checked"
+        tooltip="When enabled, responses are not linked to user accounts"
+      >
+        <Switch />
+      </Form.Item>
+      <Form.Item
+        label="Response Interval"
+        name="interval"
+        initialValue="once"
+        tooltip="How often users can submit responses"
+      >
+        <Select placeholder="Select interval" options={INTERVAL_OPTIONS} />
       </Form.Item>
 
       <Card title="Questions" size="small" style={{ marginBottom: 16 }}>

@@ -115,6 +115,9 @@ export function getNavigationValue() {
   if (pathname.includes('/questionnaires')) {
     return 'questionnaires';
   }
+  if (pathname.includes('/myQuestionnaires')) {
+    return 'myQuestionnaires';
+  }
   return 'dashboard';
 }
 
@@ -274,8 +277,13 @@ export default function Navigation() {
     }
     if (hasAccess(role, 'questionnaires')) {
       newItems.push({
+        key: 'myQuestionnaires',
+        label: 'My Questionnaires',
+        icon: <FormOutlined />,
+      });
+      newItems.push({
         key: 'questionnaires',
-        label: 'Questionnaires',
+        label: 'Manage Questionnaires',
         icon: <FormOutlined />,
       });
     }

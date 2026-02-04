@@ -15,6 +15,7 @@ import './apis/orbat.server';
 import './apis/registrations.server';
 import './apis/settings.server';
 import './apis/specializations.server';
+import './apis/questionnaireResponses.server';
 import './crud.lib';
 import { createCollectionMethods, createCollectionPublish } from './crud.lib';
 import { CACHE } from './config';
@@ -58,6 +59,7 @@ const COLLECTION_TO_MODULE = {
   roles: 'roles',
   profilePictures: 'members', // profile pictures are part of members module
   questionnaires: 'questionnaires',
+  questionnaireResponses: 'questionnaires', // responses use questionnaires permission module
 };
 
 // Role cache for performance (TTL configurable via Meteor.settings)
@@ -276,6 +278,7 @@ const collectionNames = [
   'roles',
   'profilePictures',
   'questionnaires',
+  'questionnaireResponses',
 ];
 
 if (Meteor.isServer) {
