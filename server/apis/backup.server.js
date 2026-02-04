@@ -5,6 +5,21 @@ import { getCollection } from '../crud.lib';
 import { createLog } from './logs.server';
 import { RATE_LIMITS } from '../config';
 
+/**
+ * Backup system for community-manager.
+ *
+ * NOTE: Backup operations intentionally load full collections into memory.
+ * This is by design because:
+ * 1. Backups must capture complete data to ensure restore integrity
+ * 2. Operations are protected by settings permission and rate limiting
+ * 3. Community manager collections are typically small (hundreds to low thousands)
+ * 4. Rate limiting prevents abuse (5 backups/min, 2 restores/min)
+ *
+ * For very large deployments, consider:
+ * - MongoDB's native mongodump/mongorestore for production backups
+ * - Implementing streaming export with cursor iteration
+ */
+
 // Collections to backup (all data collections)
 const BACKUP_COLLECTIONS = [
   'attendances',

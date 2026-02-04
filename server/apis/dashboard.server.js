@@ -44,6 +44,16 @@ async function aggregateCountByArrayField(collection, arrayField, nameMap) {
 
 if (Meteor.isServer) {
   Meteor.methods({
+    /**
+     * Fetches dashboard statistics for the current user.
+     *
+     * NOTE: This method intentionally loads full collections to compute aggregate statistics.
+     * This is acceptable because:
+     * 1. This is an admin-facing feature with permission checks
+     * 2. The data is used for aggregation (counts by category), not display
+     * 3. Community manager collections are typically small (hundreds, not millions)
+     * 4. Results are computed server-side and only summary data is returned
+     */
     'dashboard.stats': async function () {
       if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
 
