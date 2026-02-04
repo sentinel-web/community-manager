@@ -2,7 +2,7 @@ import { Button, Col, Input, Row } from 'antd';
 import PropTypes from 'prop-types';
 import React from 'react';
 
-export default function TableHeader({ handleChange = console.warn, value = '', handleCreate = console.warn, extra = <></>, canCreate = true }) {
+export default function TableHeader({ handleChange = () => {}, value = '', handleCreate = () => {}, extra = <></>, canCreate = true }) {
   return (
     <Row gutter={[16, 16]}>
       <Col flex="auto">

@@ -13,14 +13,29 @@ import Table from '../table/Table';
 function MemberName({ memberId }) {
   const [name, setName] = useState('loading...');
   useEffect(() => {
-    Meteor.callAsync('members.read', { _id: memberId }, { limit: 1 }).then(members => {
-      Meteor.callAsync('ranks.read', { _id: members?.[0]?.profile?.rankId ?? null }, { limit: 1 }).then(ranks => {
-        setName(`${ranks?.[0]?.name ?? ''}-${members?.[0]?.profile?.id ?? ''} "${members?.[0]?.profile?.name ?? ''}"`);
+    let isMounted = true;
+    Meteor.callAsync('members.read', { _id: memberId }, { limit: 1 })
+      .then(members => {
+        if (!isMounted) return;
+        return Meteor.callAsync('ranks.read', { _id: members?.[0]?.profile?.rankId ?? null }, { limit: 1 }).then(ranks => {
+          if (!isMounted) return;
+          setName(`${ranks?.[0]?.name ?? ''}-${members?.[0]?.profile?.id ?? ''} "${members?.[0]?.profile?.name ?? ''}"`);
+        });
+      })
+      .catch(error => {
+        if (!isMounted) return;
+        console.error('Failed to load member name:', error);
+        setName('Error loading name');
       });
-    });
+    return () => {
+      isMounted = false;
+    };
   }, [memberId]);
   return name;
 }
+MemberName.propTypes = {
+  memberId: PropTypes.string,
+};
 
 function AttendanceOption({ value, setEditting }) {
   const colorMap = useMemo(() => {
@@ -59,13 +74,15 @@ AttendanceOption.propTypes = {
 function AttendanceSelect({ value, eventId, memberId, setEditting }) {
   const handleChange = newValue => {
     if (value === newValue) return;
-    Meteor.callAsync('attendances.read', { eventId }, { limit: 1 }).then(res => {
-      const endpoint = res.length ? 'attendances.update' : 'attendances.insert';
-      const args = res.length ? [res[0]._id, { [memberId]: newValue }] : [{ eventId, [memberId]: newValue }];
-      Meteor.callAsync(endpoint, ...args)
-        .then(console.log)
-        .catch(console.error);
-    });
+    Meteor.callAsync('attendances.read', { eventId }, { limit: 1 })
+      .then(res => {
+        const endpoint = res.length ? 'attendances.update' : 'attendances.insert';
+        const args = res.length ? [res[0]._id, { [memberId]: newValue }] : [{ eventId, [memberId]: newValue }];
+        return Meteor.callAsync(endpoint, ...args);
+      })
+      .catch(() => {
+        // Error handled silently - attendance update failed
+      });
   };
 
   return (

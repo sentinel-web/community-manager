@@ -12,7 +12,7 @@ npm run update         # Update all Meteor/npm packages and fix vulnerabilities
 npm run visualize      # Analyze production bundle size
 ```
 
-Test user auto-created on first run: `admin` / `admin`
+Test user auto-created in development mode only: `admin` / `admin` (requires `NODE_ENV !== 'production'`)
 
 ## Architecture
 
@@ -25,9 +25,12 @@ client/main.jsx         # Client entry point
 server/main.js          # Server setup, permissions, validation, test data
 server/apis/            # API implementations (members, events, backup, logs, etc.)
 server/crud.lib.js      # Generic CRUD method/publish generator
+server/config.js        # Server settings with Meteor.settings overrides
 imports/api/collections/  # MongoDB collection definitions (16 collections)
 imports/ui/             # React components organized by feature
 imports/helpers/        # Utility functions
+imports/config.js       # UI constants (breakpoints, layout ratios)
+settings.example.json   # Example configuration overrides
 ```
 
 ### Key Patterns
@@ -40,8 +43,13 @@ imports/helpers/        # Utility functions
 
 **CRUD Generation** (`server/crud.lib.js`)
 - `createCollectionMethods(collectionName)` - generates standard methods: `.read`, `.insert`, `.update`, `.delete`, `.count`, `.options`
-- `createCollectionPublish(collectionName)` - generates reactive publications
+- `createCollectionPublish(collectionName)` - generates reactive publications (requires authentication)
 - All operations include permission checks and audit logging
+
+**Configuration** (`server/config.js`, `imports/config.js`)
+- Server settings (rate limits, cache TTL) configurable via `Meteor.settings` or `settings.json`
+- UI constants (breakpoints, layout ratios) in `imports/config.js`
+- See `settings.example.json` for available overrides
 
 **State Management**
 - React Context: NavigationContext, ThemeContext, DrawerContext, SubdrawerContext

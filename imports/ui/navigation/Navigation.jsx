@@ -29,6 +29,9 @@ import useNavigation from './navigation.hook';
  * Checks if a role has access to a module.
  * Handles both boolean permissions (true/false) and CRUD object permissions.
  * For CRUD modules, access means having at least `read` permission.
+ * @param {object} role - The role object containing permission definitions.
+ * @param {string} module - The module name to check access for.
+ * @returns {boolean} True if the role has access to the module.
  */
 function hasAccess(role, module) {
   if (!role) return false;
@@ -47,6 +50,11 @@ function hasAccess(role, module) {
   return false;
 }
 
+/**
+ * Determines the current navigation value based on the URL pathname.
+ * Parses window.location.pathname to identify which section is active.
+ * @returns {string} The navigation key corresponding to the current route (e.g., 'dashboard', 'events', 'members').
+ */
 export function getNavigationValue() {
   const pathname = window.location.pathname;
   if (pathname === '/') {
@@ -106,6 +114,11 @@ export function getNavigationValue() {
   return 'dashboard';
 }
 
+/**
+ * Navigation dropdown component.
+ * Renders a dropdown menu with navigation items based on user permissions.
+ * No props - uses Meteor reactive data and NavigationContext internally.
+ */
 export default function Navigation() {
   const breakpoints = Grid.useBreakpoint();
   const user = useTracker(() => Meteor.user(), []);

@@ -43,7 +43,6 @@ export default function DiscoveryTypeForm({ setOpen, useSubdrawer }) {
           message.success(`Discovery type ${model?._id ? 'updated' : 'created'} successful`);
         })
         .catch(error => {
-          console.error(error);
           notification.error({
             message: error.error,
             description: error.message,

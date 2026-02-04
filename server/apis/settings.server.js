@@ -47,8 +47,10 @@ if (Meteor.isServer) {
       validateString(filter, false);
       try {
         const setting = await SettingsCollection.findOneAsync(filter);
-        return setting?.value;
+        if (!setting) throw new Meteor.Error(404, 'Setting not found');
+        return setting.value;
       } catch (error) {
+        if (error.error === 404) throw error;
         throw new Meteor.Error(error.message);
       }
     },
