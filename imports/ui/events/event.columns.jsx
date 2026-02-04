@@ -8,21 +8,22 @@ import TableActions from '../table/body/actions/TableActions';
  * @param {object} [permissions={}] - Permission flags for the current user.
  * @param {boolean} [permissions.canUpdate=true] - Whether the user can update events.
  * @param {boolean} [permissions.canDelete=true] - Whether the user can delete events.
+ * @param {function} [t=k=>k] - Translation function for i18n.
  * @returns {Array} Array of column configuration objects for Ant Design Table.
  */
-const getEventColumns = (handleEdit, handleDelete, permissions = {}) => {
+const getEventColumns = (handleEdit, handleDelete, permissions = {}, t = k => k) => {
   const { canUpdate = true, canDelete = true } = permissions;
 
   const columns = [
     {
-      title: 'Name',
+      title: t('common.name'),
       dataIndex: 'name',
       key: 'name',
       ellipsis: true,
       sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
     },
     {
-      title: 'Description',
+      title: t('common.description'),
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
@@ -33,7 +34,7 @@ const getEventColumns = (handleEdit, handleDelete, permissions = {}) => {
   // Only add Actions column if user has update or delete permission
   if (canUpdate || canDelete) {
     columns.push({
-      title: 'Actions',
+      title: t('common.actions'),
       dataIndex: '_id',
       key: '_id',
       render: (id, record) => (

@@ -3,37 +3,37 @@ import TableActions from '../table/body/actions/TableActions';
 import DiscoveryTypeTag from './discovery-types/DiscoveryTypeTag';
 import RegistrationExtra from './RegistrationExtra';
 
-export default function getRegistrationColumns(handleEdit, handleDelete, permissions = {}) {
+export default function getRegistrationColumns(handleEdit, handleDelete, permissions = {}, t = k => k) {
   const { canUpdate = true, canDelete = true } = permissions;
 
   const columns = [
     {
-      title: 'Name',
+      title: t('common.name'),
       dataIndex: 'name',
       key: 'name',
       sorter: (a, b) => a.name.localeCompare(b.name),
     },
     {
-      title: 'ID',
+      title: t('columns.id'),
       dataIndex: 'id',
       key: 'id',
       sorter: (a, b) => String(a.id).localeCompare(String(b.id)),
     },
     {
-      title: 'Age',
+      title: t('columns.age'),
       dataIndex: 'age',
       key: 'age',
       sorter: (a, b) => a.age - b.age,
     },
     {
-      title: 'Discovery Type',
+      title: t('columns.discoveryType'),
       dataIndex: 'discoveryType',
       key: 'discoveryType',
       sorter: (a, b) => a.discoveryType.localeCompare(b.discoveryType),
       render: discoveryType => <DiscoveryTypeTag discoveryTypeId={discoveryType} />,
     },
     {
-      title: 'Description',
+      title: t('common.description'),
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
@@ -43,7 +43,7 @@ export default function getRegistrationColumns(handleEdit, handleDelete, permiss
 
   if (canUpdate || canDelete) {
     columns.push({
-      title: 'Actions',
+      title: t('common.actions'),
       dataIndex: '_id',
       key: '_id',
       render: (id, record) => (

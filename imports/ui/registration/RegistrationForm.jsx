@@ -3,6 +3,7 @@ import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import DiscoveryTypesCollection from '../../api/collections/discoveryTypes.collection';
+import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
 import CollectionSelect from '../components/CollectionSelect';
 import DiscoveryTypeForm from './discovery-types/DiscoveryTypesForm';
@@ -11,6 +12,7 @@ export default function RegistrationForm({ setOpen }) {
   const [form] = Form.useForm();
   const drawer = useContext(DrawerContext);
   const { message, notification } = App.useApp();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [disableSubmit, setDisableSubmit] = useState(false);
   const [nameError, setNameError] = useState(undefined);
@@ -71,7 +73,7 @@ export default function RegistrationForm({ setOpen }) {
         .then(() => {
           setOpen(false);
           form.resetFields();
-          message.success('Registration successful');
+          message.success(t('messages.registrationSuccessful'));
         })
         .catch(error => {
           notification.error({
@@ -111,18 +113,18 @@ export default function RegistrationForm({ setOpen }) {
           type="error"
           description={
             <Row gutter={[16, 16]}>
-              {nameError === 'error' && <Col span={24}>Name already in use</Col>}
-              {idError === 'error' && <Col span={24}>ID already in use</Col>}
+              {nameError === 'error' && <Col span={24}>{t('forms.errors.nameAlreadyInUse')}</Col>}
+              {idError === 'error' && <Col span={24}>{t('forms.errors.idAlreadyInUse')}</Col>}
             </Row>
           }
         />
       )}
-      <Form.Item name="name" label="Desired Name" rules={[{ required: true, type: 'string' }]} status={nameError} required>
-        <Input placeholder="Enter desired name" />
+      <Form.Item name="name" label={t('forms.labels.desiredName')} rules={[{ required: true, type: 'string' }]} status={nameError} required>
+        <Input placeholder={t('forms.placeholders.enterDesiredName')} />
       </Form.Item>
       <Form.Item
         name="id"
-        label="Desired ID"
+        label={t('forms.labels.desiredId')}
         rules={[
           { required: true, type: 'number' },
           { min: 1000, max: 9999, type: 'number' },
@@ -130,47 +132,47 @@ export default function RegistrationForm({ setOpen }) {
         status={idError}
         required
       >
-        <InputNumber min={1000} max={9999} step={1} placeholder="Enter desired ID" />
+        <InputNumber min={1000} max={9999} step={1} placeholder={t('forms.placeholders.enterDesiredId')} />
       </Form.Item>
       <Form.Item
         name="age"
-        label="Age"
+        label={t('forms.labels.age')}
         rules={[
           { required: true, type: 'number' },
           { type: 'number', min: 16 },
         ]}
         required
       >
-        <InputNumber min={16} step={1} placeholder="Enter age" />
+        <InputNumber min={16} step={1} placeholder={t('forms.placeholders.enterAge')} />
       </Form.Item>
       <CollectionSelect
         defaultValue={model?.discoveryType}
         name="discoveryType"
         subscription="discoveryTypes"
-        label="Discovery Type"
+        label={t('forms.labels.discoveryType')}
         rules={[{ required: false, type: 'string' }]}
-        placeholder="Select discovery type"
+        placeholder={t('forms.placeholders.selectDiscoveryType')}
         collection={DiscoveryTypesCollection}
         FormComponent={DiscoveryTypeForm}
       />
-      <Form.Item name="rulesReadAndAccepted" label="I read the rules and accept them" rules={[{ required: true, type: 'boolean' }]} required>
+      <Form.Item name="rulesReadAndAccepted" label={t('forms.labels.rulesAccepted')} rules={[{ required: true, type: 'boolean' }]} required>
         <Switch />
       </Form.Item>
       {Meteor.user() && (
-        <Form.Item name="description" label="Description" rules={[{ type: 'string' }]}>
-          <Input.TextArea autoSize placeholder="Enter description" />
+        <Form.Item name="description" label={t('common.description')} rules={[{ type: 'string' }]}>
+          <Input.TextArea autoSize placeholder={t('forms.placeholders.enterDescription')} />
         </Form.Item>
       )}
       <Row gutter={[16, 16]} align="middle" justify="end">
         <Col>
           <Button onClick={() => setOpen(false)} danger>
-            Cancel
+            {t('common.cancel')}
           </Button>
         </Col>
         <Col>
-          <Tooltip title={disableSubmit ? 'Please read and accept the rules' : ''}>
+          <Tooltip title={disableSubmit ? t('forms.tooltips.pleaseReadAndAcceptRules') : ''}>
             <Button type="primary" htmlType="submit" loading={loading} disabled={disableSubmit}>
-              Submit
+              {t('common.submit')}
             </Button>
           </Tooltip>
         </Col>

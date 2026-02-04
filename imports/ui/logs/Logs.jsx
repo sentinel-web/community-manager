@@ -4,6 +4,7 @@ import { Meteor } from 'meteor/meteor';
 import { useFind, useSubscribe } from 'meteor/react-meteor-data';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import LogsCollection from '../../api/collections/logs.collection';
+import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
 import SectionCard from '../section/SectionCard';
 import TableContainer from '../table/body/TableContainer';
@@ -43,6 +44,7 @@ export default function Logs() {
   const [dateRange, setDateRange] = useState(defaultDateRange);
   const [filter, setFilter] = useState(() => buildFilter('', defaultDateRange));
   const [options, setOptions] = useState({ limit: 20, sort: { timestamp: -1 } });
+  const { t } = useTranslation();
 
   useSubscribe('logs', filter, options);
   const datasource = useFind(() => LogsCollection.find(filter, options), [filter, options]);
@@ -66,12 +68,12 @@ export default function Logs() {
     (e, record) => {
       e.preventDefault();
       drawer.setDrawerModel(record);
-      drawer.setDrawerTitle('View Log');
+      drawer.setDrawerTitle(t('logs.viewLog'));
       drawer.setDrawerComponent(React.createElement(LogViewer));
       drawer.setDrawerOpen(true);
       drawer.setDrawerExtra(<></>);
     },
-    [drawer]
+    [drawer, t]
   );
 
   const handleDelete = useCallback(
@@ -79,7 +81,7 @@ export default function Logs() {
       e.preventDefault();
       try {
         await Meteor.callAsync('logs.remove', record._id);
-        message.success('Log deleted');
+        message.success(t('messages.deleteSuccess'));
       } catch (error) {
         notification.error({
           message: error.error,
@@ -87,10 +89,10 @@ export default function Logs() {
         });
       }
     },
-    [notification, message]
+    [notification, message, t]
   );
 
-  const columns = useMemo(() => getLogsColumns(handleView, handleDelete), [handleView, handleDelete]);
+  const columns = useMemo(() => getLogsColumns(handleView, handleDelete, t), [handleView, handleDelete, t]);
 
   const handleLoadMore = useCallback(() => {
     setOptions(prevOptions => ({ ...prevOptions, limit: prevOptions.limit + 20 }));
@@ -99,12 +101,12 @@ export default function Logs() {
   const loadMoreDisabled = useMemo(() => datasource?.length < options?.limit, [options, datasource]);
 
   return (
-    <SectionCard title="Logs" ready={true}>
+    <SectionCard title={t('logs.title')} ready={true}>
       <Row gutter={[16, 16]}>
         <Col span={24}>
           <Row gutter={[16, 16]}>
             <Col xs={24} sm={12} md={8}>
-              <Input.Search placeholder="Filter by action..." value={actionInput} onChange={handleActionChange} allowClear />
+              <Input.Search placeholder={t('logs.filterByAction')} value={actionInput} onChange={handleActionChange} allowClear />
             </Col>
             <Col xs={24} sm={12} md={8}>
               <RangePicker value={dateRange} onChange={handleDateRangeChange} style={{ width: '100%' }} allowClear />

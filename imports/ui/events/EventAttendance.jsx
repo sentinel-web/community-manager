@@ -8,6 +8,7 @@ import React, { useMemo, useState } from 'react';
 import AttendancesCollection from '../../api/collections/attendances.collection';
 import MembersCollection from '../../api/collections/members.collection';
 import RanksCollection from '../../api/collections/ranks.collection';
+import { useTranslation } from '../../i18n/LanguageContext';
 import TableContainer from '../table/body/TableContainer';
 import Table from '../table/Table';
 
@@ -21,6 +22,7 @@ MemberName.propTypes = {
 };
 
 function AttendanceOption({ value, setEditting }) {
+  const { t } = useTranslation();
   const colorMap = useMemo(() => {
     return {
       '-1': 'red',
@@ -30,11 +32,11 @@ function AttendanceOption({ value, setEditting }) {
   }, []);
   const label = useMemo(() => {
     return {
-      '-1': 'Absent (No Show)',
-      0: 'Excused',
-      1: 'Present',
+      '-1': t('events.absent'),
+      0: t('events.excused'),
+      1: t('events.present'),
     }[value];
-  }, [value]);
+  }, [value, t]);
 
   return (
     <Row gutter={[4, 4]} align="middle">
@@ -55,6 +57,7 @@ AttendanceOption.propTypes = {
 };
 
 function AttendanceSelect({ value, eventId, memberId, setEditting }) {
+  const { t } = useTranslation();
   const handleChange = newValue => {
     if (value === newValue) return;
     Meteor.callAsync('attendances.read', { eventId }, { limit: 1 })
@@ -68,17 +71,22 @@ function AttendanceSelect({ value, eventId, memberId, setEditting }) {
       });
   };
 
+  const options = useMemo(
+    () => [
+      { value: -1, label: t('events.absent') },
+      { value: 0, label: t('events.excused') },
+      { value: 1, label: t('events.present') },
+    ],
+    [t]
+  );
+
   return (
     <Row gutter={[4, 4]} align="middle">
       <Col>
         <Select
           value={value}
           onChange={handleChange}
-          options={[
-            { value: -1, label: 'Absent (No Show)' },
-            { value: 0, label: 'Excused' },
-            { value: 1, label: 'Present' },
-          ]}
+          options={options}
           style={{ minWidth: 100, width: '100%' }}
           optionFilterProp="label"
           showSearch
@@ -111,24 +119,24 @@ AttendanceRender.propTypes = {
   memberId: PropTypes.string,
 };
 
-function transformEventsIntoColumns(events, memberNameMap) {
+function transformEventsIntoColumns(events, memberNameMap, t) {
   const columns = [
     {
-      title: 'Name',
+      title: t('common.name'),
       dataIndex: 'memberId',
       key: 'memberId',
       ellipsis: true,
       render: memberId => <MemberName memberId={memberId} memberNameMap={memberNameMap} />,
     },
     {
-      title: 'IP (Inactivity Points)',
+      title: t('events.inactivityPoints'),
       dataIndex: 'ip',
       key: 'ip',
       ellipsis: true,
       sorter: (a, b) => a.ip - b.ip,
     },
     {
-      title: 'Attendance Points',
+      title: t('events.attendancePoints'),
       dataIndex: 'points',
       key: 'points',
       ellipsis: true,
@@ -152,6 +160,7 @@ function transformEventsIntoColumns(events, memberNameMap) {
 }
 
 export default function EventAttendance({ datasource }) {
+  const { t } = useTranslation();
   // Attendance grid needs all members and attendances for the selected events
   useSubscribe('attendances', { eventId: { $in: datasource.map(event => event._id) } }, { limit: 1000 });
   const attendances = useFind(() => AttendancesCollection.find({ eventId: { $in: datasource.map(event => event._id) } }), [datasource]);
@@ -173,7 +182,7 @@ export default function EventAttendance({ datasource }) {
     );
   }, [members, ranks]);
 
-  const columns = useMemo(() => transformEventsIntoColumns(datasource, memberNameMap), [datasource, memberNameMap]);
+  const columns = useMemo(() => transformEventsIntoColumns(datasource, memberNameMap, t), [datasource, memberNameMap, t]);
   const rows = useMemo(() => {
     return members.map(member => {
       return {

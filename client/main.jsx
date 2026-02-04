@@ -4,10 +4,7 @@ import { createRoot } from 'react-dom/client';
 import ReactTarget from '../imports/ui/ReactTarget';
 
 Meteor.startup(() => {
-  const html = document.querySelector('html');
-  if (html) {
-    html.setAttribute('lang', 'en');
-  }
+  // Language is set dynamically by LanguageProvider based on user preference
   const container = document.getElementById('react-target');
   if (container) {
     const root = createRoot(container);

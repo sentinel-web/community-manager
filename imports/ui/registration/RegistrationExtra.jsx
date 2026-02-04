@@ -2,8 +2,10 @@ import { App, Button, Form, Input, Modal, Space } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from '/imports/i18n/LanguageContext';
 
 const ConfirmModal = ({ open, setOpen, record }) => {
+  const { t } = useTranslation();
   const { message, notification } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
@@ -12,8 +14,8 @@ const ConfirmModal = ({ open, setOpen, record }) => {
     setLoading(true);
     if (!record) {
       notification.error({
-        message: 'Error',
-        description: 'Data not found',
+        message: t('common.error'),
+        description: t('registrations.dataNotFound'),
       });
       setLoading(false);
       return;
@@ -29,7 +31,7 @@ const ConfirmModal = ({ open, setOpen, record }) => {
         profile: { name, id, age, discoveryType, description, registrationId: record._id },
       };
       await Meteor.callAsync('members.insert', payload);
-      message.success('Member created');
+      message.success(t('registrations.memberCreated'));
       setOpen(false);
     } catch (error) {
       notification.error({
@@ -39,7 +41,7 @@ const ConfirmModal = ({ open, setOpen, record }) => {
     } finally {
       setLoading(false);
     }
-  }, [form, record, setOpen, message, notification]);
+  }, [form, record, setOpen, message, notification, t]);
 
   const toggleOpen = useCallback(() => setOpen(prevOpen => !prevOpen), [setOpen]);
 
@@ -49,16 +51,16 @@ const ConfirmModal = ({ open, setOpen, record }) => {
       okButttonProps={{ loading }}
       onOk={handleCreate}
       onCancel={toggleOpen}
-      okText="Submit"
-      cancelText="Cancel"
-      title="Please select a username and a password"
+      okText={t('common.submit')}
+      cancelText={t('common.cancel')}
+      title={t('registrations.selectUsernamePassword')}
     >
       <Form form={form} layout="vertical">
-        <Form.Item label="Username" name="username" rules={[{ required: true, type: 'string' }]} required>
-          <Input placeholder="Enter username" autoComplete="current-username" />
+        <Form.Item label={t('auth.username')} name="username" rules={[{ required: true, type: 'string' }]} required>
+          <Input placeholder={t('auth.enterUsername')} autoComplete="current-username" />
         </Form.Item>
-        <Form.Item label="Password" name="password" rules={[{ required: true, type: 'string' }]} required>
-          <Input.Password placeholder="Enter password" autoComplete="current-password" />
+        <Form.Item label={t('auth.password')} name="password" rules={[{ required: true, type: 'string' }]} required>
+          <Input.Password placeholder={t('auth.enterPassword')} autoComplete="current-password" />
         </Form.Item>
       </Form>
     </Modal>
@@ -71,6 +73,7 @@ ConfirmModal.propTypes = {
 };
 
 export default function RegistrationExtra({ record }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   const [createdAlready, setCreatedAlready] = useState(true);
@@ -85,7 +88,7 @@ export default function RegistrationExtra({ record }) {
   return (
     <Space>
       <Button disabled={createdAlready} onClick={() => setOpen(true)}>
-        Create member
+        {t('registrations.createMember')}
       </Button>
       <ConfirmModal open={open} setOpen={setOpen} record={record} />
     </Space>

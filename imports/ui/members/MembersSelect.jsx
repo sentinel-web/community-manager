@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 import MembersCollection from '../../api/collections/members.collection';
+import { useTranslation } from '../../i18n/LanguageContext';
 import CollectionSelect from '../components/CollectionSelect';
 import MemberForm from './MemberForm';
 
 export default function MembersSelect({ multiple, name, label, rules, defaultValue }) {
+  const { t } = useTranslation();
   return (
     <CollectionSelect
       defaultValue={defaultValue}
@@ -15,7 +17,7 @@ export default function MembersSelect({ multiple, name, label, rules, defaultVal
       collection={MembersCollection}
       FormComponent={MemberForm}
       subscription="members"
-      placeholder={multiple ? 'Select members' : 'Select member'}
+      placeholder={t('common.selectMembers')}
       extra={<></>}
     />
   );

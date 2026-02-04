@@ -11,14 +11,15 @@ import RankTag from './ranks/RankTag';
  * @param {object} [permissions={}] - Permission flags for the current user.
  * @param {boolean} [permissions.canUpdate=true] - Whether the user can update members.
  * @param {boolean} [permissions.canDelete=true] - Whether the user can delete members.
+ * @param {function} [t=k=>k] - Translation function for i18n.
  * @returns {Array} Array of column configuration objects for Ant Design Table.
  */
-export default function getMembersColumns(handleEdit, handleDelete, permissions = {}) {
+export default function getMembersColumns(handleEdit, handleDelete, permissions = {}, t = k => k) {
   const { canUpdate = true, canDelete = true } = permissions;
 
   const columns = [
     {
-      title: 'Squad',
+      title: t('members.squad'),
       dataIndex: 'profile.squadId',
       key: 'profile.squadId',
       ellipsis: true,
@@ -26,7 +27,7 @@ export default function getMembersColumns(handleEdit, handleDelete, permissions 
       render: (squadId, record) => (record?.profile?.squadId ? <SquadTags squadIds={[record.profile.squadId]} /> : '-'),
     },
     {
-      title: 'Rank',
+      title: t('members.rank'),
       dataIndex: 'rankId',
       key: 'profile.rankId',
       ellipsis: true,
@@ -38,7 +39,7 @@ export default function getMembersColumns(handleEdit, handleDelete, permissions 
       render: (rankId, record) => <RankTag rankId={record.profile?.rankId} />,
     },
     {
-      title: 'ID',
+      title: t('columns.id'),
       dataIndex: 'id',
       key: 'profile.id',
       ellipsis: true,
@@ -46,7 +47,7 @@ export default function getMembersColumns(handleEdit, handleDelete, permissions 
       render: (id, record) => (record.profile?.id ? record.profile.id : '-'),
     },
     {
-      title: 'Name',
+      title: t('common.name'),
       dataIndex: 'profile.name',
       key: 'profile.name',
       ellipsis: true,
@@ -58,7 +59,7 @@ export default function getMembersColumns(handleEdit, handleDelete, permissions 
   // Only add Actions column if user has update or delete permission
   if (canUpdate || canDelete) {
     columns.push({
-      title: 'Actions',
+      title: t('common.actions'),
       dataIndex: '_id',
       key: '_id',
       render: (_id, record) => (

@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 import RanksCollection from '../../../api/collections/ranks.collection';
+import { useTranslation } from '../../../i18n/LanguageContext';
 import CollectionSelect from '../../components/CollectionSelect';
 import RanksForm from './RanksForm';
 
 const RanksSelect = ({ multiple, name, label, rules, defaultValue }) => {
+  const { t } = useTranslation();
   return (
     <CollectionSelect
       defaultValue={defaultValue}
@@ -15,7 +17,7 @@ const RanksSelect = ({ multiple, name, label, rules, defaultValue }) => {
       mode={multiple ? 'multiple' : undefined}
       FormComponent={RanksForm}
       subscription="ranks"
-      placeholder={multiple ? 'Select ranks' : 'Select rank'}
+      placeholder={t('common.selectRank')}
       extra={<></>}
     />
   );

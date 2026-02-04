@@ -9,28 +9,29 @@ import TableActions from '../../table/body/actions/TableActions';
  * @param {object} [permissions={}] - Permission flags for the current user.
  * @param {boolean} [permissions.canUpdate=true] - Whether the user can update roles.
  * @param {boolean} [permissions.canDelete=true] - Whether the user can delete roles.
+ * @param {function} [t=k=>k] - Translation function for i18n.
  * @returns {Array} Array of column configuration objects for Ant Design Table.
  */
-const getRolesColumns = (handleEdit, handleDelete, permissions = {}) => {
+const getRolesColumns = (handleEdit, handleDelete, permissions = {}, t = k => k) => {
   const { canUpdate = true, canDelete = true } = permissions;
 
   const columns = [
     {
-      title: 'Name',
+      title: t('common.name'),
       dataIndex: 'name',
       key: 'name',
       ellipsis: true,
       sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
     },
     {
-      title: 'Description',
+      title: t('common.description'),
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
       sorter: (a, b) => (a.description || '').localeCompare(b.description || ''),
     },
     {
-      title: 'Color',
+      title: t('common.color'),
       dataIndex: 'color',
       key: 'color',
       ellipsis: true,
@@ -41,7 +42,7 @@ const getRolesColumns = (handleEdit, handleDelete, permissions = {}) => {
 
   if (canUpdate || canDelete) {
     columns.push({
-      title: 'Actions',
+      title: t('common.actions'),
       dataIndex: '_id',
       key: '_id',
       render: (id, record) => (

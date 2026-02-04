@@ -4,12 +4,14 @@ import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
 import { useTracker } from 'meteor/react-meteor-data';
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from '../../i18n/LanguageContext';
 import ProfileModal from '../members/ProfileModal';
 
 export default function Footer() {
   const breakpoints = Grid.useBreakpoint();
   const user = useTracker(() => Meteor.user(), []);
   const { modal, message } = App.useApp();
+  const { t } = useTranslation();
   const [imageSrc, setImageSrc] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
 
@@ -44,29 +46,29 @@ export default function Footer() {
     }
 
     modal.confirm({
-      title: 'Change Password',
+      title: t('auth.changePassword'),
       footer: null,
       centered: true,
       closable: true,
       content: (
         <Form layout="vertical" onFinish={handleSubmit}>
-          <Form.Item label="Current Password" name="oldPassword" rules={[{ required: true, type: 'string' }]} required>
-            <Input.Password placeholder="Enter password" autoComplete="off" />
+          <Form.Item label={t('auth.currentPassword')} name="oldPassword" rules={[{ required: true, type: 'string' }]} required>
+            <Input.Password placeholder={t('forms.placeholders.enterPassword')} autoComplete="off" />
           </Form.Item>
-          <Form.Item label="New Password" name="newPassword" rules={[{ required: true, type: 'string' }]} required>
-            <Input.Password placeholder="Enter password" autoComplete="off" />
+          <Form.Item label={t('auth.newPassword')} name="newPassword" rules={[{ required: true, type: 'string' }]} required>
+            <Input.Password placeholder={t('forms.placeholders.enterPassword')} autoComplete="off" />
           </Form.Item>
           <Row gutter={[16, 16]} justify="end" align="middle">
             <Col>
               <Button type="primary" htmlType="submit">
-                Sumbit
+                {t('common.submit')}
               </Button>
             </Col>
           </Row>
         </Form>
       ),
     });
-  }, [modal, message]);
+  }, [modal, message, t]);
 
   if (!user) {
     return <></>;
@@ -112,9 +114,9 @@ export default function Footer() {
           trigger={['click']}
           menu={{
             items: [
-              { key: 'changePassword', label: 'Change Password', icon: <LockFilled />, onClick: startChangePassword },
-              { key: 'profile', label: 'Profile', icon: <IdcardOutlined />, onClick: toggleProfile },
-              { key: 'logout', label: 'Logout', danger: true, icon: <LogoutOutlined />, onClick: () => Meteor.logout() },
+              { key: 'changePassword', label: t('auth.changePassword'), icon: <LockFilled />, onClick: startChangePassword },
+              { key: 'profile', label: t('auth.profile'), icon: <IdcardOutlined />, onClick: toggleProfile },
+              { key: 'logout', label: t('auth.logout'), danger: true, icon: <LogoutOutlined />, onClick: () => Meteor.logout() },
             ],
           }}
         >

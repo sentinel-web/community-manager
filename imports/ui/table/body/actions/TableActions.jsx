@@ -1,9 +1,11 @@
 import { App, Button, Col, Row } from 'antd';
 import PropTypes from 'prop-types';
 import React, { useCallback } from 'react';
+import { useTranslation } from '/imports/i18n/LanguageContext';
 
 export default function TableActions({ record, handleDelete, handleEdit, extra, canUpdate = true, canDelete = true }) {
   const { modal } = App.useApp();
+  const { t } = useTranslation();
   const styles = {
     button: {
       width: '100%',
@@ -12,16 +14,17 @@ export default function TableActions({ record, handleDelete, handleEdit, extra, 
   const handleRemove = useCallback(
     e => {
       modal.confirm({
-        title: 'Delete Entry',
-        content: 'Are you sure you want to delete this entry?',
-        okText: 'Yes',
+        title: t('modals.deleteEntry'),
+        content: t('modals.deleteEntryConfirm'),
+        okText: t('common.yes'),
+        cancelText: t('common.cancel'),
         okType: 'danger',
         onOk: () => handleDelete(e, record),
         closable: true,
         maskClosable: true,
       });
     },
-    [modal, handleDelete, record]
+    [modal, handleDelete, record, t]
   );
 
   // Don't render anything if no actions are available
@@ -34,14 +37,14 @@ export default function TableActions({ record, handleDelete, handleEdit, extra, 
       {canUpdate && (
         <Col flex="auto">
           <Button style={styles.button} onClick={e => handleEdit(e, record)}>
-            Edit
+            {t('common.edit')}
           </Button>
         </Col>
       )}
       {canDelete && (
         <Col flex="auto">
           <Button style={styles.button} onClick={e => handleRemove(e, record)} danger>
-            Delete
+            {t('common.delete')}
           </Button>
         </Col>
       )}

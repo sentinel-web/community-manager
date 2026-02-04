@@ -3,6 +3,7 @@ import { App, Card, Checkbox, ColorPicker, Form, Input, Space, Switch, Typograph
 import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useMemo } from 'react';
+import { useTranslation } from '/imports/i18n/LanguageContext';
 import { DrawerContext } from '../../app/App';
 import FormFooter from '../../components/FormFooter';
 import { getColorFromValues } from '../../specializations/SpecializationForm';
@@ -10,21 +11,21 @@ import { getColorFromValues } from '../../specializations/SpecializationForm';
 // Modules that use boolean permissions (true/false)
 const BOOLEAN_MODULES = ['dashboard', 'orbat', 'logs', 'settings'];
 
-// Modules that use CRUD permissions
+// Modules that use CRUD permissions - label keys reference navigation translations
 const CRUD_MODULES = [
-  { name: 'members', label: 'Members' },
-  { name: 'events', label: 'Events' },
-  { name: 'tasks', label: 'Tasks' },
-  { name: 'squads', label: 'Squads' },
-  { name: 'ranks', label: 'Ranks' },
-  { name: 'specializations', label: 'Specializations' },
-  { name: 'medals', label: 'Medals' },
-  { name: 'eventTypes', label: 'Event Types' },
-  { name: 'taskStatus', label: 'Task Status' },
-  { name: 'registrations', label: 'Registrations' },
-  { name: 'discoveryTypes', label: 'Discovery Types' },
-  { name: 'roles', label: 'Roles' },
-  { name: 'questionnaires', label: 'Questionnaires' },
+  { name: 'members', labelKey: 'navigation.members' },
+  { name: 'events', labelKey: 'navigation.events' },
+  { name: 'tasks', labelKey: 'navigation.tasks' },
+  { name: 'squads', labelKey: 'navigation.squads' },
+  { name: 'ranks', labelKey: 'navigation.ranks' },
+  { name: 'specializations', labelKey: 'navigation.specializations' },
+  { name: 'medals', labelKey: 'navigation.medals' },
+  { name: 'eventTypes', labelKey: 'navigation.eventTypes' },
+  { name: 'taskStatus', labelKey: 'navigation.taskStatus' },
+  { name: 'registrations', labelKey: 'navigation.registrations' },
+  { name: 'discoveryTypes', labelKey: 'navigation.discoveryTypes' },
+  { name: 'roles', labelKey: 'navigation.roles' },
+  { name: 'questionnaires', labelKey: 'navigation.questionnaires' },
 ];
 
 /**
@@ -55,6 +56,7 @@ function prepareModelForForm(model) {
 }
 
 const RolesForm = ({ setOpen }) => {
+  const { t } = useTranslation();
   const { drawerModel: model } = useContext(DrawerContext);
   const { message, notification } = App.useApp();
   const { isUpdate, endpoint } = useMemo(
@@ -68,7 +70,7 @@ const RolesForm = ({ setOpen }) => {
         const args = [...(model?._id ? [model._id] : []), { ...values, color: getColorFromValues(values) }];
         await Meteor.callAsync(endpoint, ...args);
         setOpen(false);
-        message.success(isUpdate ? 'Role updated' : 'Role created');
+        message.success(isUpdate ? t('messages.roleUpdated') : t('messages.roleCreated'));
       } catch (error) {
         notification.error({
           message: error.error,
@@ -76,7 +78,7 @@ const RolesForm = ({ setOpen }) => {
         });
       }
     },
-    [setOpen, endpoint, model?._id, isUpdate, message, notification]
+    [setOpen, endpoint, model?._id, isUpdate, message, notification, t]
   );
 
   const [form] = Form.useForm();
@@ -84,29 +86,29 @@ const RolesForm = ({ setOpen }) => {
 
   return (
     <Form layout="vertical" form={form} onFinish={handleFinish} initialValues={initialValues}>
-      <Form.Item name="name" label="Name" rules={[{ required: true, type: 'string' }]} required>
-        <Input placeholder="Enter name" />
+      <Form.Item name="name" label={t('common.name')} rules={[{ required: true, type: 'string' }]} required>
+        <Input placeholder={t('forms.placeholders.enterName')} />
       </Form.Item>
-      <Form.Item name="description" label="Description" rules={[{ required: false, type: 'string' }]}>
-        <Input.TextArea placeholder="Enter description" />
+      <Form.Item name="description" label={t('common.description')} rules={[{ required: false, type: 'string' }]}>
+        <Input.TextArea placeholder={t('forms.placeholders.enterDescription')} />
       </Form.Item>
-      <Form.Item name="color" label="Color">
+      <Form.Item name="color" label={t('common.color')}>
         <ColorPicker format="hex" />
       </Form.Item>
 
       <Typography.Title level={5} style={{ marginTop: 16 }}>
-        Basic Permissions
+        {t('members.basicPermissions')}
       </Typography.Title>
-      <RuleInput name="dashboard" label="Dashboard" />
-      <RuleInput name="orbat" label="Orbat" />
-      <RuleInput name="logs" label="Logs" />
-      <RuleInput name="settings" label="Settings" />
+      <RuleInput name="dashboard" label={t('navigation.dashboard')} />
+      <RuleInput name="orbat" label={t('navigation.orbat')} />
+      <RuleInput name="logs" label={t('navigation.logs')} />
+      <RuleInput name="settings" label={t('navigation.settings')} />
 
       <Typography.Title level={5} style={{ marginTop: 16 }}>
-        CRUD Permissions
+        {t('members.crudPermissions')}
       </Typography.Title>
-      {CRUD_MODULES.map(({ name, label }) => (
-        <CrudPermissionInput key={name} name={name} label={label} />
+      {CRUD_MODULES.map(({ name, labelKey }) => (
+        <CrudPermissionInput key={name} name={name} label={t(labelKey)} t={t} />
       ))}
 
       <FormFooter setOpen={setOpen} />
@@ -129,21 +131,21 @@ RuleInput.propTypes = {
   label: PropTypes.string,
 };
 
-const CrudPermissionInput = ({ name, label }) => {
+const CrudPermissionInput = ({ name, label, t }) => {
   return (
     <Card size="small" title={label} style={{ marginBottom: 16 }}>
       <Space wrap>
         <Form.Item name={[name, 'read']} valuePropName="checked" style={{ marginBottom: 0 }}>
-          <Checkbox>Read</Checkbox>
+          <Checkbox>{t('common.read')}</Checkbox>
         </Form.Item>
         <Form.Item name={[name, 'create']} valuePropName="checked" style={{ marginBottom: 0 }}>
-          <Checkbox>Create</Checkbox>
+          <Checkbox>{t('common.create')}</Checkbox>
         </Form.Item>
         <Form.Item name={[name, 'update']} valuePropName="checked" style={{ marginBottom: 0 }}>
-          <Checkbox>Update</Checkbox>
+          <Checkbox>{t('common.update')}</Checkbox>
         </Form.Item>
         <Form.Item name={[name, 'delete']} valuePropName="checked" style={{ marginBottom: 0 }}>
-          <Checkbox>Delete</Checkbox>
+          <Checkbox>{t('common.delete')}</Checkbox>
         </Form.Item>
       </Space>
     </Card>
@@ -152,6 +154,7 @@ const CrudPermissionInput = ({ name, label }) => {
 CrudPermissionInput.propTypes = {
   name: PropTypes.string,
   label: PropTypes.string,
+  t: PropTypes.func,
 };
 
 export default RolesForm;

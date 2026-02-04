@@ -28,6 +28,7 @@ server/crud.lib.js      # Generic CRUD method/publish generator
 server/config.js        # Server settings with Meteor.settings overrides
 imports/api/collections/  # MongoDB collection definitions (16 collections)
 imports/ui/             # React components organized by feature
+imports/i18n/           # Localization (i18n) - LanguageContext, locales/
 imports/helpers/        # Utility functions
 imports/config.js       # UI constants (breakpoints, layout ratios)
 settings.example.json   # Example configuration overrides
@@ -52,9 +53,18 @@ settings.example.json   # Example configuration overrides
 - See `settings.example.json` for available overrides
 
 **State Management**
-- React Context: NavigationContext, ThemeContext, DrawerContext, SubdrawerContext
+- React Context: NavigationContext, ThemeContext, DrawerContext, SubdrawerContext, LanguageContext
 - Meteor hooks: `useTracker()`, `useFind()`, `useSubscribe()` for reactive data
 - Pathname-based routing without router library (reads `window.location.pathname`)
+
+**Localization (i18n)**
+- Custom lightweight i18n system in `imports/i18n/`
+- Supported languages: English (en), German (de), French (fr)
+- Locale files in `imports/i18n/locales/` as JSON
+- Use `useTranslation()` hook to get `t()` function
+- Use `useLanguage()` hook for full context (language, setLanguage, t, locales)
+- Language persisted in localStorage, auto-detects browser language
+- LanguageSelector component in header for switching languages
 
 **Validation** (server/main.js)
 - `validateString()`, `validateNumber()`, `validateBoolean()`, `validateDate()`

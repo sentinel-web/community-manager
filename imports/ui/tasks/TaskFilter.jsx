@@ -1,8 +1,9 @@
 import { App, Form, Select } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
-import React, { useCallback, useContext } from 'react';
+import React, { useCallback, useContext, useMemo } from 'react';
 import TaskStatusCollection from '../../api/collections/taskStatus.collection';
+import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
 import CollectionSelect from '../components/CollectionSelect';
 import FormFooter from '../components/FormFooter';
@@ -10,6 +11,7 @@ import MembersSelect from '../members/MembersSelect';
 import TaskStatusForm from './task-status/TaskStatusForm';
 
 const TaskFilter = ({ setOpen }) => {
+  const { t } = useTranslation();
   const { drawerModel: model } = useContext(DrawerContext);
   const { notification } = App.useApp();
   const [form] = Form.useForm();
@@ -30,24 +32,25 @@ const TaskFilter = ({ setOpen }) => {
     [setOpen, notification]
   );
 
+  const typeOptions = useMemo(
+    () => [
+      { value: 'table', label: t('tasks.viewTable') },
+      { value: 'kanban', label: t('tasks.viewKanban') },
+    ],
+    [t]
+  );
+
   return (
     <Form layout="vertical" form={form} onFinish={handleFinish} initialValues={model || { type: 'table', status: [], participants: [] }}>
-      <Form.Item label="Type" name="type" rules={[{ required: false, type: 'string' }]}>
-        <Select
-          placeholder="Select type"
-          allowClear
-          options={[
-            { value: 'table', label: 'Table' },
-            { value: 'kanban', label: 'Kanban' },
-          ]}
-        />
+      <Form.Item label={t('tasks.type')} name="type" rules={[{ required: false, type: 'string' }]}>
+        <Select placeholder={t('tasks.selectType')} allowClear options={typeOptions} />
       </Form.Item>
       <CollectionSelect
         defaultValue={model?.status}
         name="status"
-        label="Status"
+        label={t('common.status')}
         rules={[{ required: false, type: 'array' }]}
-        placeholder="Select status"
+        placeholder={t('common.status')}
         FormComponent={TaskStatusForm}
         collection={TaskStatusCollection}
         mode="multiple"
@@ -55,9 +58,9 @@ const TaskFilter = ({ setOpen }) => {
       />
       <MembersSelect
         name="participants"
-        label="Participants"
+        label={t('tasks.participants')}
         rules={[{ required: false, type: 'array' }]}
-        placeholder="Select participants"
+        placeholder={t('forms.placeholders.selectParticipants')}
         defaultValue={model?.participants}
         multiple
       />

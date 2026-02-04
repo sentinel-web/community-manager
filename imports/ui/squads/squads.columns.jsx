@@ -31,18 +31,18 @@ SquadTags.propTypes = {
   squadIds: PropTypes.array,
 };
 
-const getSquadsColumns = (handleEdit, handleDelete, permissions = {}) => {
+const getSquadsColumns = (handleEdit, handleDelete, permissions = {}, t = k => k) => {
   const { canUpdate = true, canDelete = true } = permissions;
 
   const columns = [
     {
-      title: 'Image',
+      title: t('columns.image'),
       dataIndex: 'image',
       key: 'image',
       render: image => (image ? <img src={image} alt="squad" width="50" height="50" /> : '-'),
     },
     {
-      title: 'Name',
+      title: t('common.name'),
       dataIndex: 'name',
       key: 'name',
       sorter: (a, b) => String(a.name).localeCompare(String(b.name)),
@@ -60,14 +60,14 @@ const getSquadsColumns = (handleEdit, handleDelete, permissions = {}) => {
         ),
     },
     {
-      title: 'Short Range Frequency',
+      title: t('columns.shortRangeFrequency'),
       dataIndex: 'shortRangeFrequency',
       key: 'shortRangeFrequency',
       sorter: (a, b) => String(a.shortRangeFrequency).localeCompare(String(b.shortRangeFrequency)),
       render: shortRangeFrequency => shortRangeFrequency || '-',
     },
     {
-      title: 'Long Range Frequency',
+      title: t('columns.longRangeFrequency'),
       dataIndex: 'longRangeFrequency',
       key: 'longRangeFrequency',
       sorter: (a, b) => String(a.longRangeFrequency).localeCompare(String(b.longRangeFrequency)),
@@ -77,7 +77,7 @@ const getSquadsColumns = (handleEdit, handleDelete, permissions = {}) => {
 
   if (canUpdate || canDelete) {
     columns.push({
-      title: 'Actions',
+      title: t('common.actions'),
       dataIndex: 'actions',
       key: 'actions',
       render: (id, record) => (

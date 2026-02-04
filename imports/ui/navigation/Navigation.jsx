@@ -25,6 +25,7 @@ import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
 import React, { useCallback, useEffect, useMemo } from 'react';
 import RolesCollection from '../../api/collections/roles.collection';
 import useNavigation from './navigation.hook';
+import { useTranslation } from '../../i18n/LanguageContext';
 
 /**
  * Checks if a role has access to a module.
@@ -129,6 +130,7 @@ export function getNavigationValue() {
 export default function Navigation() {
   const breakpoints = Grid.useBreakpoint();
   const user = useTracker(() => Meteor.user(), []);
+  const { t } = useTranslation();
 
   const { navigationValue, setNavigationValue } = useNavigation();
   useEffect(() => {
@@ -159,12 +161,12 @@ export default function Navigation() {
       return [];
     }
     if (hasAccess(role, 'dashboard')) {
-      newItems.push({ key: 'dashboard', label: 'Dashboard', icon: <DashboardOutlined /> });
+      newItems.push({ key: 'dashboard', label: t('navigation.dashboard'), icon: <DashboardOutlined /> });
     }
     if (hasAccess(role, 'orbat')) {
       newItems.push({
         key: 'orbat',
-        label: 'Orbat',
+        label: t('navigation.orbat'),
         icon: <ClusterOutlined />,
       });
     }
@@ -177,14 +179,14 @@ export default function Navigation() {
     if (hasAccess(role, 'events')) {
       newItems.push({
         key: 'events',
-        label: 'Events',
+        label: t('navigation.events'),
         icon: <CalendarOutlined />,
       });
     }
     if (hasAccess(role, 'eventTypes')) {
       newItems.push({
         key: 'eventTypes',
-        label: 'Event Types',
+        label: t('navigation.eventTypes'),
         icon: <TagsOutlined />,
       });
     }
@@ -197,14 +199,14 @@ export default function Navigation() {
     if (hasAccess(role, 'tasks')) {
       newItems.push({
         key: 'tasks',
-        label: 'Tasks',
+        label: t('navigation.tasks'),
         icon: <CheckCircleOutlined />,
       });
     }
     if (hasAccess(role, 'taskStatus')) {
       newItems.push({
         key: 'taskStatus',
-        label: 'Task Statuses',
+        label: t('navigation.taskStatus'),
         icon: <OrderedListOutlined />,
       });
     }
@@ -217,35 +219,35 @@ export default function Navigation() {
     if (hasAccess(role, 'squads')) {
       newItems.push({
         key: 'squads',
-        label: 'Squads',
+        label: t('navigation.squads'),
         icon: <TeamOutlined />,
       });
     }
     if (hasAccess(role, 'members')) {
       newItems.push({
         key: 'members',
-        label: 'Members',
+        label: t('navigation.members'),
         icon: <UserOutlined />,
       });
     }
     if (hasAccess(role, 'ranks')) {
       newItems.push({
         key: 'ranks',
-        label: 'Ranks',
+        label: t('navigation.ranks'),
         icon: <IdcardOutlined />,
       });
     }
     if (hasAccess(role, 'specializations')) {
       newItems.push({
         key: 'specializations',
-        label: 'Specializations',
+        label: t('navigation.specializations'),
         icon: <SolutionOutlined />,
       });
     }
     if (hasAccess(role, 'medals')) {
       newItems.push({
         key: 'medals',
-        label: 'Medals',
+        label: t('navigation.medals'),
         icon: <TrophyOutlined />,
       });
     }
@@ -258,14 +260,14 @@ export default function Navigation() {
     if (hasAccess(role, 'registrations')) {
       newItems.push({
         key: 'registrations',
-        label: 'Registrations',
+        label: t('navigation.registrations'),
         icon: <UserAddOutlined />,
       });
     }
     if (hasAccess(role, 'discoveryTypes')) {
       newItems.push({
         key: 'discoveryTypes',
-        label: 'Discovery Types',
+        label: t('navigation.discoveryTypes'),
         icon: <TagOutlined />,
       });
     }
@@ -296,34 +298,34 @@ export default function Navigation() {
     if (hasAccess(role, 'roles')) {
       newItems.push({
         key: 'roles',
-        label: 'Roles',
+        label: t('navigation.roles'),
         icon: <UsergroupAddOutlined />,
       });
     }
     if (hasAccess(role, 'logs')) {
       newItems.push({
         key: 'logs',
-        label: 'Logs',
+        label: t('navigation.logs'),
         icon: <FileTextOutlined />,
       });
     }
     if (hasAccess(role, 'settings')) {
       newItems.push({
         key: 'settings',
-        label: 'Settings',
+        label: t('navigation.settings'),
         icon: <SettingOutlined />,
       });
     }
     if (hasAccess(role, 'settings')) {
       newItems.push({
         key: 'backup',
-        label: 'Backup',
+        label: t('navigation.backup'),
         icon: <CloudServerOutlined />,
       });
     }
 
     return newItems;
-  }, [roles, navigationValue]);
+  }, [roles, navigationValue, t]);
 
   return (
     <nav>
@@ -337,7 +339,7 @@ export default function Navigation() {
           }}
         >
           <Button size="large" icon={<MenuOutlined />}>
-            {breakpoints.sm && 'Navigation'}
+            {breakpoints.sm && t('navigation.title')}
           </Button>
         </Dropdown>
       )}

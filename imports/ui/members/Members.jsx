@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
 import MembersCollection from '../../api/collections/members.collection';
+import { useTranslation } from '../../i18n/LanguageContext';
 import Section from '../section/Section';
 import MemberForm from './MemberForm';
 import getMembersColumns from './members.columns';
@@ -10,6 +11,7 @@ import getMembersColumns from './members.columns';
  * No props - uses Section component for data fetching and display.
  */
 export default function Members() {
+  const { t } = useTranslation();
   const filterFactory = useCallback(
     string => ({
       $or: [
@@ -24,7 +26,7 @@ export default function Members() {
 
   return (
     <Section
-      title="Members"
+      title={t('members.title')}
       collectionName="members"
       Collection={MembersCollection}
       FormComponent={MemberForm}
