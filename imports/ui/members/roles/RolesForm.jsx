@@ -24,6 +24,7 @@ const CRUD_MODULES = [
   { name: 'registrations', label: 'Registrations' },
   { name: 'discoveryTypes', label: 'Discovery Types' },
   { name: 'roles', label: 'Roles' },
+  { name: 'questionnaires', label: 'Questionnaires' },
 ];
 
 /**
