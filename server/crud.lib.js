@@ -18,6 +18,7 @@ import SquadsCollection from '../imports/api/collections/squads.collection';
 import TasksCollection from '../imports/api/collections/tasks.collection';
 import TaskStatusCollection from '../imports/api/collections/taskStatus.collection';
 import QuestionnairesCollection from '../imports/api/collections/questionnaires.collection';
+import QuestionnaireResponsesCollection from '../imports/api/collections/questionnaireResponses.collection';
 
 export function getCollection(collection) {
   if (!collection) throw new Meteor.Error(400, 'No collection name');
@@ -54,6 +55,8 @@ export function getCollection(collection) {
       return RolesCollection;
     case 'questionnaires':
       return QuestionnairesCollection;
+    case 'questionnaireResponses':
+      return QuestionnaireResponsesCollection;
     default:
       throw new Meteor.Error(404, `Collection "${collection}" not found`);
   }

@@ -11,6 +11,7 @@ import Suspense from '../suspense/Suspense';
 // Map modules to their permission keys (for modules that share permissions)
 const MODULE_PERMISSION_MAP = {
   backup: 'settings', // Backup uses settings permission
+  myQuestionnaires: 'questionnaires', // My Questionnaires uses questionnaires permission
 };
 
 /**
@@ -55,6 +56,7 @@ const Logs = lazy(() => import('../logs/Logs'));
 const Settings = lazy(() => import('../settings/Settings'));
 const Backup = lazy(() => import('../backup/Backup'));
 const Questionnaires = lazy(() => import('../questionnaires/Questionnaires'));
+const MyQuestionnaires = lazy(() => import('../questionnaires/MyQuestionnaires'));
 
 export default function Main() {
   const { navigationValue } = useNavigation();
@@ -104,6 +106,7 @@ export default function Main() {
           {hasAccess && navigationValue === 'settings' && <Settings />}
           {hasAccess && navigationValue === 'backup' && <Backup />}
           {hasAccess && navigationValue === 'questionnaires' && <Questionnaires />}
+          {hasAccess && navigationValue === 'myQuestionnaires' && <MyQuestionnaires />}
         </Suspense>
       )}
     </section>

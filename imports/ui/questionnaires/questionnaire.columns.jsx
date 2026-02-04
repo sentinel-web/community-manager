@@ -1,4 +1,4 @@
-import { Tag } from 'antd';
+import { Button, Col, Tag } from 'antd';
 import React from 'react';
 import TableActions from '../table/body/actions/TableActions';
 
@@ -8,7 +8,7 @@ const STATUS_COLORS = {
   closed: 'error',
 };
 
-const getQuestionnaireColumns = (handleEdit, handleDelete, permissions = {}) => {
+const getQuestionnaireColumns = (handleEdit, handleDelete, permissions = {}, handleViewResponses = null) => {
   const { canUpdate = true, canDelete = true } = permissions;
 
   const columns = [
@@ -42,13 +42,30 @@ const getQuestionnaireColumns = (handleEdit, handleDelete, permissions = {}) => 
     },
   ];
 
-  if (canUpdate || canDelete) {
+  const ViewResponsesExtra = handleViewResponses
+    ? ({ record }) => (
+        <Col flex="auto">
+          <Button style={{ width: '100%' }} onClick={e => handleViewResponses(e, record)}>
+            Responses
+          </Button>
+        </Col>
+      )
+    : null;
+
+  if (canUpdate || canDelete || handleViewResponses) {
     columns.push({
       title: 'Actions',
       dataIndex: '_id',
       key: '_id',
       render: (id, record) => (
-        <TableActions record={record} handleEdit={handleEdit} handleDelete={handleDelete} canUpdate={canUpdate} canDelete={canDelete} />
+        <TableActions
+          record={record}
+          handleEdit={handleEdit}
+          handleDelete={handleDelete}
+          canUpdate={canUpdate}
+          canDelete={canDelete}
+          extra={ViewResponsesExtra}
+        />
       ),
     });
   }
