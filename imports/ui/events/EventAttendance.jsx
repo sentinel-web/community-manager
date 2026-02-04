@@ -4,37 +4,20 @@ import dayjs from 'dayjs';
 import { Meteor } from 'meteor/meteor';
 import { useFind, useSubscribe } from 'meteor/react-meteor-data';
 import PropTypes from 'prop-types';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import AttendancesCollection from '../../api/collections/attendances.collection';
 import MembersCollection from '../../api/collections/members.collection';
+import RanksCollection from '../../api/collections/ranks.collection';
 import TableContainer from '../table/body/TableContainer';
 import Table from '../table/Table';
 
-function MemberName({ memberId }) {
-  const [name, setName] = useState('loading...');
-  useEffect(() => {
-    let isMounted = true;
-    Meteor.callAsync('members.read', { _id: memberId }, { limit: 1 })
-      .then(members => {
-        if (!isMounted) return;
-        return Meteor.callAsync('ranks.read', { _id: members?.[0]?.profile?.rankId ?? null }, { limit: 1 }).then(ranks => {
-          if (!isMounted) return;
-          setName(`${ranks?.[0]?.name ?? ''}-${members?.[0]?.profile?.id ?? ''} "${members?.[0]?.profile?.name ?? ''}"`);
-        });
-      })
-      .catch(error => {
-        if (!isMounted) return;
-        console.error('Failed to load member name:', error);
-        setName('Error loading name');
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, [memberId]);
-  return name;
+function MemberName({ memberId, memberNameMap }) {
+  // Use pre-computed name from parent to avoid N+1 queries
+  return memberNameMap.get(memberId) || 'Unknown';
 }
 MemberName.propTypes = {
   memberId: PropTypes.string,
+  memberNameMap: PropTypes.instanceOf(Map),
 };
 
 function AttendanceOption({ value, setEditting }) {
@@ -128,14 +111,14 @@ AttendanceRender.propTypes = {
   memberId: PropTypes.string,
 };
 
-function transformEventsIntoColumns(events) {
+function transformEventsIntoColumns(events, memberNameMap) {
   const columns = [
     {
       title: 'Name',
       dataIndex: 'memberId',
       key: 'memberId',
       ellipsis: true,
-      render: memberId => <MemberName memberId={memberId} />,
+      render: memberId => <MemberName memberId={memberId} memberNameMap={memberNameMap} />,
     },
     {
       title: 'IP (Inactivity Points)',
@@ -169,11 +152,27 @@ function transformEventsIntoColumns(events) {
 }
 
 export default function EventAttendance({ datasource }) {
-  const columns = useMemo(() => transformEventsIntoColumns(datasource), [datasource]);
   useSubscribe('attendances', { eventId: { $in: datasource.map(event => event._id) } });
   const attendances = useFind(() => AttendancesCollection.find({ eventId: { $in: datasource.map(event => event._id) } }), [datasource]);
   useSubscribe('members', {}, {});
   const members = useFind(() => MembersCollection.find({}, { sort: { squadId: 1, rankId: 1 } }), []);
+  useSubscribe('ranks', {}, {});
+  const ranks = useFind(() => RanksCollection.find({}), []);
+
+  // Pre-compute member names with ranks to avoid N+1 queries per row
+  const memberNameMap = useMemo(() => {
+    const rankNameById = new Map(ranks.map(r => [r._id, r.name]));
+    return new Map(
+      members.map(m => {
+        const rankName = rankNameById.get(m.profile?.rankId) ?? '';
+        const id = m.profile?.id ?? '';
+        const name = m.profile?.name ?? '';
+        return [m._id, `${rankName}-${id} "${name}"`];
+      })
+    );
+  }, [members, ranks]);
+
+  const columns = useMemo(() => transformEventsIntoColumns(datasource, memberNameMap), [datasource, memberNameMap]);
   const rows = useMemo(() => {
     return members.map(member => {
       return {
