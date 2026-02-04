@@ -1,6 +1,8 @@
 import { App, Empty, Row, Spin, Typography } from 'antd';
 import { Meteor } from 'meteor/meteor';
+import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import RolesCollection from '../../api/collections/roles.collection';
 import { DrawerContext, SubdrawerContext } from '../app/App';
 import TableContainer from '../table/body/TableContainer';
 import TableFooter from '../table/footer/TableFooter';
@@ -10,15 +12,31 @@ import ResponseDetailView from './ResponseDetailView';
 
 const { Text } = Typography;
 
+function getUpdatePermission(role) {
+  if (!role) return false;
+  const permission = role.questionnaires;
+  if (permission === true) return true;
+  if (typeof permission === 'object' && permission !== null) {
+    return permission.update === true;
+  }
+  return false;
+}
+
 export default function QuestionnaireResponses() {
   const drawer = useContext(DrawerContext);
   const subdrawer = useContext(SubdrawerContext);
   const { drawerModel: questionnaire } = drawer;
-  const { notification } = App.useApp();
+  const { notification, message } = App.useApp();
 
   const [responses, setResponses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [limit, setLimit] = useState(20);
+
+  // Get user's role for permission check
+  const user = useTracker(() => Meteor.user(), []);
+  useSubscribe('roles', { _id: user?.profile?.roleId ?? null }, { limit: 1 });
+  const roles = useFind(() => RolesCollection.find({ _id: user?.profile?.roleId ?? null }, { limit: 1 }), [user?.profile?.roleId]);
+  const canUpdate = useMemo(() => getUpdatePermission(roles?.[0]), [roles]);
 
   const loadResponses = useCallback(async () => {
     if (!questionnaire?._id) return;
@@ -51,11 +69,31 @@ export default function QuestionnaireResponses() {
     [subdrawer, questionnaire]
   );
 
+  const handleToggleIgnored = useCallback(
+    async (e, response) => {
+      e.preventDefault();
+      try {
+        await Meteor.callAsync('questionnaireResponses.setIgnored', response._id, !response.ignored);
+        message.success(response.ignored ? 'Response unignored' : 'Response ignored');
+        loadResponses();
+      } catch (error) {
+        notification.error({
+          message: error.error,
+          description: error.message,
+        });
+      }
+    },
+    [message, notification, loadResponses]
+  );
+
   const handleLoadMore = useCallback(() => {
     setLimit(prev => prev + 20);
   }, []);
 
-  const columns = useMemo(() => getQuestionnaireResponseColumns(handleViewDetails), [handleViewDetails]);
+  const columns = useMemo(
+    () => getQuestionnaireResponseColumns(handleViewDetails, handleToggleIgnored, canUpdate),
+    [handleViewDetails, handleToggleIgnored, canUpdate]
+  );
 
   const loadMoreDisabled = responses.length < limit;
 
