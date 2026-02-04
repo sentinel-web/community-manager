@@ -56,6 +56,10 @@ export function getCollection(collection) {
   }
 }
 
+// Default limit for publications to prevent memory exhaustion
+const DEFAULT_PUBLISH_LIMIT = 100;
+const MAX_PUBLISH_LIMIT = 1000;
+
 function createCollectionPublish(collection) {
   if (Meteor.isServer) {
     const Collection = getCollection(collection);
@@ -63,7 +67,16 @@ function createCollectionPublish(collection) {
       if (!this.userId) return this.ready();
       if (validateObject(filter, false)) return [];
       if (validateObject(options, false)) return [];
-      return Collection.find(filter, options);
+
+      // Apply default limit if none specified, cap at maximum (immutable)
+      const limitedOptions = { ...options };
+      if (!limitedOptions.limit) {
+        limitedOptions.limit = DEFAULT_PUBLISH_LIMIT;
+      } else if (limitedOptions.limit > MAX_PUBLISH_LIMIT) {
+        limitedOptions.limit = MAX_PUBLISH_LIMIT;
+      }
+
+      return Collection.find(filter, limitedOptions);
     });
   }
 }
