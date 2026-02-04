@@ -1,21 +1,32 @@
 import dayjs from 'dayjs';
+import 'dayjs/locale/de';
+import 'dayjs/locale/fr';
 import { useFind, useSubscribe } from 'meteor/react-meteor-data';
 import PropTypes from 'prop-types';
-import React, { useCallback, useContext, useMemo, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Calendar, dayjsLocalizer } from 'react-big-calendar';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import EventTypesCollection from '../../api/collections/eventTypes.collection';
 import getLegibleTextColor from '../../helpers/colors/getLegibleTextColor';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
 import EventForm from './EventForm';
 
-const localizer = dayjsLocalizer(dayjs);
 const DnDCalendar = withDragAndDrop(Calendar);
 
 const EventCalendar = ({ datasource, setFilter }) => {
+  const { t, language } = useLanguage();
   const drawer = useContext(DrawerContext);
+
+  // Set dayjs locale based on current language
+  useEffect(() => {
+    dayjs.locale(language);
+  }, [language]);
+
+  // Create localizer with current locale
+  const localizer = useMemo(() => dayjsLocalizer(dayjs), [language]);
   const [range, setRange] = useState({
     start: dayjs().startOf('month').startOf('week').toDate(),
     end: dayjs().endOf('month').endOf('week').toDate(),
@@ -27,7 +38,7 @@ const EventCalendar = ({ datasource, setFilter }) => {
   const openForm = event => {
     const isEdit = !!event?._id;
     const model = event || {};
-    drawer.setDrawerTitle(isEdit ? 'Edit Event' : 'Create Event');
+    drawer.setDrawerTitle(isEdit ? t('events.editEvent') : t('events.createEvent'));
     drawer.setDrawerModel(model);
     drawer.setDrawerComponent(<EventForm setOpen={drawer.setDrawerOpen} />);
     drawer.setDrawerOpen(true);
@@ -69,6 +80,19 @@ const EventCalendar = ({ datasource, setFilter }) => {
 
   const formats = useMemo(() => ({ timeGutterFormat: 'HH:mm' }), []);
 
+  const messages = useMemo(
+    () => ({
+      today: t('common.today'),
+      previous: t('common.back'),
+      next: t('common.next'),
+      month: t('common.month'),
+      week: t('common.week'),
+      day: t('common.day'),
+      agenda: t('common.agenda'),
+    }),
+    [t]
+  );
+
   const [currentView, setCurrentView] = useState('month');
 
   const handleRangeChange = useCallback(
@@ -107,6 +131,7 @@ const EventCalendar = ({ datasource, setFilter }) => {
         localizer={localizer}
         events={events}
         formats={formats}
+        messages={messages}
         draggableAccessor={draggableAccessor}
         onEventDrop={onEventDrop}
         onEventResize={onEventResize}

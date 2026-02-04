@@ -26,25 +26,25 @@ Participants.propTypes = {
   participants: PropTypes.array,
 };
 
-const getTaskColumns = (handleTaskEdit, handleTaskDelete, permissions = {}) => {
+const getTaskColumns = (handleTaskEdit, handleTaskDelete, permissions = {}, t = k => k) => {
   const { canUpdate = true, canDelete = true } = permissions;
 
   const columns = [
     {
-      title: 'Name',
+      title: t('common.name'),
       dataIndex: 'name',
       sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
       ellipsis: true,
     },
     {
-      title: 'Participants',
+      title: t('tasks.participants'),
       dataIndex: 'participants',
       sorter: (a, b) => (a.participants?.length || 0) - (b.participants?.length || 0),
       render: participants => <Participants participants={participants} />,
       ellipsis: true,
     },
     {
-      title: 'Status',
+      title: t('common.status'),
       dataIndex: 'status',
       sorter: (a, b) => {
         const aStatus = a.status ? TaskStatusCollection.findOne({ _id: a.status })?.name : a.status;
@@ -58,7 +58,7 @@ const getTaskColumns = (handleTaskEdit, handleTaskDelete, permissions = {}) => {
 
   if (canUpdate || canDelete) {
     columns.push({
-      title: 'Actions',
+      title: t('common.actions'),
       dataIndex: '_id',
       render: (id, record) => (
         <TableActions record={record} handleEdit={handleTaskEdit} handleDelete={handleTaskDelete} canUpdate={canUpdate} canDelete={canDelete} />
@@ -69,4 +69,5 @@ const getTaskColumns = (handleTaskEdit, handleTaskDelete, permissions = {}) => {
   return columns;
 };
 
+export { getTaskColumns };
 export default getTaskColumns;

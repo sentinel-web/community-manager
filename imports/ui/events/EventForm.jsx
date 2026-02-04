@@ -5,6 +5,7 @@ import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useMemo } from 'react';
 import EventTypesCollection from '../../api/collections/eventTypes.collection';
+import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
 import CollectionSelect from '../components/CollectionSelect';
 import MembersSelect from '../members/MembersSelect';
@@ -24,6 +25,7 @@ export const getDateFromValues = (values, key = 'date') => {
 
 const EventForm = ({ setOpen }) => {
   const { message, notification, modal } = App.useApp();
+  const { t } = useTranslation();
   const drawer = useContext(DrawerContext);
 
   const model = useMemo(() => {
@@ -49,7 +51,7 @@ const EventForm = ({ setOpen }) => {
         });
       };
       const handleSuccess = () => {
-        const text = model?._id ? 'Event updated' : 'Event created';
+        const text = model?._id ? t('messages.eventUpdated') : t('messages.eventCreated');
         message.success(text);
         setOpen(false);
       };
@@ -57,17 +59,19 @@ const EventForm = ({ setOpen }) => {
         .then(handleSuccess)
         .catch(handleError);
     },
-    [model?._id, message, notification, setOpen]
+    [model?._id, message, notification, setOpen, t]
   );
 
   const handleDelete = useCallback(() => {
     modal.confirm({
-      title: 'Are you sure you want to delete this event?',
-      okText: 'Delete',
+      title: t('forms.confirmations.deleteEvent'),
+      okText: t('common.delete'),
+      cancelText: t('common.cancel'),
+      okType: 'danger',
       onOk: async () => {
         await Meteor.callAsync('events.remove', model._id)
           .then(() => {
-            message.success('Event deleted');
+            message.success(t('messages.eventDeleted'));
             setOpen(false);
           })
           .catch(error => {
@@ -78,61 +82,62 @@ const EventForm = ({ setOpen }) => {
           });
       },
     });
-  }, [modal, message, setOpen, model, notification]);
+  }, [modal, message, setOpen, model, notification, t]);
 
   const [form] = Form.useForm();
 
   return (
     <Form form={form} layout="vertical" initialValues={model} onFinish={handleFinish}>
-      <Form.Item name="start" label="Start Date" rules={[{ required: true, type: 'date' }]}>
+      <Form.Item name="start" label={t('events.startDate')} rules={[{ required: true, type: 'date' }]}>
         <DatePicker style={styles.datePicker} showTime />
       </Form.Item>
-      <Form.Item name="end" label="End Date" rules={[{ required: true, type: 'date' }]}>
+      <Form.Item name="end" label={t('events.endDate')} rules={[{ required: true, type: 'date' }]}>
         <DatePicker style={styles.datePicker} showTime />
       </Form.Item>
-      <Form.Item name="name" label="Name" rules={[{ required: true, type: 'string' }]}>
-        <Input placeholder="Enter title" />
+      <Form.Item name="name" label={t('common.name')} rules={[{ required: true, type: 'string' }]}>
+        <Input placeholder={t('forms.placeholders.enterTitle')} />
       </Form.Item>
       <CollectionSelect
         defaultValue={model.eventType}
         name="eventType"
-        label="Event Type"
+        label={t('events.eventType')}
+        placeholder={t('common.selectEventType')}
         rules={[{ type: 'string' }]}
         collection={EventTypesCollection}
         subscription="eventTypes"
         FormComponent={EventTypesForm}
       />
-      <MembersSelect multiple name="hosts" label="Hosts" rules={[{ type: 'array' }]} defaultValue={model.hosts} />
-      <MembersSelect multiple name="attendees" label="Attendees" rules={[{ type: 'array' }]} defaultValue={model.attendees} />
+      <MembersSelect multiple name="hosts" label={t('events.hosts')} rules={[{ type: 'array' }]} defaultValue={model.hosts} />
+      <MembersSelect multiple name="attendees" label={t('events.attendees')} rules={[{ type: 'array' }]} defaultValue={model.attendees} />
       <Row gutter={[16, 16]} style={{ flexWrap: 'nowrap' }}>
         <Col flex="auto">
-          <Form.Item name="isPrivate" label="Is Private" valuePropName="checked" rules={[{ type: 'boolean' }]}>
+          <Form.Item name="isPrivate" label={t('forms.labels.isPrivate')} valuePropName="checked" rules={[{ type: 'boolean' }]}>
             <Switch />
           </Form.Item>
         </Col>
         <Col flex="auto">
-          <Form.Item name="color" label="Color">
-            <ColorPicker placeholder="Enter color" />
+          <Form.Item name="color" label={t('common.color')}>
+            <ColorPicker placeholder={t('forms.placeholders.enterColor')} />
           </Form.Item>
         </Col>
       </Row>
-      <Form.Item name="preset" label="Preset Link" rules={[{ type: 'string' }]}>
-        <Input placeholder="Enter preset link" />
+      <Form.Item name="preset" label={t('forms.labels.presetLink')} rules={[{ type: 'string' }]}>
+        <Input placeholder={t('forms.placeholders.enterPresetLink')} />
       </Form.Item>
-      <Form.Item name="description" label="Description" rules={[{ type: 'string' }]}>
-        <Input.TextArea autoSize placeholder="Enter description" />
+      <Form.Item name="description" label={t('common.description')} rules={[{ type: 'string' }]}>
+        <Input.TextArea autoSize placeholder={t('forms.placeholders.enterDescription')} />
       </Form.Item>
       <Row gutter={[16, 16]} justify="end" align="middle">
         {model?._id && (
           <Col>
             <Button type="primary" onClick={handleDelete} icon={<DeleteOutlined />} danger>
-              Delete
+              {t('common.delete')}
             </Button>
           </Col>
         )}
         <Col>
           <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
-            Save
+            {t('common.save')}
           </Button>
         </Col>
       </Row>

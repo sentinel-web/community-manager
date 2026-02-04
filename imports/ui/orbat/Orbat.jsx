@@ -3,12 +3,14 @@ import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Tree, TreeNode } from 'react-organizational-chart';
+import { useTranslation } from '../../i18n/LanguageContext';
 import { turnBase64ToImage } from '../profile-picture-input/ProfilePictureInput';
 
 export default function Orbat() {
   const [ready, setReady] = useState(true);
   const [squads, setSquads] = useState([]);
   const [options, setOptions] = useState([]);
+  const { t } = useTranslation();
 
   useEffect(() => {
     setReady(false);
@@ -93,7 +95,7 @@ export default function Orbat() {
   };
 
   return (
-    <Card loading={!ready} title={<Typography.Title level={3}>ORBAT</Typography.Title>}>
+    <Card loading={!ready} title={<Typography.Title level={3}>{t('orbat.title')}</Typography.Title>}>
       <div style={{ overflow: 'auto' }}>
         {options?.length === 0 && <Empty />}
         {options.map(option => {

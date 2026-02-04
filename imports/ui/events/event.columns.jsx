@@ -1,19 +1,19 @@
 import React from 'react';
 import TableActions from '../table/body/actions/TableActions';
 
-const getEventColumns = (handleEdit, handleDelete, permissions = {}) => {
+const getEventColumns = (handleEdit, handleDelete, permissions = {}, t = k => k) => {
   const { canUpdate = true, canDelete = true } = permissions;
 
   const columns = [
     {
-      title: 'Name',
+      title: t('common.name'),
       dataIndex: 'name',
       key: 'name',
       ellipsis: true,
       sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
     },
     {
-      title: 'Description',
+      title: t('common.description'),
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
@@ -24,7 +24,7 @@ const getEventColumns = (handleEdit, handleDelete, permissions = {}) => {
   // Only add Actions column if user has update or delete permission
   if (canUpdate || canDelete) {
     columns.push({
-      title: 'Actions',
+      title: t('common.actions'),
       dataIndex: '_id',
       key: '_id',
       render: (id, record) => (

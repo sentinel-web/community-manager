@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 import SquadsCollection from '../../api/collections/squads.collection';
+import { useTranslation } from '../../i18n/LanguageContext';
 import CollectionSelect from '../components/CollectionSelect';
 import SquadsForm from './SquadsForm';
 
 export default function SquadsSelect({ multiple, name, label, rules, defaultValue }) {
+  const { t } = useTranslation();
   return (
     <CollectionSelect
       defaultValue={defaultValue}
@@ -15,7 +17,7 @@ export default function SquadsSelect({ multiple, name, label, rules, defaultValu
       collection={SquadsCollection}
       FormComponent={SquadsForm}
       subscription="squads"
-      placeholder={multiple ? 'Select squads' : 'Select squad'}
+      placeholder={t('common.selectSquad')}
       extra={<></>}
     />
   );

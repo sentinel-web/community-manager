@@ -1,9 +1,11 @@
 import { App, Button, Col, Row } from 'antd';
 import PropTypes from 'prop-types';
 import React, { useCallback } from 'react';
+import { useTranslation } from '/imports/i18n/LanguageContext';
 
 export default function LogTableActions({ record, handleDelete, handleView }) {
   const { modal } = App.useApp();
+  const { t } = useTranslation();
   const styles = {
     button: {
       width: '100%',
@@ -12,28 +14,29 @@ export default function LogTableActions({ record, handleDelete, handleView }) {
   const handleRemove = useCallback(
     e => {
       modal.confirm({
-        title: 'Delete Log',
-        content: 'Are you sure you want to delete this log entry?',
-        okText: 'Yes',
+        title: t('logs.deleteLog'),
+        content: t('logs.deleteLogConfirm'),
+        okText: t('common.yes'),
+        cancelText: t('common.cancel'),
         okType: 'danger',
         onOk: () => handleDelete(e, record),
         closable: true,
         maskClosable: true,
       });
     },
-    [modal, handleDelete, record]
+    [modal, handleDelete, record, t]
   );
 
   return (
     <Row gutter={[16, 16]} justify="center">
       <Col flex="auto">
         <Button style={styles.button} onClick={e => handleView(e, record)}>
-          View
+          {t('logs.view')}
         </Button>
       </Col>
       <Col flex="auto">
         <Button style={styles.button} onClick={e => handleRemove(e, record)} danger>
-          Delete
+          {t('common.delete')}
         </Button>
       </Col>
     </Row>

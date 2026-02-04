@@ -5,6 +5,7 @@ import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import RanksCollection from '../../api/collections/ranks.collection';
 import RolesCollection from '../../api/collections/roles.collection';
+import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
 import CollectionSelect from '../components/CollectionSelect';
 import { getDateFromValues } from '../events/EventForm';
@@ -29,6 +30,7 @@ export const transformDateToDays = (values, key = 'date') => {
 export default function MemberForm({ setOpen }) {
   const [form] = Form.useForm();
   const { message, notification } = App.useApp();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [disableSubmit, setDisableSubmit] = useState(false);
   const [nameError, setNameError] = useState(undefined);
@@ -115,7 +117,7 @@ export default function MemberForm({ setOpen }) {
         .then(() => {
           setOpen(false);
           form.resetFields();
-          message.success('Save successful');
+          message.success(t('messages.saveSuccessful'));
         })
         .catch(error => {
           console.error(error);
@@ -162,31 +164,31 @@ export default function MemberForm({ setOpen }) {
           <ProfilePictureInput fileList={fileList} setFileList={setFileList} form={form} profilePictureId={model?.profile?.profilePictureId} />
         </Col>
       </Row>
-      <Divider>Member Account</Divider>
-      <Form.Item name="username" label="Username" rules={[{ required: true, type: 'string' }]} required>
-        <Input placeholder="Enter username" />
+      <Divider>{t('forms.sections.memberAccount')}</Divider>
+      <Form.Item name="username" label={t('auth.username')} rules={[{ required: true, type: 'string' }]} required>
+        <Input placeholder={t('forms.placeholders.enterUsername')} />
       </Form.Item>
       {!model?._id && (
-        <Form.Item name="password" label="Password" rules={[{ required: true, type: 'string' }]} required>
-          <Input.Password placeholder="Enter password" />
+        <Form.Item name="password" label={t('auth.password')} rules={[{ required: true, type: 'string' }]} required>
+          <Input.Password placeholder={t('forms.placeholders.enterPassword')} />
         </Form.Item>
       )}
-      <Divider>Member Profile</Divider>
+      <Divider>{t('forms.sections.memberProfile')}</Divider>
       {(nameError === 'error' || idError === 'error') && (
         <Alert
           className="alert"
           type="error"
           description={
             <Row gutter={[16, 16]}>
-              {nameError === 'error' && <Col span={24}>Name already in use</Col>}
-              {idError === 'error' && <Col span={24}>ID already in use</Col>}
+              {nameError === 'error' && <Col span={24}>{t('forms.errors.nameAlreadyInUse')}</Col>}
+              {idError === 'error' && <Col span={24}>{t('forms.errors.idAlreadyInUse')}</Col>}
             </Row>
           }
         />
       )}
       <Form.Item
         name={['profile', 'id']}
-        label="ID"
+        label={t('forms.labels.id')}
         rules={[
           { required: true, type: 'number' },
           { min: 1000, max: 9999, type: 'number' },
@@ -194,17 +196,18 @@ export default function MemberForm({ setOpen }) {
         status={idError}
         required
       >
-        <InputNumber min={1000} max={9999} step={1} placeholder="Enter ID" />
+        <InputNumber min={1000} max={9999} step={1} placeholder={t('forms.placeholders.enterId')} />
       </Form.Item>
-      <Form.Item name={['profile', 'name']} label="Name" rules={[{ required: true, type: 'string' }]} status={nameError} required>
-        <Input placeholder="Enter name" />
+      <Form.Item name={['profile', 'name']} label={t('common.name')} rules={[{ required: true, type: 'string' }]} status={nameError} required>
+        <Input placeholder={t('forms.placeholders.enterName')} />
       </Form.Item>
-      <SquadsSelect name={['profile', 'squadId']} label="Squad" rules={[{ type: 'string' }]} defaultValue={model?.profile?.squadId} />
+      <SquadsSelect name={['profile', 'squadId']} label={t('members.squad')} rules={[{ type: 'string' }]} defaultValue={model?.profile?.squadId} />
       <CollectionSelect
         defaultValue={model?.profile?.rankId}
         FormComponent={RanksForm}
         name={['profile', 'rankId']}
-        label="Rank"
+        label={t('members.rank')}
+        placeholder={t('common.selectRank')}
         rules={[{ type: 'string' }]}
         collection={RanksCollection}
         subscription="ranks"
@@ -213,65 +216,66 @@ export default function MemberForm({ setOpen }) {
         defaultValue={model?.profile?.navyRankId}
         FormComponent={RanksForm}
         name={['profile', 'navyRankId']}
-        label="Navy Rank"
+        label={t('forms.labels.navyRank')}
+        placeholder={t('common.selectRank')}
         rules={[{ type: 'string' }]}
         collection={RanksCollection}
         subscription="ranks"
       />
       {Meteor.user() && (
-        <Form.Item name={['profile', 'description']} label="Description" rules={[{ type: 'string' }]}>
-          <Input.TextArea autoSize placeholder="Enter description" />
+        <Form.Item name={['profile', 'description']} label={t('common.description')} rules={[{ type: 'string' }]}>
+          <Input.TextArea autoSize placeholder={t('forms.placeholders.enterDescription')} />
         </Form.Item>
       )}
-      <Divider>Admin Data</Divider>
+      <Divider>{t('forms.sections.adminData')}</Divider>
       <SpecializationsSelect
         name={['profile', 'specializationIds']}
-        label="Specializations"
+        label={t('members.specializations')}
         rules={[{ type: 'array' }]}
         defaultValue={model?.profile?.specializationIds}
         multiple
       />
-      <MedalsSelect name={['profile', 'medalIds']} label="Medals" rules={[{ type: 'array' }]} defaultValue={model?.profile?.medalIds} multiple />
+      <MedalsSelect name={['profile', 'medalIds']} label={t('members.medals')} rules={[{ type: 'array' }]} defaultValue={model?.profile?.medalIds} multiple />
       <CollectionSelect
         name={['profile', 'roleId']}
-        label="Role"
-        placeholder="Select role"
+        label={t('forms.labels.role')}
+        placeholder={t('forms.placeholders.selectRole')}
         rules={[{ type: 'string' }]}
         subscription="roles"
         FormComponent={RolesForm}
         defaultValue={model?.profile?.roleId}
         collection={RolesCollection}
       />
-      <Form.Item name={['profile', 'discordTag']} label="Discord Tag" rules={[{ type: 'string' }]}>
-        <Input placeholder="Enter discord tag" />
+      <Form.Item name={['profile', 'discordTag']} label={t('members.discordTag')} rules={[{ type: 'string' }]}>
+        <Input placeholder={t('forms.placeholders.enterDiscordTag')} />
       </Form.Item>
-      <Form.Item name={['profile', 'steamProfileLink']} label="Steam Profile Link" rules={[{ type: 'url' }]}>
-        <Input placeholder="Enter steam profile link" />
+      <Form.Item name={['profile', 'steamProfileLink']} label={t('forms.labels.steamProfileLink')} rules={[{ type: 'url' }]}>
+        <Input placeholder={t('forms.placeholders.enterSteamProfileLink')} />
       </Form.Item>
-      <Form.Item name={['profile', 'staticAttendancePoints']} label="Static Attendance Points" rules={[{ type: 'number' }]}>
-        <InputNumber min={0} placeholder="Enter static attendance points" />
+      <Form.Item name={['profile', 'staticAttendancePoints']} label={t('forms.labels.staticAttendancePoints')} rules={[{ type: 'number' }]}>
+        <InputNumber min={0} placeholder={t('forms.placeholders.enterStaticAttendancePoints')} />
       </Form.Item>
-      <Form.Item name={['profile', 'staticInactivityPoints']} label="Static Inactivity Points" rules={[{ type: 'number' }]}>
-        <InputNumber min={0} placeholder="Enter static inactivity points" />
+      <Form.Item name={['profile', 'staticInactivityPoints']} label={t('forms.labels.staticInactivityPoints')} rules={[{ type: 'number' }]}>
+        <InputNumber min={0} placeholder={t('forms.placeholders.enterStaticInactivityPoints')} />
       </Form.Item>
-      <Form.Item name={['profile', 'entryDate']} label="Entry Date" rules={[{ type: 'date' }]}>
-        <DatePicker style={styles.datePicker} />
+      <Form.Item name={['profile', 'entryDate']} label={t('members.entryDate')} rules={[{ type: 'date' }]}>
+        <DatePicker style={styles.datePicker} placeholder={t('common.selectDate')} />
       </Form.Item>
-      <Form.Item name={['profile', 'exitDate']} label="Exit Date" rules={[{ type: 'date' }]}>
-        <DatePicker style={styles.datePicker} />
+      <Form.Item name={['profile', 'exitDate']} label={t('members.exitDate')} rules={[{ type: 'date' }]}>
+        <DatePicker style={styles.datePicker} placeholder={t('common.selectDate')} />
       </Form.Item>
-      <Form.Item name={['profile', 'hasCustomArmour']} label="Has Custom Armour" valuePropName="checked" rules={[{ type: 'boolean' }]}>
+      <Form.Item name={['profile', 'hasCustomArmour']} label={t('forms.labels.hasCustomArmour')} valuePropName="checked" rules={[{ type: 'boolean' }]}>
         <Switch />
       </Form.Item>
       <Row gutter={[16, 16]} align="middle" justify="end">
         <Col>
           <Button onClick={handleCancel} danger>
-            Cancel
+            {t('common.cancel')}
           </Button>
         </Col>
         <Col>
           <Button type="primary" htmlType="submit" loading={loading} disabled={disableSubmit}>
-            Submit
+            {t('common.submit')}
           </Button>
         </Col>
       </Row>
