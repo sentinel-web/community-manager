@@ -14,7 +14,7 @@ export default function ProfileModal({ showProfile = false, toggleProfile = cons
 
   return (
     <Modal title={t('modals.profile')} open={showProfile} onCancel={toggleProfile} width={window.innerWidth * 0.75} footer={null} centered>
-      {profileStats && <ProfileStats profileStats={profileStats} />}
+      {profileStats && <ProfileStats profileStats={profileStats} t={t} />}
     </Modal>
   );
 }
