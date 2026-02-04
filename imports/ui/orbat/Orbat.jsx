@@ -113,6 +113,14 @@ const ORBAT_Label = ({ option }) => {
   const [items, setItems] = useState([]);
   useEffect(() => {
     Meteor.callAsync('orbat.popover.items', option.id).then(setItems).catch(() => {});
+    let isMounted = true;
+    Meteor.callAsync('orbat.popover.items', option.id)
+      .then(data => {
+        if (isMounted) setItems(data);
+      });
+    return () => {
+      isMounted = false;
+    };
   }, [option.id]);
   const hoverStyle = { cursor: 'pointer' };
 

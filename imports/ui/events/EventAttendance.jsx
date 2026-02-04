@@ -13,14 +13,29 @@ import Table from '../table/Table';
 function MemberName({ memberId }) {
   const [name, setName] = useState('loading...');
   useEffect(() => {
-    Meteor.callAsync('members.read', { _id: memberId }, { limit: 1 }).then(members => {
-      Meteor.callAsync('ranks.read', { _id: members?.[0]?.profile?.rankId ?? null }, { limit: 1 }).then(ranks => {
-        setName(`${ranks?.[0]?.name ?? ''}-${members?.[0]?.profile?.id ?? ''} "${members?.[0]?.profile?.name ?? ''}"`);
+    let isMounted = true;
+    Meteor.callAsync('members.read', { _id: memberId }, { limit: 1 })
+      .then(members => {
+        if (!isMounted) return;
+        return Meteor.callAsync('ranks.read', { _id: members?.[0]?.profile?.rankId ?? null }, { limit: 1 }).then(ranks => {
+          if (!isMounted) return;
+          setName(`${ranks?.[0]?.name ?? ''}-${members?.[0]?.profile?.id ?? ''} "${members?.[0]?.profile?.name ?? ''}"`);
+        });
+      })
+      .catch(error => {
+        if (!isMounted) return;
+        console.error('Failed to load member name:', error);
+        setName('Error loading name');
       });
-    });
+    return () => {
+      isMounted = false;
+    };
   }, [memberId]);
   return name;
 }
+MemberName.propTypes = {
+  memberId: PropTypes.string,
+};
 
 function AttendanceOption({ value, setEditting }) {
   const colorMap = useMemo(() => {

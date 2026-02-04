@@ -1,5 +1,6 @@
 import { App as AntdApp, theme as AntdTheme, ConfigProvider, Drawer, Layout } from 'antd';
 import React, { createContext, useEffect, useState } from 'react';
+import { getDrawerWidth } from '../../config';
 import Footer from '../footer/Footer';
 import Header from '../header/Header';
 import Main from '../main/Main';
@@ -95,7 +96,7 @@ export default function App() {
                   </Layout.Footer>
                 </Layout>
                 <Drawer
-                  width={window.innerWidth < 768 ? window.innerWidth : window.innerWidth * 0.33}
+                  width={getDrawerWidth(window.innerWidth)}
                   open={drawerOpen}
                   onClose={() => setDrawerOpen(false)}
                   title={drawerTitle}
@@ -104,7 +105,7 @@ export default function App() {
                 >
                   {drawerComponent}
                   <Drawer
-                    width={window.innerWidth < 768 ? window.innerWidth : window.innerWidth * 0.33}
+                    width={getDrawerWidth(window.innerWidth)}
                     open={subdrawerOpen}
                     onClose={() => setSubdrawerOpen(false)}
                     title={subdrawerTitle}

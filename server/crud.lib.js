@@ -59,7 +59,8 @@ export function getCollection(collection) {
 function createCollectionPublish(collection) {
   if (Meteor.isServer) {
     const Collection = getCollection(collection);
-    Meteor.publish(collection, (filter = {}, options = {}) => {
+    Meteor.publish(collection, function (filter = {}, options = {}) {
+      if (!this.userId) return this.ready();
       if (validateObject(filter, false)) return [];
       if (validateObject(options, false)) return [];
       return Collection.find(filter, options);
