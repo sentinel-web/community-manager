@@ -63,7 +63,8 @@ const MAX_PUBLISH_LIMIT = 1000;
 function createCollectionPublish(collection) {
   if (Meteor.isServer) {
     const Collection = getCollection(collection);
-    Meteor.publish(collection, (filter = {}, options = {}) => {
+    Meteor.publish(collection, function (filter = {}, options = {}) {
+      if (!this.userId) return this.ready();
       if (validateObject(filter, false)) return [];
       if (validateObject(options, false)) return [];
 
@@ -195,6 +196,7 @@ function createCollectionMethods(collection) {
       });
     }
   } catch (error) {
+    // Log error for debugging - method registration failures are critical
     createLog('crud.methodCreationError', { collection, error: error.message });
   }
 }

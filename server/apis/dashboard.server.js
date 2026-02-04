@@ -12,6 +12,36 @@ import SquadsCollection from '../../imports/api/collections/squads.collection';
 import TasksCollection from '../../imports/api/collections/tasks.collection';
 import TaskStatusCollection from '../../imports/api/collections/taskStatus.collection';
 
+// Helper to run aggregation and convert IDs to names
+async function aggregateCountByField(collection, groupField, nameMap) {
+  const pipeline = [{ $match: { [groupField]: { $ne: null } } }, { $group: { _id: `$${groupField}`, count: { $sum: 1 } } }];
+  const rawCollection = collection.rawCollection();
+  const aggregationResult = await rawCollection.aggregate(pipeline).toArray();
+  const result = {};
+  for (const item of aggregationResult) {
+    const name = nameMap.get(item._id);
+    if (name) result[name] = item.count;
+  }
+  return result;
+}
+
+// Helper for array field aggregation (unwinds array before grouping)
+async function aggregateCountByArrayField(collection, arrayField, nameMap) {
+  const pipeline = [
+    { $match: { [arrayField]: { $exists: true, $ne: [] } } },
+    { $unwind: `$${arrayField}` },
+    { $group: { _id: `$${arrayField}`, count: { $sum: 1 } } },
+  ];
+  const rawCollection = collection.rawCollection();
+  const aggregationResult = await rawCollection.aggregate(pipeline).toArray();
+  const result = {};
+  for (const item of aggregationResult) {
+    const name = nameMap.get(item._id);
+    if (name) result[name] = item.count;
+  }
+  return result;
+}
+
 if (Meteor.isServer) {
   Meteor.methods({
     /**
@@ -48,68 +78,47 @@ if (Meteor.isServer) {
       const hasDiscoveryTypes = role.discoveryTypes;
       if (hasDiscoveryTypes) {
         const discoveryTypes = await DiscoveryTypesCollection.find().fetchAsync();
-        const discoveryTypeNameByIdMap = new Map(discoveryTypes.map(discoveryType => [discoveryType._id, discoveryType.name]));
-        result['registrations by discovery type'] = {};
-        await RegistrationsCollection.find().forEachAsync(registration => {
-          if (!registration.discoveryType) return;
-          const discoveryTypeName = discoveryTypeNameByIdMap.get(registration.discoveryType);
-          result['registrations by discovery type'][discoveryTypeName] = result['registrations by discovery type'][registration.discoveryType] || 0;
-          result['registrations by discovery type'][discoveryTypeName]++;
-        });
+        const discoveryTypeNameByIdMap = new Map(discoveryTypes.map(dt => [dt._id, dt.name]));
+        result['registrations by discovery type'] = await aggregateCountByField(
+          RegistrationsCollection,
+          'discoveryType',
+          discoveryTypeNameByIdMap
+        );
       }
 
-      const members = await MembersCollection.find().fetchAsync();
       const hasSquads = role.squads;
       if (hasSquads) {
         const squads = await SquadsCollection.find().fetchAsync();
-        const squadNameByIdMap = new Map(squads.map(squad => [squad._id, squad.name]));
-        result['member count by squad'] = {};
-        members.forEach(member => {
-          if (!member.profile?.squadId) return;
-          const squadName = squadNameByIdMap.get(member.profile?.squadId);
-          result['member count by squad'][squadName] = result['member count by squad'][squadName] || 0;
-          result['member count by squad'][squadName]++;
-        });
+        const squadNameByIdMap = new Map(squads.map(s => [s._id, s.name]));
+        result['member count by squad'] = await aggregateCountByField(MembersCollection, 'profile.squadId', squadNameByIdMap);
       }
+
       const hasMembers = role.members;
-      if (hasMembers) result['member count'] = members.length;
+      if (hasMembers) result['member count'] = await MembersCollection.countDocuments();
+
       const hasRanks = role.ranks;
       if (hasRanks) {
         const ranks = await RanksCollection.find().fetchAsync();
-        const rankNameByIdMap = new Map(ranks.map(rank => [rank._id, rank.name]));
-        result['member count by rank'] = {};
-        members.forEach(member => {
-          if (!member.profile?.rankId) return;
-          const rankName = rankNameByIdMap.get(member.profile?.rankId);
-          result['member count by rank'][rankName] = result['member count by rank'][rankName] || 0;
-          result['member count by rank'][rankName]++;
-        });
+        const rankNameByIdMap = new Map(ranks.map(r => [r._id, r.name]));
+        result['member count by rank'] = await aggregateCountByField(MembersCollection, 'profile.rankId', rankNameByIdMap);
       }
+
       const hasSpecializations = role.specializations;
       if (hasSpecializations) {
         const specializations = await SpecializationsCollection.find().fetchAsync();
-        const specializationNameByIdMap = new Map(specializations.map(specialization => [specialization._id, specialization.name]));
-        result['member count by specialization'] = {};
-        members.forEach(member => {
-          member.profile?.specializationIds?.forEach?.(specializationId => {
-            const specializationName = specializationNameByIdMap.get(specializationId);
-            result['member count by specialization'][specializationName] = result['member count by specialization'][specializationName] || 0;
-            result['member count by specialization'][specializationName]++;
-          });
-        });
+        const specializationNameByIdMap = new Map(specializations.map(s => [s._id, s.name]));
+        result['member count by specialization'] = await aggregateCountByArrayField(
+          MembersCollection,
+          'profile.specializationIds',
+          specializationNameByIdMap
+        );
       }
+
       const hasMedals = role.medals;
       if (hasMedals) {
         const medals = await MedalsCollection.find().fetchAsync();
-        const medalNameByIdMap = new Map(medals.map(medal => [medal._id, medal.name]));
-        result['member count by medal'] = {};
-        members.forEach(member => {
-          member.profile?.medalIds?.forEach?.(medalId => {
-            const medalName = medalNameByIdMap.get(medalId);
-            result['member count by medal'][medalName] = result['member count by medal'][medalName] || 0;
-            result['member count by medal'][medalName]++;
-          });
-        });
+        const medalNameByIdMap = new Map(medals.map(m => [m._id, m.name]));
+        result['member count by medal'] = await aggregateCountByArrayField(MembersCollection, 'profile.medalIds', medalNameByIdMap);
       }
 
       const hasEvents = role.events;
@@ -117,14 +126,8 @@ if (Meteor.isServer) {
       const hasEventTypes = role.eventTypes;
       if (hasEventTypes) {
         const eventTypes = await EventTypesCollection.find().fetchAsync();
-        const eventTypeNameByIdMap = new Map(eventTypes.map(eventType => [eventType._id, eventType.name]));
-        result['event count by event type'] = {};
-        await EventsCollection.find().forEachAsync(event => {
-          if (!event.eventTypeId) return;
-          const eventTypeName = eventTypeNameByIdMap.get(event.eventTypeId);
-          result['event count by event type'][eventTypeName] = result['event count by event type'][eventTypeName] || 0;
-          result['event count by event type'][eventTypeName]++;
-        });
+        const eventTypeNameByIdMap = new Map(eventTypes.map(et => [et._id, et.name]));
+        result['event count by event type'] = await aggregateCountByField(EventsCollection, 'eventTypeId', eventTypeNameByIdMap);
       }
 
       const hasTasks = role.tasks;
@@ -132,27 +135,15 @@ if (Meteor.isServer) {
       const hasTaskStatuses = role.taskStatus;
       if (hasTaskStatuses) {
         const taskStatuses = await TaskStatusCollection.find().fetchAsync();
-        const taskStatusNameByIdMap = new Map(taskStatuses.map(taskStatus => [taskStatus._id, taskStatus.name]));
-        result['task count by task status'] = {};
-        await TasksCollection.find().forEachAsync(task => {
-          if (!task.status) return;
-          const taskStatusName = taskStatusNameByIdMap.get(task.status);
-          result['task count by task status'][taskStatusName] = result['task count by task status'][taskStatusName] || 0;
-          result['task count by task status'][taskStatusName]++;
-        });
+        const taskStatusNameByIdMap = new Map(taskStatuses.map(ts => [ts._id, ts.name]));
+        result['task count by task status'] = await aggregateCountByField(TasksCollection, 'status', taskStatusNameByIdMap);
       }
 
       const hasRoles = role.roles;
       if (hasRoles) {
         const roles = await RolesCollection.find().fetchAsync();
-        const roleNameByIdMap = new Map(roles.map(role => [role._id, role.name]));
-        result['member count by role'] = {};
-        members.forEach(member => {
-          if (!member.profile?.roleId) return;
-          const roleName = roleNameByIdMap.get(member.profile?.roleId);
-          result['member count by role'][roleName] = result['member count by role'][roleName] || 0;
-          result['member count by role'][roleName]++;
-        });
+        const roleNameByIdMap = new Map(roles.map(r => [r._id, r.name]));
+        result['member count by role'] = await aggregateCountByField(MembersCollection, 'profile.roleId', roleNameByIdMap);
       }
 
       return result;

@@ -40,7 +40,6 @@ export default function TaskStatusForm({ setOpen, useSubdrawer }) {
           message.success(`Task status ${model?._id ? 'updated' : 'created'} successfully`);
         })
         .catch(error => {
-          console.error(error);
           notification.error({
             message: error.error,
             description: error.message,

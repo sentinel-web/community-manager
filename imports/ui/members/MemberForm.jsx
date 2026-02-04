@@ -79,8 +79,7 @@ export default function MemberForm({ setOpen }) {
         setNameError(result ? 'success' : 'error');
         setDisableSubmit(!result);
       })
-      .catch(error => {
-        console.error(error);
+      .catch(() => {
         setNameError('warning');
       });
   }, [form, model?._id]);
@@ -93,8 +92,7 @@ export default function MemberForm({ setOpen }) {
         setIdError(result ? 'success' : 'error');
         setDisableSubmit(!result);
       })
-      .catch(error => {
-        console.error(error);
+      .catch(() => {
         setIdError('warning');
       });
   }, [form, model?._id]);
@@ -118,7 +116,6 @@ export default function MemberForm({ setOpen }) {
           message.success('Save successful');
         })
         .catch(error => {
-          console.error(error);
           notification.error({
             message: error.error,
             description: error.message,
