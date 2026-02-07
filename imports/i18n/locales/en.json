@@ -291,7 +291,10 @@
     "dragOrClick": "Drag and drop or click to upload"
   },
   "orbat": {
-    "title": "ORBAT"
+    "title": "ORBAT",
+    "simple": "Simple",
+    "advanced": "Advanced",
+    "noMembers": "No members"
   },
   "registrations": {
     "title": "Registrations",

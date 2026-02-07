@@ -291,7 +291,10 @@
     "dragOrClick": "Glisser-déposer ou cliquer pour téléverser"
   },
   "orbat": {
-    "title": "ORBAT"
+    "title": "ORBAT",
+    "simple": "Simple",
+    "advanced": "Avancé",
+    "noMembers": "Aucun membre"
   },
   "registrations": {
     "title": "Inscriptions",

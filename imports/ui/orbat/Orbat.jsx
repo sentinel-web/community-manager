@@ -1,17 +1,21 @@
-import { App, Card, Descriptions, Empty, Popover, Typography } from 'antd';
+import { App, Card, Descriptions, Empty, Popover, Select, Space, Typography } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Tree, TreeNode } from 'react-organizational-chart';
+import getLegibleTextColor from '../../helpers/colors/getLegibleTextColor';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { turnBase64ToImage } from '../profile-picture-input/ProfilePictureInput';
+import useTheme from '../theme/theme.hook';
 
 export default function Orbat() {
   const { message } = App.useApp();
   const [ready, setReady] = useState(true);
   const [squads, setSquads] = useState([]);
   const [options, setOptions] = useState([]);
+  const [viewType, setViewType] = useState('simple');
   const { t } = useTranslation();
+  const { theme } = useTheme();
 
   useEffect(() => {
     setReady(false);
@@ -66,6 +70,7 @@ export default function Orbat() {
         info: squad.description,
         parentId: squad.parentSquadId,
         src: src,
+        color: squad.color,
         children: [],
       };
       const parent = findParentRecursive(preparedOrbatOptions, data.parentId);
@@ -87,21 +92,28 @@ export default function Orbat() {
     getOptions().then(setOptions);
   }, [getOptions]);
 
-  const mapOption = option => {
-    return (
-      <TreeNode key={option.id} label={<ORBAT_Label option={option} />}>
-        {option.children?.map(mapOption)}
-      </TreeNode>
-    );
-  };
+  const mapOption = useCallback(
+    option => {
+      return (
+        <TreeNode key={option.id} label={<ORBAT_Label option={option} viewType={viewType} />}>
+          {option.children?.map(mapOption)}
+        </TreeNode>
+      );
+    },
+    [viewType]
+  );
 
   return (
-    <Card loading={!ready} title={<Typography.Title level={3}>{t('orbat.title')}</Typography.Title>}>
+    <Card
+      loading={!ready}
+      title={<Typography.Title level={3}>{t('orbat.title')}</Typography.Title>}
+      extra={<OrbatViewSelector viewType={viewType} handleChange={setViewType} t={t} />}
+    >
       <div style={{ overflow: 'auto' }}>
         {options?.length === 0 && <Empty />}
         {options.map(option => {
           return (
-            <Tree key={option.id} label={<ORBAT_Label option={option} />}>
+            <Tree lineColor={theme === 'dark' ? 'white' : 'black'} key={option.id} label={<ORBAT_Label option={option} viewType={viewType} />}>
               {option.children?.map(mapOption)}
             </Tree>
           );
@@ -111,19 +123,48 @@ export default function Orbat() {
   );
 }
 
-const ORBAT_Label = ({ option }) => {
+const OrbatViewSelector = ({ viewType, handleChange, t }) => {
+  const viewTypes = useMemo(
+    () => [
+      { value: 'simple', label: t('orbat.simple') },
+      { value: 'advanced', label: t('orbat.advanced') },
+    ],
+    [t]
+  );
+  return <Select style={{ minWidth: 125 }} value={viewType} onChange={handleChange} options={viewTypes} optionFilterProp="label" showSearch />;
+};
+OrbatViewSelector.propTypes = {
+  viewType: PropTypes.string,
+  handleChange: PropTypes.func,
+  t: PropTypes.func,
+};
+
+const ORBAT_Label = ({ option, viewType }) => {
   const [items, setItems] = useState([]);
+
   useEffect(() => {
-    Meteor.callAsync('orbat.popover.items', option.id).then(setItems).catch(() => {});
     let isMounted = true;
     Meteor.callAsync('orbat.popover.items', option.id)
       .then(data => {
         if (isMounted) setItems(data);
-      });
+      })
+      .catch(() => {});
     return () => {
       isMounted = false;
     };
   }, [option.id]);
+
+  if (viewType === 'advanced') {
+    return <ORBAT_AdvancedLabel option={option} items={items} />;
+  }
+  return <ORBAT_SimpleLabel option={option} items={items} />;
+};
+ORBAT_Label.propTypes = {
+  option: PropTypes.object,
+  viewType: PropTypes.string,
+};
+
+const ORBAT_SimpleLabel = ({ option, items }) => {
   const hoverStyle = { cursor: 'pointer' };
 
   return (
@@ -159,6 +200,39 @@ const ORBAT_Label = ({ option }) => {
     </div>
   );
 };
-ORBAT_Label.propTypes = {
+ORBAT_SimpleLabel.propTypes = {
   option: PropTypes.object,
+  items: PropTypes.array,
+};
+
+const ORBAT_AdvancedLabel = ({ option, items }) => {
+  const { t } = useTranslation();
+  const bgColor = option.color;
+  const textColor = bgColor ? getLegibleTextColor(bgColor) : undefined;
+
+  return (
+    <Card type="inner" title={option.name} styles={{ header: { backgroundColor: bgColor, color: textColor } }}>
+      <Space direction="vertical" align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
+        {option.src && (
+          <img style={{ maxWidth: '64px', aspectRatio: '1/1', objectFit: 'contain' }} src={option.src} alt="-" title={option.info || option.name} />
+        )}
+        <Typography.Text type="secondary">{option.descritpion}</Typography.Text>
+        {items?.length > 0 ? (
+          items.map((item, index) => (
+            <div key={index}>
+              <Typography.Text strong>{item.label}</Typography.Text> <Typography.Text>{item.children}</Typography.Text>
+            </div>
+          ))
+        ) : (
+          <Typography.Text type="secondary" italic>
+            {t('orbat.noMembers')}
+          </Typography.Text>
+        )}
+      </Space>
+    </Card>
+  );
+};
+ORBAT_AdvancedLabel.propTypes = {
+  option: PropTypes.object,
+  items: PropTypes.array,
 };

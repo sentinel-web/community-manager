@@ -291,7 +291,10 @@
     "dragOrClick": "Ziehen und ablegen oder klicken zum Hochladen"
   },
   "orbat": {
-    "title": "ORBAT"
+    "title": "ORBAT",
+    "simple": "Einfach",
+    "advanced": "Erweitert",
+    "noMembers": "Keine Mitglieder"
   },
   "registrations": {
     "title": "Bewerbungen",
