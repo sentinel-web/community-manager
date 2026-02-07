@@ -1,5 +1,7 @@
-import { Col, DatePicker, Select } from 'antd';
+import { Col, Checkbox, DatePicker, Select } from 'antd';
 import dayjs from 'dayjs';
+import { Meteor } from 'meteor/meteor';
+import { useTracker } from 'meteor/react-meteor-data';
 import PropTypes from 'prop-types';
 import React, { useCallback, useMemo, useState } from 'react';
 import EventTypesCollection from '../../api/collections/eventTypes.collection';
@@ -17,7 +19,10 @@ export default function Events() {
   const [viewType, setViewType] = useState('calendar');
   const [dateRange, setDateRange] = useState([dayjs().startOf('month'), dayjs().endOf('month')]);
   const [eventTypes, setEventTypes] = useState([]);
+  const [relevantOnly, setRelevantOnly] = useState(false);
   const { t } = useTranslation();
+  const userId = useTracker(() => Meteor.userId(), []);
+
   const customView = useMemo(() => {
     switch (viewType) {
       case 'calendar':
@@ -38,9 +43,12 @@ export default function Events() {
         start: { $lte: dateRange?.[1]?.toDate?.() },
         end: { $gte: dateRange?.[0]?.toDate?.() },
       };
+      if (relevantOnly && userId) {
+        filter.$or = [{ hosts: userId }, { attendees: userId }];
+      }
       return filter;
     },
-    [dateRange, eventTypes]
+    [dateRange, eventTypes, relevantOnly, userId]
   );
 
   const handleViewTypeChange = useCallback(
@@ -80,6 +88,11 @@ export default function Events() {
               <DatePicker.RangePicker value={dateRange} onChange={setDateRange} />
             </Col>
           )}
+          <Col>
+            <Checkbox checked={relevantOnly} onChange={e => setRelevantOnly(e.target.checked)}>
+              {t('events.relevantToMe')}
+            </Checkbox>
+          </Col>
           <Col>
             <ViewTypeSelector viewType={viewType} handleChange={handleViewTypeChange} t={t} />
           </Col>

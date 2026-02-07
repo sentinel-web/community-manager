@@ -153,7 +153,10 @@
     "youAreSignedUp": "Du bist angemeldet",
     "attendeeCount": "Teilnehmer",
     "createEvent": "Ereignis erstellen",
-    "editEvent": "Ereignis bearbeiten"
+    "editEvent": "Ereignis bearbeiten",
+    "relevantToMe": "Für mich relevant",
+    "addSquad": "Trupp hinzufügen",
+    "addAll": "Alle hinzufügen"
   },
   "tasks": {
     "title": "Aufgaben",
@@ -201,7 +204,15 @@
     "contactInfo": "Kontaktinformationen",
     "qualifications": "Qualifikationen",
     "viewProfile": "Profil anzeigen",
-    "squadScopeNotice": "Zeige Mitglieder deines Trupps"
+    "squadScopeNotice": "Zeige Mitglieder deines Trupps",
+    "squadView": "Trupp-Ansicht",
+    "tableView": "Tabellenansicht",
+    "noSquad": "Kein Trupp",
+    "specialPermissions": "Spezialberechtigungen",
+    "canManageSpecializations": "Kann Spezialisierungen verwalten (Ausbilder)",
+    "canManageRecruits": "Kann Rekruten verwalten (Mentor)",
+    "canCreateEvents": "Kann Ereignisse erstellen (Zeus)",
+    "canManageTasks": "Kann Aufgaben verwalten (Entwickler)"
   },
   "settings": {
     "title": "Einstellungen",

@@ -3,7 +3,7 @@ import EventsCollection from '../../imports/api/collections/events.collection';
 import EventTypesCollection from '../../imports/api/collections/eventTypes.collection';
 import MembersCollection from '../../imports/api/collections/members.collection';
 import RanksCollection from '../../imports/api/collections/ranks.collection';
-import { validateUserId, validateString } from '../main';
+import { validateUserId, validateString, validateObject, getUserRole, isOfficerOrAdmin } from '../main';
 import { createLog } from './logs.server';
 
 const getFullName = (rank, id, name) => `${rank || 'Unranked'}-${id || '0000'} ${name || 'Name'}`;
@@ -20,7 +20,35 @@ async function resolveNames(userIds) {
   }));
 }
 
+// Default limit for publications to prevent memory exhaustion
+const DEFAULT_PUBLISH_LIMIT = 100;
+const MAX_PUBLISH_LIMIT = 1000;
+
 if (Meteor.isServer) {
+  // Custom events publication: non-officers only see public events + events they're involved in
+  Meteor.publish('events', async function (filter = {}, options = {}) {
+    if (!this.userId) return this.ready();
+    validateObject(filter, false);
+    validateObject(options, false);
+
+    const limitedOptions = { ...options };
+    if (!limitedOptions.limit) {
+      limitedOptions.limit = DEFAULT_PUBLISH_LIMIT;
+    } else if (limitedOptions.limit > MAX_PUBLISH_LIMIT) {
+      limitedOptions.limit = MAX_PUBLISH_LIMIT;
+    }
+
+    const role = await getUserRole(this.userId);
+    if (isOfficerOrAdmin(role)) {
+      return EventsCollection.find(filter, limitedOptions);
+    }
+
+    // Non-officers: only see non-private events or events they're part of
+    const privateFilter = { $or: [{ isPrivate: { $ne: true } }, { hosts: this.userId }, { attendees: this.userId }] };
+    const mergedFilter = { $and: [filter, privateFilter] };
+    return EventsCollection.find(mergedFilter, limitedOptions);
+  });
+
   Meteor.methods({
     'events.rsvp': async function (eventId) {
       validateUserId(this.userId);

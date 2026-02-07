@@ -153,7 +153,10 @@
     "youAreSignedUp": "Vous êtes inscrit",
     "attendeeCount": "Participants",
     "createEvent": "Créer un événement",
-    "editEvent": "Modifier l'événement"
+    "editEvent": "Modifier l'événement",
+    "relevantToMe": "Me concerne",
+    "addSquad": "Ajouter l'escouade",
+    "addAll": "Ajouter tout"
   },
   "tasks": {
     "title": "Tâches",
@@ -201,7 +204,15 @@
     "contactInfo": "Informations de contact",
     "qualifications": "Qualifications",
     "viewProfile": "Voir le profil",
-    "squadScopeNotice": "Affichage des membres de votre escouade"
+    "squadScopeNotice": "Affichage des membres de votre escouade",
+    "squadView": "Vue par escouade",
+    "tableView": "Vue tableau",
+    "noSquad": "Sans escouade",
+    "specialPermissions": "Permissions spéciales",
+    "canManageSpecializations": "Peut gérer les spécialisations (Instructeur)",
+    "canManageRecruits": "Peut gérer les recrues (Mentor)",
+    "canCreateEvents": "Peut créer des événements (Zeus)",
+    "canManageTasks": "Peut gérer les tâches (Développeur)"
   },
   "settings": {
     "title": "Paramètres",

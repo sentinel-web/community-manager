@@ -1,10 +1,12 @@
-import { DeleteOutlined, SaveOutlined } from '@ant-design/icons';
-import { App, Button, Col, ColorPicker, DatePicker, Form, Input, Row, Switch } from 'antd';
+import { DeleteOutlined, SaveOutlined, TeamOutlined, UsergroupAddOutlined } from '@ant-design/icons';
+import { App, Button, Col, ColorPicker, DatePicker, Form, Input, Row, Select, Switch } from 'antd';
 import dayjs from 'dayjs';
 import { Meteor } from 'meteor/meteor';
+import { useFind, useSubscribe } from 'meteor/react-meteor-data';
 import PropTypes from 'prop-types';
-import React, { useCallback, useContext, useMemo } from 'react';
+import React, { useCallback, useContext, useMemo, useState } from 'react';
 import EventTypesCollection from '../../api/collections/eventTypes.collection';
+import SquadsCollection from '../../api/collections/squads.collection';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
 import CollectionSelect from '../components/CollectionSelect';
@@ -109,6 +111,7 @@ const EventForm = ({ setOpen }) => {
       />
       <MembersSelect multiple name="hosts" label={t('events.hosts')} rules={[{ type: 'array' }]} defaultValue={model.hosts} />
       <MembersSelect multiple name="attendees" label={t('events.attendees')} rules={[{ type: 'array' }]} defaultValue={model.attendees} />
+      <SquadQuickAdd form={form} t={t} />
       <Row gutter={[16, 16]} style={{ flexWrap: 'nowrap' }}>
         <Col flex="auto">
           <Form.Item name="isPrivate" label={t('forms.labels.isPrivate')} valuePropName="checked" rules={[{ type: 'boolean' }]}>
@@ -146,6 +149,78 @@ const EventForm = ({ setOpen }) => {
 };
 EventForm.propTypes = {
   setOpen: PropTypes.func,
+};
+
+const SquadQuickAdd = ({ form, t }) => {
+  const [selectedSquad, setSelectedSquad] = useState(undefined);
+  const [loading, setLoading] = useState(false);
+  const { notification } = App.useApp();
+  useSubscribe('squads', {}, {});
+  const squads = useFind(() => SquadsCollection.find({}), []);
+  const squadOptions = useMemo(() => squads.map(s => ({ label: s.name, value: s._id })), [squads]);
+
+  const mergeAttendees = useCallback(
+    newIds => {
+      const current = form.getFieldValue('attendees') || [];
+      const merged = [...new Set([...current, ...newIds])];
+      form.setFieldsValue({ attendees: merged });
+    },
+    [form]
+  );
+
+  const handleAddSquad = useCallback(async () => {
+    if (!selectedSquad) return;
+    setLoading(true);
+    try {
+      const members = await Meteor.callAsync('members.read', { 'profile.squadId': selectedSquad }, { fields: { _id: 1 } });
+      mergeAttendees(members.map(m => m._id));
+    } catch (error) {
+      notification.error({ message: error.error, description: error.message });
+    }
+    setLoading(false);
+  }, [selectedSquad, mergeAttendees, notification]);
+
+  const handleAddAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const members = await Meteor.callAsync('members.read', {}, { fields: { _id: 1 } });
+      mergeAttendees(members.map(m => m._id));
+    } catch (error) {
+      notification.error({ message: error.error, description: error.message });
+    }
+    setLoading(false);
+  }, [mergeAttendees, notification]);
+
+  return (
+    <Row gutter={[8, 8]} style={{ marginBottom: 16 }} align="middle">
+      <Col flex="auto">
+        <Select
+          style={{ width: '100%' }}
+          placeholder={t('common.selectSquad')}
+          value={selectedSquad}
+          onChange={setSelectedSquad}
+          options={squadOptions}
+          allowClear
+          showSearch
+          optionFilterProp="label"
+        />
+      </Col>
+      <Col>
+        <Button icon={<TeamOutlined />} onClick={handleAddSquad} loading={loading} disabled={!selectedSquad}>
+          {t('events.addSquad')}
+        </Button>
+      </Col>
+      <Col>
+        <Button icon={<UsergroupAddOutlined />} onClick={handleAddAll} loading={loading}>
+          {t('events.addAll')}
+        </Button>
+      </Col>
+    </Row>
+  );
+};
+SquadQuickAdd.propTypes = {
+  form: PropTypes.object,
+  t: PropTypes.func,
 };
 
 export default EventForm;

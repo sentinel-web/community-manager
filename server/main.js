@@ -206,6 +206,19 @@ export function getPermissionModule(collectionName) {
   return COLLECTION_TO_MODULE[collectionName] || null;
 }
 
+/**
+ * Checks if a user has a special permission flag on their role.
+ * Special flags: canManageSpecializations, canManageRecruits, canCreateEvents, canManageTasks
+ * @param {string} userId - The user's ID
+ * @param {string} flag - The special permission flag to check
+ * @returns {Promise<boolean>}
+ */
+export async function checkSpecialPermission(userId, flag) {
+  const role = await getUserRole(userId);
+  if (!role) return false;
+  return role[flag] === true;
+}
+
 // Export constants for use in other modules
 export { BOOLEAN_MODULES, CRUD_MODULES };
 
@@ -291,7 +304,6 @@ if (Meteor.isServer) {
 }
 
 const collectionNames = [
-  'events',
   'attendances',
   'eventTypes',
   'tasks',
@@ -310,9 +322,15 @@ const collectionNames = [
   'questionnaireResponses',
 ];
 
+// Events: custom publication in events.server.js (filters private events for non-officers)
+const methodOnlyCollections = ['events'];
+
 if (Meteor.isServer) {
   for (const collectionName of collectionNames) {
     createCollectionPublish(collectionName);
+    createCollectionMethods(collectionName);
+  }
+  for (const collectionName of methodOnlyCollections) {
     createCollectionMethods(collectionName);
   }
 }

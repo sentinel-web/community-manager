@@ -10,7 +10,7 @@ import RanksCollection from '../../imports/api/collections/ranks.collection';
 import RolesCollection from '../../imports/api/collections/roles.collection';
 import SpecializationsCollection from '../../imports/api/collections/specializations.collection';
 import SquadsCollection from '../../imports/api/collections/squads.collection';
-import { validateObject, validatePublish, validateUserId, checkPermission, getSquadScope, isOfficerOrAdmin, getUserRole } from '../main';
+import { validateObject, validatePublish, validateUserId, checkPermission, checkSpecialPermission, getSquadScope, isOfficerOrAdmin, getUserRole } from '../main';
 import { createLog } from './logs.server';
 
 async function getMemberById(memberId) {
@@ -88,7 +88,12 @@ if (Meteor.isServer) {
 
       // Check update permission
       const hasPermission = await checkPermission(this.userId, 'members', 'update');
-      if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+      if (!hasPermission) {
+        // Allow instructors to update specializations only
+        const isSpecOnly = data['profile.specializationIds'] && Object.keys(data).length === 1;
+        const canManageSpecs = isSpecOnly && (await checkSpecialPermission(this.userId, 'canManageSpecializations'));
+        if (!canManageSpecs) throw new Meteor.Error(403, 'Permission denied');
+      }
 
       // Squad scope check: non-officers can only update members in same squad
       const role = await getUserRole(this.userId);

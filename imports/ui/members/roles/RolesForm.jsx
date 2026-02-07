@@ -111,6 +111,14 @@ const RolesForm = ({ setOpen }) => {
         <CrudPermissionInput key={name} name={name} label={t(labelKey)} t={t} />
       ))}
 
+      <Typography.Title level={5} style={{ marginTop: 16 }}>
+        {t('members.specialPermissions')}
+      </Typography.Title>
+      <RuleInput name="canManageSpecializations" label={t('members.canManageSpecializations')} />
+      <RuleInput name="canManageRecruits" label={t('members.canManageRecruits')} />
+      <RuleInput name="canCreateEvents" label={t('members.canCreateEvents')} />
+      <RuleInput name="canManageTasks" label={t('members.canManageTasks')} />
+
       <FormFooter setOpen={setOpen} />
     </Form>
   );

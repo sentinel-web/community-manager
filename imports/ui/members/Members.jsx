@@ -1,20 +1,23 @@
-import React, { useCallback, useContext } from 'react';
+import { Col, Select } from 'antd';
+import React, { useCallback, useContext, useMemo, useState } from 'react';
 import MembersCollection from '../../api/collections/members.collection';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
 import Section from '../section/Section';
 import MemberForm from './MemberForm';
 import MemberProfile from './MemberProfile';
+import MembersSquadView from './MembersSquadView';
 import getMembersColumns from './members.columns';
 
 /**
  * Members management page component.
  * Displays a searchable table of community members with CRUD operations.
- * No props - uses Section component for data fetching and display.
+ * Supports table view and squad-grouped view.
  */
 export default function Members() {
   const { t } = useTranslation();
   const drawer = useContext(DrawerContext);
+  const [viewType, setViewType] = useState('table');
 
   const onViewProfile = useCallback(
     memberId => {
@@ -43,6 +46,16 @@ export default function Members() {
     []
   );
 
+  const customView = useMemo(() => (viewType === 'squad' ? MembersSquadView : false), [viewType]);
+
+  const viewOptions = useMemo(
+    () => [
+      { value: 'table', label: t('members.tableView') },
+      { value: 'squad', label: t('members.squadView') },
+    ],
+    [t]
+  );
+
   return (
     <Section
       title={t('members.title')}
@@ -51,6 +64,12 @@ export default function Members() {
       FormComponent={MemberForm}
       columnsFactory={columnsFactory}
       filterFactory={filterFactory}
+      customView={customView}
+      headerExtra={
+        <Col>
+          <Select style={{ minWidth: 125 }} value={viewType} onChange={setViewType} options={viewOptions} />
+        </Col>
+      }
     />
   );
 }

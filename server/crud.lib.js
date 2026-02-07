@@ -1,6 +1,13 @@
 import { Meteor } from 'meteor/meteor';
-import { validateObject, validateString, checkPermission, getPermissionModule, clearRoleCache } from './main';
+import { validateObject, validateString, checkPermission, checkSpecialPermission, getPermissionModule, clearRoleCache } from './main';
 import { createLog } from './apis/logs.server';
+
+// Special permission fallbacks: when standard CRUD permission is denied,
+// check these role flags as an alternative authorization path
+const SPECIAL_PERMISSION_FALLBACK = {
+  events: { create: 'canCreateEvents' },
+  tasks: { create: 'canManageTasks', update: 'canManageTasks' },
+};
 
 import AttendancesCollection from '../imports/api/collections/attendances.collection';
 import DiscoveryTypesCollection from '../imports/api/collections/discoveryTypes.collection';
@@ -115,7 +122,11 @@ function createCollectionMethods(collection) {
           // Check create permission (skip for unsafe collections like registrations)
           if (permissionModule && this.userId) {
             const hasPermission = await checkPermission(this.userId, permissionModule, 'create');
-            if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+            if (!hasPermission) {
+              const fallbackFlag = SPECIAL_PERMISSION_FALLBACK[collection]?.create;
+              const hasSpecial = fallbackFlag ? await checkSpecialPermission(this.userId, fallbackFlag) : false;
+              if (!hasSpecial) throw new Meteor.Error(403, 'Permission denied');
+            }
           }
 
           const id = await Collection.insertAsync(payload);
@@ -132,7 +143,11 @@ function createCollectionMethods(collection) {
           // Check update permission
           if (permissionModule) {
             const hasPermission = await checkPermission(this.userId, permissionModule, 'update');
-            if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+            if (!hasPermission) {
+              const fallbackFlag = SPECIAL_PERMISSION_FALLBACK[collection]?.update;
+              const hasSpecial = fallbackFlag ? await checkSpecialPermission(this.userId, fallbackFlag) : false;
+              if (!hasSpecial) throw new Meteor.Error(403, 'Permission denied');
+            }
           }
 
           const result = await Collection.updateAsync({ _id: id }, { $set: data });

@@ -153,7 +153,10 @@
     "youAreSignedUp": "You are signed up",
     "attendeeCount": "Attendees",
     "createEvent": "Create Event",
-    "editEvent": "Edit Event"
+    "editEvent": "Edit Event",
+    "relevantToMe": "Relevant to me",
+    "addSquad": "Add Squad",
+    "addAll": "Add All"
   },
   "tasks": {
     "title": "Tasks",
@@ -201,7 +204,15 @@
     "contactInfo": "Contact Information",
     "qualifications": "Qualifications",
     "viewProfile": "View Profile",
-    "squadScopeNotice": "Showing members from your squad"
+    "squadScopeNotice": "Showing members from your squad",
+    "squadView": "Squad View",
+    "tableView": "Table View",
+    "noSquad": "No Squad",
+    "specialPermissions": "Special Permissions",
+    "canManageSpecializations": "Can Manage Specializations (Instructor)",
+    "canManageRecruits": "Can Manage Recruits (Mentor)",
+    "canCreateEvents": "Can Create Events (Zeus)",
+    "canManageTasks": "Can Manage Tasks (Developer)"
   },
   "settings": {
     "title": "Settings",
