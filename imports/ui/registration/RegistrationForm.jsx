@@ -32,6 +32,8 @@ export default function RegistrationForm({ setOpen }) {
         id: null,
         age: null,
         discoveryType: null,
+        steamProfileLink: '',
+        discordTag: '',
         rulesReadAndAccepted: false,
         description: '',
       });
@@ -67,8 +69,8 @@ export default function RegistrationForm({ setOpen }) {
   const handleSubmit = useCallback(
     values => {
       setLoading(true);
-      const { name, id, age, discoveryType, rulesReadAndAccepted, description } = values;
-      const args = [...(model?._id ? [model._id] : []), { name, id, age, discoveryType, rulesReadAndAccepted, description }];
+      const { name, id, age, discoveryType, steamProfileLink, discordTag, rulesReadAndAccepted, description } = values;
+      const args = [...(model?._id ? [model._id] : []), { name, id, age, discoveryType, steamProfileLink, discordTag, rulesReadAndAccepted, description }];
       Meteor.callAsync(Meteor.user() && model?._id ? 'registrations.update' : 'registrations.insert', ...args)
         .then(() => {
           setOpen(false);
@@ -155,6 +157,12 @@ export default function RegistrationForm({ setOpen }) {
         collection={DiscoveryTypesCollection}
         FormComponent={DiscoveryTypeForm}
       />
+      <Form.Item name="steamProfileLink" label={t('forms.labels.steamProfileLink')} rules={[{ type: 'string' }]}>
+        <Input placeholder={t('forms.placeholders.enterSteamProfileLink')} />
+      </Form.Item>
+      <Form.Item name="discordTag" label={t('forms.labels.discordTag')} rules={[{ type: 'string' }]}>
+        <Input placeholder={t('forms.placeholders.enterDiscordTag')} />
+      </Form.Item>
       <Form.Item name="rulesReadAndAccepted" label={t('forms.labels.rulesAccepted')} rules={[{ required: true, type: 'boolean' }]} required>
         <Switch />
       </Form.Item>

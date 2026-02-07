@@ -1,8 +1,10 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useContext } from 'react';
 import MembersCollection from '../../api/collections/members.collection';
 import { useTranslation } from '../../i18n/LanguageContext';
+import { DrawerContext } from '../app/App';
 import Section from '../section/Section';
 import MemberForm from './MemberForm';
+import MemberProfile from './MemberProfile';
 import getMembersColumns from './members.columns';
 
 /**
@@ -12,6 +14,23 @@ import getMembersColumns from './members.columns';
  */
 export default function Members() {
   const { t } = useTranslation();
+  const drawer = useContext(DrawerContext);
+
+  const onViewProfile = useCallback(
+    memberId => {
+      drawer.setDrawerTitle(t('members.viewProfile'));
+      drawer.setDrawerModel({});
+      drawer.setDrawerComponent(<MemberProfile memberId={memberId} />);
+      drawer.setDrawerOpen(true);
+    },
+    [drawer, t]
+  );
+
+  const columnsFactory = useCallback(
+    (handleEdit, handleDelete, permissions, t) => getMembersColumns(handleEdit, handleDelete, permissions, t, { onViewProfile }),
+    [onViewProfile]
+  );
+
   const filterFactory = useCallback(
     string => ({
       $or: [
@@ -30,7 +49,7 @@ export default function Members() {
       collectionName="members"
       Collection={MembersCollection}
       FormComponent={MemberForm}
-      columnsFactory={getMembersColumns}
+      columnsFactory={columnsFactory}
       filterFactory={filterFactory}
     />
   );

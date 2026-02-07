@@ -2,6 +2,7 @@ import dayjs from 'dayjs';
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
 import AttendancesCollection from '../../imports/api/collections/attendances.collection';
+import EventsCollection from '../../imports/api/collections/events.collection';
 import MedalsCollection from '../../imports/api/collections/medals.collection';
 import MembersCollection from '../../imports/api/collections/members.collection';
 import ProfilePicturesCollection from '../../imports/api/collections/profilePictures.collection';
@@ -9,7 +10,7 @@ import RanksCollection from '../../imports/api/collections/ranks.collection';
 import RolesCollection from '../../imports/api/collections/roles.collection';
 import SpecializationsCollection from '../../imports/api/collections/specializations.collection';
 import SquadsCollection from '../../imports/api/collections/squads.collection';
-import { validateObject, validatePublish, validateUserId, checkPermission } from '../main';
+import { validateObject, validatePublish, validateUserId, checkPermission, getSquadScope, isOfficerOrAdmin, getUserRole } from '../main';
 import { createLog } from './logs.server';
 
 async function getMemberById(memberId) {
@@ -33,9 +34,11 @@ if (Meteor.isServer) {
     validateUserId(this.userId);
     return MembersCollection.find({ _id: this.userId }, { fields: { services: 0 } });
   });
-  Meteor.publish('members', function (filter = {}, options = {}) {
+  Meteor.publish('members', async function (filter = {}, options = {}) {
     validatePublish(this.userId, filter, options);
-    return MembersCollection.find(filter, { ...options, fields: { services: 0 } });
+    const squadScope = await getSquadScope(this.userId);
+    const scopedFilter = { ...filter, ...squadScope };
+    return MembersCollection.find(scopedFilter, { ...options, fields: { services: 0 } });
   });
 
   Meteor.methods({
@@ -48,7 +51,9 @@ if (Meteor.isServer) {
       const hasPermission = await checkPermission(this.userId, 'members', 'read');
       if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
 
-      return await MembersCollection.find(filter, options).fetchAsync();
+      const squadScope = await getSquadScope(this.userId);
+      const scopedFilter = { ...filter, ...squadScope };
+      return await MembersCollection.find(scopedFilter, options).fetchAsync();
     },
     'members.findOne': async function (filter = {}, options = {}) {
       validateUserId(this.userId);
@@ -79,11 +84,20 @@ if (Meteor.isServer) {
     },
     'members.update': async function (memberId = '', data = {}) {
       validateUserId(this.userId);
-      await getMemberById(memberId);
+      const targetMember = await getMemberById(memberId);
 
       // Check update permission
       const hasPermission = await checkPermission(this.userId, 'members', 'update');
       if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+
+      // Squad scope check: non-officers can only update members in same squad
+      const role = await getUserRole(this.userId);
+      if (!isOfficerOrAdmin(role)) {
+        const viewer = await MembersCollection.findOneAsync(this.userId);
+        if (viewer?.profile?.squadId && targetMember?.profile?.squadId !== viewer.profile.squadId) {
+          throw new Meteor.Error(403, 'Cannot update members outside your squad');
+        }
+      }
 
       const selector = { _id: memberId };
       const modifier = { $set: data };
@@ -176,8 +190,73 @@ if (Meteor.isServer) {
       const members = await MembersCollection.find({}).fetchAsync();
       return members;
     },
-    'members.profileStats': async function (user, role) {
+    'members.profileAccess': async function (targetUserId) {
       if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
+
+      const viewerRole = await RolesCollection.findOneAsync({ _id: (await MembersCollection.findOneAsync(this.userId))?.profile?.roleId ?? null });
+      const isOfficerOrAdmin = viewerRole?.roles === true;
+      return { canViewContact: isOfficerOrAdmin || this.userId === targetUserId };
+    },
+    'members.attendanceBreakdown': async function (targetUserId) {
+      if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
+      const userId = targetUserId || this.userId;
+
+      if (userId !== this.userId) {
+        const hasPermission = await checkPermission(this.userId, 'members', 'read');
+        if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+      }
+
+      const now = dayjs();
+      const quarterStart = now.startOf('quarter').toDate();
+      const total = { present: 0, absent: 0, excused: 0, zeus: 0, total: 0 };
+      const quarterly = { present: 0, absent: 0, excused: 0, zeus: 0, total: 0 };
+      let missionCount = 0;
+
+      await AttendancesCollection.find({ [userId]: { $exists: true } }).forEachAsync(async attendance => {
+        const val = attendance[userId];
+        if (val === -2) return; // skip cancelled
+
+        total.total += 1;
+        if (val === 1) { total.present += 1; missionCount += 1; }
+        else if (val === 2) { total.zeus += 1; missionCount += 1; }
+        else if (val === -1) total.absent += 1;
+        else if (val === 0) total.excused += 1;
+
+        // Check if event is in current quarter
+        const event = await EventsCollection.findOneAsync({ _id: attendance.eventId });
+        if (event && event.start >= quarterStart) {
+          quarterly.total += 1;
+          if (val === 1) quarterly.present += 1;
+          else if (val === 2) quarterly.zeus += 1;
+          else if (val === -1) quarterly.absent += 1;
+          else if (val === 0) quarterly.excused += 1;
+        }
+      });
+
+      return { total, quarterly, missionCount };
+    },
+    'members.profileStats': async function (userOrTargetId, role) {
+      if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
+
+      let user = userOrTargetId;
+      // Support passing a targetUserId string
+      if (typeof userOrTargetId === 'string') {
+        if (userOrTargetId !== this.userId) {
+          const hasPermission = await checkPermission(this.userId, 'members', 'read');
+          if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+
+          // Squad scope check
+          const viewerRole = await getUserRole(this.userId);
+          if (!isOfficerOrAdmin(viewerRole)) {
+            const viewer = await MembersCollection.findOneAsync(this.userId);
+            const target = await MembersCollection.findOneAsync(userOrTargetId);
+            if (viewer?.profile?.squadId && target?.profile?.squadId !== viewer.profile.squadId) {
+              throw new Meteor.Error(403, 'Cannot view profiles outside your squad');
+            }
+          }
+        }
+        user = await Meteor.users.findOneAsync(userOrTargetId);
+      }
 
       if (!user) user = await Meteor.users.findOneAsync(this.userId);
 
@@ -189,10 +268,10 @@ if (Meteor.isServer) {
       let inactivityPoints = user.profile?.staticInactivityPoints || 0;
       let attendancePoints = user.profile?.staticAttendancePoints || 0;
       await AttendancesCollection.find({ [user._id]: { $exists: true } }).forEachAsync(attendance => {
-        if (attendance[user._id] === -1) {
-          inactivityPoints += 1;
-        }
-        attendancePoints += attendance[user._id] || 0;
+        const val = attendance[user._id];
+        if (val === -2) return; // skip cancelled events
+        if (val === -1) inactivityPoints += 1;
+        attendancePoints += val === 2 ? 1 : (val || 0);
       });
 
       const result = {
@@ -217,6 +296,8 @@ if (Meteor.isServer) {
           ? (await SpecializationsCollection.find({ _id: { $in: user.profile.specializationIds } }).mapAsync(s => s.name)).join(', ')
           : '-',
         description: user.profile?.description || '-',
+        steamProfileLink: user.profile?.steamProfileLink || '',
+        discordTag: user.profile?.discordTag || '',
       };
 
       return result;

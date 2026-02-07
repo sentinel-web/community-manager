@@ -25,16 +25,20 @@ function AttendanceOption({ value, setEditting }) {
   const { t } = useTranslation();
   const colorMap = useMemo(() => {
     return {
+      '-2': 'default',
       '-1': 'red',
       0: 'yellow',
       1: 'green',
+      2: 'cyan',
     };
   }, []);
   const label = useMemo(() => {
     return {
+      '-2': t('events.eventCancelled'),
       '-1': t('events.absent'),
       0: t('events.excused'),
       1: t('events.present'),
+      2: t('events.presentZeus'),
     }[value];
   }, [value, t]);
 
@@ -77,9 +81,11 @@ function AttendanceSelect({ value, eventId, memberId, setEditting }) {
 
   const options = useMemo(
     () => [
+      { value: -2, label: t('events.eventCancelled') },
       { value: -1, label: t('events.absent') },
       { value: 0, label: t('events.excused') },
       { value: 1, label: t('events.present') },
+      { value: 2, label: t('events.presentZeus') },
     ],
     [t]
   );
@@ -202,12 +208,18 @@ export default function EventAttendance({ datasource }) {
   const columns = useMemo(() => transformEventsIntoColumns(datasource, memberNameMap, t), [datasource, memberNameMap, t]);
   const rows = useMemo(() => {
     return members.map(member => {
+      let ip = member.profile.staticInactivityPoints || 0;
+      let points = member.profile.staticAttendancePoints || 0;
+      attendances.forEach(attendance => {
+        const val = attendance[member._id];
+        if (val === -2 || val == null) return; // skip cancelled/missing
+        if (val === -1) ip += 1;
+        points += val === 2 ? 1 : Number(val);
+      });
       return {
         _id: member._id,
-        ip: (member.profile.staticInactivityPoints || 0) + (attendances.filter(attendance => attendance[member._id] === -1).length || 0),
-        points:
-          (member.profile.staticAttendancePoints || 0) +
-          (attendances.reduce((acc, attendance) => acc + (attendance[member._id] != null ? Number(attendance[member._id]) : 0), 0) || 0),
+        ip,
+        points,
         memberId: member._id,
         ...datasource.reduce((acc, event) => {
           acc[event._id] = attendances.find(attendance => attendance.eventId === event._id)?.[member._id];

@@ -9,6 +9,7 @@ import RolesCollection from '../imports/api/collections/roles.collection';
 import TasksCollection from '../imports/api/collections/tasks.collection';
 import './apis/backup.server';
 import './apis/dashboard.server';
+import './apis/events.server';
 import './apis/logs.server';
 import './apis/members.server';
 import './apis/orbat.server';
@@ -18,7 +19,7 @@ import './apis/specializations.server';
 import './apis/questionnaireResponses.server';
 import './crud.lib';
 import { createCollectionMethods, createCollectionPublish } from './crud.lib';
-import { CACHE } from './config';
+import { CACHE, SQUAD_SCOPED_PERMISSIONS } from './config';
 
 // === Permission System ===
 
@@ -207,6 +208,34 @@ export function getPermissionModule(collectionName) {
 
 // Export constants for use in other modules
 export { BOOLEAN_MODULES, CRUD_MODULES };
+
+/**
+ * Checks if a role represents an officer or admin.
+ * Officers/admins bypass squad-scoped filtering.
+ */
+export function isOfficerOrAdmin(role) {
+  if (!role) return false;
+  return role.roles === true;
+}
+
+/**
+ * Gets squad scope filter for a user.
+ * Non-officers get filtered to their own squad; officers/admins get no filter.
+ * @param {string} userId - The user's ID
+ * @returns {Promise<Object>} - MongoDB filter to apply, or empty object for officers
+ */
+export async function getSquadScope(userId) {
+  if (!SQUAD_SCOPED_PERMISSIONS.enabled) return {};
+
+  const role = await getUserRole(userId);
+  if (isOfficerOrAdmin(role)) return {};
+
+  const user = await MembersCollection.findOneAsync(userId);
+  const squadId = user?.profile?.squadId;
+  if (!squadId) return {};
+
+  return { 'profile.squadId': squadId };
+}
 
 /**
  * Creates test data for development environments only.

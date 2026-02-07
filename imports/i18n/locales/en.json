@@ -145,6 +145,13 @@
     "present": "Present",
     "absent": "Absent (No Show)",
     "excused": "Excused",
+    "presentZeus": "Present (Zeus)",
+    "eventCancelled": "Event Cancelled",
+    "signUp": "Sign Up",
+    "signOff": "Sign Off",
+    "eventDetails": "Event Details",
+    "youAreSignedUp": "You are signed up",
+    "attendeeCount": "Attendees",
     "createEvent": "Create Event",
     "editEvent": "Edit Event"
   },
@@ -187,7 +194,14 @@
     "playerRank": "Player Rank",
     "zeusRank": "Zeus Rank",
     "basicPermissions": "Basic Permissions",
-    "crudPermissions": "CRUD Permissions"
+    "crudPermissions": "CRUD Permissions",
+    "missionCount": "Missions Attended",
+    "attendanceOverall": "Attendance (Overall)",
+    "attendanceQuarterly": "Attendance (Quarterly)",
+    "contactInfo": "Contact Information",
+    "qualifications": "Qualifications",
+    "viewProfile": "View Profile",
+    "squadScopeNotice": "Showing members from your squad"
   },
   "settings": {
     "title": "Settings",
@@ -329,7 +343,9 @@
     "linkToFile": "Link to File",
     "link": "Link",
     "age": "Age",
-    "discoveryType": "Discovery Type"
+    "discoveryType": "Discovery Type",
+    "steamProfileLink": "Steam Profile",
+    "discordTag": "Discord"
   },
   "validation": {
     "required": "This field is required",
@@ -392,6 +408,7 @@
       "desiredId": "Desired ID",
       "age": "Age",
       "discoveryType": "Discovery Type",
+      "discordTag": "Discord Username",
       "rulesAccepted": "I read the rules and accept them"
     },
     "placeholders": {

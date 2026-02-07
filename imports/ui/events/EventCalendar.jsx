@@ -12,6 +12,7 @@ import EventTypesCollection from '../../api/collections/eventTypes.collection';
 import getLegibleTextColor from '../../helpers/colors/getLegibleTextColor';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
+import EventDetailPopover from './EventDetailPopover';
 import EventForm from './EventForm';
 
 const DnDCalendar = withDragAndDrop(Calendar);
@@ -27,6 +28,9 @@ const EventCalendar = ({ datasource, setFilter }) => {
 
   // Create localizer with current locale
   const localizer = useMemo(() => dayjsLocalizer(dayjs), [language]);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailEvent, setDetailEvent] = useState(null);
+
   const [range, setRange] = useState({
     start: dayjs().startOf('month').startOf('week').toDate(),
     end: dayjs().endOf('month').endOf('week').toDate(),
@@ -62,7 +66,8 @@ const EventCalendar = ({ datasource, setFilter }) => {
   };
 
   const onSelectEvent = (event, e) => {
-    openForm(event);
+    setDetailEvent(event);
+    setDetailOpen(true);
     e.stopPropagation();
   };
 
@@ -124,6 +129,7 @@ const EventCalendar = ({ datasource, setFilter }) => {
 
   return (
     <div style={{ height: window.innerHeight * 0.75 }}>
+      <EventDetailPopover event={detailEvent} open={detailOpen} setOpen={setDetailOpen} onEdit={openForm} />
       <DnDCalendar
         startAccessor="start"
         endAccessor="end"

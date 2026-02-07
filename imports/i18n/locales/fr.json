@@ -145,6 +145,13 @@
     "present": "Présent",
     "absent": "Absent (Non présenté)",
     "excused": "Excusé",
+    "presentZeus": "Présent (Zeus)",
+    "eventCancelled": "Événement annulé",
+    "signUp": "S'inscrire",
+    "signOff": "Se désinscrire",
+    "eventDetails": "Détails de l'événement",
+    "youAreSignedUp": "Vous êtes inscrit",
+    "attendeeCount": "Participants",
     "createEvent": "Créer un événement",
     "editEvent": "Modifier l'événement"
   },
@@ -187,7 +194,14 @@
     "playerRank": "Grade joueur",
     "zeusRank": "Grade Zeus",
     "basicPermissions": "Permissions de base",
-    "crudPermissions": "Permissions CRUD"
+    "crudPermissions": "Permissions CRUD",
+    "missionCount": "Missions effectuées",
+    "attendanceOverall": "Présence (Global)",
+    "attendanceQuarterly": "Présence (Trimestriel)",
+    "contactInfo": "Informations de contact",
+    "qualifications": "Qualifications",
+    "viewProfile": "Voir le profil",
+    "squadScopeNotice": "Affichage des membres de votre escouade"
   },
   "settings": {
     "title": "Paramètres",
@@ -329,7 +343,9 @@
     "linkToFile": "Lien vers le fichier",
     "link": "Lien",
     "age": "Âge",
-    "discoveryType": "Type de découverte"
+    "discoveryType": "Type de découverte",
+    "steamProfileLink": "Profil Steam",
+    "discordTag": "Discord"
   },
   "validation": {
     "required": "Ce champ est obligatoire",
@@ -392,6 +408,7 @@
       "desiredId": "ID souhaité",
       "age": "Âge",
       "discoveryType": "Type de découverte",
+      "discordTag": "Nom d'utilisateur Discord",
       "rulesAccepted": "J'ai lu les règles et je les accepte"
     },
     "placeholders": {

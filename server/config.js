@@ -30,6 +30,7 @@ const DEFAULTS = {
   cache: {
     roleTtlMs: 60000, // 1 minute
   },
+  squadScopedPermissions: true,
 };
 
 /**
@@ -93,5 +94,12 @@ export const RATE_LIMITS = {
 export const CACHE = {
   get roleTtlMs() {
     return getConfig(['cache', 'roleTtlMs'], 60000);
+  },
+};
+
+// Squad-Scoped Permissions
+export const SQUAD_SCOPED_PERMISSIONS = {
+  get enabled() {
+    return getConfig(['squadScopedPermissions'], true);
   },
 };

@@ -24,11 +24,11 @@ const ConfirmModal = ({ open, setOpen, record }) => {
     try {
       const values = await form.validateFields();
       const { username, password } = values || {};
-      const { name, id, age, discoveryType, description } = record || {};
+      const { name, id, age, discoveryType, steamProfileLink, discordTag, description } = record || {};
       const payload = {
         username,
         password,
-        profile: { name, id, age, discoveryType, description, registrationId: record._id },
+        profile: { name, id, age, discoveryType, steamProfileLink, discordTag, description, registrationId: record._id },
       };
       await Meteor.callAsync('members.insert', payload);
       message.success(t('registrations.memberCreated'));
@@ -48,7 +48,7 @@ const ConfirmModal = ({ open, setOpen, record }) => {
   return (
     <Modal
       open={open}
-      okButttonProps={{ loading }}
+      okButtonProps={{ loading }}
       onOk={handleCreate}
       onCancel={toggleOpen}
       okText={t('common.submit')}

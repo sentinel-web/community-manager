@@ -33,6 +33,19 @@ export default function getRegistrationColumns(handleEdit, handleDelete, permiss
       render: discoveryType => <DiscoveryTypeTag discoveryTypeId={discoveryType} />,
     },
     {
+      title: t('columns.steamProfileLink'),
+      dataIndex: 'steamProfileLink',
+      key: 'steamProfileLink',
+      ellipsis: true,
+      render: link => (link ? <a href={link} target="_blank" rel="noopener noreferrer">{link}</a> : '-'),
+    },
+    {
+      title: t('columns.discordTag'),
+      dataIndex: 'discordTag',
+      key: 'discordTag',
+      ellipsis: true,
+    },
+    {
       title: t('common.description'),
       dataIndex: 'description',
       key: 'description',
