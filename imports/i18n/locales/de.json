@@ -175,7 +175,13 @@
     "viewTable": "Tabelle",
     "viewKanban": "Kanban",
     "type": "Typ",
-    "selectType": "Typ auswählen"
+    "selectType": "Typ auswählen",
+    "completedBy": "Abgeschlossen von",
+    "createdAt": "Erstellt am",
+    "comments": "Kommentare",
+    "addComment": "Kommentar hinzufügen",
+    "commentPlaceholder": "Kommentar schreiben...",
+    "commentAdded": "Kommentar hinzugefügt"
   },
   "members": {
     "title": "Mitglieder",
@@ -212,7 +218,10 @@
     "canManageSpecializations": "Kann Spezialisierungen verwalten (Ausbilder)",
     "canManageRecruits": "Kann Rekruten verwalten (Mentor)",
     "canCreateEvents": "Kann Ereignisse erstellen (Zeus)",
-    "canManageTasks": "Kann Aufgaben verwalten (Entwickler)"
+    "canManageTasks": "Kann Aufgaben verwalten (Entwickler)",
+    "position": "Position",
+    "requestSpecialization": "Spezialisierung anfragen",
+    "unassigned": "Nicht zugewiesen"
   },
   "settings": {
     "title": "Einstellungen",
@@ -328,7 +337,9 @@
     "memberCreated": "Mitglied erstellt",
     "dataNotFound": "Daten nicht gefunden",
     "selectUsernamePassword": "Bitte wählen Sie einen Benutzernamen und ein Passwort",
-    "desiredName": "Gewünschter Name"
+    "desiredName": "Gewünschter Name",
+    "discoveryTypeDetails": "Details",
+    "hasTextInput": "Hat Texteingabe"
   },
   "specializations": {
     "title": "Spezialisierungen",
@@ -395,7 +406,8 @@
     "specializationCreated": "Spezialisierung erstellt",
     "specializationUpdated": "Spezialisierung aktualisiert",
     "squadCreated": "Trupp erstellt",
-    "squadUpdated": "Trupp aktualisiert"
+    "squadUpdated": "Trupp aktualisiert",
+    "specializationRequested": "Spezialisierungsanfrage eingereicht"
   },
   "forms": {
     "sections": {
@@ -445,7 +457,9 @@
       "selectRole": "Rolle auswählen",
       "enterShortRangeFrequency": "Kurzstreckenfrequenz eingeben",
       "enterLongRangeFrequency": "Langstreckenfrequenz eingeben",
-      "enterLinkToFile": "Link zur Datei eingeben"
+      "enterLinkToFile": "Link zur Datei eingeben",
+      "enterPosition": "Position eingeben",
+      "enterDetails": "Details eingeben"
     },
     "errors": {
       "nameAlreadyInUse": "Name wird bereits verwendet",

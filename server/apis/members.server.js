@@ -195,6 +195,31 @@ if (Meteor.isServer) {
       const members = await MembersCollection.find({}).fetchAsync();
       return members;
     },
+    'members.groupedOptions': async function () {
+      validateUserId(this.userId);
+
+      const members = await MembersCollection.find({}, { fields: { 'profile.rankId': 1, 'profile.id': 1, 'profile.name': 1, 'profile.squadId': 1 } }).fetchAsync();
+
+      // Batch load ranks and squads
+      const rankIds = [...new Set(members.map(m => m.profile?.rankId).filter(Boolean))];
+      const squadIds = [...new Set(members.map(m => m.profile?.squadId).filter(Boolean))];
+      const ranks = await RanksCollection.find({ _id: { $in: rankIds } }).fetchAsync();
+      const squads = await SquadsCollection.find({ _id: { $in: squadIds } }).fetchAsync();
+      const rankNameById = new Map(ranks.map(r => [r._id, r.name]));
+      const squadNameById = new Map(squads.map(s => [s._id, s.name]));
+
+      const groups = {};
+      for (const member of members) {
+        const squadName = member.profile?.squadId ? squadNameById.get(member.profile.squadId) || '-' : 'Unassigned';
+        if (!groups[squadName]) groups[squadName] = [];
+        groups[squadName].push({
+          label: getFullName(rankNameById.get(member.profile?.rankId), member.profile?.id, member.profile?.name),
+          value: member._id,
+        });
+      }
+
+      return Object.entries(groups).map(([label, options]) => ({ label, options }));
+    },
     'members.profileAccess': async function (targetUserId) {
       if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
 
@@ -279,6 +304,9 @@ if (Meteor.isServer) {
         attendancePoints += val === 2 ? 1 : (val || 0);
       });
 
+      const resolvedRank = user.profile?.rankId ? await RanksCollection.findOneAsync({ _id: user.profile.rankId }) : null;
+      const resolvedNavyRank = user.profile?.navyRankId ? await RanksCollection.findOneAsync({ _id: user.profile.navyRankId }) : null;
+
       const result = {
         ['profile picture']: user.profile?.profilePictureId
           ? (await ProfilePicturesCollection.findOneAsync({ _id: user.profile.profilePictureId }))?.value
@@ -286,10 +314,9 @@ if (Meteor.isServer) {
         squad: user.profile?.squadId ? (await SquadsCollection.findOneAsync({ _id: user.profile.squadId }))?.name : '-',
         role: role?.name || '-',
         ['entry date']: user.profile?.entryDate ? dayjs(user.profile.entryDate).format('YYYY-MM-DD') : '-',
-        rank: user.profile?.rankId
-          ? (await RanksCollection.findOneAsync({ _id: user.profile.rankId }))?.name ??
-            (user.profile.navyRankId ? (await RanksCollection.findOneAsync({ _id: user.profile.navyRankId }))?.name : '-')
-          : '-',
+        rank: resolvedRank?.name || '-',
+        rankColor: resolvedRank?.color || null,
+        navyRank: resolvedNavyRank?.name || '-',
         id: user.profile?.id || '-',
         name: user.profile?.name || '-',
         ['attendance points']: attendancePoints,
@@ -298,11 +325,12 @@ if (Meteor.isServer) {
           ? (await MedalsCollection.find({ _id: { $in: user.profile.medalIds } }).mapAsync(m => m.name)).join(', ')
           : '-',
         specializations: user.profile?.specializationIds?.length
-          ? (await SpecializationsCollection.find({ _id: { $in: user.profile.specializationIds } }).mapAsync(s => s.name)).join(', ')
-          : '-',
+          ? await SpecializationsCollection.find({ _id: { $in: user.profile.specializationIds } }).mapAsync(s => ({ name: s.name, linkToFile: s.linkToFile || null }))
+          : [],
         description: user.profile?.description || '-',
         steamProfileLink: user.profile?.steamProfileLink || '',
         discordTag: user.profile?.discordTag || '',
+        position: user.profile?.position || '-',
       };
 
       return result;

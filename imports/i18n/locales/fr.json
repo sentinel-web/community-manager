@@ -175,7 +175,13 @@
     "viewTable": "Tableau",
     "viewKanban": "Kanban",
     "type": "Type",
-    "selectType": "Sélectionner le type"
+    "selectType": "Sélectionner le type",
+    "completedBy": "Complété par",
+    "createdAt": "Créé le",
+    "comments": "Commentaires",
+    "addComment": "Ajouter un commentaire",
+    "commentPlaceholder": "Écrire un commentaire...",
+    "commentAdded": "Commentaire ajouté"
   },
   "members": {
     "title": "Membres",
@@ -212,7 +218,10 @@
     "canManageSpecializations": "Peut gérer les spécialisations (Instructeur)",
     "canManageRecruits": "Peut gérer les recrues (Mentor)",
     "canCreateEvents": "Peut créer des événements (Zeus)",
-    "canManageTasks": "Peut gérer les tâches (Développeur)"
+    "canManageTasks": "Peut gérer les tâches (Développeur)",
+    "position": "Position",
+    "requestSpecialization": "Demander une spécialisation",
+    "unassigned": "Non assigné"
   },
   "settings": {
     "title": "Paramètres",
@@ -328,7 +337,9 @@
     "memberCreated": "Membre créé",
     "dataNotFound": "Données non trouvées",
     "selectUsernamePassword": "Veuillez choisir un nom d'utilisateur et un mot de passe",
-    "desiredName": "Nom souhaité"
+    "desiredName": "Nom souhaité",
+    "discoveryTypeDetails": "Détails",
+    "hasTextInput": "A une saisie de texte"
   },
   "specializations": {
     "title": "Spécialisations",
@@ -395,7 +406,8 @@
     "specializationCreated": "Spécialisation créée",
     "specializationUpdated": "Spécialisation mise à jour",
     "squadCreated": "Escouade créée",
-    "squadUpdated": "Escouade mise à jour"
+    "squadUpdated": "Escouade mise à jour",
+    "specializationRequested": "Demande de spécialisation soumise"
   },
   "forms": {
     "sections": {
@@ -445,7 +457,9 @@
       "selectRole": "Sélectionner le rôle",
       "enterShortRangeFrequency": "Entrer la fréquence courte portée",
       "enterLongRangeFrequency": "Entrer la fréquence longue portée",
-      "enterLinkToFile": "Entrer le lien vers le fichier"
+      "enterLinkToFile": "Entrer le lien vers le fichier",
+      "enterPosition": "Entrer la position",
+      "enterDetails": "Entrer les détails"
     },
     "errors": {
       "nameAlreadyInUse": "Ce nom est déjà utilisé",

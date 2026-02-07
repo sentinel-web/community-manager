@@ -1,4 +1,6 @@
-import { Button, Card, Col, Empty, Grid, Row } from 'antd';
+import { CommentOutlined } from '@ant-design/icons';
+import { Badge, Button, Card, Col, Empty, Grid, Row, Typography } from 'antd';
+import dayjs from 'dayjs';
 import { Meteor } from 'meteor/meteor';
 import { useTracker } from 'meteor/react-meteor-data';
 import PropTypes from 'prop-types';
@@ -71,6 +73,28 @@ const KanbanBoard = ({ datasource, handleEdit, handleDelete }) => {
                                 </pre>
                               )}
                               <Participants participants={task.participants} />
+                              {task.completedBy?.length > 0 && (
+                                <div style={{ marginTop: 4 }}>
+                                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>Completed by: </Typography.Text>
+                                  <Participants participants={task.completedBy} />
+                                </div>
+                              )}
+                              <Row justify="space-between" align="middle" style={{ marginTop: 8 }}>
+                                {task.createdAt && (
+                                  <Col>
+                                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                      {dayjs(task.createdAt).format('YYYY-MM-DD')}
+                                    </Typography.Text>
+                                  </Col>
+                                )}
+                                {task.comments?.length > 0 && (
+                                  <Col>
+                                    <Badge count={task.comments.length} size="small">
+                                      <CommentOutlined style={{ fontSize: 16 }} />
+                                    </Badge>
+                                  </Col>
+                                )}
+                              </Row>
                             </Card>
                           </div>
                         )}

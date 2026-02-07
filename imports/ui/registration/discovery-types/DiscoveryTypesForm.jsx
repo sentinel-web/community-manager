@@ -1,4 +1,4 @@
-import { App, ColorPicker, Form, Input } from 'antd';
+import { App, ColorPicker, Form, Input, Switch } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
@@ -36,8 +36,8 @@ export default function DiscoveryTypeForm({ setOpen, useSubdrawer }) {
   const handleSubmit = useCallback(
     values => {
       setLoading(true);
-      const { name, description } = values;
-      const args = [...(model?._id ? [model._id] : []), { name, color: getColorFromValues(values), description }];
+      const { name, description, hasTextInput } = values;
+      const args = [...(model?._id ? [model._id] : []), { name, color: getColorFromValues(values), description, hasTextInput: !!hasTextInput }];
       Meteor.callAsync(Meteor.user() && model?._id ? 'discoveryTypes.update' : 'discoveryTypes.insert', ...args)
         .then(() => {
           setOpen(false);
@@ -65,6 +65,9 @@ export default function DiscoveryTypeForm({ setOpen, useSubdrawer }) {
       </Form.Item>
       <Form.Item name="color" label={t('common.color')}>
         <ColorPicker format="hex" />
+      </Form.Item>
+      <Form.Item name="hasTextInput" label={t('registrations.hasTextInput')} valuePropName="checked" rules={[{ type: 'boolean' }]}>
+        <Switch />
       </Form.Item>
       <FormFooter setOpen={setOpen} />
     </Form>

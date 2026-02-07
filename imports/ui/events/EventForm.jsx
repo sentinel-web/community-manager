@@ -36,6 +36,7 @@ const EventForm = ({ setOpen }) => {
       ...data,
       start: data.start ? dayjs(data.start) : null,
       end: data.end ? dayjs(data.end) : null,
+      hosts: data.hosts || (data._id ? [] : [Meteor.userId()]),
     };
   }, [drawer]);
 
@@ -109,8 +110,8 @@ const EventForm = ({ setOpen }) => {
         subscription="eventTypes"
         FormComponent={EventTypesForm}
       />
-      <MembersSelect multiple name="hosts" label={t('events.hosts')} rules={[{ type: 'array' }]} defaultValue={model.hosts} />
-      <MembersSelect multiple name="attendees" label={t('events.attendees')} rules={[{ type: 'array' }]} defaultValue={model.attendees} />
+      <MembersSelect multiple grouped name="hosts" label={t('events.hosts')} rules={[{ type: 'array' }]} defaultValue={model.hosts} />
+      <MembersSelect multiple grouped name="attendees" label={t('events.attendees')} rules={[{ type: 'array' }]} defaultValue={model.attendees} />
       <SquadQuickAdd form={form} t={t} />
       <Row gutter={[16, 16]} style={{ flexWrap: 'nowrap' }}>
         <Col flex="auto">

@@ -16,6 +16,7 @@ import './apis/orbat.server';
 import './apis/registrations.server';
 import './apis/settings.server';
 import './apis/specializations.server';
+import './apis/tasks.server';
 import './apis/questionnaireResponses.server';
 import './crud.lib';
 import { createCollectionMethods, createCollectionPublish } from './crud.lib';

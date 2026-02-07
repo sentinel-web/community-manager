@@ -12,8 +12,11 @@ async function orbatPopoverItems(squadId = '') {
   const items = [];
   const ranks = await RanksCollection.find({ _id: { $in: members.map(m => m.profile.rankId) } }).mapAsync(r => ({ value: r._id, label: r.name }));
   for (const member of members) {
+    const rankName = ranks.find(r => r.value === member.profile.rankId)?.label || '-';
+    const position = member.profile?.position;
+    const label = position ? `${position} - ${rankName}` : rankName;
     items.push({
-      label: ranks.find(r => r.value === member.profile.rankId)?.label || '-',
+      label,
       children: `${member.profile.id} "${member.profile.name}"`,
     });
   }

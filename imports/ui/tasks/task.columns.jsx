@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
@@ -44,6 +45,13 @@ const getTaskColumns = (handleTaskEdit, handleTaskDelete, permissions = {}, t = 
       ellipsis: true,
     },
     {
+      title: t('tasks.completedBy'),
+      dataIndex: 'completedBy',
+      sorter: (a, b) => (a.completedBy?.length || 0) - (b.completedBy?.length || 0),
+      render: completedBy => <Participants participants={completedBy} />,
+      ellipsis: true,
+    },
+    {
       title: t('common.status'),
       dataIndex: 'status',
       sorter: (a, b) => {
@@ -53,6 +61,13 @@ const getTaskColumns = (handleTaskEdit, handleTaskDelete, permissions = {}, t = 
       },
       ellipsis: true,
       render: status => (status ? <TaskStatusTag taskStatusId={status} /> : '-'),
+    },
+    {
+      title: t('tasks.createdAt'),
+      dataIndex: 'createdAt',
+      sorter: (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0),
+      render: createdAt => (createdAt ? dayjs(createdAt).format('YYYY-MM-DD') : '-'),
+      ellipsis: true,
     },
   ];
 

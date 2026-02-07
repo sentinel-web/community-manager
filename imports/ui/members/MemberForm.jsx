@@ -219,6 +219,9 @@ export default function MemberForm({ setOpen }) {
         collection={RanksCollection}
         subscription="ranks"
       />
+      <Form.Item name={['profile', 'position']} label={t('members.position')} rules={[{ type: 'string' }]}>
+        <Input placeholder={t('forms.placeholders.enterPosition')} />
+      </Form.Item>
       {Meteor.user() && (
         <Form.Item name={['profile', 'description']} label={t('common.description')} rules={[{ type: 'string' }]}>
           <Input.TextArea autoSize placeholder={t('forms.placeholders.enterDescription')} />

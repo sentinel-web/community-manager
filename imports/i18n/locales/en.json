@@ -175,7 +175,13 @@
     "viewTable": "Table",
     "viewKanban": "Kanban",
     "type": "Type",
-    "selectType": "Select type"
+    "selectType": "Select type",
+    "completedBy": "Completed By",
+    "createdAt": "Created At",
+    "comments": "Comments",
+    "addComment": "Add Comment",
+    "commentPlaceholder": "Write a comment...",
+    "commentAdded": "Comment added"
   },
   "members": {
     "title": "Members",
@@ -212,7 +218,10 @@
     "canManageSpecializations": "Can Manage Specializations (Instructor)",
     "canManageRecruits": "Can Manage Recruits (Mentor)",
     "canCreateEvents": "Can Create Events (Zeus)",
-    "canManageTasks": "Can Manage Tasks (Developer)"
+    "canManageTasks": "Can Manage Tasks (Developer)",
+    "position": "Position",
+    "requestSpecialization": "Request Specialization",
+    "unassigned": "Unassigned"
   },
   "settings": {
     "title": "Settings",
@@ -328,7 +337,9 @@
     "memberCreated": "Member created",
     "dataNotFound": "Data not found",
     "selectUsernamePassword": "Please select a username and a password",
-    "desiredName": "Desired Name"
+    "desiredName": "Desired Name",
+    "discoveryTypeDetails": "Details",
+    "hasTextInput": "Has Text Input"
   },
   "specializations": {
     "title": "Specializations",
@@ -395,7 +406,8 @@
     "specializationCreated": "Specialization created",
     "specializationUpdated": "Specialization updated",
     "squadCreated": "Squad created",
-    "squadUpdated": "Squad updated"
+    "squadUpdated": "Squad updated",
+    "specializationRequested": "Specialization request submitted"
   },
   "forms": {
     "sections": {
@@ -445,7 +457,9 @@
       "selectRole": "Select role",
       "enterShortRangeFrequency": "Enter short range frequency",
       "enterLongRangeFrequency": "Enter long range frequency",
-      "enterLinkToFile": "Enter link to file"
+      "enterLinkToFile": "Enter link to file",
+      "enterPosition": "Enter position",
+      "enterDetails": "Enter details"
     },
     "errors": {
       "nameAlreadyInUse": "Name already in use",

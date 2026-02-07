@@ -1,5 +1,6 @@
 import { Alert, App, Button, Col, Form, Input, InputNumber, Row, Switch, Tooltip } from 'antd';
 import { Meteor } from 'meteor/meteor';
+import { useFind, useSubscribe } from 'meteor/react-meteor-data';
 import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import DiscoveryTypesCollection from '../../api/collections/discoveryTypes.collection';
@@ -66,11 +67,27 @@ export default function RegistrationForm({ setOpen }) {
       });
   }, [form.getFieldValue, model?._id]);
 
+  useSubscribe('discoveryTypes', {}, {});
+  const discoveryTypes = useFind(() => DiscoveryTypesCollection.find({}), []);
+  const [showDetails, setShowDetails] = useState(false);
+
+  const handleDiscoveryTypeChange = useCallback(() => {
+    const selectedId = form.getFieldValue('discoveryType');
+    const dt = discoveryTypes.find(d => d._id === selectedId);
+    setShowDetails(!!dt?.hasTextInput);
+    if (!dt?.hasTextInput) {
+      form.setFieldValue('discoveryTypeDetails', undefined);
+    }
+  }, [form, discoveryTypes]);
+
   const handleSubmit = useCallback(
     values => {
       setLoading(true);
-      const { name, id, age, discoveryType, steamProfileLink, discordTag, rulesReadAndAccepted, description } = values;
-      const args = [...(model?._id ? [model._id] : []), { name, id, age, discoveryType, steamProfileLink, discordTag, rulesReadAndAccepted, description }];
+      const { name, id, age, discoveryType, discoveryTypeDetails, steamProfileLink, discordTag, rulesReadAndAccepted, description } = values;
+      const args = [
+        ...(model?._id ? [model._id] : []),
+        { name, id, age, discoveryType, discoveryTypeDetails, steamProfileLink, discordTag, rulesReadAndAccepted, description },
+      ];
       Meteor.callAsync(Meteor.user() && model?._id ? 'registrations.update' : 'registrations.insert', ...args)
         .then(() => {
           setOpen(false);
@@ -99,8 +116,11 @@ export default function RegistrationForm({ setOpen }) {
       if ('rulesReadAndAccepted' in (changedValues ?? {}) && 'rulesReadAndAccepted' in (values ?? {})) {
         setDisableSubmit(!values.rulesReadAndAccepted);
       }
+      if ('discoveryType' in (changedValues ?? {})) {
+        handleDiscoveryTypeChange();
+      }
     },
-    [validateId, validateName]
+    [validateId, validateName, handleDiscoveryTypeChange]
   );
 
   useEffect(() => {
@@ -156,7 +176,13 @@ export default function RegistrationForm({ setOpen }) {
         placeholder={t('forms.placeholders.selectDiscoveryType')}
         collection={DiscoveryTypesCollection}
         FormComponent={DiscoveryTypeForm}
+        onChange={handleDiscoveryTypeChange}
       />
+      {showDetails && (
+        <Form.Item name="discoveryTypeDetails" label={t('registrations.discoveryTypeDetails')} rules={[{ type: 'string' }]}>
+          <Input placeholder={t('forms.placeholders.enterDetails')} />
+        </Form.Item>
+      )}
       <Form.Item name="steamProfileLink" label={t('forms.labels.steamProfileLink')} rules={[{ type: 'string' }]}>
         <Input placeholder={t('forms.placeholders.enterSteamProfileLink')} />
       </Form.Item>

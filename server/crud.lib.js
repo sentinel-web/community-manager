@@ -129,6 +129,9 @@ function createCollectionMethods(collection) {
             }
           }
 
+          if (collection === 'tasks') {
+            payload.createdAt = new Date();
+          }
           const id = await Collection.insertAsync(payload);
           if (collection !== 'logs') {
             await createLog(`${collection}.created`, { id, ...payload });
