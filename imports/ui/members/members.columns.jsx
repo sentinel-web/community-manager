@@ -1,4 +1,3 @@
-import { Button } from 'antd';
 import React from 'react';
 import RanksCollection from '../../api/collections/ranks.collection';
 import { SquadTags } from '../squads/squads.columns';
@@ -13,13 +12,10 @@ import RankTag from './ranks/RankTag';
  * @param {boolean} [permissions.canUpdate=true] - Whether the user can update members.
  * @param {boolean} [permissions.canDelete=true] - Whether the user can delete members.
  * @param {function} [t=k=>k] - Translation function for i18n.
- * @param {object} [extra={}] - Extra options.
- * @param {function} [extra.onViewProfile] - Callback to open member profile. Called with (memberId).
  * @returns {Array} Array of column configuration objects for Ant Design Table.
  */
-export default function getMembersColumns(handleEdit, handleDelete, permissions = {}, t = k => k, extra = {}) {
+export default function getMembersColumns(handleEdit, handleDelete, permissions = {}, t = k => k) {
   const { canUpdate = true, canDelete = true } = permissions;
-  const { onViewProfile } = extra;
 
   const columns = [
     {
@@ -56,17 +52,7 @@ export default function getMembersColumns(handleEdit, handleDelete, permissions 
       key: 'profile.name',
       ellipsis: true,
       sorter: (a, b) => String(a.profile.name).localeCompare(String(b.profile.name)),
-      render: (name, record) => {
-        const displayName = record.profile?.name || '-';
-        if (onViewProfile) {
-          return (
-            <Button type="link" style={{ padding: 0 }} onClick={() => onViewProfile(record._id)}>
-              {displayName}
-            </Button>
-          );
-        }
-        return displayName;
-      },
+      render: (name, record) => record.profile?.name || '-',
     },
   ];
 
