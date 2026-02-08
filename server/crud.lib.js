@@ -24,6 +24,7 @@ import SpecializationsCollection from '../imports/api/collections/specialization
 import SquadsCollection from '../imports/api/collections/squads.collection';
 import TasksCollection from '../imports/api/collections/tasks.collection';
 import TaskStatusCollection from '../imports/api/collections/taskStatus.collection';
+import PositionsCollection from '../imports/api/collections/positions.collection';
 import QuestionnairesCollection from '../imports/api/collections/questionnaires.collection';
 import QuestionnaireResponsesCollection from '../imports/api/collections/questionnaireResponses.collection';
 
@@ -60,6 +61,8 @@ export function getCollection(collection) {
       return ProfilePicturesCollection;
     case 'roles':
       return RolesCollection;
+    case 'positions':
+      return PositionsCollection;
     case 'questionnaires':
       return QuestionnairesCollection;
     case 'questionnaireResponses':

@@ -5,6 +5,7 @@ import AttendancesCollection from '../../imports/api/collections/attendances.col
 import EventsCollection from '../../imports/api/collections/events.collection';
 import MedalsCollection from '../../imports/api/collections/medals.collection';
 import MembersCollection from '../../imports/api/collections/members.collection';
+import PositionsCollection from '../../imports/api/collections/positions.collection';
 import ProfilePicturesCollection from '../../imports/api/collections/profilePictures.collection';
 import RanksCollection from '../../imports/api/collections/ranks.collection';
 import RolesCollection from '../../imports/api/collections/roles.collection';
@@ -132,6 +133,14 @@ if (Meteor.isServer) {
       } catch (error) {
         throw new Meteor.Error(error.message);
       }
+    },
+    'members.saveTaskFilter': async function (filter = {}) {
+      if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
+      validateObject(filter, false);
+      const user = await MembersCollection.findOneAsync(this.userId);
+      if (!user) throw new Meteor.Error(404, 'User not found');
+      const profile = { ...user.profile, taskFilter: filter };
+      await MembersCollection.updateAsync({ _id: this.userId }, { $set: { profile } });
     },
     'members.options': async function () {
       validateUserId(this.userId);
@@ -306,6 +315,7 @@ if (Meteor.isServer) {
 
       const resolvedRank = user.profile?.rankId ? await RanksCollection.findOneAsync({ _id: user.profile.rankId }) : null;
       const resolvedNavyRank = user.profile?.navyRankId ? await RanksCollection.findOneAsync({ _id: user.profile.navyRankId }) : null;
+      const resolvedPosition = user.profile?.positionId ? await PositionsCollection.findOneAsync({ _id: user.profile.positionId }) : null;
 
       const result = {
         ['profile picture']: user.profile?.profilePictureId
@@ -330,7 +340,8 @@ if (Meteor.isServer) {
         description: user.profile?.description || '-',
         steamProfileLink: user.profile?.steamProfileLink || '',
         discordTag: user.profile?.discordTag || '',
-        position: user.profile?.position || '-',
+        position: resolvedPosition?.name || '-',
+        positionColor: resolvedPosition?.color || null,
       };
 
       return result;

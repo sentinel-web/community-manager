@@ -42,6 +42,7 @@ const CRUD_MODULES = [
   'discoveryTypes',
   'roles',
   'questionnaires',
+  'positions',
 ];
 
 // Map collection names to permission modules
@@ -62,6 +63,7 @@ const COLLECTION_TO_MODULE = {
   profilePictures: 'members', // profile pictures are part of members module
   questionnaires: 'questionnaires',
   questionnaireResponses: 'questionnaires', // responses use questionnaires permission module
+  positions: 'positions',
 };
 
 // Role cache for performance (TTL configurable via Meteor.settings)
@@ -99,6 +101,11 @@ export function normalizeRolePermissions(role) {
 
   const normalized = { ...role };
 
+  // Preserve admin all-access flag before normalization.
+  // The 'roles' field has dual purpose: it's both a CRUD permission module name
+  // and the admin flag (roles === true means full access to everything).
+  const isAdmin = role.roles === true;
+
   for (const module of CRUD_MODULES) {
     const permission = role[module];
     if (permission === true) {
@@ -110,6 +117,9 @@ export function normalizeRolePermissions(role) {
     }
     // If already an object, leave it as-is
   }
+
+  // Restore admin flag so isOfficerOrAdmin and checkPermission work correctly
+  if (isAdmin) normalized.roles = true;
 
   return normalized;
 }
@@ -321,6 +331,7 @@ const collectionNames = [
   'profilePictures',
   'questionnaires',
   'questionnaireResponses',
+  'positions',
 ];
 
 // Events: custom publication in events.server.js (filters private events for non-officers)
