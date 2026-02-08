@@ -71,19 +71,18 @@ export class NavigationPage extends BasePage {
   }
 
   /**
-   * Click logout button (in user dropdown)
+   * Click logout button (in Footer's dropdown)
+   * Footer has a Button type="text" with DownOutlined icon that triggers a dropdown menu.
    */
   async logout(): Promise<void> {
-    // Click on the user dropdown at bottom left - has down arrow icon
-    const userDropdown = this.page.locator('text=Admin >> xpath=ancestor::*[contains(@class, "dropdown")]').first();
-    if (await userDropdown.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await userDropdown.click();
-    } else {
-      // Fallback: click the admin text area that has the down arrow
-      await this.page.locator('.ant-dropdown-trigger:has-text("Admin")').first().click();
-    }
-    await this.page.waitForSelector('[role="menu"], .ant-dropdown', { timeout: 5000 });
-    await this.page.click('text=Logout');
+    // The footer (Layout.Footer → <footer class="ant-layout-footer">) has a text button with a down arrow icon
+    const downBtn = this.page.locator('.ant-layout-footer button.ant-btn-text').first();
+    await downBtn.click();
+    // Wait for the dropdown menu to appear
+    await this.page.waitForSelector('.ant-dropdown-menu', { timeout: 5000 });
+    // Click the Logout menu item (it has danger: true)
+    await this.page.locator('.ant-dropdown-menu-item-danger').click();
+    // Wait for login page to appear
     await this.page.waitForSelector('.login', { timeout: 10000 });
   }
 }

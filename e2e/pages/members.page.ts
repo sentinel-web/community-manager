@@ -25,8 +25,6 @@ export class MembersPage extends BasePage {
   async search(query: string): Promise<void> {
     const searchInput = this.page.locator('input[placeholder*="earch"]');
     await searchInput.fill(query);
-    // Wait for reactive update
-    await this.page.waitForTimeout(500);
   }
 
   /**
@@ -35,7 +33,6 @@ export class MembersPage extends BasePage {
   async clearSearch(): Promise<void> {
     const searchInput = this.page.locator('input[placeholder*="earch"]');
     await searchInput.clear();
-    await this.page.waitForTimeout(500);
   }
 
   /**
@@ -62,10 +59,11 @@ export class MembersPage extends BasePage {
   }
 
   /**
-   * Click on a member row to edit
+   * Click Edit button in a member's row
    */
   async clickMemberRow(name: string): Promise<void> {
-    await this.page.click(`tr:has-text("${name}")`);
+    const row = this.page.locator(`tr[data-row-key]:has-text("${name}")`);
+    await row.locator('button:not(.ant-btn-link):has-text("Edit")').click();
     await this.waitForDrawerOpen();
   }
 
@@ -83,12 +81,17 @@ export class MembersPage extends BasePage {
   }
 
   /**
-   * Delete a member by clicking delete button in their row
+   * Delete a member by clicking delete button in their row and confirming modal
    */
   async deleteMember(name: string): Promise<void> {
-    const row = this.page.locator(`tr:has-text("${name}")`);
-    await row.locator('button[danger], button:has-text("Delete")').click();
-    await this.confirmPopconfirm();
+    const row = this.page.locator(`tr[data-row-key]:has-text("${name}")`);
+    const deleteBtn = row.locator('button.ant-btn-dangerous').first();
+    await deleteBtn.scrollIntoViewIfNeeded();
+    await deleteBtn.click();
+    const modal = this.page.locator('.ant-modal-confirm');
+    await modal.waitFor({ state: 'visible' });
+    await modal.locator('button:has-text("Yes")').click();
+    await modal.waitFor({ state: 'hidden', timeout: 10000 });
   }
 
   /**
@@ -132,5 +135,33 @@ export class MembersPage extends BasePage {
   async hasValidationError(): Promise<boolean> {
     const errorCount = await this.page.locator('.ant-form-item-explain-error').count();
     return errorCount > 0;
+  }
+
+  /**
+   * Auto-retrying assertion: member row is visible
+   */
+  async expectMemberVisible(name: string): Promise<void> {
+    await expect(this.page.locator(`tr[data-row-key]:has-text("${name}")`)).toBeVisible();
+  }
+
+  /**
+   * Auto-retrying assertion: member row is gone
+   */
+  async expectMemberHidden(name: string): Promise<void> {
+    await expect(this.page.locator(`tr[data-row-key]:has-text("${name}")`)).toHaveCount(0);
+  }
+
+  /**
+   * Auto-retrying assertion: table has no data rows
+   */
+  async expectEmptyTable(): Promise<void> {
+    await expect(this.page.locator('tr[data-row-key]')).toHaveCount(0);
+  }
+
+  /**
+   * Auto-retrying assertion: validation error is visible
+   */
+  async expectValidationError(): Promise<void> {
+    await expect(this.page.locator('.ant-form-item-explain-error').first()).toBeVisible();
   }
 }

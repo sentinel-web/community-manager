@@ -26,16 +26,14 @@ test.describe('Members', () => {
     await membersPage.search('admin');
 
     // Should show admin user
-    const exists = await membersPage.memberExists('admin');
-    expect(exists).toBe(true);
+    await membersPage.expectMemberVisible('admin');
 
     // Clear and search for non-existent
     await membersPage.clearSearch();
     await membersPage.search('nonexistentuser12345');
 
     // Should show no results
-    const count = await membersPage.getMemberCount();
-    expect(count).toBe(0);
+    await membersPage.expectEmptyTable();
   });
 
   test('should open create form drawer', async ({ page }) => {
@@ -52,71 +50,90 @@ test.describe('Members', () => {
   test('should show validation error for empty required fields', async ({ page }) => {
     await membersPage.clickCreate();
 
+    // Clear the username field (form initializes it to empty string, but clear to ensure)
+    const usernameInput = page.locator('input[id="username"]');
+    await usernameInput.clear();
+
     // Try to submit without filling required fields
     await membersPage.submitForm();
 
-    // Should show validation error
-    const hasError = await membersPage.hasValidationError();
-    expect(hasError).toBe(true);
+    // Wait for async validation to complete
+    await membersPage.expectValidationError();
   });
 
-  test.skip('should create and delete a member', async ({ page }) => {
-    // Skip: Form field IDs depend on Ant Design nested naming convention
-    const testId = Math.floor(Math.random() * 8999) + 1000; // Random 4-digit ID
+  test('should create and delete a member', async ({ page }) => {
+    const testId = Math.floor(Math.random() * 8999) + 1000;
     const testUsername = `testuser_${testId}`;
+    const testName = `E2E User ${testId}`;
 
     // Create member
     await membersPage.createMember({
       username: testUsername,
       password: 'testpassword123',
       id: testId.toString(),
-      name: 'Test User',
+      name: testName,
     });
 
     // Wait for drawer to close
     await membersPage.waitForDrawerClose();
 
-    // Verify member appears in table
-    await membersPage.search(testUsername);
-    const exists = await membersPage.memberExists(testUsername);
-    expect(exists).toBe(true);
+    // Reload page to force fresh subscription (Meteor.users reactive sync can be delayed)
+    await page.goto('/members');
+    await page.waitForSelector('.ant-table, .ant-empty', { timeout: 15000 });
+
+    // Search by profile name (table shows profile.name, not username)
+    await membersPage.search(testName);
+    await membersPage.expectMemberVisible(testName);
 
     // Clean up - delete the member
-    await membersPage.deleteMember(testUsername);
+    await membersPage.deleteMember(testName);
 
     // Verify member is removed
-    await page.waitForTimeout(500);
-    const stillExists = await membersPage.memberExists(testUsername);
-    expect(stillExists).toBe(false);
+    await membersPage.expectMemberHidden(testName);
   });
 
-  test.skip('should edit an existing member', async ({ page }) => {
-    // Skip: Depends on create member working correctly
-    // First create a member to edit
+  test('should edit an existing member', async ({ page }) => {
     const testId = Math.floor(Math.random() * 8999) + 1000;
     const testUsername = `edittest_${testId}`;
+    const originalName = `E2E Edit ${testId}`;
+    const updatedName = `E2E Updated ${testId}`;
 
     await membersPage.createMember({
       username: testUsername,
       password: 'testpassword123',
       id: testId.toString(),
-      name: 'Original Name',
+      name: originalName,
     });
 
     await membersPage.waitForDrawerClose();
 
-    // Search for the member
-    await membersPage.search(testUsername);
+    // Reload page to force fresh subscription (Meteor.users reactive sync can be delayed)
+    await page.goto('/members');
+    await page.waitForSelector('.ant-table, .ant-empty', { timeout: 15000 });
 
-    // Click on member to edit
-    await membersPage.clickMemberRow(testUsername);
+    // Search by profile name (table displays profile.name, not username)
+    await membersPage.search(originalName);
+    await membersPage.expectMemberVisible(originalName);
 
-    // Update the name
-    await membersPage.fillFormField('name', 'Updated Name');
+    // Click Edit button on member row
+    await membersPage.clickMemberRow(originalName);
+
+    // Update the name (nested field: ['profile', 'name'] -> id="profile_name")
+    const nameInput = page.locator('input[id="profile_name"]');
+    await nameInput.clear();
+    await nameInput.fill(updatedName);
     await membersPage.submitForm();
     await membersPage.waitForDrawerClose();
 
+    // Reload again to see updated name
+    await page.goto('/members');
+    await page.waitForSelector('.ant-table, .ant-empty', { timeout: 15000 });
+
+    // Verify the name was updated
+    await membersPage.search(updatedName);
+    await membersPage.expectMemberVisible(updatedName);
+
     // Clean up
-    await membersPage.deleteMember(testUsername);
+    await membersPage.deleteMember(updatedName);
   });
 });

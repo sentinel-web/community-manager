@@ -63,7 +63,7 @@ export class BasePage {
    */
   async waitForDrawerClose(): Promise<void> {
     // Wait for drawer-open class to be removed (handles animation)
-    await this.page.locator('.ant-drawer-open').waitFor({ state: 'hidden', timeout: 10000 });
+    await this.page.locator('.ant-drawer-open').waitFor({ state: 'hidden', timeout: 15000 });
   }
 
   /**

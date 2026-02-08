@@ -103,19 +103,20 @@ export class EventsPage extends BasePage {
 
     await this.fillFormField('name', data.name);
 
-    // Date pickers require special handling
+    // Date pickers: fill value then click drawer title to dismiss popup
+    // (pressing Enter would submit the form, causing duplicate creation)
     if (data.start) {
       const startPicker = this.page.locator('#start');
       await startPicker.click();
       await startPicker.fill(data.start);
-      await this.page.keyboard.press('Enter');
+      await this.page.locator('.ant-drawer-title').click();
     }
 
     if (data.end) {
       const endPicker = this.page.locator('#end');
       await endPicker.click();
       await endPicker.fill(data.end);
-      await this.page.keyboard.press('Enter');
+      await this.page.locator('.ant-drawer-title').click();
     }
 
     if (data.eventType) {
@@ -142,12 +143,17 @@ export class EventsPage extends BasePage {
   }
 
   /**
-   * Delete an event from table view
+   * Delete an event from table view (uses modal.confirm)
    */
   async deleteEvent(eventName: string): Promise<void> {
-    const row = this.page.locator(`tr:has-text("${eventName}")`);
-    await row.locator('button[danger], button:has-text("Delete")').click();
-    await this.confirmPopconfirm();
+    const row = this.page.locator(`tr[data-row-key]:has-text("${eventName}")`);
+    const deleteBtn = row.locator('button.ant-btn-dangerous').first();
+    await deleteBtn.scrollIntoViewIfNeeded();
+    await deleteBtn.click();
+    const modal = this.page.locator('.ant-modal-confirm');
+    await modal.waitFor({ state: 'visible' });
+    await modal.locator('button:has-text("Yes")').click();
+    await modal.waitFor({ state: 'hidden', timeout: 10000 });
   }
 
   /**
@@ -170,7 +176,20 @@ export class EventsPage extends BasePage {
   async search(query: string): Promise<void> {
     const searchInput = this.page.locator('input[placeholder*="earch"]');
     await searchInput.fill(query);
-    await this.page.waitForTimeout(500);
+  }
+
+  /**
+   * Auto-retrying assertion: event row is visible in table
+   */
+  async expectEventInTable(name: string): Promise<void> {
+    await expect(this.page.locator(`tr[data-row-key]:has-text("${name}")`).first()).toBeVisible();
+  }
+
+  /**
+   * Auto-retrying assertion: event row is gone from table
+   */
+  async expectEventNotInTable(name: string): Promise<void> {
+    await expect(this.page.locator(`tr[data-row-key]:has-text("${name}")`)).toHaveCount(0);
   }
 
   /**

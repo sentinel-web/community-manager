@@ -55,13 +55,19 @@ test.describe('Events', () => {
     await expect(page.locator('input[id="name"]')).toBeVisible();
   });
 
-  test.skip('should create and delete an event', async ({ page }) => {
-    // Skip: Event form validation may require additional fields
+  test('should create and delete an event', async ({ page }) => {
     const eventName = `Test Event ${Date.now()}`;
 
-    // Create event
+    // Create event with required start and end dates
+    const now = new Date();
+    const later = new Date(now.getTime() + 2 * 60 * 60 * 1000); // +2 hours
+    const formatDate = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:00`;
+
     await eventsPage.createEvent({
       name: eventName,
+      start: formatDate(now),
+      end: formatDate(later),
     });
 
     // Wait for drawer to close
@@ -73,18 +79,13 @@ test.describe('Events', () => {
     // Search for the event
     await eventsPage.search(eventName);
 
-    // Verify event appears
-    const events = await eventsPage.getTableEventNames();
-    const found = events.some(e => e.includes(eventName));
-    expect(found).toBe(true);
+    // Verify event appears (auto-retrying)
+    await eventsPage.expectEventInTable(eventName);
 
-    // Delete the event
+    // Delete the event via UI
     await eventsPage.deleteEvent(eventName);
 
-    // Verify deleted
-    await page.waitForTimeout(500);
-    const afterDelete = await eventsPage.getTableEventNames();
-    const stillExists = afterDelete.some(e => e.includes(eventName));
-    expect(stillExists).toBe(false);
+    // Verify event is removed (auto-retrying)
+    await eventsPage.expectEventNotInTable(eventName);
   });
 });

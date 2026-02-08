@@ -54,8 +54,7 @@ test.describe('Authentication', () => {
     await navPage.waitForNavigationReady();
   });
 
-  test.skip('should logout successfully', async ({ page }) => {
-    // Skip: Logout dropdown selector needs adjustment for specific UI layout
+  test('should logout successfully', async ({ page }) => {
     const loginPage = new LoginPage(page);
     const navPage = new NavigationPage(page);
 
@@ -66,7 +65,7 @@ test.describe('Authentication', () => {
     // Wait for login to complete
     await navPage.waitForNavigationReady();
 
-    // Logout
+    // Logout via Footer dropdown
     await navPage.logout();
 
     // Should be back on login page
