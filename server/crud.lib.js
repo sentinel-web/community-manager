@@ -24,7 +24,10 @@ import EventTypesCollection from '../imports/api/collections/eventTypes.collecti
 import LogsCollection from '../imports/api/collections/logs.collection';
 import MedalsCollection from '../imports/api/collections/medals.collection';
 import MembersCollection from '../imports/api/collections/members.collection';
+import PositionsCollection from '../imports/api/collections/positions.collection';
 import ProfilePicturesCollection from '../imports/api/collections/profilePictures.collection';
+import QuestionnairesCollection from '../imports/api/collections/questionnaires.collection';
+import QuestionnaireResponsesCollection from '../imports/api/collections/questionnaireResponses.collection';
 import RanksCollection from '../imports/api/collections/ranks.collection';
 import RegistrationsCollection from '../imports/api/collections/registrations.collection';
 import RolesCollection from '../imports/api/collections/roles.collection';
@@ -32,49 +35,46 @@ import SpecializationsCollection from '../imports/api/collections/specialization
 import SquadsCollection from '../imports/api/collections/squads.collection';
 import TasksCollection from '../imports/api/collections/tasks.collection';
 import TaskStatusCollection from '../imports/api/collections/taskStatus.collection';
-import PositionsCollection from '../imports/api/collections/positions.collection';
-import QuestionnairesCollection from '../imports/api/collections/questionnaires.collection';
-import QuestionnaireResponsesCollection from '../imports/api/collections/questionnaireResponses.collection';
 
 export function getCollection(collection) {
   if (!collection) throw new Meteor.Error(400, 'No collection name');
   switch (collection) {
-    case 'eventTypes':
-      return EventTypesCollection;
-    case 'ranks':
-      return RanksCollection;
-    case 'discoveryTypes':
-      return DiscoveryTypesCollection;
-    case 'taskStatus':
-      return TaskStatusCollection;
-    case 'medals':
-      return MedalsCollection;
-    case 'events':
-      return EventsCollection;
-    case 'logs':
-      return LogsCollection;
     case 'attendances':
       return AttendancesCollection;
+    case 'discoveryTypes':
+      return DiscoveryTypesCollection;
+    case 'events':
+      return EventsCollection;
+    case 'eventTypes':
+      return EventTypesCollection;
+    case 'logs':
+      return LogsCollection;
+    case 'medals':
+      return MedalsCollection;
     case 'members':
       return MembersCollection;
-    case 'squads':
-      return SquadsCollection;
-    case 'specializations':
-      return SpecializationsCollection;
-    case 'tasks':
-      return TasksCollection;
-    case 'registrations':
-      return RegistrationsCollection;
-    case 'profilePictures':
-      return ProfilePicturesCollection;
-    case 'roles':
-      return RolesCollection;
     case 'positions':
       return PositionsCollection;
+    case 'profilePictures':
+      return ProfilePicturesCollection;
     case 'questionnaires':
       return QuestionnairesCollection;
     case 'questionnaireResponses':
       return QuestionnaireResponsesCollection;
+    case 'ranks':
+      return RanksCollection;
+    case 'registrations':
+      return RegistrationsCollection;
+    case 'roles':
+      return RolesCollection;
+    case 'specializations':
+      return SpecializationsCollection;
+    case 'squads':
+      return SquadsCollection;
+    case 'tasks':
+      return TasksCollection;
+    case 'taskStatus':
+      return TaskStatusCollection;
     default:
       throw new Meteor.Error(404, `Collection "${collection}" not found`);
   }

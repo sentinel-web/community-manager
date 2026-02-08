@@ -13,12 +13,13 @@ import './apis/events.server';
 import './apis/logs.server';
 import './apis/members.server';
 import './apis/orbat.server';
+import './apis/questionnaireResponses.server';
+import './apis/questionnaires.server';
 import './apis/registrations.server';
 import './apis/settings.server';
 import './apis/specializations.server';
+import './apis/squads.server';
 import './apis/tasks.server';
-import './apis/questionnaireResponses.server';
-import './crud.lib';
 import { createCollectionMethods, createCollectionPublish } from './crud.lib';
 import { CACHE, SQUAD_SCOPED_PERMISSIONS } from './config';
 
@@ -29,41 +30,41 @@ const BOOLEAN_MODULES = ['dashboard', 'orbat', 'logs', 'settings'];
 
 // Modules that use CRUD permissions (read/create/update/delete)
 const CRUD_MODULES = [
-  'members',
-  'events',
-  'tasks',
-  'squads',
-  'ranks',
-  'specializations',
-  'medals',
-  'eventTypes',
-  'taskStatus',
-  'registrations',
   'discoveryTypes',
-  'roles',
-  'questionnaires',
+  'events',
+  'eventTypes',
+  'medals',
+  'members',
   'positions',
+  'questionnaires',
+  'ranks',
+  'registrations',
+  'roles',
+  'specializations',
+  'squads',
+  'tasks',
+  'taskStatus',
 ];
 
 // Map collection names to permission modules
 const COLLECTION_TO_MODULE = {
-  members: 'members',
-  events: 'events',
   attendances: 'events', // attendances are part of events module
-  tasks: 'tasks',
-  squads: 'squads',
-  ranks: 'ranks',
-  specializations: 'specializations',
-  medals: 'medals',
-  eventTypes: 'eventTypes',
-  taskStatus: 'taskStatus',
-  registrations: 'registrations',
   discoveryTypes: 'discoveryTypes',
-  roles: 'roles',
+  events: 'events',
+  eventTypes: 'eventTypes',
+  medals: 'medals',
+  members: 'members',
+  positions: 'positions',
   profilePictures: 'members', // profile pictures are part of members module
   questionnaires: 'questionnaires',
   questionnaireResponses: 'questionnaires', // responses use questionnaires permission module
-  positions: 'positions',
+  ranks: 'ranks',
+  registrations: 'registrations',
+  roles: 'roles',
+  specializations: 'specializations',
+  squads: 'squads',
+  tasks: 'tasks',
+  taskStatus: 'taskStatus',
 };
 
 // Role cache for performance (TTL configurable via Meteor.settings)
@@ -316,22 +317,22 @@ if (Meteor.isServer) {
 
 const collectionNames = [
   'attendances',
-  'eventTypes',
-  'tasks',
-  'taskStatus',
-  // 'members', // ! handled separately
-  'squads',
-  'ranks',
-  'specializations',
-  'medals',
-  'registrations',
   'discoveryTypes',
-  // 'settings', // ! handled separately
-  'roles',
+  'eventTypes',
+  // 'members', // ! handled separately
+  'medals',
+  'positions',
   'profilePictures',
   'questionnaires',
   'questionnaireResponses',
-  'positions',
+  'ranks',
+  'registrations',
+  'roles',
+  // 'settings', // ! handled separately
+  'specializations',
+  'squads',
+  'taskStatus',
+  'tasks',
 ];
 
 // Events: custom publication in events.server.js (filters private events for non-officers)
