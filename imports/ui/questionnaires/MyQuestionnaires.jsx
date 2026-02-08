@@ -7,7 +7,7 @@ import { DrawerContext } from '../app/App';
 import SectionCard from '../section/SectionCard';
 import QuestionnaireResponseForm from './QuestionnaireResponseForm';
 
-const { Text } = Typography;
+const { Text, Paragraph } = Typography;
 
 const INTERVAL_LABELS = {
   once: 'One-time',
@@ -161,9 +161,9 @@ const QuestionnaireCard = ({ questionnaire, onFillOut, onRevoke }) => {
     <Card title={name} extra={renderTags()} actions={actions}>
       <Space direction="vertical" style={{ width: '100%' }}>
         {description && (
-          <Text type="secondary" ellipsis={{ rows: 2 }}>
+          <Paragraph type="secondary" ellipsis={{ rows: 2 }}>
             {description}
-          </Text>
+          </Paragraph>
         )}
         <Text>
           <strong>{questionCount}</strong> question{questionCount !== 1 ? 's' : ''}

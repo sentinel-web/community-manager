@@ -18,7 +18,8 @@
     "logs": "Journaux",
     "settings": "Paramètres",
     "backup": "Sauvegarde",
-    "questionnaires": "Questionnaires"
+    "questionnaires": "Questionnaires",
+    "positions": "Positions"
   },
   "common": {
     "create": "Créer",
@@ -60,6 +61,7 @@
     "selectMedals": "Sélectionner les médailles",
     "selectEventType": "Sélectionner le type d'événement",
     "selectTaskStatus": "Sélectionner le statut",
+    "selectPosition": "Sélectionner la position",
     "selectTask": "Sélectionner la tâche",
     "today": "Aujourd'hui",
     "back": "Précédent",
@@ -255,7 +257,8 @@
     "logs": "Journaux",
     "settings": "Paramètres",
     "users": "Utilisateurs",
-    "members": "Membres"
+    "members": "Membres",
+    "positions": "Positions"
   },
   "backup": {
     "title": "Sauvegarde & Récupération",
@@ -322,7 +325,8 @@
     "parentSquad": "Escouade parente",
     "shortRangeFrequency": "Fréquence courte portée",
     "longRangeFrequency": "Fréquence longue portée",
-    "dragOrClick": "Glisser-déposer ou cliquer pour téléverser"
+    "dragOrClick": "Glisser-déposer ou cliquer pour téléverser",
+    "excludeFromOrbat": "Exclure de l'ORBAT"
   },
   "orbat": {
     "title": "ORBAT",
@@ -407,7 +411,9 @@
     "specializationUpdated": "Spécialisation mise à jour",
     "squadCreated": "Escouade créée",
     "squadUpdated": "Escouade mise à jour",
-    "specializationRequested": "Demande de spécialisation soumise"
+    "specializationRequested": "Demande de spécialisation soumise",
+    "positionCreated": "Position créée avec succès",
+    "positionUpdated": "Position mise à jour avec succès"
   },
   "forms": {
     "sections": {
@@ -471,6 +477,9 @@
     "confirmations": {
       "deleteEvent": "Êtes-vous sûr de vouloir supprimer cet événement ?"
     }
+  },
+  "positions": {
+    "order": "Ordre"
   },
   "modals": {
     "profile": "Profil",

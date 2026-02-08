@@ -156,7 +156,7 @@ export default function MemberProfile({ memberId }) {
             { label: t('common.name'), children: profileStats.name },
             { label: t('members.roles'), children: profileStats.role },
             ...(profileStats.position && profileStats.position !== '-'
-              ? [{ label: t('members.position'), children: profileStats.position }]
+              ? [{ label: t('members.position'), children: <Tag color={profileStats.positionColor}>{profileStats.position}</Tag> }]
               : []),
           ]}
         />

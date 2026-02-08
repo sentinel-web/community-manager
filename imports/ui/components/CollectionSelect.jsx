@@ -21,6 +21,7 @@ const CollectionSelect = ({
   FormComponent,
   subscription,
   extra = empty,
+  query = {},
 }) => {
   const { modal } = App.useApp();
   const drawer = useContext(DrawerContext);
@@ -29,6 +30,7 @@ const CollectionSelect = ({
   const [limit, setLimit] = useState(20);
   const [searchValue, setSearchValue] = useState('');
   const [value, setValue] = useState(Array.isArray(defaultValue) ? defaultValue : defaultValue || []);
+  const stableQuery = useMemo(() => query, [JSON.stringify(query)]);
   const valueFilter = useMemo(() => ({ _id: Array.isArray(value) ? { $in: value } : value }), [value]);
   const searchFilter = useMemo(
     () =>
@@ -38,9 +40,12 @@ const CollectionSelect = ({
 
   const valueLength = useMemo(() => (Array.isArray(value) ? value.length : 1), [value]);
   const otherLimit = useMemo(() => (valueLength > limit ? valueLength : limit - valueLength), [limit, valueLength]);
-  useSubscribe(subscription, valueFilter, { limit: valueLength });
-  useSubscribe(subscription, searchFilter, { limit: otherLimit });
-  const documents = useFind(() => collection?.find?.({ $or: [valueFilter, searchFilter] }) || [], [collection, valueFilter, searchFilter]);
+  const valueSubFilter = useMemo(() => ({ ...valueFilter, ...stableQuery }), [valueFilter, stableQuery]);
+  const searchSubFilter = useMemo(() => ({ ...searchFilter, ...stableQuery }), [searchFilter, stableQuery]);
+  useSubscribe(subscription, valueSubFilter, { limit: valueLength });
+  useSubscribe(subscription, searchSubFilter, { limit: otherLimit });
+  const combinedFilter = useMemo(() => ({ $and: [{ $or: [valueFilter, searchFilter] }, stableQuery] }), [valueFilter, searchFilter, stableQuery]);
+  const documents = useFind(() => collection?.find?.(combinedFilter) || [], [collection, combinedFilter]);
   const options = useMemo(() => documents.map(item => ({ value: item._id, label: item.name ?? item?.profile?.name, raw: item })), [documents]);
   const isFormItem = useMemo(() => name && label && rules, [name, label, rules]);
   const user = useTracker(() => Meteor.user(), []);
@@ -194,6 +199,7 @@ CollectionSelect.propTypes = {
   FormComponent: PropTypes.elementType,
   subscription: PropTypes.string,
   extra: PropTypes.node,
+  query: PropTypes.object,
 };
 
 export default CollectionSelect;

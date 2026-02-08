@@ -18,7 +18,7 @@ const TaskFilter = ({ setOpen }) => {
 
   const handleFinish = useCallback(
     async values => {
-      Meteor.callAsync('members.update', Meteor.userId(), { 'profile.taskFilter': values })
+      Meteor.callAsync('members.saveTaskFilter', values)
         .then(() => {
           setOpen(false);
         })

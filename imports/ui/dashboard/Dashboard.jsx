@@ -1,4 +1,4 @@
-import { App, Button, Card, Col, Collapse, Descriptions, Row, Statistic, Typography } from 'antd';
+import { App, Button, Card, Col, Collapse, Descriptions, Row, Statistic, Tag, Typography } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -134,7 +134,20 @@ export function ProfileStats({ profileStats, t }) {
             .filter(([key]) => fullWidthKeys.includes(key))
             .map(([key, value]) => ({
               label: translateLabel(key),
-              children: value,
+              children:
+                key === 'specializations' && Array.isArray(value) && value.length > 0
+                  ? value.map((spec, i) =>
+                      spec.linkToFile ? (
+                        <a key={i} href={spec.linkToFile} target="_blank" rel="noopener noreferrer">
+                          <Tag color="blue" style={{ cursor: 'pointer' }}>{spec.name}</Tag>
+                        </a>
+                      ) : (
+                        <Tag key={i}>{spec.name}</Tag>
+                      )
+                    )
+                  : key === 'specializations'
+                    ? '-'
+                    : value,
             }))}
           bordered
         />

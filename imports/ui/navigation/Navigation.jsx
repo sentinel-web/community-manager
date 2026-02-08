@@ -1,4 +1,5 @@
 import {
+  AimOutlined,
   CalendarOutlined,
   CheckCircleOutlined,
   CloudServerOutlined,
@@ -37,6 +38,9 @@ import { useTranslation } from '../../i18n/LanguageContext';
  */
 function hasAccess(role, module) {
   if (!role) return false;
+
+  // Admin bypass: roles === true grants access to all modules
+  if (role.roles === true) return true;
 
   const permission = role[module];
 
@@ -100,6 +104,9 @@ export function getNavigationValue() {
   }
   if (pathname.includes('/medals')) {
     return 'medals';
+  }
+  if (pathname.includes('/positions')) {
+    return 'positions';
   }
   if (pathname.includes('/roles')) {
     return 'roles';
@@ -249,6 +256,13 @@ export default function Navigation() {
         key: 'medals',
         label: t('navigation.medals'),
         icon: <TrophyOutlined />,
+      });
+    }
+    if (hasAccess(role, 'positions')) {
+      newItems.push({
+        key: 'positions',
+        label: t('navigation.positions'),
+        icon: <AimOutlined />,
       });
     }
     if (hasAccess(role, 'squads') || hasAccess(role, 'members') || hasAccess(role, 'ranks') || hasAccess(role, 'specializations')) {

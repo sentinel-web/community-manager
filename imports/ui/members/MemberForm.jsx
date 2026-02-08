@@ -13,6 +13,7 @@ import ProfilePictureInput from '../profile-picture-input/ProfilePictureInput';
 import SpecializationsSelect from '../specializations/SpecializationsSelect';
 import SquadsSelect from '../squads/SquadsSelect';
 import MedalsSelect from './medals/MedalsSelect';
+import PositionsSelect from './positions/PositionsSelect';
 import RanksForm from './ranks/RanksForm';
 import RolesForm from './roles/RolesForm';
 
@@ -64,6 +65,7 @@ export default function MemberForm({ setOpen }) {
           staticAttendancePoints: null,
           staticInactivityPoints: null,
           medalIds: [],
+          positionId: null,
           description: '',
           entryDate: null,
           exitDate: null,
@@ -208,6 +210,7 @@ export default function MemberForm({ setOpen }) {
         rules={[{ type: 'string' }]}
         collection={RanksCollection}
         subscription="ranks"
+        query={{ type: 'player' }}
       />
       <CollectionSelect
         defaultValue={model?.profile?.navyRankId}
@@ -218,10 +221,14 @@ export default function MemberForm({ setOpen }) {
         rules={[{ type: 'string' }]}
         collection={RanksCollection}
         subscription="ranks"
+        query={{ type: 'zeus' }}
       />
-      <Form.Item name={['profile', 'position']} label={t('members.position')} rules={[{ type: 'string' }]}>
-        <Input placeholder={t('forms.placeholders.enterPosition')} />
-      </Form.Item>
+      <PositionsSelect
+        name={['profile', 'positionId']}
+        label={t('members.position')}
+        rules={[{ type: 'string' }]}
+        defaultValue={model?.profile?.positionId}
+      />
       {Meteor.user() && (
         <Form.Item name={['profile', 'description']} label={t('common.description')} rules={[{ type: 'string' }]}>
           <Input.TextArea autoSize placeholder={t('forms.placeholders.enterDescription')} />

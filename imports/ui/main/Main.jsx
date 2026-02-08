@@ -22,6 +22,9 @@ const MODULE_PERMISSION_MAP = {
 function checkAccess(role, module) {
   if (!role) return false;
 
+  // Admin bypass: roles === true grants access to all modules
+  if (role.roles === true) return true;
+
   // Map module to its permission key
   const permissionKey = MODULE_PERMISSION_MAP[module] || module;
   const permission = role[permissionKey];
@@ -47,6 +50,7 @@ const Tasks = lazy(() => import('../tasks/Tasks'));
 const TaskStatuses = lazy(() => import('../tasks/task-status/TaskStatuses'));
 const Specializations = lazy(() => import('../specializations/Specializations'));
 const Medals = lazy(() => import('../members/medals/Medals'));
+const Positions = lazy(() => import('../members/positions/Positions'));
 const Ranks = lazy(() => import('../members/ranks/Ranks'));
 const Squads = lazy(() => import('../squads/Squads'));
 const Registrations = lazy(() => import('../registration/Registration'));
@@ -99,6 +103,7 @@ export default function Main() {
           {hasAccess && navigationValue === 'ranks' && <Ranks />}
           {hasAccess && navigationValue === 'specializations' && <Specializations />}
           {hasAccess && navigationValue === 'medals' && <Medals />}
+          {hasAccess && navigationValue === 'positions' && <Positions />}
           {hasAccess && navigationValue === 'registrations' && <Registrations />}
           {hasAccess && navigationValue === 'discoveryTypes' && <DiscoveryTypes />}
           {hasAccess && navigationValue === 'roles' && <Roles />}

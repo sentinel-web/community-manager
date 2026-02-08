@@ -2,7 +2,7 @@ import { Tag } from 'antd';
 import React from 'react';
 import TableActions from '../../table/body/actions/TableActions';
 
-export default function getDiscoveryTypeColumns(handleEdit, handleDelete, permissions = {}, t = k => k) {
+const getPositionColumns = (handleEdit, handleDelete, permissions = {}, t = k => k) => {
   const { canUpdate = true, canDelete = true } = permissions;
 
   const columns = [
@@ -10,21 +10,30 @@ export default function getDiscoveryTypeColumns(handleEdit, handleDelete, permis
       title: t('common.name'),
       dataIndex: 'name',
       key: 'name',
-      sorter: (a, b) => a.name.localeCompare(b.name),
+      ellipsis: true,
+      sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
+    },
+    {
+      title: t('positions.order'),
+      dataIndex: 'order',
+      key: 'order',
+      ellipsis: true,
+      sorter: (a, b) => (a.order || 0) - (b.order || 0),
+    },
+    {
+      title: t('common.color'),
+      dataIndex: 'color',
+      key: 'color',
+      ellipsis: true,
+      sorter: (a, b) => (a.color || '').localeCompare(b.color || ''),
+      render: color => <Tag color={color || 'transparent'}>{color}</Tag>,
     },
     {
       title: t('common.description'),
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
-      sorter: (a, b) => a.description.localeCompare(b.description),
-    },
-    {
-      title: t('common.color'),
-      dataIndex: 'color',
-      key: 'color',
-      sorter: (a, b) => a.color.localeCompare(b.color),
-      render: color => <Tag color={color || 'transparent'}>{color}</Tag>,
+      sorter: (a, b) => (a.description || '').localeCompare(b.description || ''),
     },
   ];
 
@@ -40,4 +49,6 @@ export default function getDiscoveryTypeColumns(handleEdit, handleDelete, permis
   }
 
   return columns;
-}
+};
+
+export default getPositionColumns;

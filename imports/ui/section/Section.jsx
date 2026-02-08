@@ -21,6 +21,11 @@ function getModulePermissions(role, module) {
     return { canCreate: false, canUpdate: false, canDelete: false };
   }
 
+  // Admin role (roles: true) has full access to all modules
+  if (role.roles === true) {
+    return { canCreate: true, canUpdate: true, canDelete: true };
+  }
+
   const permission = role[module];
 
   // Boolean permission (true = full access)

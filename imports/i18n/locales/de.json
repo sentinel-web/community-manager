@@ -18,7 +18,8 @@
     "logs": "Protokolle",
     "settings": "Einstellungen",
     "backup": "Sicherung",
-    "questionnaires": "Fragebögen"
+    "questionnaires": "Fragebögen",
+    "positions": "Positionen"
   },
   "common": {
     "create": "Erstellen",
@@ -60,6 +61,7 @@
     "selectMedals": "Auszeichnungen auswählen",
     "selectEventType": "Ereignistyp auswählen",
     "selectTaskStatus": "Status auswählen",
+    "selectPosition": "Position auswählen",
     "selectTask": "Aufgabe auswählen",
     "today": "Heute",
     "back": "Zurück",
@@ -255,7 +257,8 @@
     "logs": "Protokolle",
     "settings": "Einstellungen",
     "users": "Benutzer",
-    "members": "Mitglieder"
+    "members": "Mitglieder",
+    "positions": "Positionen"
   },
   "backup": {
     "title": "Sicherung & Wiederherstellung",
@@ -322,7 +325,8 @@
     "parentSquad": "Übergeordneter Trupp",
     "shortRangeFrequency": "Kurzstreckenfrequenz",
     "longRangeFrequency": "Langstreckenfrequenz",
-    "dragOrClick": "Ziehen und ablegen oder klicken zum Hochladen"
+    "dragOrClick": "Ziehen und ablegen oder klicken zum Hochladen",
+    "excludeFromOrbat": "Vom ORBAT ausschließen"
   },
   "orbat": {
     "title": "ORBAT",
@@ -407,7 +411,9 @@
     "specializationUpdated": "Spezialisierung aktualisiert",
     "squadCreated": "Trupp erstellt",
     "squadUpdated": "Trupp aktualisiert",
-    "specializationRequested": "Spezialisierungsanfrage eingereicht"
+    "specializationRequested": "Spezialisierungsanfrage eingereicht",
+    "positionCreated": "Position erfolgreich erstellt",
+    "positionUpdated": "Position erfolgreich aktualisiert"
   },
   "forms": {
     "sections": {
@@ -471,6 +477,9 @@
     "confirmations": {
       "deleteEvent": "Möchten Sie dieses Ereignis wirklich löschen?"
     }
+  },
+  "positions": {
+    "order": "Reihenfolge"
   },
   "modals": {
     "profile": "Profil",

@@ -1,4 +1,4 @@
-import { App, Col, ColorPicker, Form, Input, Row, Upload } from 'antd';
+import { App, Col, ColorPicker, Form, Input, Row, Switch, Upload } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useContext, useEffect, useMemo, useState } from 'react';
@@ -94,6 +94,9 @@ const SquadsForm = ({ setOpen, useSubdrawer = false }) => {
       </Form.Item>
       <Form.Item label={t('common.description')} name="description" rules={[{ required: false, type: 'string' }]}>
         <Input.TextArea autoSize placeholder={t('forms.placeholders.enterDescription')} />
+      </Form.Item>
+      <Form.Item label={t('squads.excludeFromOrbat')} name="excludeFromOrbat" valuePropName="checked">
+        <Switch />
       </Form.Item>
       <FormFooter setOpen={setOpen} />
     </Form>
