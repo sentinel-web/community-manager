@@ -326,7 +326,8 @@
     "shortRangeFrequency": "Kurzstreckenfrequenz",
     "longRangeFrequency": "Langstreckenfrequenz",
     "dragOrClick": "Ziehen und ablegen oder klicken zum Hochladen",
-    "excludeFromOrbat": "Vom ORBAT ausschließen"
+    "excludeFromOrbat": "Vom ORBAT ausschließen",
+    "noMembers": "Keine Mitglieder"
   },
   "orbat": {
     "title": "ORBAT",

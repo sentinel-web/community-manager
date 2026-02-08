@@ -326,7 +326,8 @@
     "shortRangeFrequency": "Short Range Frequency",
     "longRangeFrequency": "Long Range Frequency",
     "dragOrClick": "Drag and drop or click to upload",
-    "excludeFromOrbat": "Exclude from ORBAT"
+    "excludeFromOrbat": "Exclude from ORBAT",
+    "noMembers": "No members"
   },
   "orbat": {
     "title": "ORBAT",

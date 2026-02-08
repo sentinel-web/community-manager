@@ -65,6 +65,7 @@ export default function Section({
   headerExtra = <></>,
   customView = false,
   permissionModule = null,
+  expandable = undefined,
 }) {
   const [nameInput, setNameInput] = useState('');
   const [filter, setFilter] = useState(filterFactory(''));
@@ -160,7 +161,7 @@ export default function Section({
           {customView ? (
             React.createElement(customView, { handleEdit, handleDelete, datasource, setFilter, permissions })
           ) : (
-            <TableSection columns={columns} datasource={datasource} handleLoadMore={handleLoadMore} disabled={loadMoreDisabled} />
+            <TableSection columns={columns} datasource={datasource} handleLoadMore={handleLoadMore} disabled={loadMoreDisabled} expandable={expandable} />
           )}
         </Col>
       </Row>
@@ -178,13 +179,14 @@ Section.propTypes = {
   headerExtra: PropTypes.node,
   customView: PropTypes.bool,
   permissionModule: PropTypes.string,
+  expandable: PropTypes.object,
 };
 
-const TableSection = ({ columns, datasource, handleLoadMore, disabled }) => {
+const TableSection = ({ columns, datasource, handleLoadMore, disabled, expandable }) => {
   return (
     <>
       <TableContainer>
-        <Table columns={columns} datasource={datasource} />
+        <Table columns={columns} datasource={datasource} expandable={expandable} />
       </TableContainer>
       <TableFooter ready={true} count={datasource.length} handleLoadMore={handleLoadMore} disabled={disabled} />
     </>
@@ -195,4 +197,5 @@ TableSection.propTypes = {
   datasource: PropTypes.array,
   handleLoadMore: PropTypes.func,
   disabled: PropTypes.bool,
+  expandable: PropTypes.object,
 };
