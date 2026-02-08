@@ -5,7 +5,7 @@ import MembersCollection from '../../imports/api/collections/members.collection'
 import { checkPermission, validateString, validateArray, validateObject } from '../main';
 import { createLog } from './logs.server';
 
-function getIntervalCutoffDate(interval) {
+export function getIntervalCutoffDate(interval) {
   if (!interval || interval === 'once') return null;
   if (interval === 'unlimited') return new Date(0);
 
