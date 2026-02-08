@@ -1,5 +1,13 @@
 import { Meteor } from 'meteor/meteor';
-import { validateObject, validateString, checkPermission, checkSpecialPermission, getPermissionModule, clearRoleCache } from './main';
+import {
+  validateObject,
+  validateString,
+  validateArrayOfStrings,
+  checkPermission,
+  checkSpecialPermission,
+  getPermissionModule,
+  clearRoleCache,
+} from './main';
 import { createLog } from './apis/logs.server';
 
 // Special permission fallbacks: when standard CRUD permission is denied,
@@ -191,6 +199,42 @@ function createCollectionMethods(collection) {
           }
 
           return result;
+        },
+        [`${collection}.bulkRemove`]: async function (ids = []) {
+          if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
+          if (validateArrayOfStrings(ids, false)) throw new Meteor.Error(400, 'Invalid ids');
+          if (ids.length === 0) throw new Meteor.Error(400, 'No ids provided');
+          if (ids.length > 100) throw new Meteor.Error(400, 'Maximum 100 items per bulk delete');
+
+          if (permissionModule) {
+            const hasPermission = await checkPermission(this.userId, permissionModule, 'delete');
+            if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+          }
+
+          let removed = 0;
+          const errors = [];
+
+          for (const id of ids) {
+            try {
+              const doc = await Collection.findOneAsync(id);
+              if (!doc) {
+                errors.push(`Document ${id} not found`);
+                continue;
+              }
+              await Collection.removeAsync({ _id: id });
+              if (collection !== 'logs') {
+                await createLog(`${collection}.deleted`, { id });
+              }
+              if (collection === 'roles') {
+                clearRoleCache(id);
+              }
+              removed++;
+            } catch (error) {
+              errors.push(`Failed to delete ${id}: ${error.message}`);
+            }
+          }
+
+          return { removed, errors };
         },
         [`${collection}.count`]: async function (filter = {}) {
           if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');

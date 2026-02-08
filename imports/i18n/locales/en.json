@@ -69,7 +69,9 @@
     "month": "Month",
     "week": "Week",
     "day": "Day",
-    "agenda": "Agenda"
+    "agenda": "Agenda",
+    "selectedCount": "{{count}} selected",
+    "clearSelection": "Clear selection"
   },
   "auth": {
     "login": "Login",
@@ -414,7 +416,9 @@
     "squadUpdated": "Squad updated",
     "specializationRequested": "Specialization request submitted",
     "positionCreated": "Position created successfully",
-    "positionUpdated": "Position updated successfully"
+    "positionUpdated": "Position updated successfully",
+    "bulkDeleteSuccess": "{{count}} entries deleted successfully",
+    "bulkDeletePartial": "{{removed}} entries deleted, {{errors}} failed"
   },
   "forms": {
     "sections": {
@@ -486,6 +490,7 @@
     "profile": "Profile",
     "registration": "Registration",
     "deleteEntry": "Delete Entry",
-    "deleteEntryConfirm": "Are you sure you want to delete this entry?"
+    "deleteEntryConfirm": "Are you sure you want to delete this entry?",
+    "bulkDeleteConfirm": "Are you sure you want to delete {{count}} entries?"
   }
 }

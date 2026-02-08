@@ -8,6 +8,7 @@ import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
 import TableContainer from '../table/body/TableContainer';
 import TableFooter from '../table/footer/TableFooter';
+import GroupActionsBar from '../table/header/GroupActionsBar';
 import TableHeader from '../table/header/TableHeader';
 import Table from '../table/Table';
 import SectionCard from './SectionCard';
@@ -66,14 +67,17 @@ export default function Section({
   customView = false,
   permissionModule = null,
   expandable = undefined,
+  groupActions = [],
 }) {
   const [nameInput, setNameInput] = useState('');
   const [filter, setFilter] = useState(filterFactory(''));
   const [options, setOptions] = useState({ limit: 20 });
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
   useSubscribe(collectionName, filter, options);
   const datasource = useFind(() => Collection?.find?.(filter, options) || [], [Collection, filter, options]);
   const drawer = useContext(DrawerContext);
-  const { notification, message } = App.useApp();
+  const { notification, message, modal } = App.useApp();
   const { t } = useTranslation();
 
   // Get user's role for permission checks
@@ -85,6 +89,11 @@ export default function Section({
     const module = permissionModule || collectionName;
     return getModulePermissions(role, module);
   }, [roles, permissionModule, collectionName]);
+
+  // Clear selection when filter changes
+  useEffect(() => {
+    setSelectedRowKeys([]);
+  }, [filter]);
 
   useEffect(() => {
     setFilter(filterFactory(nameInput));
@@ -134,6 +143,74 @@ export default function Section({
     [notification, message, collectionName, t]
   );
 
+  const handleBulkDelete = useCallback(() => {
+    const count = selectedRowKeys.length;
+    modal.confirm({
+      title: t('common.delete'),
+      content: t('modals.bulkDeleteConfirm', { count }),
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        setBulkActionLoading(true);
+        try {
+          const result = await Meteor.callAsync(`${collectionName}.bulkRemove`, selectedRowKeys);
+          if (result.errors.length > 0) {
+            message.warning(t('messages.bulkDeletePartial', { removed: result.removed, errors: result.errors.length }));
+          } else {
+            message.success(t('messages.bulkDeleteSuccess', { count: result.removed }));
+          }
+          setSelectedRowKeys([]);
+        } catch (error) {
+          notification.error({
+            message: error.error,
+            description: error.message,
+          });
+        } finally {
+          setBulkActionLoading(false);
+        }
+      },
+    });
+  }, [selectedRowKeys, collectionName, modal, message, notification, t]);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedRowKeys([]);
+  }, []);
+
+  // Wrap custom group action handlers with loading/error/clear logic
+  const wrappedGroupActions = useMemo(
+    () =>
+      groupActions.map(action => ({
+        ...action,
+        handler: async () => {
+          setBulkActionLoading(true);
+          try {
+            await action.handler(selectedRowKeys);
+            setSelectedRowKeys([]);
+          } catch (error) {
+            notification.error({
+              message: error.error || t('common.error'),
+              description: error.message,
+            });
+          } finally {
+            setBulkActionLoading(false);
+          }
+        },
+      })),
+    [groupActions, selectedRowKeys, notification, t]
+  );
+
+  const showSelection = permissions.canDelete || groupActions.length > 0;
+
+  const rowSelection = useMemo(
+    () =>
+      showSelection
+        ? {
+            selectedRowKeys,
+            onChange: setSelectedRowKeys,
+          }
+        : undefined,
+    [showSelection, selectedRowKeys]
+  );
+
   const columns = useMemo(
     () => columnsFactory(handleEdit, handleDelete, permissions, t),
     [handleEdit, handleDelete, columnsFactory, permissions, t]
@@ -157,11 +234,29 @@ export default function Section({
             canCreate={permissions.canCreate}
           />
         </Col>
+        {selectedRowKeys.length > 0 && (
+          <Col span={24}>
+            <GroupActionsBar
+              selectedCount={selectedRowKeys.length}
+              onDelete={permissions.canDelete ? handleBulkDelete : undefined}
+              groupActions={wrappedGroupActions}
+              onClearSelection={handleClearSelection}
+              loading={bulkActionLoading}
+            />
+          </Col>
+        )}
         <Col span={24}>
           {customView ? (
             React.createElement(customView, { handleEdit, handleDelete, datasource, setFilter, permissions })
           ) : (
-            <TableSection columns={columns} datasource={datasource} handleLoadMore={handleLoadMore} disabled={loadMoreDisabled} expandable={expandable} />
+            <TableSection
+              columns={columns}
+              datasource={datasource}
+              handleLoadMore={handleLoadMore}
+              disabled={loadMoreDisabled}
+              expandable={expandable}
+              rowSelection={rowSelection}
+            />
           )}
         </Col>
       </Row>
@@ -180,13 +275,20 @@ Section.propTypes = {
   customView: PropTypes.bool,
   permissionModule: PropTypes.string,
   expandable: PropTypes.object,
+  groupActions: PropTypes.arrayOf(
+    PropTypes.shape({
+      key: PropTypes.string.isRequired,
+      label: PropTypes.string.isRequired,
+      handler: PropTypes.func.isRequired,
+    })
+  ),
 };
 
-const TableSection = ({ columns, datasource, handleLoadMore, disabled, expandable }) => {
+const TableSection = ({ columns, datasource, handleLoadMore, disabled, expandable, rowSelection }) => {
   return (
     <>
       <TableContainer>
-        <Table columns={columns} datasource={datasource} expandable={expandable} />
+        <Table columns={columns} datasource={datasource} expandable={expandable} rowSelection={rowSelection} />
       </TableContainer>
       <TableFooter ready={true} count={datasource.length} handleLoadMore={handleLoadMore} disabled={disabled} />
     </>
@@ -198,4 +300,5 @@ TableSection.propTypes = {
   handleLoadMore: PropTypes.func,
   disabled: PropTypes.bool,
   expandable: PropTypes.object,
+  rowSelection: PropTypes.object,
 };

@@ -69,7 +69,9 @@
     "month": "Monat",
     "week": "Woche",
     "day": "Tag",
-    "agenda": "Agenda"
+    "agenda": "Agenda",
+    "selectedCount": "{{count}} ausgewählt",
+    "clearSelection": "Auswahl aufheben"
   },
   "auth": {
     "login": "Anmelden",
@@ -414,7 +416,9 @@
     "squadUpdated": "Trupp aktualisiert",
     "specializationRequested": "Spezialisierungsanfrage eingereicht",
     "positionCreated": "Position erfolgreich erstellt",
-    "positionUpdated": "Position erfolgreich aktualisiert"
+    "positionUpdated": "Position erfolgreich aktualisiert",
+    "bulkDeleteSuccess": "{{count}} Einträge erfolgreich gelöscht",
+    "bulkDeletePartial": "{{removed}} Einträge gelöscht, {{errors}} fehlgeschlagen"
   },
   "forms": {
     "sections": {
@@ -486,6 +490,7 @@
     "profile": "Profil",
     "registration": "Bewerbung",
     "deleteEntry": "Eintrag löschen",
-    "deleteEntryConfirm": "Möchten Sie diesen Eintrag wirklich löschen?"
+    "deleteEntryConfirm": "Möchten Sie diesen Eintrag wirklich löschen?",
+    "bulkDeleteConfirm": "Möchten Sie wirklich {{count}} Einträge löschen?"
   }
 }

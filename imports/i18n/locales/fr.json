@@ -69,7 +69,9 @@
     "month": "Mois",
     "week": "Semaine",
     "day": "Jour",
-    "agenda": "Agenda"
+    "agenda": "Agenda",
+    "selectedCount": "{{count}} sélectionné(s)",
+    "clearSelection": "Effacer la sélection"
   },
   "auth": {
     "login": "Connexion",
@@ -414,7 +416,9 @@
     "squadUpdated": "Escouade mise à jour",
     "specializationRequested": "Demande de spécialisation soumise",
     "positionCreated": "Position créée avec succès",
-    "positionUpdated": "Position mise à jour avec succès"
+    "positionUpdated": "Position mise à jour avec succès",
+    "bulkDeleteSuccess": "{{count}} entrées supprimées avec succès",
+    "bulkDeletePartial": "{{removed}} entrées supprimées, {{errors}} échouées"
   },
   "forms": {
     "sections": {
@@ -486,6 +490,7 @@
     "profile": "Profil",
     "registration": "Inscription",
     "deleteEntry": "Supprimer l'entrée",
-    "deleteEntryConfirm": "Êtes-vous sûr de vouloir supprimer cette entrée ?"
+    "deleteEntryConfirm": "Êtes-vous sûr de vouloir supprimer cette entrée ?",
+    "bulkDeleteConfirm": "Êtes-vous sûr de vouloir supprimer {{count}} entrées ?"
   }
 }
