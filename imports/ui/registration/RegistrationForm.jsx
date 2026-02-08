@@ -156,7 +156,7 @@ export default function RegistrationForm({ setOpen }) {
         ]}
         required
       >
-        <Input placeholder="e.g. Panda#1234 oder Panda" />
+        <Input placeholder="Panda#1234 or Panda" />
       </Form.Item>
       <CollectionSelect
         defaultValue={model?.discoveryType}

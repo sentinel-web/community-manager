@@ -13,6 +13,9 @@ import './apis/specializations.server';
 import './crud.lib';
 import { createCollectionMethods, createCollectionPublish } from './crud.lib';
 import { getDiscord } from '../imports/server/discord/client.js';
+import * as DiscordCommands from '../imports/server/discord/registerCommands.js';
+
+console.log('[Discord] registerCommands exports:', Object.keys(DiscordCommands));
 
 async function createTestData() {
   const adminRole = await RolesCollection.findOneAsync({ _id: 'admin' });
@@ -24,6 +27,11 @@ async function createTestData() {
 
 if (Meteor.isServer) {
   Meteor.startup(async () => {
+    try {
+    await DiscordCommands.registerAndListCommands();
+  } catch (e) {
+    console.error('[Discord] Command registration failed:', e);
+  }
    getDiscord();
     await createTestData();
   });
