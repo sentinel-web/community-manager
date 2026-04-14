@@ -1,5 +1,6 @@
 import { App as AntdApp, theme as AntdTheme, ConfigProvider, Drawer, Layout } from 'antd';
-import React, { createContext, useEffect, useState } from 'react';
+import { Meteor } from 'meteor/meteor';
+import React, { createContext, useCallback, useEffect, useState } from 'react';
 import { getDrawerWidth } from '../../config';
 import Footer from '../footer/Footer';
 import Header from '../header/Header';
@@ -7,6 +8,8 @@ import Main from '../main/Main';
 import { getNavigationValue } from '../navigation/Navigation';
 import useSettings from '../settings/settings.hook';
 import { getPreferedTheme } from '../theme/theme.hook';
+import DemoTour from '../tour/DemoTour';
+import { TourProvider } from '../tour/TourContext';
 
 export const NavigationContext = createContext({});
 export const ThemeContext = createContext({});
@@ -36,7 +39,18 @@ export default function App() {
     document.documentElement.style.setProperty('--primary-color', communityColor);
   }, [communityColor]);
 
+  const handleSystemThemeChange = useCallback(e => {
+    setTheme(e.matches ? 'dark' : 'light');
+  }, []);
+
   useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    mediaQuery.addEventListener('change', handleSystemThemeChange);
+    return () => mediaQuery.removeEventListener('change', handleSystemThemeChange);
+  }, [handleSystemThemeChange]);
+
+  useEffect(() => {
+    document.body.classList.remove('light', 'dark');
     document.body.classList.add(theme);
   }, [theme]);
 
@@ -71,6 +85,7 @@ export default function App() {
               setDrawerExtra: setSubdrawerExtra,
             }}
           >
+            <TourProvider>
             <ConfigProvider
               theme={{
                 token: {
@@ -95,6 +110,7 @@ export default function App() {
                     <Footer />
                   </Layout.Footer>
                 </Layout>
+                {Meteor.isDevelopment && <DemoTour />}
                 <Drawer
                   width={getDrawerWidth(window.innerWidth)}
                   open={drawerOpen}
@@ -117,6 +133,7 @@ export default function App() {
                 </Drawer>
               </AntdApp>
             </ConfigProvider>
+            </TourProvider>
           </SubdrawerContext.Provider>
         </DrawerContext.Provider>
       </NavigationContext.Provider>
