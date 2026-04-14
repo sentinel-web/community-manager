@@ -5,13 +5,32 @@ import useNavigation from '../navigation/navigation.hook';
 import TourContext from './TourContext';
 import getTourSteps from './tourSteps';
 
-function pollForElement(targetFn, timeoutMs = 3000, intervalMs = 50) {
+function pollForStableElement(targetFn, timeoutMs = 3000, intervalMs = 50, stableMs = 200) {
   return new Promise(resolve => {
     const start = Date.now();
+    let lastRect = null;
+    let stableSince = null;
+
     const check = () => {
+      if (Date.now() - start >= timeoutMs) return resolve(lastRect ? targetFn() : null);
+
       const el = targetFn();
-      if (el) return resolve(el);
-      if (Date.now() - start >= timeoutMs) return resolve(null);
+      if (!el) {
+        lastRect = null;
+        stableSince = null;
+        return setTimeout(check, intervalMs);
+      }
+
+      const rect = el.getBoundingClientRect();
+      const same = lastRect && rect.width === lastRect.width && rect.height === lastRect.height;
+
+      if (same) {
+        if (Date.now() - stableSince >= stableMs) return resolve(el);
+      } else {
+        lastRect = rect;
+        stableSince = Date.now();
+      }
+
       setTimeout(check, intervalMs);
     };
     check();
@@ -65,9 +84,9 @@ export default function DemoTour() {
           await step.action(actions);
         }
 
-        // Poll for target element
+        // Poll until target element exists and dimensions have stabilized
         if (step.target) {
-          await pollForElement(step.target, 3000, 50);
+          await pollForStableElement(step.target, 3000, 50, 200);
         }
 
         setCurrentStep(nextStep);
@@ -89,5 +108,14 @@ export default function DemoTour() {
 
   if (!open) return null;
 
-  return <Tour open={open} current={currentStep} onChange={handleChange} onClose={handleClose} steps={steps} />;
+  return (
+    <Tour
+      open={open}
+      current={currentStep}
+      onChange={handleChange}
+      onClose={handleClose}
+      steps={steps}
+      scrollIntoViewOptions={{ behavior: 'smooth', block: 'center' }}
+    />
+  );
 }
