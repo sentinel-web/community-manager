@@ -240,7 +240,11 @@
     "memberIdBlacklist": "Mitglieder-ID-Schwarze Liste",
     "enterTitle": "Titel eingeben",
     "enterBlacklistedName": "Neuen gesperrten Namen eingeben",
-    "enterBlacklistedId": "Neue gesperrte ID eingeben"
+    "enterBlacklistedId": "Neue gesperrte ID eingeben",
+    "generateDemoData": "Demodaten generieren",
+    "generateDemoDataConfirm": "Dies wird alle vorhandenen Daten löschen und durch Demodaten ersetzen. Fortfahren?",
+    "generateDemoDataSuccess": "Demodaten erfolgreich generiert. Bitte erneut anmelden.",
+    "generateDemoDataError": "Demodaten konnten nicht generiert werden"
   },
   "collections": {
     "attendances": "Anwesenheiten",

@@ -1,5 +1,5 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, Col, ColorPicker, Input, List, Row, Typography } from 'antd';
+import { Button, Col, ColorPicker, Input, List, Popconfirm, Row, Typography } from 'antd';
 import Dragger from 'antd/es/upload/Dragger';
 import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
@@ -83,6 +83,11 @@ export default function Settings() {
                 <Col xs={24} lg={12}>
                   <CommunityIdBlackListSettings communityIdBlackList={communityIdBlackList} handleChange={handleChange} t={t} />
                 </Col>
+                {Meteor.isDevelopment && (
+                  <Col span={24}>
+                    <DemoDataSettings t={t} />
+                  </Col>
+                )}
               </Row>
             </Col>
           </Row>
@@ -280,5 +285,44 @@ function CommunityColorSettings({ communityColor, handleChange, t }) {
 CommunityColorSettings.propTypes = {
   communityColor: PropTypes.string,
   handleChange: PropTypes.func,
+  t: PropTypes.func,
+};
+
+function DemoDataSettings({ t }) {
+  const [loading, setLoading] = useState(false);
+
+  const handleGenerate = useCallback(async () => {
+    setLoading(true);
+    try {
+      await Meteor.callAsync('demoData.generate');
+      alert(t('settings.generateDemoDataSuccess'));
+      window.location.reload();
+    } catch (error) {
+      alert(t('settings.generateDemoDataError') + ': ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
+
+  return (
+    <Row gutter={[16, 16]}>
+      <SettingTitle title={t('settings.generateDemoData')} />
+      <Col span={24}>
+        <Popconfirm
+          title={t('settings.generateDemoDataConfirm')}
+          onConfirm={handleGenerate}
+          okText="OK"
+          cancelText="Cancel"
+          okButtonProps={{ danger: true }}
+        >
+          <Button danger loading={loading}>
+            {t('settings.generateDemoData')}
+          </Button>
+        </Popconfirm>
+      </Col>
+    </Row>
+  );
+}
+DemoDataSettings.propTypes = {
   t: PropTypes.func,
 };

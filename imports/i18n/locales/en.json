@@ -240,7 +240,11 @@
     "memberIdBlacklist": "Member ID Black List",
     "enterTitle": "Enter title",
     "enterBlacklistedName": "Enter new black listed name",
-    "enterBlacklistedId": "Enter new black listed id"
+    "enterBlacklistedId": "Enter new black listed id",
+    "generateDemoData": "Generate Demo Data",
+    "generateDemoDataConfirm": "This will delete all existing data and replace it with demo data. Continue?",
+    "generateDemoDataSuccess": "Demo data generated successfully. Please log in again.",
+    "generateDemoDataError": "Failed to generate demo data"
   },
   "collections": {
     "attendances": "Attendances",

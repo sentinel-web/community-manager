@@ -240,7 +240,11 @@
     "memberIdBlacklist": "Liste noire des ID de membres",
     "enterTitle": "Entrez le titre",
     "enterBlacklistedName": "Entrez un nouveau nom sur liste noire",
-    "enterBlacklistedId": "Entrez un nouvel ID sur liste noire"
+    "enterBlacklistedId": "Entrez un nouvel ID sur liste noire",
+    "generateDemoData": "Générer des données de démo",
+    "generateDemoDataConfirm": "Ceci supprimera toutes les données existantes et les remplacera par des données de démo. Continuer ?",
+    "generateDemoDataSuccess": "Données de démo générées avec succès. Veuillez vous reconnecter.",
+    "generateDemoDataError": "Échec de la génération des données de démo"
   },
   "collections": {
     "attendances": "Présences",
