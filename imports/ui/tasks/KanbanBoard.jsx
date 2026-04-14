@@ -6,10 +6,12 @@ import { useTracker } from 'meteor/react-meteor-data';
 import PropTypes from 'prop-types';
 import React, { useMemo } from 'react';
 import { DragDropContext, Draggable, Droppable } from 'react-beautiful-dnd';
+import { useTranslation } from '../../i18n/LanguageContext';
 import TaskStatusTag from './task-status/TaskStatusTag';
 import { Participants } from './task.columns';
 
 const KanbanBoard = ({ datasource, handleEdit, handleDelete }) => {
+  const { t } = useTranslation();
   const onDragEnd = result => {
     const { destination, source, draggableId } = result;
     if (!destination) return;
@@ -57,11 +59,11 @@ const KanbanBoard = ({ datasource, handleEdit, handleDelete }) => {
                               extra={
                                 <Row gutter={[16, 16]} align="middle" justify="end">
                                   <Col>
-                                    <Button onClick={e => handleEdit(e, task)}>Edit</Button>
+                                    <Button onClick={e => handleEdit(e, task)}>{t('common.edit')}</Button>
                                   </Col>
                                   <Col>
                                     <Button onClick={e => handleDelete(e, task)} danger>
-                                      Delete
+                                      {t('common.delete')}
                                     </Button>
                                   </Col>
                                 </Row>
@@ -75,7 +77,7 @@ const KanbanBoard = ({ datasource, handleEdit, handleDelete }) => {
                               <Participants participants={task.participants} />
                               {task.completedBy?.length > 0 && (
                                 <div style={{ marginTop: 4 }}>
-                                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>Completed by: </Typography.Text>
+                                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('tasks.completedBy')}{' '}</Typography.Text>
                                   <Participants participants={task.completedBy} />
                                 </div>
                               )}

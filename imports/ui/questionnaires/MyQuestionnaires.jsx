@@ -3,25 +3,19 @@ import { App, Button, Card, Col, Empty, Popconfirm, Row, Space, Spin, Tag, Toolt
 import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useEffect, useState } from 'react';
+import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
 import SectionCard from '../section/SectionCard';
 import QuestionnaireResponseForm from './QuestionnaireResponseForm';
 
 const { Text, Paragraph } = Typography;
 
-const INTERVAL_LABELS = {
-  once: 'One-time',
-  daily: 'Daily',
-  weekly: 'Weekly',
-  monthly: 'Monthly',
-  unlimited: 'Unlimited',
-};
-
 export default function MyQuestionnaires() {
   const [questionnaires, setQuestionnaires] = useState([]);
   const [loading, setLoading] = useState(true);
   const { notification } = App.useApp();
   const drawer = useContext(DrawerContext);
+  const { t } = useTranslation();
 
   const loadQuestionnaires = useCallback(async () => {
     try {
@@ -61,7 +55,7 @@ export default function MyQuestionnaires() {
     async responseId => {
       try {
         await Meteor.callAsync('questionnaireResponses.revoke', responseId);
-        notification.success({ message: 'Response revoked successfully' });
+        notification.success({ message: t('questionnaires.revokeSuccess') });
         loadQuestionnaires();
       } catch (error) {
         notification.error({
@@ -70,22 +64,22 @@ export default function MyQuestionnaires() {
         });
       }
     },
-    [notification, loadQuestionnaires]
+    [notification, loadQuestionnaires, t]
   );
 
   return (
-    <SectionCard title="My Questionnaires" ready={!loading}>
+    <SectionCard title={t('questionnaires.myTitle')} ready={!loading}>
       {loading ? (
         <Row justify="center" style={{ padding: 48 }}>
           <Spin size="large" />
         </Row>
       ) : questionnaires.length === 0 ? (
-        <Empty description="No active questionnaires available" />
+        <Empty description={t('questionnaires.noActiveQuestionnaires')} />
       ) : (
         <Row gutter={[16, 16]}>
           {questionnaires.map(questionnaire => (
             <Col xs={24} sm={12} lg={8} key={questionnaire._id}>
-              <QuestionnaireCard questionnaire={questionnaire} onFillOut={handleFillOut} onRevoke={handleRevoke} />
+              <QuestionnaireCard questionnaire={questionnaire} onFillOut={handleFillOut} onRevoke={handleRevoke} t={t} />
             </Col>
           ))}
         </Row>
@@ -94,17 +88,26 @@ export default function MyQuestionnaires() {
   );
 }
 
-const QuestionnaireCard = ({ questionnaire, onFillOut, onRevoke }) => {
+const QuestionnaireCard = ({ questionnaire, onFillOut, onRevoke, t }) => {
   const { name, description, questionCount, canRespond, responseReason, nextAllowedDate, responseCount, allowAnonymous, interval, latestResponseId } =
     questionnaire;
-  const intervalLabel = INTERVAL_LABELS[interval] || INTERVAL_LABELS.once;
+
+  const intervalLabels = {
+    once: t('questionnaires.intervalOnceLabel'),
+    daily: t('questionnaires.intervalDaily'),
+    weekly: t('questionnaires.intervalWeekly'),
+    monthly: t('questionnaires.intervalMonthly'),
+    unlimited: t('questionnaires.intervalUnlimited'),
+  };
+
+  const intervalLabel = intervalLabels[interval] || intervalLabels.once;
   const canRevoke = !allowAnonymous && latestResponseId && !canRespond;
 
   const renderAction = () => {
     if (canRespond) {
       return (
         <Button key="fill" type="primary" icon={<FormOutlined />} onClick={() => onFillOut(questionnaire)}>
-          Fill Out
+          {t('questionnaires.fillOut')}
         </Button>
       );
     }
@@ -113,7 +116,7 @@ const QuestionnaireCard = ({ questionnaire, onFillOut, onRevoke }) => {
       return (
         <Space key="completed">
           <CheckCircleOutlined style={{ color: '#52c41a' }} />
-          <Text type="success">Completed</Text>
+          <Text type="success">{t('questionnaires.completed')}</Text>
         </Space>
       );
     }
@@ -123,7 +126,7 @@ const QuestionnaireCard = ({ questionnaire, onFillOut, onRevoke }) => {
         <Space key="waiting">
           <ClockCircleOutlined style={{ color: '#faad14' }} />
           <Text type="warning">
-            {nextAllowedDate ? `Available ${new Date(nextAllowedDate).toLocaleDateString()}` : 'Please wait'}
+            {nextAllowedDate ? t('questionnaires.availableDate', { date: new Date(nextAllowedDate).toLocaleDateString() }) : t('questionnaires.pleaseWait')}
           </Text>
         </Space>
       </Tooltip>
@@ -135,14 +138,14 @@ const QuestionnaireCard = ({ questionnaire, onFillOut, onRevoke }) => {
     return (
       <Popconfirm
         key="revoke"
-        title="Revoke response"
-        description="Are you sure you want to revoke your response?"
+        title={t('questionnaires.revokeResponse')}
+        description={t('questionnaires.revokeConfirm')}
         onConfirm={() => onRevoke(latestResponseId)}
-        okText="Yes"
-        cancelText="No"
+        okText={t('common.yes')}
+        cancelText={t('common.no')}
       >
         <Button danger icon={<DeleteOutlined />}>
-          Revoke
+          {t('questionnaires.revoke')}
         </Button>
       </Popconfirm>
     );
@@ -150,7 +153,7 @@ const QuestionnaireCard = ({ questionnaire, onFillOut, onRevoke }) => {
 
   const renderTags = () => {
     const tags = [];
-    if (allowAnonymous) tags.push(<Tag key="anon" color="blue">Anonymous</Tag>);
+    if (allowAnonymous) tags.push(<Tag key="anon" color="blue">{t('questionnaires.anonymous')}</Tag>);
     if (interval && interval !== 'once') tags.push(<Tag key="interval" color="cyan">{intervalLabel}</Tag>);
     return tags.length > 0 ? <Space size={4}>{tags}</Space> : null;
   };
@@ -165,13 +168,9 @@ const QuestionnaireCard = ({ questionnaire, onFillOut, onRevoke }) => {
             {description}
           </Paragraph>
         )}
-        <Text>
-          <strong>{questionCount}</strong> question{questionCount !== 1 ? 's' : ''}
-        </Text>
+        <Text>{t('questionnaires.questionCount', { count: questionCount })}</Text>
         {responseCount > 0 && (
-          <Text type="secondary">
-            {responseCount} response{responseCount !== 1 ? 's' : ''} submitted
-          </Text>
+          <Text type="secondary">{t('questionnaires.responseCount', { count: responseCount })}</Text>
         )}
       </Space>
     </Card>
@@ -193,4 +192,5 @@ QuestionnaireCard.propTypes = {
   }).isRequired,
   onFillOut: PropTypes.func.isRequired,
   onRevoke: PropTypes.func.isRequired,
+  t: PropTypes.func.isRequired,
 };

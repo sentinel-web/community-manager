@@ -3,32 +3,40 @@ import { App, Button, Card, Form, Input, Select, Space, Switch } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useMemo } from 'react';
+import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
 import FormFooter from '../components/FormFooter';
-
-const QUESTION_TYPES = [
-  { value: 'text', label: 'Text' },
-  { value: 'textarea', label: 'Long Text' },
-  { value: 'number', label: 'Number' },
-  { value: 'select', label: 'Single Choice' },
-  { value: 'multiselect', label: 'Multiple Choice' },
-  { value: 'rating', label: 'Rating (1-5)' },
-];
-
-const INTERVAL_OPTIONS = [
-  { value: 'once', label: 'Once (one response only)' },
-  { value: 'daily', label: 'Daily' },
-  { value: 'weekly', label: 'Weekly' },
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'unlimited', label: 'Unlimited' },
-];
 
 const QuestionnaireForm = ({ setOpen }) => {
   const { drawerModel: model } = useContext(DrawerContext);
   const { message, notification } = App.useApp();
+  const { t } = useTranslation();
   const { isUpdate, endpoint } = useMemo(
     () => (model?._id ? { isUpdate: true, endpoint: 'questionnaires.update' } : { isUpdate: false, endpoint: 'questionnaires.insert' }),
     [model?._id]
+  );
+
+  const questionTypes = useMemo(
+    () => [
+      { value: 'text', label: t('questionnaires.typeText') },
+      { value: 'textarea', label: t('questionnaires.typeLongText') },
+      { value: 'number', label: t('questionnaires.typeNumber') },
+      { value: 'select', label: t('questionnaires.typeSingleChoice') },
+      { value: 'multiselect', label: t('questionnaires.typeMultipleChoice') },
+      { value: 'rating', label: t('questionnaires.typeRating') },
+    ],
+    [t]
+  );
+
+  const intervalOptions = useMemo(
+    () => [
+      { value: 'once', label: t('questionnaires.intervalOnce') },
+      { value: 'daily', label: t('questionnaires.intervalDaily') },
+      { value: 'weekly', label: t('questionnaires.intervalWeekly') },
+      { value: 'monthly', label: t('questionnaires.intervalMonthly') },
+      { value: 'unlimited', label: t('questionnaires.intervalUnlimited') },
+    ],
+    [t]
   );
 
   const handleFinish = useCallback(
@@ -42,7 +50,7 @@ const QuestionnaireForm = ({ setOpen }) => {
         const args = isUpdate ? [model._id, payload] : [payload];
         await Meteor.callAsync(endpoint, ...args);
         setOpen(false);
-        message.success(isUpdate ? 'Questionnaire updated' : 'Questionnaire created');
+        message.success(isUpdate ? t('questionnaires.updated') : t('questionnaires.created'));
       } catch (error) {
         notification.error({
           message: error.error,
@@ -50,55 +58,55 @@ const QuestionnaireForm = ({ setOpen }) => {
         });
       }
     },
-    [setOpen, endpoint, model?._id, model?.createdAt, isUpdate, message, notification]
+    [setOpen, endpoint, model?._id, model?.createdAt, isUpdate, message, notification, t]
   );
 
   const [form] = Form.useForm();
 
   return (
     <Form layout="vertical" form={form} onFinish={handleFinish} initialValues={model}>
-      <Form.Item label="Name" name="name" rules={[{ required: true, type: 'string', message: 'Please enter a name' }]} required>
-        <Input placeholder="Enter questionnaire name" />
+      <Form.Item label={t('common.name')} name="name" rules={[{ required: true, type: 'string', message: t('questionnaires.pleaseEnterName') }]} required>
+        <Input placeholder={t('questionnaires.enterQuestionnaireName')} />
       </Form.Item>
-      <Form.Item label="Description" name="description" rules={[{ required: false, type: 'string' }]}>
-        <Input.TextArea autoSize placeholder="Enter description" />
+      <Form.Item label={t('common.description')} name="description" rules={[{ required: false, type: 'string' }]}>
+        <Input.TextArea autoSize placeholder={t('forms.placeholders.enterDescription')} />
       </Form.Item>
-      <Form.Item label="Status" name="status" rules={[{ required: false, type: 'string' }]} initialValue="draft">
+      <Form.Item label={t('common.status')} name="status" rules={[{ required: false, type: 'string' }]} initialValue="draft">
         <Select
-          placeholder="Select status"
+          placeholder={t('questionnaires.selectStatus')}
           options={[
-            { value: 'draft', label: 'Draft' },
-            { value: 'active', label: 'Active' },
-            { value: 'closed', label: 'Closed' },
+            { value: 'draft', label: t('questionnaires.draft') },
+            { value: 'active', label: t('questionnaires.active') },
+            { value: 'closed', label: t('questionnaires.closed') },
           ]}
         />
       </Form.Item>
       <Form.Item
-        label="Allow Anonymous Responses"
+        label={t('questionnaires.allowAnonymous')}
         name="allowAnonymous"
         valuePropName="checked"
-        tooltip="When enabled, responses are not linked to user accounts"
+        tooltip={t('questionnaires.allowAnonymousTooltip')}
       >
         <Switch />
       </Form.Item>
       <Form.Item
-        label="Response Interval"
+        label={t('questionnaires.responseInterval')}
         name="interval"
         initialValue="once"
-        tooltip="How often users can submit responses"
+        tooltip={t('questionnaires.responseIntervalTooltip')}
       >
-        <Select placeholder="Select interval" options={INTERVAL_OPTIONS} />
+        <Select placeholder={t('questionnaires.selectInterval')} options={intervalOptions} />
       </Form.Item>
 
-      <Card title="Questions" size="small" style={{ marginBottom: 16 }}>
+      <Card title={t('questionnaires.questions')} size="small" style={{ marginBottom: 16 }}>
         <Form.List name="questions">
           {(fields, { add, remove }) => (
             <>
               {fields.map(({ key, name, ...restField }) => (
-                <QuestionItem key={key} name={name} restField={restField} remove={remove} />
+                <QuestionItem key={key} name={name} restField={restField} remove={remove} t={t} questionTypes={questionTypes} />
               ))}
               <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                Add Question
+                {t('questionnaires.addQuestion')}
               </Button>
             </>
           )}
@@ -113,7 +121,7 @@ QuestionnaireForm.propTypes = {
   setOpen: PropTypes.func,
 };
 
-const QuestionItem = ({ name, restField, remove }) => {
+const QuestionItem = ({ name, restField, remove, t, questionTypes }) => {
   const form = Form.useFormInstance();
   const questionType = Form.useWatch(['questions', name, 'type'], form);
 
@@ -124,23 +132,23 @@ const QuestionItem = ({ name, restField, remove }) => {
           <Form.Item
             {...restField}
             name={[name, 'text']}
-            rules={[{ required: true, message: 'Please enter a question' }]}
+            rules={[{ required: true, message: t('questionnaires.pleaseEnterQuestion') }]}
             style={{ marginBottom: 8, flex: 1 }}
           >
-            <Input placeholder="Question text" />
+            <Input placeholder={t('questionnaires.questionText')} />
           </Form.Item>
           <Button type="text" danger icon={<DeleteOutlined />} onClick={() => remove(name)} />
         </Space>
         <Space wrap>
-          <Form.Item {...restField} name={[name, 'type']} rules={[{ required: true, message: 'Select a type' }]} style={{ marginBottom: 8 }}>
-            <Select placeholder="Question type" options={QUESTION_TYPES} style={{ width: 150 }} />
+          <Form.Item {...restField} name={[name, 'type']} rules={[{ required: true, message: t('questionnaires.selectAType') }]} style={{ marginBottom: 8 }}>
+            <Select placeholder={t('questionnaires.questionType')} options={questionTypes} style={{ width: 150 }} />
           </Form.Item>
           <Form.Item {...restField} name={[name, 'required']} style={{ marginBottom: 8 }}>
             <Select
-              placeholder="Required?"
+              placeholder={t('questionnaires.requiredQuestion')}
               options={[
-                { value: true, label: 'Required' },
-                { value: false, label: 'Optional' },
+                { value: true, label: t('questionnaires.required') },
+                { value: false, label: t('questionnaires.optional') },
               ]}
               style={{ width: 110 }}
               defaultValue={false}
@@ -151,10 +159,10 @@ const QuestionItem = ({ name, restField, remove }) => {
           <Form.Item
             {...restField}
             name={[name, 'options']}
-            rules={[{ required: true, message: 'Please add options' }]}
+            rules={[{ required: true, message: t('questionnaires.pleaseAddOptions') }]}
             style={{ marginBottom: 8 }}
           >
-            <Select mode="tags" placeholder="Add options (press Enter after each)" tokenSeparators={[',']} />
+            <Select mode="tags" placeholder={t('questionnaires.addOptions')} tokenSeparators={[',']} />
           </Form.Item>
         )}
       </Space>
@@ -165,6 +173,8 @@ QuestionItem.propTypes = {
   name: PropTypes.number,
   restField: PropTypes.object,
   remove: PropTypes.func,
+  t: PropTypes.func,
+  questionTypes: PropTypes.array,
 };
 
 export default QuestionnaireForm;

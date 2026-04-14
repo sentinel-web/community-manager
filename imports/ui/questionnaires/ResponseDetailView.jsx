@@ -1,6 +1,7 @@
 import { Rate, Space, Tag, Typography } from 'antd';
 import PropTypes from 'prop-types';
 import React, { useContext } from 'react';
+import { useTranslation } from '../../i18n/LanguageContext';
 import { SubdrawerContext } from '../app/App';
 
 const { Text, Title } = Typography;
@@ -8,9 +9,10 @@ const { Text, Title } = Typography;
 const ResponseDetailView = () => {
   const { drawerModel } = useContext(SubdrawerContext);
   const { response, questionnaire } = drawerModel || {};
+  const { t } = useTranslation();
 
   if (!response || !questionnaire) {
-    return <Text>No response data available.</Text>;
+    return <Text>{t('questionnaires.noResponseData')}</Text>;
   }
 
   const { respondentName, respondentId, submittedAt, answers } = response;
@@ -18,19 +20,19 @@ const ResponseDetailView = () => {
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="large">
       <div>
-        <Text type="secondary">Respondent</Text>
-        <div>{respondentId ? respondentName : <Tag color="blue">Anonymous</Tag>}</div>
+        <Text type="secondary">{t('questionnaires.respondent')}</Text>
+        <div>{respondentId ? respondentName : <Tag color="blue">{t('questionnaires.anonymous')}</Tag>}</div>
       </div>
       <div>
-        <Text type="secondary">Submitted</Text>
+        <Text type="secondary">{t('questionnaires.submitted')}</Text>
         <div>{submittedAt ? new Date(submittedAt).toLocaleString() : '-'}</div>
       </div>
       <div>
-        <Title level={5}>Answers</Title>
+        <Title level={5}>{t('questionnaires.answers')}</Title>
         <Space direction="vertical" style={{ width: '100%' }} size="middle">
           {(questionnaire.questions || []).map((question, index) => {
             const answer = answers?.find(a => a.questionIndex === index);
-            return <AnswerDisplay key={index} question={question} answer={answer} />;
+            return <AnswerDisplay key={index} question={question} answer={answer} t={t} />;
           })}
         </Space>
       </div>
@@ -40,13 +42,13 @@ const ResponseDetailView = () => {
 
 export default ResponseDetailView;
 
-const AnswerDisplay = ({ question, answer }) => {
+const AnswerDisplay = ({ question, answer, t }) => {
   const value = answer?.value;
   const isEmpty = value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
 
   const renderValue = () => {
     if (isEmpty) {
-      return <Text type="secondary" italic>No answer</Text>;
+      return <Text type="secondary" italic>{t('questionnaires.noAnswer')}</Text>;
     }
 
     switch (question.type) {
@@ -89,4 +91,5 @@ AnswerDisplay.propTypes = {
     questionIndex: PropTypes.number,
     value: PropTypes.any,
   }),
+  t: PropTypes.func,
 };

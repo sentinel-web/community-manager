@@ -2,6 +2,7 @@ import { App, Form, Input, InputNumber, Rate, Select, Typography } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useCallback, useContext } from 'react';
+import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
 import FormFooter from '../components/FormFooter';
 
@@ -10,6 +11,7 @@ const { Text } = Typography;
 const QuestionnaireResponseForm = ({ setOpen, onSuccess }) => {
   const { drawerModel: questionnaire } = useContext(DrawerContext);
   const { message, notification } = App.useApp();
+  const { t } = useTranslation();
   const [form] = Form.useForm();
 
   const handleFinish = useCallback(
@@ -22,7 +24,7 @@ const QuestionnaireResponseForm = ({ setOpen, onSuccess }) => {
 
         await Meteor.callAsync('questionnaireResponses.submit', questionnaire._id, answers);
         setOpen(false);
-        message.success('Response submitted successfully');
+        message.success(t('questionnaires.submitSuccess'));
         if (onSuccess) onSuccess();
       } catch (error) {
         notification.error({
@@ -31,37 +33,37 @@ const QuestionnaireResponseForm = ({ setOpen, onSuccess }) => {
         });
       }
     },
-    [setOpen, questionnaire, message, notification, onSuccess]
+    [setOpen, questionnaire, message, notification, onSuccess, t]
   );
 
   const renderQuestionField = (question, index) => {
     const fieldName = `question_${index}`;
-    const rules = question.required ? [{ required: true, message: 'This question is required' }] : [];
+    const rules = question.required ? [{ required: true, message: t('questionnaires.questionRequired') }] : [];
 
     switch (question.type) {
       case 'text':
         return (
           <Form.Item key={index} label={question.text} name={fieldName} rules={rules}>
-            <Input placeholder="Enter your answer" />
+            <Input placeholder={t('questionnaires.enterAnswer')} />
           </Form.Item>
         );
       case 'textarea':
         return (
           <Form.Item key={index} label={question.text} name={fieldName} rules={rules}>
-            <Input.TextArea placeholder="Enter your answer" autoSize={{ minRows: 3 }} />
+            <Input.TextArea placeholder={t('questionnaires.enterAnswer')} autoSize={{ minRows: 3 }} />
           </Form.Item>
         );
       case 'number':
         return (
           <Form.Item key={index} label={question.text} name={fieldName} rules={rules}>
-            <InputNumber placeholder="Enter a number" style={{ width: '100%' }} />
+            <InputNumber placeholder={t('questionnaires.enterNumber')} style={{ width: '100%' }} />
           </Form.Item>
         );
       case 'select':
         return (
           <Form.Item key={index} label={question.text} name={fieldName} rules={rules}>
             <Select
-              placeholder="Select an option"
+              placeholder={t('questionnaires.selectOption')}
               options={(question.options || []).map(opt => ({ value: opt, label: opt }))}
             />
           </Form.Item>
@@ -71,7 +73,7 @@ const QuestionnaireResponseForm = ({ setOpen, onSuccess }) => {
           <Form.Item key={index} label={question.text} name={fieldName} rules={rules}>
             <Select
               mode="multiple"
-              placeholder="Select options"
+              placeholder={t('questionnaires.selectOptions')}
               options={(question.options || []).map(opt => ({ value: opt, label: opt }))}
             />
           </Form.Item>
@@ -85,14 +87,14 @@ const QuestionnaireResponseForm = ({ setOpen, onSuccess }) => {
       default:
         return (
           <Form.Item key={index} label={question.text} name={fieldName} rules={rules}>
-            <Input placeholder="Enter your answer" />
+            <Input placeholder={t('questionnaires.enterAnswer')} />
           </Form.Item>
         );
     }
   };
 
   if (!questionnaire || !questionnaire.questions?.length) {
-    return <Text>This questionnaire has no questions.</Text>;
+    return <Text>{t('questionnaires.noQuestions')}</Text>;
   }
 
   return (
@@ -103,7 +105,7 @@ const QuestionnaireResponseForm = ({ setOpen, onSuccess }) => {
         </Text>
       )}
       {questionnaire.questions.map((question, index) => renderQuestionField(question, index))}
-      <FormFooter setOpen={setOpen} submitText="Submit Response" />
+      <FormFooter setOpen={setOpen} submitText={t('questionnaires.submitResponse')} />
     </Form>
   );
 };

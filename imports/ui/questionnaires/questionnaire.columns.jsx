@@ -8,33 +8,33 @@ const STATUS_COLORS = {
   closed: 'error',
 };
 
-const getQuestionnaireColumns = (handleEdit, handleDelete, permissions = {}, handleViewResponses = null) => {
+const getQuestionnaireColumns = (handleEdit, handleDelete, permissions = {}, t, handleViewResponses = null) => {
   const { canUpdate = true, canDelete = true } = permissions;
 
   const columns = [
     {
-      title: 'Name',
+      title: t('common.name'),
       dataIndex: 'name',
       key: 'name',
       ellipsis: true,
       sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
     },
     {
-      title: 'Description',
+      title: t('common.description'),
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
       sorter: (a, b) => (a.description || '').localeCompare(b.description || ''),
     },
     {
-      title: 'Status',
+      title: t('common.status'),
       dataIndex: 'status',
       key: 'status',
       sorter: (a, b) => (a.status || '').localeCompare(b.status || ''),
-      render: status => <Tag color={STATUS_COLORS[status] || 'default'}>{status || 'draft'}</Tag>,
+      render: status => <Tag color={STATUS_COLORS[status] || 'default'}>{status ? t(`questionnaires.${status}`) : t('questionnaires.draft')}</Tag>,
     },
     {
-      title: 'Questions',
+      title: t('questionnaires.questions'),
       dataIndex: 'questions',
       key: 'questions',
       sorter: (a, b) => (a.questions?.length || 0) - (b.questions?.length || 0),
@@ -46,7 +46,7 @@ const getQuestionnaireColumns = (handleEdit, handleDelete, permissions = {}, han
     ? ({ record }) => (
         <Col flex="auto">
           <Button style={{ width: '100%' }} onClick={e => handleViewResponses(e, record)}>
-            Responses
+            {t('questionnaires.responses')}
           </Button>
         </Col>
       )
@@ -54,7 +54,7 @@ const getQuestionnaireColumns = (handleEdit, handleDelete, permissions = {}, han
 
   if (canUpdate || canDelete || handleViewResponses) {
     columns.push({
-      title: 'Actions',
+      title: t('common.actions'),
       dataIndex: '_id',
       key: '_id',
       render: (id, record) => (

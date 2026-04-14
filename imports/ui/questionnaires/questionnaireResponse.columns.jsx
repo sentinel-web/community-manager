@@ -2,29 +2,29 @@ import { EyeInvisibleOutlined, EyeOutlined } from '@ant-design/icons';
 import { Button, Space, Tag, Tooltip } from 'antd';
 import React from 'react';
 
-const getQuestionnaireResponseColumns = (handleViewDetails, handleToggleIgnored = null, canUpdate = false) => {
+const getQuestionnaireResponseColumns = (handleViewDetails, handleToggleIgnored = null, canUpdate = false, t) => {
   return [
     {
-      title: 'Respondent',
+      title: t('questionnaires.respondent'),
       dataIndex: 'respondentName',
       key: 'respondentName',
       ellipsis: true,
       render: (name, record) => (
         <Space>
-          {record.respondentId ? name : <Tag color="blue">Anonymous</Tag>}
-          {record.ignored && <Tag color="orange">Ignored</Tag>}
+          {record.respondentId ? name : <Tag color="blue">{t('questionnaires.anonymous')}</Tag>}
+          {record.ignored && <Tag color="orange">{t('questionnaires.ignored')}</Tag>}
         </Space>
       ),
     },
     {
-      title: 'Submitted At',
+      title: t('questionnaires.submittedAt'),
       dataIndex: 'submittedAt',
       key: 'submittedAt',
       sorter: (a, b) => new Date(a.submittedAt) - new Date(b.submittedAt),
       render: date => (date ? new Date(date).toLocaleString() : '-'),
     },
     {
-      title: 'Answers',
+      title: t('questionnaires.answers'),
       dataIndex: 'answers',
       key: 'answerSummary',
       ellipsis: true,
@@ -32,20 +32,20 @@ const getQuestionnaireResponseColumns = (handleViewDetails, handleToggleIgnored 
         if (!answers || answers.length === 0) return '-';
         const count = answers.length;
         const answered = answers.filter(a => a.value !== undefined && a.value !== null && a.value !== '').length;
-        return `${answered}/${count} answered`;
+        return t('questionnaires.answeredOf', { answered, count });
       },
     },
     {
-      title: 'Actions',
+      title: t('common.actions'),
       dataIndex: '_id',
       key: 'actions',
       render: (id, record) => (
         <Space>
-          <Tooltip title="View Details">
+          <Tooltip title={t('questionnaires.viewDetails')}>
             <Button type="text" icon={<EyeOutlined />} onClick={e => handleViewDetails(e, record)} />
           </Tooltip>
           {canUpdate && handleToggleIgnored && (
-            <Tooltip title={record.ignored ? 'Unignore' : 'Ignore'}>
+            <Tooltip title={record.ignored ? t('questionnaires.unignore') : t('questionnaires.ignore')}>
               <Button
                 type="text"
                 danger={!record.ignored}

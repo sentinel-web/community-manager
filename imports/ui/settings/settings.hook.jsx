@@ -4,9 +4,11 @@ import SettingsCollection from '../../api/collections/settings.collection';
 
 export default function useSettings() {
   const { ready, communityTitle, communityLogo, communityColor, communityNameBlackList, communityIdBlackList } = useTracker(() => {
-    const subscription = Meteor.subscribe('settings');
+    const publicSub = Meteor.subscribe('settings.public');
+    const userId = Meteor.userId();
+    const privateSub = userId ? Meteor.subscribe('settings') : { ready: () => true };
     return {
-      ready: subscription.ready(),
+      ready: publicSub.ready() && privateSub.ready(),
       communityTitle: SettingsCollection.findOne({ key: 'community-title' })?.value,
       communityLogo: SettingsCollection.findOne({ key: 'community-logo' })?.value,
       communityColor: SettingsCollection.findOne({ key: 'community-color' })?.value ?? '#3b88c3',

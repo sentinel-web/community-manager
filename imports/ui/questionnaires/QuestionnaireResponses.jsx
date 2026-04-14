@@ -3,6 +3,7 @@ import { Meteor } from 'meteor/meteor';
 import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import RolesCollection from '../../api/collections/roles.collection';
+import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext, SubdrawerContext } from '../app/App';
 import TableContainer from '../table/body/TableContainer';
 import TableFooter from '../table/footer/TableFooter';
@@ -27,6 +28,7 @@ export default function QuestionnaireResponses() {
   const subdrawer = useContext(SubdrawerContext);
   const { drawerModel: questionnaire } = drawer;
   const { notification, message } = App.useApp();
+  const { t } = useTranslation();
 
   const [responses, setResponses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -61,12 +63,12 @@ export default function QuestionnaireResponses() {
   const handleViewDetails = useCallback(
     (e, response) => {
       e.preventDefault();
-      subdrawer.setDrawerTitle('Response Details');
+      subdrawer.setDrawerTitle(t('questionnaires.responseDetails'));
       subdrawer.setDrawerModel({ response, questionnaire });
       subdrawer.setDrawerComponent(React.createElement(ResponseDetailView, { setOpen: subdrawer.setDrawerOpen }));
       subdrawer.setDrawerOpen(true);
     },
-    [subdrawer, questionnaire]
+    [subdrawer, questionnaire, t]
   );
 
   const handleToggleIgnored = useCallback(
@@ -74,7 +76,7 @@ export default function QuestionnaireResponses() {
       e.preventDefault();
       try {
         await Meteor.callAsync('questionnaireResponses.setIgnored', response._id, !response.ignored);
-        message.success(response.ignored ? 'Response unignored' : 'Response ignored');
+        message.success(response.ignored ? t('questionnaires.responseUnignored') : t('questionnaires.responseIgnored'));
         loadResponses();
       } catch (error) {
         notification.error({
@@ -83,7 +85,7 @@ export default function QuestionnaireResponses() {
         });
       }
     },
-    [message, notification, loadResponses]
+    [message, notification, loadResponses, t]
   );
 
   const handleLoadMore = useCallback(() => {
@@ -91,27 +93,27 @@ export default function QuestionnaireResponses() {
   }, []);
 
   const columns = useMemo(
-    () => getQuestionnaireResponseColumns(handleViewDetails, handleToggleIgnored, canUpdate),
-    [handleViewDetails, handleToggleIgnored, canUpdate]
+    () => getQuestionnaireResponseColumns(handleViewDetails, handleToggleIgnored, canUpdate, t),
+    [handleViewDetails, handleToggleIgnored, canUpdate, t]
   );
 
   const loadMoreDisabled = responses.length < limit;
 
   if (!questionnaire) {
-    return <Text>No questionnaire selected.</Text>;
+    return <Text>{t('questionnaires.noQuestionnaireSelected')}</Text>;
   }
 
   return (
     <div>
       <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
-        Viewing responses for: <strong>{questionnaire.name}</strong>
+        {t('questionnaires.responsesFor')} <strong>{questionnaire.name}</strong>
       </Text>
       {loading ? (
         <Row justify="center" style={{ padding: 48 }}>
           <Spin size="large" />
         </Row>
       ) : responses.length === 0 ? (
-        <Empty description="No responses yet" />
+        <Empty description={t('questionnaires.noResponsesYet')} />
       ) : (
         <>
           <TableContainer>

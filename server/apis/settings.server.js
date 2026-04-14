@@ -3,7 +3,13 @@ import SettingsCollection from '../../imports/api/collections/settings.collectio
 import { validateObject, validateString, validateUserId, checkPermission } from '../main';
 import { createLog } from './logs.server';
 
+const PUBLIC_SETTING_KEYS = ['community-title', 'community-logo', 'community-color'];
+
 if (Meteor.isServer) {
+  Meteor.publish('settings.public', function () {
+    return SettingsCollection.find({ key: { $in: PUBLIC_SETTING_KEYS } });
+  });
+
   Meteor.publish('settings', function (filter = {}, options = {}) {
     validateUserId(this.userId);
     validateObject(filter, false);
