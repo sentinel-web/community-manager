@@ -199,21 +199,23 @@ function createTasks(memberIds) {
   ];
 }
 
-const QUESTIONNAIRE = {
-  _id: 'q-1',
-  name: 'Monthly Community Feedback',
-  description: 'Help us improve! Share your thoughts on recent events and community direction.',
-  status: 'active',
-  allowAnonymous: true,
-  interval: 'monthly',
-  questions: [
-    { text: 'How would you rate the quality of recent operations?', type: 'rating', required: true, options: [] },
-    { text: 'What type of events would you like to see more of?', type: 'select', required: true, options: ['Training', 'Operations', 'Social', 'Briefings'] },
-    { text: 'Any suggestions or feedback for the leadership team?', type: 'textarea', required: false, options: [] },
-  ],
-  createdAt: new Date(),
-  updatedAt: new Date(),
-};
+function createQuestionnaire() {
+  return {
+    _id: 'q-1',
+    name: 'Monthly Community Feedback',
+    description: 'Help us improve! Share your thoughts on recent events and community direction.',
+    status: 'active',
+    allowAnonymous: true,
+    interval: 'monthly',
+    questions: [
+      { text: 'How would you rate the quality of recent operations?', type: 'rating', required: true, options: [] },
+      { text: 'What type of events would you like to see more of?', type: 'select', required: true, options: ['Training', 'Operations', 'Social', 'Briefings'] },
+      { text: 'Any suggestions or feedback for the leadership team?', type: 'textarea', required: false, options: [] },
+    ],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+}
 
 function createQuestionnaireResponses(memberIds) {
   return [
@@ -288,7 +290,7 @@ async function insertDemoData() {
   for (const task of tasks) await TasksCollection.insertAsync(task);
 
   // 6. Questionnaires and responses
-  await QuestionnairesCollection.insertAsync(QUESTIONNAIRE);
+  await QuestionnairesCollection.insertAsync(createQuestionnaire());
   const responses = createQuestionnaireResponses(memberIds);
   for (const resp of responses) await QuestionnaireResponsesCollection.insertAsync(resp);
 
@@ -311,7 +313,7 @@ if (Meteor.isServer) {
 
       await wipeAllCollections();
       await insertDemoData();
-      await createLog('demoData.generated', {});
+      await createLog('demoData.generated', { userId: this.userId });
       return true;
     },
   });
