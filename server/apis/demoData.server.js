@@ -257,6 +257,13 @@ const SETTINGS = [
   { _id: 'community-color', key: 'community-color', value: '#1890ff' },
 ];
 
+const AVATAR_COLORS = ['#f5222d', '#fa541c', '#fa8c16', '#faad14', '#52c41a', '#13c2c2', '#1890ff', '#722ed1', '#eb2f96', '#2f54eb'];
+
+function createAvatarDataUri(initial, color) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128"><rect width="128" height="128" rx="64" fill="${color}"/><text x="64" y="64" dy=".35em" text-anchor="middle" fill="white" font-family="Arial,sans-serif" font-size="56" font-weight="bold">${initial}</text></svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
+}
+
 async function insertDemoData() {
   // 1. Reference data (no dependencies)
   for (const role of ROLES) await RolesCollection.insertAsync(role);
@@ -271,9 +278,12 @@ async function insertDemoData() {
 
   // 2. Members (depend on roles, squads, ranks, specializations, medals)
   const memberIds = [];
-  for (const member of MEMBERS) {
+  for (let i = 0; i < MEMBERS.length; i++) {
+    const member = MEMBERS[i];
     const userId = await Accounts.createUserAsync({ username: member.username, password: member.password });
-    await MembersCollection.updateAsync(userId, { $set: { profile: member.profile } });
+    const avatarDataUri = createAvatarDataUri(member.profile.name[0], AVATAR_COLORS[i % AVATAR_COLORS.length]);
+    const picId = await ProfilePicturesCollection.insertAsync({ value: avatarDataUri });
+    await MembersCollection.updateAsync(userId, { $set: { profile: { ...member.profile, profilePictureId: picId } } });
     memberIds.push(userId);
   }
 
