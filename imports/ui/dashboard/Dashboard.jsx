@@ -3,12 +3,14 @@ import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
+import { useTourRef } from '../tour/TourContext';
 
 export default function Dashboard() {
   const { message } = App.useApp();
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(false);
   const { t } = useTranslation();
+  const statsRef = useTourRef('dashboard-stats');
   const fetchStats = useCallback(function () {
     setLoading(true);
     Meteor.callAsync('dashboard.stats')
@@ -23,10 +25,11 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <Card
-      type="inner"
-      loading={loading}
-      title={
+    <div ref={statsRef}>
+      <Card
+        type="inner"
+        loading={loading}
+        title={
         <Row justify="space-between" align="middle">
           <Col>
             <Typography.Title level={3}>{t('dashboard.title')}</Typography.Title>
@@ -77,7 +80,8 @@ export default function Dashboard() {
           },
         ]}
       />
-    </Card>
+      </Card>
+    </div>
   );
 }
 

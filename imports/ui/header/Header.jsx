@@ -5,10 +5,12 @@ import Navigation from '../navigation/Navigation';
 import LanguageSelector from '../components/LanguageSelector';
 import useSettings from '../settings/settings.hook';
 import Title from '../title/Title';
+import { useTourRef } from '../tour/TourContext';
 
 export default function Header() {
   const { communityTitle, communityLogo } = useSettings();
   const breakpoints = Grid.useBreakpoint();
+  const headerRef = useTourRef('header-controls');
 
   useEffect(() => {
     if (communityLogo) {
@@ -39,10 +41,10 @@ export default function Header() {
         </Row>
       </Col>
       <Col>
-        <LanguageSelector />
-      </Col>
-      <Col>
-        <Navigation />
+        <div ref={headerRef} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <LanguageSelector />
+          <Navigation />
+        </div>
       </Col>
     </Row>
   );

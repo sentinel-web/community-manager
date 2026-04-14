@@ -7,6 +7,7 @@ import getLegibleTextColor from '../../helpers/colors/getLegibleTextColor';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { turnBase64ToImage } from '../profile-picture-input/ProfilePictureInput';
 import useTheme from '../theme/theme.hook';
+import { useTourRef } from '../tour/TourContext';
 
 export default function Orbat() {
   const { message } = App.useApp();
@@ -16,6 +17,7 @@ export default function Orbat() {
   const [viewType, setViewType] = useState('simple');
   const { t } = useTranslation();
   const { theme } = useTheme();
+  const chartRef = useTourRef('orbat-chart');
 
   useEffect(() => {
     setReady(false);
@@ -104,22 +106,24 @@ export default function Orbat() {
   );
 
   return (
-    <Card
-      loading={!ready}
-      title={<Typography.Title level={3}>{t('orbat.title')}</Typography.Title>}
-      extra={<OrbatViewSelector viewType={viewType} handleChange={setViewType} t={t} />}
-    >
-      <div style={{ overflow: 'auto' }}>
-        {options?.length === 0 && <Empty />}
-        {options.map(option => {
-          return (
-            <Tree lineColor={theme === 'dark' ? 'white' : 'black'} key={option.id} label={<ORBAT_Label option={option} viewType={viewType} />}>
-              {option.children?.map(mapOption)}
-            </Tree>
-          );
-        })}
-      </div>
-    </Card>
+    <div ref={chartRef}>
+      <Card
+        loading={!ready}
+        title={<Typography.Title level={3}>{t('orbat.title')}</Typography.Title>}
+        extra={<OrbatViewSelector viewType={viewType} handleChange={setViewType} t={t} />}
+      >
+        <div style={{ overflow: 'auto' }}>
+          {options?.length === 0 && <Empty />}
+          {options.map(option => {
+            return (
+              <Tree lineColor={theme === 'dark' ? 'white' : 'black'} key={option.id} label={<ORBAT_Label option={option} viewType={viewType} />}>
+                {option.children?.map(mapOption)}
+              </Tree>
+            );
+          })}
+        </div>
+      </Card>
+    </div>
   );
 }
 
