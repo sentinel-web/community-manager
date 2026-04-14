@@ -22,26 +22,32 @@ A development-only feature that populates the database with realistic demo data 
 
 | Collection | Count | Details |
 |---|---|---|
-| Members | 8-12 | Realistic military callsigns/names, spread across squads, various ranks and specializations |
+| Roles | 3 | Admin (`roles: true`), Officer (full CRUD on all modules), Member (read on members/events/tasks, no write access to most modules) |
 | Squads | 3-4 | e.g., Alpha, Bravo, Charlie, HQ/Command. Colors, radio frequencies, parent-child hierarchy |
-| Ranks | 5-6 | Progression chain: Recruit -> Private -> Corporal -> Sergeant -> Lieutenant -> Captain |
+| Ranks | 5-6 | Progression chain: Recruit -> Private -> Corporal -> Sergeant -> Lieutenant -> Captain. Linked via previousRankId/nextRankId |
 | Specializations | 4-5 | e.g., Medic, Marksman, Engineer, Pilot, Explosives |
 | Medals | 3-4 | e.g., Service Medal, Combat Medal, Leadership Medal |
-| Events | 5-8 | Mix of past and upcoming, different event types. Past events should have attendance data |
+| Positions | 3-4 | e.g., Squad Leader, Fireteam Lead, Logistics Officer |
+| Discovery Types | 3 | e.g., Reddit, Friend, Steam |
 | Event Types | 3-4 | e.g., Training, Operation, Briefing, Social |
-| Attendances | — | Attendance records for past events with realistic status distribution |
-| Tasks | 6-8 | Spread across Kanban columns (To Do, In Progress, Done) |
 | Task Statuses | 3 | To Do, In Progress, Done |
-| Questionnaires | 1 | Active questionnaire with multiple question types |
+| Members | 8-12 | Realistic military callsigns/names, spread across squads, various ranks and specializations. Admin user is recreated as part of demo data with password `admin` |
+| Events | 5-8 | Mix of past and upcoming (dates relative to `new Date()` at generation time), different event types |
+| Attendances | — | For past events. Schema: `{ [eventId]: { [memberId]: points } }` where points are -2 (cancelled), -1 (absent), 0 (excused), 1 (present), 2 (zeus). Realistic distribution across members |
+| Tasks | 6-8 | Spread across Kanban columns (To Do, In Progress, Done) with assigned participants |
+| Questionnaires | 1 | Active questionnaire with multiple question types (text, rating, select) |
 | Questionnaire Responses | 3-5 | Responses to the active questionnaire |
 | Registrations | 2-3 | Pending applications |
-| Discovery Types | 3 | e.g., Reddit, Friend, Steam |
-| Roles | 2-3 | Admin (existing), Officer (full CRUD), Member (read-only most modules) |
+| Settings | 1 | Community name, primary color for branding |
+| Logs | — | Not populated - the demo data generation itself will create audit logs via `createLog()`, seeding the logs view naturally |
+
+**Collections wiped but not populated:** ProfilePictures (no base64 images needed for demo - profiles work fine without them).
 
 **Implementation approach:**
-- Server method `settings.generateDemoData` (dev-only, guarded by `NODE_ENV` check)
-- Wipes all collections first (except preserving the admin role/user, or recreating them as part of the demo data)
-- Inserts demo data in dependency order: ranks/squads first, then members referencing them, then events, etc.
+- Server method `demoData.generate` in a dedicated `server/apis/demoData.server.js` file (dev-only, guarded by `NODE_ENV` check)
+- Wipes all collections, then recreates everything including the admin user/role as part of the demo data
+- After the method completes, the client reloads the page (the user's session will be invalidated by the wipe, so the client should catch the disconnect and redirect to login; the admin user is recreated with credentials `admin`/`admin`)
+- Inserts demo data in dependency order: roles/ranks/squads first, then members referencing them, then events/tasks/etc.
 - Client-side button in Settings page with Ant Design Popconfirm for the confirmation dialog
 
 ### 2. Demo Walkthrough Cheat Sheet
