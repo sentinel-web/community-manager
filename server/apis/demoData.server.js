@@ -252,9 +252,13 @@ const REGISTRATIONS = [
   { _id: 'reg-3', name: 'Titan', id: 2003, age: 25, discoveryType: 'steam', rulesReadAndAccepted: true, description: 'Former milsim player, looking for an active group.' },
 ];
 
+const COMMUNITY_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1890ff"/><stop offset="100%" stop-color="#003a8c"/></linearGradient></defs><path d="M64 4L120 28V68C120 96 96 118 64 124C32 118 8 96 8 68V28Z" fill="url(#g)" stroke="#fff" stroke-width="2"/><path d="M64 16L108 36V68C108 90 88 108 64 114C40 108 20 90 20 68V36Z" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1"/><text x="64" y="62" text-anchor="middle" fill="white" font-family="Arial,sans-serif" font-size="28" font-weight="bold" letter-spacing="4">TFS</text><text x="64" y="86" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-family="Arial,sans-serif" font-size="9" letter-spacing="2">SENTINEL</text></svg>`;
+const COMMUNITY_LOGO = `data:image/svg+xml;base64,${Buffer.from(COMMUNITY_LOGO_SVG).toString('base64')}`;
+
 const SETTINGS = [
   { _id: 'community-title', key: 'community-title', value: 'Task Force Sentinel' },
   { _id: 'community-color', key: 'community-color', value: '#1890ff' },
+  { _id: 'community-logo', key: 'community-logo', value: COMMUNITY_LOGO },
 ];
 
 const AVATAR_COLORS = ['#f5222d', '#fa541c', '#fa8c16', '#faad14', '#52c41a', '#13c2c2', '#1890ff', '#722ed1', '#eb2f96', '#2f54eb'];
