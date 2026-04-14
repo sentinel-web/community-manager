@@ -311,8 +311,8 @@ function DemoDataSettings({ t }) {
         <Popconfirm
           title={t('settings.generateDemoDataConfirm')}
           onConfirm={handleGenerate}
-          okText="OK"
-          cancelText="Cancel"
+          okText={t('common.yes')}
+          cancelText={t('common.cancel')}
           okButtonProps={{ danger: true }}
         >
           <Button danger loading={loading}>
