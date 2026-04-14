@@ -9,6 +9,7 @@ import RolesCollection from '../imports/api/collections/roles.collection';
 import TasksCollection from '../imports/api/collections/tasks.collection';
 import './apis/backup.server';
 import './apis/dashboard.server';
+import './apis/demoData.server';
 import './apis/events.server';
 import './apis/logs.server';
 import './apis/members.server';
