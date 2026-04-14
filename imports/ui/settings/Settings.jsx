@@ -8,7 +8,7 @@ import { useTranslation } from '../../i18n/LanguageContext';
 import Logo from '../logo/Logo';
 import useNavigation from '../navigation/navigation.hook';
 import SectionCard from '../section/SectionCard';
-import TourContext from '../tour/TourContext';
+import TourContext, { useTourRef } from '../tour/TourContext';
 import useSettings from './settings.hook';
 
 async function getEventValue(key, e) {
@@ -53,6 +53,7 @@ async function turnImageFileIntoWebp(file) {
 }
 
 export default function Settings() {
+  const settingsRef = useTourRef('settings-section');
   const { ready, communityTitle, communityLogo, communityColor, communityNameBlackList, communityIdBlackList } = useSettings();
   const { t } = useTranslation();
 
@@ -64,43 +65,45 @@ export default function Settings() {
   }
 
   return (
-    <SectionCard title={t('settings.title')} ready={ready}>
-      <Row gutter={[16, 16]}>
-        <Col span={24}>
-          <Row gutter={[16, 16]}>
-            <Col span={24}>
-              <Row gutter={[16, 16]}>
-                <Col span={24}>
-                  <CommunityLogoSettings communityLogo={communityLogo} handleChange={handleChange} t={t} />
-                </Col>
-                <Col xs={24} lg={12}>
-                  <CommunityTitleSettings communityTitle={communityTitle} handleChange={handleChange} t={t} />
-                </Col>
-                <Col xs={24} lg={12}>
-                  <CommunityColorSettings communityColor={communityColor} handleChange={handleChange} t={t} />
-                </Col>
-                <Col xs={24} lg={12}>
-                  <CommunityNameBlackListSettings communityNameBlackList={communityNameBlackList} handleChange={handleChange} t={t} />
-                </Col>
-                <Col xs={24} lg={12}>
-                  <CommunityIdBlackListSettings communityIdBlackList={communityIdBlackList} handleChange={handleChange} t={t} />
-                </Col>
-                {Meteor.isDevelopment && (
+    <div ref={settingsRef}>
+      <SectionCard title={t('settings.title')} ready={ready}>
+        <Row gutter={[16, 16]}>
+          <Col span={24}>
+            <Row gutter={[16, 16]}>
+              <Col span={24}>
+                <Row gutter={[16, 16]}>
                   <Col span={24}>
-                    <DemoDataSettings t={t} />
+                    <CommunityLogoSettings communityLogo={communityLogo} handleChange={handleChange} t={t} />
                   </Col>
-                )}
-                {Meteor.isDevelopment && (
-                  <Col span={24}>
-                    <TourSettings t={t} />
+                  <Col xs={24} lg={12}>
+                    <CommunityTitleSettings communityTitle={communityTitle} handleChange={handleChange} t={t} />
                   </Col>
-                )}
-              </Row>
-            </Col>
-          </Row>
-        </Col>
-      </Row>
-    </SectionCard>
+                  <Col xs={24} lg={12}>
+                    <CommunityColorSettings communityColor={communityColor} handleChange={handleChange} t={t} />
+                  </Col>
+                  <Col xs={24} lg={12}>
+                    <CommunityNameBlackListSettings communityNameBlackList={communityNameBlackList} handleChange={handleChange} t={t} />
+                  </Col>
+                  <Col xs={24} lg={12}>
+                    <CommunityIdBlackListSettings communityIdBlackList={communityIdBlackList} handleChange={handleChange} t={t} />
+                  </Col>
+                  {Meteor.isDevelopment && (
+                    <Col span={24}>
+                      <DemoDataSettings t={t} />
+                    </Col>
+                  )}
+                  {Meteor.isDevelopment && (
+                    <Col span={24}>
+                      <TourSettings t={t} />
+                    </Col>
+                  )}
+                </Row>
+              </Col>
+            </Row>
+          </Col>
+        </Row>
+      </SectionCard>
+    </div>
   );
 }
 

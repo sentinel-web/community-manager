@@ -9,6 +9,7 @@ import EventsCollection from '../../api/collections/events.collection';
 import { useTranslation } from '../../i18n/LanguageContext';
 import CollectionSelect from '../components/CollectionSelect';
 import Section from '../section/Section';
+import { useTourRef, useTourAction } from '../tour/TourContext';
 import EventAttendance from './EventAttendance';
 import EventCalendar from './EventCalendar';
 import EventForm from './EventForm';
@@ -60,7 +61,12 @@ export default function Events() {
     [setViewType, setDateRange]
   );
 
+  const eventsRef = useTourRef('events-section');
+  useTourAction('events-switch-calendar', () => handleViewTypeChange('calendar'));
+  useTourAction('events-switch-attendance', () => handleViewTypeChange('attendance'));
+
   return (
+    <div ref={eventsRef}>
     <Section
       title={t('events.title')}
       collectionName="events"
@@ -99,6 +105,7 @@ export default function Events() {
         </>
       }
     />
+    </div>
   );
 }
 

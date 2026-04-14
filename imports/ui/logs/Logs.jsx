@@ -7,6 +7,7 @@ import LogsCollection from '../../api/collections/logs.collection';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
 import SectionCard from '../section/SectionCard';
+import { useTourRef } from '../tour/TourContext';
 import TableContainer from '../table/body/TableContainer';
 import TableFooter from '../table/footer/TableFooter';
 import Table from '../table/Table';
@@ -39,6 +40,7 @@ function buildFilter(actionInput, dateRange) {
 }
 
 export default function Logs() {
+  const logsRef = useTourRef('logs-section');
   const defaultDateRange = useMemo(() => [dayjs().subtract(7, 'day'), dayjs()], []);
   const [actionInput, setActionInput] = useState('');
   const [dateRange, setDateRange] = useState(defaultDateRange);
@@ -101,25 +103,27 @@ export default function Logs() {
   const loadMoreDisabled = useMemo(() => datasource?.length < options?.limit, [options, datasource]);
 
   return (
-    <SectionCard title={t('logs.title')} ready={true}>
-      <Row gutter={[16, 16]}>
-        <Col span={24}>
-          <Row gutter={[16, 16]}>
-            <Col xs={24} sm={12} md={8}>
-              <Input.Search placeholder={t('logs.filterByAction')} value={actionInput} onChange={handleActionChange} allowClear />
-            </Col>
-            <Col xs={24} sm={12} md={8}>
-              <RangePicker value={dateRange} onChange={handleDateRangeChange} style={{ width: '100%' }} allowClear />
-            </Col>
-          </Row>
-        </Col>
-        <Col span={24}>
-          <TableContainer>
-            <Table columns={columns} datasource={datasource} />
-          </TableContainer>
-          <TableFooter ready={true} count={datasource.length} handleLoadMore={handleLoadMore} disabled={loadMoreDisabled} />
-        </Col>
-      </Row>
-    </SectionCard>
+    <div ref={logsRef}>
+      <SectionCard title={t('logs.title')} ready={true}>
+        <Row gutter={[16, 16]}>
+          <Col span={24}>
+            <Row gutter={[16, 16]}>
+              <Col xs={24} sm={12} md={8}>
+                <Input.Search placeholder={t('logs.filterByAction')} value={actionInput} onChange={handleActionChange} allowClear />
+              </Col>
+              <Col xs={24} sm={12} md={8}>
+                <RangePicker value={dateRange} onChange={handleDateRangeChange} style={{ width: '100%' }} allowClear />
+              </Col>
+            </Row>
+          </Col>
+          <Col span={24}>
+            <TableContainer>
+              <Table columns={columns} datasource={datasource} />
+            </TableContainer>
+            <TableFooter ready={true} count={datasource.length} handleLoadMore={handleLoadMore} disabled={loadMoreDisabled} />
+          </Col>
+        </Row>
+      </SectionCard>
+    </div>
   );
 }

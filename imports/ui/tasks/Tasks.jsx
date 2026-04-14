@@ -6,6 +6,7 @@ import TasksCollection from '../../api/collections/tasks.collection';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
 import Section from '../section/Section';
+import { useTourRef } from '../tour/TourContext';
 import KanbanBoard from './KanbanBoard';
 import { getTaskColumns } from './task.columns';
 import TaskFilter from './TaskFilter';
@@ -14,6 +15,7 @@ import TaskForm from './TaskForm';
 const empty = <></>;
 
 export default function Tasks() {
+  const tasksRef = useTourRef('tasks-section');
   const filter = useTracker(() => Meteor.user()?.profile?.taskFilter, []);
   const drawer = useContext(DrawerContext);
   const { t } = useTranslation();
@@ -43,15 +45,17 @@ export default function Tasks() {
   );
 
   return (
-    <Section
-      title={t('tasks.title')}
-      collectionName="tasks"
-      Collection={TasksCollection}
-      FormComponent={TaskForm}
-      columnsFactory={getTaskColumns}
-      customView={filter?.type === 'kanban' ? KanbanBoard : false}
-      headerExtra={<Button onClick={openFilterDrawer}>{t('tasks.filter')}</Button>}
-      filterFactory={filterFactory}
-    />
+    <div ref={tasksRef}>
+      <Section
+        title={t('tasks.title')}
+        collectionName="tasks"
+        Collection={TasksCollection}
+        FormComponent={TaskForm}
+        columnsFactory={getTaskColumns}
+        customView={filter?.type === 'kanban' ? KanbanBoard : false}
+        headerExtra={<Button onClick={openFilterDrawer}>{t('tasks.filter')}</Button>}
+        filterFactory={filterFactory}
+      />
+    </div>
   );
 }

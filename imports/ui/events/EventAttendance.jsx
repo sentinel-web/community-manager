@@ -11,6 +11,7 @@ import RanksCollection from '../../api/collections/ranks.collection';
 import { useTranslation } from '../../i18n/LanguageContext';
 import TableContainer from '../table/body/TableContainer';
 import Table from '../table/Table';
+import { useTourRef } from '../tour/TourContext';
 
 function MemberName({ memberId, memberNameMap }) {
   // Use pre-computed name from parent to avoid N+1 queries
@@ -170,6 +171,7 @@ function transformEventsIntoColumns(events, memberNameMap, t) {
 }
 
 export default function EventAttendance({ datasource }) {
+  const attendanceRef = useTourRef('events-attendance');
   const { t } = useTranslation();
   // Attendance grid needs all members and attendances for the selected events
   useSubscribe('attendances', { eventId: { $in: datasource.map(event => event._id) } }, { limit: 1000 });
@@ -229,9 +231,11 @@ export default function EventAttendance({ datasource }) {
     });
   }, [members, datasource, attendances]);
   return (
-    <TableContainer>
-      <Table columns={columns} datasource={rows} />
-    </TableContainer>
+    <div ref={attendanceRef}>
+      <TableContainer>
+        <Table columns={columns} datasource={rows} />
+      </TableContainer>
+    </div>
   );
 }
 EventAttendance.propTypes = {

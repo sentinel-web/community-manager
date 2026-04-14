@@ -7,11 +7,13 @@ import { Meteor } from 'meteor/meteor';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import SectionCard from '../section/SectionCard';
+import { useTourRef } from '../tour/TourContext';
 
 // Maximum backup file size: 50MB
 const MAX_BACKUP_SIZE = 50 * 1024 * 1024;
 
 export default function Backup() {
+  const backupRef = useTourRef('backup-section');
   const [loading, setLoading] = useState(false);
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
   const [backupData, setBackupData] = useState(null);
@@ -175,15 +177,17 @@ export default function Backup() {
   }, []);
 
   return (
-    <SectionCard title={t('backup.title')} ready={true}>
-      <Row gutter={[24, 24]}>
-        <Col xs={24} lg={12}>
-          <BackupSection loading={loading} onBackup={handleBackup} t={t} />
-        </Col>
-        <Col xs={24} lg={12}>
-          <RestoreSection onFileUpload={handleFileUpload} t={t} />
-        </Col>
-      </Row>
+    <div ref={backupRef}>
+      <SectionCard title={t('backup.title')} ready={true}>
+        <Row gutter={[24, 24]}>
+          <Col xs={24} lg={12}>
+            <BackupSection loading={loading} onBackup={handleBackup} t={t} />
+          </Col>
+          <Col xs={24} lg={12}>
+            <RestoreSection onFileUpload={handleFileUpload} t={t} />
+          </Col>
+        </Row>
+      </SectionCard>
 
       <RestoreConfirmModal
         open={restoreModalOpen && !safetyBackupData}
@@ -202,7 +206,7 @@ export default function Backup() {
         onClose={handleCloseSafetyBackupModal}
         t={t}
       />
-    </SectionCard>
+    </div>
   );
 }
 

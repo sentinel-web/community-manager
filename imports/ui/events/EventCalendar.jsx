@@ -14,10 +14,12 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
 import EventDetailPopover from './EventDetailPopover';
 import EventForm from './EventForm';
+import { useTourRef } from '../tour/TourContext';
 
 const DnDCalendar = withDragAndDrop(Calendar);
 
 const EventCalendar = ({ datasource, setFilter }) => {
+  const calendarRef = useTourRef('events-calendar');
   const { t, language } = useLanguage();
   const drawer = useContext(DrawerContext);
 
@@ -128,26 +130,28 @@ const EventCalendar = ({ datasource, setFilter }) => {
   const events = useMemo(() => datasource?.map?.(event => ({ ...event, title: event.name })) || [], [datasource]);
 
   return (
-    <div style={{ height: window.innerHeight * 0.75 }}>
-      <EventDetailPopover event={detailEvent} open={detailOpen} setOpen={setDetailOpen} onEdit={openForm} />
-      <DnDCalendar
-        startAccessor="start"
-        endAccessor="end"
-        localizer={localizer}
-        events={events}
-        formats={formats}
-        messages={messages}
-        draggableAccessor={draggableAccessor}
-        onEventDrop={onEventDrop}
-        onEventResize={onEventResize}
-        onDragEnd={onDragEnd}
-        onSelectSlot={onSelectSlot}
-        onSelectEvent={onSelectEvent}
-        eventPropGetter={eventPropGetter}
-        onRangeChange={handleRangeChange}
-        resizable
-        selectable
-      />
+    <div ref={calendarRef}>
+      <div style={{ height: window.innerHeight * 0.75 }}>
+        <EventDetailPopover event={detailEvent} open={detailOpen} setOpen={setDetailOpen} onEdit={openForm} />
+        <DnDCalendar
+          startAccessor="start"
+          endAccessor="end"
+          localizer={localizer}
+          events={events}
+          formats={formats}
+          messages={messages}
+          draggableAccessor={draggableAccessor}
+          onEventDrop={onEventDrop}
+          onEventResize={onEventResize}
+          onDragEnd={onDragEnd}
+          onSelectSlot={onSelectSlot}
+          onSelectEvent={onSelectEvent}
+          eventPropGetter={eventPropGetter}
+          onRangeChange={handleRangeChange}
+          resizable
+          selectable
+        />
+      </div>
     </div>
   );
 };
