@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { useTranslation } from '../../i18n/LanguageContext';
+import { useTourRef } from '../tour/TourContext';
 
 const ATTENDANCE_COLORS = { present: '#52c41a', zeus: '#1890ff', excused: '#faad14', absent: '#ff4d4f' };
 
@@ -41,6 +42,7 @@ AttendancePieChart.propTypes = {
 
 export default function MemberProfile({ memberId }) {
   const { t } = useTranslation();
+  const profileRef = useTourRef('members-expanded');
   const { message, notification } = App.useApp();
   const [profileStats, setProfileStats] = useState(null);
   const [access, setAccess] = useState({ canViewContact: false });
@@ -101,6 +103,7 @@ export default function MemberProfile({ memberId }) {
   if (!profileStats) return null;
 
   return (
+    <div ref={profileRef}>
     <Row gutter={[16, 16]}>
       {/* Header: Profile Picture + Basic Info */}
       <Col xs={24} md={8}>
@@ -278,6 +281,7 @@ export default function MemberProfile({ memberId }) {
         />
       </Modal>
     </Row>
+    </div>
   );
 }
 MemberProfile.propTypes = {

@@ -2,6 +2,7 @@ import { Col, Select } from 'antd';
 import React, { useCallback, useMemo, useState } from 'react';
 import MembersCollection from '../../api/collections/members.collection';
 import { useTranslation } from '../../i18n/LanguageContext';
+import { useTourRef } from '../tour/TourContext';
 import Section from '../section/Section';
 import MemberForm from './MemberForm';
 import MemberProfile from './MemberProfile';
@@ -15,6 +16,7 @@ import getMembersColumns from './members.columns';
  */
 export default function Members() {
   const { t } = useTranslation();
+  const tableRef = useTourRef('members-table');
   const [viewType, setViewType] = useState('table');
 
   const filterFactory = useCallback(
@@ -47,20 +49,22 @@ export default function Members() {
   );
 
   return (
-    <Section
-      title={t('members.title')}
-      collectionName="members"
-      Collection={MembersCollection}
-      FormComponent={MemberForm}
-      columnsFactory={getMembersColumns}
-      filterFactory={filterFactory}
-      customView={customView}
-      expandable={expandable}
-      headerExtra={
-        <Col>
-          <Select style={{ minWidth: 125 }} value={viewType} onChange={setViewType} options={viewOptions} />
-        </Col>
-      }
-    />
+    <div ref={tableRef}>
+      <Section
+        title={t('members.title')}
+        collectionName="members"
+        Collection={MembersCollection}
+        FormComponent={MemberForm}
+        columnsFactory={getMembersColumns}
+        filterFactory={filterFactory}
+        customView={customView}
+        expandable={expandable}
+        headerExtra={
+          <Col>
+            <Select style={{ minWidth: 125 }} value={viewType} onChange={setViewType} options={viewOptions} />
+          </Col>
+        }
+      />
+    </div>
   );
 }

@@ -1,14 +1,20 @@
 import React from 'react';
 import RanksCollection from '../../../api/collections/ranks.collection';
 import { useTranslation } from '../../../i18n/LanguageContext';
+import { useTourRef } from '../../tour/TourContext';
 import Section from '../../section/Section';
 import RanksForm from './RanksForm';
 import getRankColumns from './ranks.columns';
 
 const Ranks = () => {
   const { t } = useTranslation();
+  const sectionRef = useTourRef('ranks-section');
 
-  return <Section title={t('members.ranks')} collectionName="ranks" FormComponent={RanksForm} columnsFactory={getRankColumns} Collection={RanksCollection} />;
+  return (
+    <div ref={sectionRef}>
+      <Section title={t('members.ranks')} collectionName="ranks" FormComponent={RanksForm} columnsFactory={getRankColumns} Collection={RanksCollection} />
+    </div>
+  );
 };
 
 export default Ranks;
