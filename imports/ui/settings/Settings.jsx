@@ -3,10 +3,12 @@ import { Button, Col, ColorPicker, Input, List, Popconfirm, Row, Typography } fr
 import Dragger from 'antd/es/upload/Dragger';
 import { Meteor } from 'meteor/meteor';
 import PropTypes from 'prop-types';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useContext, useState } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import Logo from '../logo/Logo';
+import useNavigation from '../navigation/navigation.hook';
 import SectionCard from '../section/SectionCard';
+import TourContext from '../tour/TourContext';
 import useSettings from './settings.hook';
 
 async function getEventValue(key, e) {
@@ -86,6 +88,11 @@ export default function Settings() {
                 {Meteor.isDevelopment && (
                   <Col span={24}>
                     <DemoDataSettings t={t} />
+                  </Col>
+                )}
+                {Meteor.isDevelopment && (
+                  <Col span={24}>
+                    <TourSettings t={t} />
                   </Col>
                 )}
               </Row>
@@ -324,5 +331,35 @@ function DemoDataSettings({ t }) {
   );
 }
 DemoDataSettings.propTypes = {
+  t: PropTypes.func,
+};
+
+function TourSettings({ t }) {
+  const { startTour } = useContext(TourContext);
+  const { setNavigationValue } = useNavigation();
+
+  const handleStartTour = useCallback(() => {
+    setNavigationValue('dashboard');
+    window.history.pushState(null, null, `${window.location.origin}/dashboard`);
+    setTimeout(() => startTour(), 300);
+  }, [startTour, setNavigationValue]);
+
+  return (
+    <Row gutter={[16, 16]}>
+      <SettingTitle title={t('tour.startTour')} />
+      <Col span={24}>
+        <Popconfirm
+          title={t('tour.startTourConfirm')}
+          onConfirm={handleStartTour}
+          okText={t('common.yes')}
+          cancelText={t('common.cancel')}
+        >
+          <Button type="primary">{t('tour.startTour')}</Button>
+        </Popconfirm>
+      </Col>
+    </Row>
+  );
+}
+TourSettings.propTypes = {
   t: PropTypes.func,
 };
