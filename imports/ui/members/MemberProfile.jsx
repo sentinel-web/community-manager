@@ -94,9 +94,11 @@ export default function MemberProfile({ memberId }) {
 
   if (loading) {
     return (
-      <Row justify="center" style={{ padding: 40 }}>
-        <Spin size="large" />
-      </Row>
+      <div ref={profileRef}>
+        <Row justify="center" style={{ padding: 40 }}>
+          <Spin size="large" />
+        </Row>
+      </div>
     );
   }
 
