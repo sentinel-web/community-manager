@@ -41,11 +41,11 @@
     "@eslint/json": "^0.12.0",
     "@eslint/markdown": "^6.5.0",
     "@playwright/test": "^1.49.0",
-    "@types/node": "^25.6.0",
+    "@types/node": "^20.14.0",
     "eslint": "^9.28.0",
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-react": "^7.37.5",
     "globals": "^16.2.0",
-    "typescript": "^5.9.3"
+    "typescript": "5.9.3"
   }
 }
