@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "jsx": "react",
+    "allowJs": true,
+    "checkJs": false,
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "/*": ["./*"],
+      "/imports/*": ["./imports/*"],
+      "meteor/*": [".meteor/local/types/packages.d.ts"]
+    },
+    "types": ["node"]
+  },
+  "include": ["imports/**/*", "server/**/*", "client/**/*", ".meteor/local/types/**/*.d.ts"],
+  "exclude": ["node_modules", ".meteor/local", "e2e", "dist", "build"]
+}
