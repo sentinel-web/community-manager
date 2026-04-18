@@ -1,0 +1,18 @@
+# Local / non-Traefik overrides.
+# Used automatically by `docker compose up` in dev; delete or rename
+# (e.g. to docker-compose.local.yml) on production hosts.
+services:
+  app:
+    ports:
+      - "3000:3000"
+    environment:
+      ROOT_URL: ${ROOT_URL:-http://localhost:3000}
+    labels:
+      - "traefik.enable=false"
+    networks:
+      - default
+      - internal
+
+networks:
+  default:
+    driver: bridge

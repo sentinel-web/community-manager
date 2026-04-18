@@ -1,37 +1,105 @@
+name: community-manager
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: community-manager:latest
     environment:
-      - ROOT_URL=${ROOT_URL}
-      - MONGO_URL=${MONGO_URL:-mongodb://mongo:27017/community-manager}
+      ROOT_URL: ${ROOT_URL}
+      MONGO_URL: ${MONGO_URL:-mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/community-manager?authSource=admin}
+      METEOR_SETTINGS: ${METEOR_SETTINGS:-}
+      PORT: 3000
     depends_on:
       mongo:
         condition: service_healthy
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+        reservations:
+          memory: 512m
+    logging: *default-logging
     networks:
       - traefik
-      - default
+      - internal
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
       - "traefik.http.routers.community-manager.rule=Host(`${DOMAIN}`)"
       - "traefik.http.routers.community-manager.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.community-manager.tls=true"
       - "traefik.http.routers.community-manager.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}"
       - "traefik.http.services.community-manager.loadbalancer.server.port=3000"
 
   mongo:
-    image: mongo:7
+    image: mongo:7.0
+    restart: unless-stopped
+    command: ["--bind_ip_all", "--auth"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     volumes:
       - mongo-data:/data/db
+      - mongo-config:/data/configdb
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test:
+        - "CMD"
+        - "mongosh"
+        - "--quiet"
+        - "-u"
+        - "${MONGO_INITDB_ROOT_USERNAME}"
+        - "-p"
+        - "${MONGO_INITDB_ROOT_PASSWORD}"
+        - "--authenticationDatabase"
+        - "admin"
+        - "--eval"
+        - "db.adminCommand('ping').ok"
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+        reservations:
+          memory: 512m
+    logging: *default-logging
+    networks:
+      - internal
 
 volumes:
   mongo-data:
+  mongo-config:
 
 networks:
   traefik:
     external: true
+  internal:
+    driver: bridge
+    internal: true

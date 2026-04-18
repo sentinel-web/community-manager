@@ -1,8 +1,64 @@
+# VCS
 .git
+.gitignore
 .github
+
+# Meteor local build cache
 .meteor/local
+
+# Node
 node_modules
+npm-debug.log*
+
+# Linting / formatting
 .eslintrc.cjs
 eslint.config.mjs
 .prettierrc
+
+# Docs
 README.md
+TESTING.md
+CLAUDE.md
+docs
+
+# Editor / IDE
+.vscode
+.idea
+*.swp
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+settings.json
+!settings.example.json
+
+# E2E / Playwright (must exclude — ~10 MB, not used at runtime)
+e2e
+playwright-report
+test-results
+
+# NOTE: `tests/` is intentionally NOT ignored — package.json references
+# tests/main.js as meteor.testModule, and Meteor's build resolves the path
+# even in production builds.
+
+# Coverage artifacts
+coverage
+.nyc_output
+
+# Claude tooling
+.claude
+memory
+
+# Build artifacts
+build
+dist
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
