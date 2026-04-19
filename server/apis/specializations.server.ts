@@ -5,19 +5,18 @@ import { createLog } from './logs.server';
 
 if (Meteor.isServer) {
   Meteor.methods({
-    'specializations.names': async function (specializations = []) {
+    'specializations.names': async function (specializations: string[] = []): Promise<string> {
       validateUserId(this.userId);
       validateArrayOfStrings(specializations, false);
       try {
-        // Use batch query instead of N+1 individual queries
         const foundSpecializations = await SpecializationsCollection.find({ _id: { $in: specializations } }).fetchAsync();
         const names = foundSpecializations.map(s => s.name);
         return names.join(', ');
       } catch (error) {
-        throw new Meteor.Error(error.message);
+        throw new Meteor.Error((error as Error).message);
       }
     },
-    'specializations.request': async function (specializationId) {
+    'specializations.request': async function (specializationId: string): Promise<boolean> {
       validateUserId(this.userId);
       validateString(specializationId, false);
 
