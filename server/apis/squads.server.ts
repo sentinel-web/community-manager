@@ -4,13 +4,23 @@ import PositionsCollection from '../../imports/api/collections/positions.collect
 import RanksCollection from '../../imports/api/collections/ranks.collection';
 import { validateString } from '../main';
 
-async function squadMembers(squadId = '') {
+interface SquadMemberSummary {
+  _id: string;
+  name: string | undefined;
+  id: number | undefined;
+  rankName: string | null;
+  rankColor: string | null;
+  positionName: string | null;
+  positionColor: string | null;
+}
+
+async function squadMembers(this: Meteor.MethodThisType, squadId: string = ''): Promise<SquadMemberSummary[]> {
   validateString(this.userId, false);
   validateString(squadId, false);
   const members = await MembersCollection.find({ 'profile.squadId': squadId }).fetchAsync();
   if (members.length === 0) return [];
-  const rankIds = members.map(m => m.profile.rankId).filter(Boolean);
-  const positionIds = members.map(m => m.profile?.positionId).filter(Boolean);
+  const rankIds = members.map(m => m.profile?.rankId).filter((x): x is string => Boolean(x));
+  const positionIds = members.map(m => m.profile?.positionId).filter((x): x is string => Boolean(x));
   const ranks = rankIds.length > 0
     ? await RanksCollection.find({ _id: { $in: rankIds } }).fetchAsync()
     : [];
@@ -18,12 +28,12 @@ async function squadMembers(squadId = '') {
     ? await PositionsCollection.find({ _id: { $in: positionIds } }).fetchAsync()
     : [];
   return members.map(m => {
-    const rank = ranks.find(r => r._id === m.profile.rankId);
-    const position = m.profile?.positionId ? positions.find(p => p._id === m.profile.positionId) : null;
+    const rank = ranks.find(r => r._id === m.profile?.rankId);
+    const position = m.profile?.positionId ? positions.find(p => p._id === m.profile?.positionId) : null;
     return {
       _id: m._id,
-      name: m.profile.name,
-      id: m.profile.id,
+      name: m.profile?.name,
+      id: m.profile?.id,
       rankName: rank?.name || null,
       rankColor: rank?.color || null,
       positionName: position?.name || null,

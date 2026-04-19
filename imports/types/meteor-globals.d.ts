@@ -17,6 +17,7 @@ declare module 'meteor/meteor' {
       navyRankId?: string;
       specializationIds?: string[];
       medalIds?: string[];
+      positionId?: string;
       profilePictureId?: string;
       discordTag?: string;
       steamProfileLink?: string;
