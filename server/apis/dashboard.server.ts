@@ -1,4 +1,5 @@
 import { Meteor } from 'meteor/meteor';
+import type { Mongo } from 'meteor/mongo';
 import DiscoveryTypesCollection from '../../imports/api/collections/discoveryTypes.collection';
 import EventsCollection from '../../imports/api/collections/events.collection';
 import EventTypesCollection from '../../imports/api/collections/eventTypes.collection';
@@ -11,13 +12,19 @@ import SpecializationsCollection from '../../imports/api/collections/specializat
 import SquadsCollection from '../../imports/api/collections/squads.collection';
 import TasksCollection from '../../imports/api/collections/tasks.collection';
 import TaskStatusCollection from '../../imports/api/collections/taskStatus.collection';
+import type { Role } from '/imports/api/types';
 
-// Helper to run aggregation and convert IDs to names
-async function aggregateCountByField(collection, groupField, nameMap) {
+type AnyCollection = Mongo.Collection<any>;
+
+async function aggregateCountByField(
+  collection: AnyCollection,
+  groupField: string,
+  nameMap: Map<string | undefined, string>,
+): Promise<Record<string, number>> {
   const pipeline = [{ $match: { [groupField]: { $ne: null } } }, { $group: { _id: `$${groupField}`, count: { $sum: 1 } } }];
   const rawCollection = collection.rawCollection();
-  const aggregationResult = await rawCollection.aggregate(pipeline).toArray();
-  const result = {};
+  const aggregationResult = await (rawCollection as unknown as { aggregate(p: unknown[]): { toArray(): Promise<Array<{ _id: string; count: number }>> } }).aggregate(pipeline).toArray();
+  const result: Record<string, number> = {};
   for (const item of aggregationResult) {
     const name = nameMap.get(item._id);
     if (name) result[name] = item.count;
@@ -25,16 +32,19 @@ async function aggregateCountByField(collection, groupField, nameMap) {
   return result;
 }
 
-// Helper for array field aggregation (unwinds array before grouping)
-async function aggregateCountByArrayField(collection, arrayField, nameMap) {
+async function aggregateCountByArrayField(
+  collection: AnyCollection,
+  arrayField: string,
+  nameMap: Map<string | undefined, string>,
+): Promise<Record<string, number>> {
   const pipeline = [
     { $match: { [arrayField]: { $exists: true, $ne: [] } } },
     { $unwind: `$${arrayField}` },
     { $group: { _id: `$${arrayField}`, count: { $sum: 1 } } },
   ];
   const rawCollection = collection.rawCollection();
-  const aggregationResult = await rawCollection.aggregate(pipeline).toArray();
-  const result = {};
+  const aggregationResult = await (rawCollection as unknown as { aggregate(p: unknown[]): { toArray(): Promise<Array<{ _id: string; count: number }>> } }).aggregate(pipeline).toArray();
+  const result: Record<string, number> = {};
   for (const item of aggregationResult) {
     const name = nameMap.get(item._id);
     if (name) result[name] = item.count;
@@ -44,17 +54,7 @@ async function aggregateCountByArrayField(collection, arrayField, nameMap) {
 
 if (Meteor.isServer) {
   Meteor.methods({
-    /**
-     * Fetches dashboard statistics for the current user.
-     *
-     * NOTE: This method intentionally loads full collections to compute aggregate statistics.
-     * This is acceptable because:
-     * 1. This is an admin-facing feature with permission checks
-     * 2. The data is used for aggregation (counts by category), not display
-     * 3. Community manager collections are typically small (hundreds, not millions)
-     * 4. Results are computed server-side and only summary data is returned
-     */
-    'dashboard.stats': async function () {
+    'dashboard.stats': async function (): Promise<Record<string, unknown>> {
       if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
 
       const user = await Meteor.users.findOneAsync(this.userId);
@@ -65,85 +65,73 @@ if (Meteor.isServer) {
 
       if (!roleId) throw new Meteor.Error(404, 'Role not found');
 
-      const role = await RolesCollection.findOneAsync({ _id: roleId });
+      const role = (await RolesCollection.findOneAsync({ _id: roleId })) as Role | undefined;
 
       if (!role) throw new Meteor.Error(404, 'Role not found');
 
-      const result = {};
+      const result: Record<string, unknown> = {};
 
       result.profile = await Meteor.callAsync('members.profileStats', user, role);
 
-      const hasRegistrations = role.registrations;
-      if (hasRegistrations) result['registrations count'] = await RegistrationsCollection.countDocuments();
-      const hasDiscoveryTypes = role.discoveryTypes;
-      if (hasDiscoveryTypes) {
+      if (role.registrations) result['registrations count'] = await RegistrationsCollection.countDocuments();
+      if (role.discoveryTypes) {
         const discoveryTypes = await DiscoveryTypesCollection.find().fetchAsync();
         const discoveryTypeNameByIdMap = new Map(discoveryTypes.map(dt => [dt._id, dt.name]));
         result['registrations by discovery type'] = await aggregateCountByField(
-          RegistrationsCollection,
+          RegistrationsCollection as AnyCollection,
           'discoveryType',
-          discoveryTypeNameByIdMap
+          discoveryTypeNameByIdMap,
         );
       }
 
-      const hasSquads = role.squads;
-      if (hasSquads) {
+      if (role.squads) {
         const squads = await SquadsCollection.find().fetchAsync();
         const squadNameByIdMap = new Map(squads.map(s => [s._id, s.name]));
-        result['member count by squad'] = await aggregateCountByField(MembersCollection, 'profile.squadId', squadNameByIdMap);
+        result['member count by squad'] = await aggregateCountByField(MembersCollection as AnyCollection, 'profile.squadId', squadNameByIdMap);
       }
 
-      const hasMembers = role.members;
-      if (hasMembers) result['member count'] = await MembersCollection.countDocuments();
+      if (role.members) result['member count'] = await MembersCollection.countDocuments();
 
-      const hasRanks = role.ranks;
-      if (hasRanks) {
+      if (role.ranks) {
         const ranks = await RanksCollection.find().fetchAsync();
         const rankNameByIdMap = new Map(ranks.map(r => [r._id, r.name]));
-        result['member count by rank'] = await aggregateCountByField(MembersCollection, 'profile.rankId', rankNameByIdMap);
+        result['member count by rank'] = await aggregateCountByField(MembersCollection as AnyCollection, 'profile.rankId', rankNameByIdMap);
       }
 
-      const hasSpecializations = role.specializations;
-      if (hasSpecializations) {
+      if (role.specializations) {
         const specializations = await SpecializationsCollection.find().fetchAsync();
         const specializationNameByIdMap = new Map(specializations.map(s => [s._id, s.name]));
         result['member count by specialization'] = await aggregateCountByArrayField(
-          MembersCollection,
+          MembersCollection as AnyCollection,
           'profile.specializationIds',
-          specializationNameByIdMap
+          specializationNameByIdMap,
         );
       }
 
-      const hasMedals = role.medals;
-      if (hasMedals) {
+      if (role.medals) {
         const medals = await MedalsCollection.find().fetchAsync();
         const medalNameByIdMap = new Map(medals.map(m => [m._id, m.name]));
-        result['member count by medal'] = await aggregateCountByArrayField(MembersCollection, 'profile.medalIds', medalNameByIdMap);
+        result['member count by medal'] = await aggregateCountByArrayField(MembersCollection as AnyCollection, 'profile.medalIds', medalNameByIdMap);
       }
 
-      const hasEvents = role.events;
-      if (hasEvents) result['event count'] = await EventsCollection.countDocuments();
-      const hasEventTypes = role.eventTypes;
-      if (hasEventTypes) {
+      if (role.events) result['event count'] = await EventsCollection.countDocuments();
+      if (role.eventTypes) {
         const eventTypes = await EventTypesCollection.find().fetchAsync();
         const eventTypeNameByIdMap = new Map(eventTypes.map(et => [et._id, et.name]));
-        result['event count by event type'] = await aggregateCountByField(EventsCollection, 'eventTypeId', eventTypeNameByIdMap);
+        result['event count by event type'] = await aggregateCountByField(EventsCollection as AnyCollection, 'eventTypeId', eventTypeNameByIdMap);
       }
 
-      const hasTasks = role.tasks;
-      if (hasTasks) result['task count'] = await TasksCollection.countDocuments();
-      const hasTaskStatuses = role.taskStatus;
-      if (hasTaskStatuses) {
+      if (role.tasks) result['task count'] = await TasksCollection.countDocuments();
+      if (role.taskStatus) {
         const taskStatuses = await TaskStatusCollection.find().fetchAsync();
         const taskStatusNameByIdMap = new Map(taskStatuses.map(ts => [ts._id, ts.name]));
-        result['task count by task status'] = await aggregateCountByField(TasksCollection, 'status', taskStatusNameByIdMap);
+        result['task count by task status'] = await aggregateCountByField(TasksCollection as AnyCollection, 'status', taskStatusNameByIdMap);
       }
 
-      const hasRoles = role.roles;
-      if (hasRoles) {
+      if (role.roles) {
         const roles = await RolesCollection.find().fetchAsync();
         const roleNameByIdMap = new Map(roles.map(r => [r._id, r.name]));
-        result['member count by role'] = await aggregateCountByField(MembersCollection, 'profile.roleId', roleNameByIdMap);
+        result['member count by role'] = await aggregateCountByField(MembersCollection as AnyCollection, 'profile.roleId', roleNameByIdMap);
       }
 
       return result;
