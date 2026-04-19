@@ -27,6 +27,7 @@ declare module 'meteor/meteor' {
       staticAttendancePoints?: number;
       staticInactivityPoints?: number;
       hasCustomArmour?: boolean;
+      taskFilter?: Record<string, unknown>;
     }
   }
 }

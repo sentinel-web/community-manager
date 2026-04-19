@@ -13,20 +13,22 @@ import SpecializationsCollection from '../../imports/api/collections/specializat
 import SquadsCollection from '../../imports/api/collections/squads.collection';
 import { validateObject, validatePublish, validateUserId, checkPermission, checkSpecialPermission, getSquadScope, isOfficerOrAdmin, getUserRole } from '../main';
 import { createLog } from './logs.server';
+import type { Role } from '/imports/api/types';
 
-async function getMemberById(memberId) {
+async function getMemberById(memberId: string): Promise<Meteor.User> {
   validateUserId(memberId);
   const member = await MembersCollection.findOneAsync(memberId);
   validateObject(member, false);
-  return member;
+  return member as Meteor.User;
 }
 
-const getRankName = async rankId => {
-  const rank = await RanksCollection.findOneAsync({ _id: rankId || null });
+const getRankName = async (rankId: string | null | undefined): Promise<string | undefined> => {
+  const rank = await RanksCollection.findOneAsync({ _id: rankId || null } as never);
   return rank?.name;
 };
+void getRankName;
 
-const getFullName = (rank, id, name) => {
+const getFullName = (rank: string | undefined, id: number | undefined, name: string | undefined): string => {
   return `${rank || 'Unranked'}-${id || '0000'} ${name || 'Name'}`;
 };
 
@@ -35,7 +37,7 @@ if (Meteor.isServer) {
     validateUserId(this.userId);
     return MembersCollection.find({ _id: this.userId }, { fields: { services: 0 } });
   });
-  Meteor.publish('members', async function (filter = {}, options = {}) {
+  Meteor.publish('members', async function (filter: Record<string, unknown> = {}, options: Record<string, unknown> = {}) {
     validatePublish(this.userId, filter, options);
     const squadScope = await getSquadScope(this.userId);
     const scopedFilter = { ...filter, ...squadScope };
@@ -43,12 +45,11 @@ if (Meteor.isServer) {
   });
 
   Meteor.methods({
-    'members.read': async function (filter = {}, options = {}) {
+    'members.read': async function (filter: Record<string, unknown> = {}, options: Record<string, unknown> = {}) {
       validateUserId(this.userId);
       validateObject(filter, false);
       validateObject(options, false);
 
-      // Check read permission
       const hasPermission = await checkPermission(this.userId, 'members', 'read');
       if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
 
@@ -56,7 +57,7 @@ if (Meteor.isServer) {
       const scopedFilter = { ...filter, ...squadScope };
       return await MembersCollection.find(scopedFilter, options).fetchAsync();
     },
-    'members.findOne': async function (filter = {}, options = {}) {
+    'members.findOne': async function (filter: Record<string, unknown> = {}, options: Record<string, unknown> = {}) {
       validateUserId(this.userId);
       validateObject(filter, false);
       validateObject(options, false);
@@ -64,39 +65,35 @@ if (Meteor.isServer) {
       if (!member) throw new Meteor.Error(404, 'Member not found');
       return member;
     },
-    'members.insert': async function (payload = {}) {
+    'members.insert': async function (payload: Record<string, unknown> = {}): Promise<string> {
       validateUserId(this.userId);
-      validateObject(payload);
+      validateObject(payload, false);
 
-      // Check create permission
       const hasPermission = await checkPermission(this.userId, 'members', 'create');
       if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
 
       try {
-        const memberId = await Accounts.createUserAsync(payload);
+        const memberId = await Accounts.createUserAsync(payload as Parameters<typeof Accounts.createUserAsync>[0]);
         await createLog('member.created', {
           id: memberId,
           username: payload.username,
         });
         return memberId;
       } catch (error) {
-        throw new Meteor.Error(error.message);
+        throw new Meteor.Error((error as Error).message);
       }
     },
-    'members.update': async function (memberId = '', data = {}) {
+    'members.update': async function (memberId: string = '', data: Record<string, unknown> = {}) {
       validateUserId(this.userId);
       const targetMember = await getMemberById(memberId);
 
-      // Check update permission
       const hasPermission = await checkPermission(this.userId, 'members', 'update');
       if (!hasPermission) {
-        // Allow instructors to update specializations only
         const isSpecOnly = data['profile.specializationIds'] && Object.keys(data).length === 1;
         const canManageSpecs = isSpecOnly && (await checkSpecialPermission(this.userId, 'canManageSpecializations'));
         if (!canManageSpecs) throw new Meteor.Error(403, 'Permission denied');
       }
 
-      // Squad scope check: non-officers can only update members in same squad
       const role = await getUserRole(this.userId);
       if (!isOfficerOrAdmin(role)) {
         const viewer = await MembersCollection.findOneAsync(this.userId);
@@ -108,33 +105,32 @@ if (Meteor.isServer) {
       const selector = { _id: memberId };
       const modifier = { $set: data };
       try {
-        const result = await MembersCollection.updateAsync(selector, modifier);
+        const result = await MembersCollection.updateAsync(selector as never, modifier as never);
         await createLog('member.updated', {
           id: memberId,
           changes: data,
         });
         return result;
       } catch (error) {
-        throw new Meteor.Error(error.message);
+        throw new Meteor.Error((error as Error).message);
       }
     },
-    'members.remove': async function (memberId = '') {
+    'members.remove': async function (memberId: string = '') {
       validateUserId(this.userId);
       await getMemberById(memberId);
 
-      // Check delete permission
       const hasPermission = await checkPermission(this.userId, 'members', 'delete');
       if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
 
       try {
-        const result = await MembersCollection.removeAsync({ _id: memberId });
+        const result = await MembersCollection.removeAsync({ _id: memberId } as never);
         await createLog('member.deleted', { id: memberId });
         return result;
       } catch (error) {
-        throw new Meteor.Error(error.message);
+        throw new Meteor.Error((error as Error).message);
       }
     },
-    'members.saveTaskFilter': async function (filter = {}) {
+    'members.saveTaskFilter': async function (filter: Record<string, unknown> = {}) {
       if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
       validateObject(filter, false);
       const user = await MembersCollection.findOneAsync(this.userId);
@@ -147,36 +143,34 @@ if (Meteor.isServer) {
 
       const members = await MembersCollection.find({}, { fields: { 'profile.rankId': 1, 'profile.id': 1, 'profile.name': 1 } }).fetchAsync();
 
-      // Batch load all ranks to avoid N+1 queries
-      const rankIds = [...new Set(members.map(m => m.profile?.rankId).filter(Boolean))];
+      const rankIds = [...new Set(members.map(m => m.profile?.rankId).filter((x): x is string => Boolean(x)))];
       const ranks = await RanksCollection.find({ _id: { $in: rankIds } }).fetchAsync();
       const rankNameById = new Map(ranks.map(r => [r._id, r.name]));
 
       const options = members.map(member => ({
-        label: getFullName(rankNameById.get(member.profile?.rankId), member.profile?.id, member.profile?.name),
+        label: getFullName(rankNameById.get(member.profile?.rankId as string), member.profile?.id, member.profile?.name),
         value: member._id,
       }));
 
       return options;
     },
-    'members.participantNames': async function (filter = {}, options = {}) {
+    'members.participantNames': async function (filter: Record<string, unknown> = {}, options: Record<string, unknown> = {}) {
       validateUserId(this.userId);
       validateObject(filter, false);
       validateObject(options, false);
       try {
         const members = await MembersCollection.find(filter, options).fetchAsync();
 
-        // Batch load all ranks to avoid N+1 queries
-        const rankIds = [...new Set(members.map(m => m.profile?.rankId).filter(Boolean))];
+        const rankIds = [...new Set(members.map(m => m.profile?.rankId).filter((x): x is string => Boolean(x)))];
         const ranks = await RanksCollection.find({ _id: { $in: rankIds } }).fetchAsync();
         const rankNameById = new Map(ranks.map(r => [r._id, r.name]));
 
         const names = members.map(member =>
-          getFullName(rankNameById.get(member.profile?.rankId), member.profile?.id, member.profile?.name)
+          getFullName(rankNameById.get(member.profile?.rankId as string), member.profile?.id, member.profile?.name)
         );
         return names.join(', ');
       } catch (error) {
-        throw new Meteor.Error(error.message);
+        throw new Meteor.Error((error as Error).message);
       }
     },
     'members.getUsedIds': async function () {
@@ -184,7 +178,7 @@ if (Meteor.isServer) {
         throw new Meteor.Error('not-authorized');
       }
 
-      const members = await MembersCollection.find({}, { fields: { 'profile.id': 1 } }).mapAsync(m => m.profile.id);
+      const members = await MembersCollection.find({}, { fields: { 'profile.id': 1 } }).mapAsync(m => m.profile?.id);
 
       return members;
     },
@@ -193,7 +187,7 @@ if (Meteor.isServer) {
         throw new Meteor.Error('not-authorized');
       }
 
-      const members = await MembersCollection.find({}, { fields: { 'profile.name': 1 } }).mapAsync(m => m.profile.name);
+      const members = await MembersCollection.find({}, { fields: { 'profile.name': 1 } }).mapAsync(m => m.profile?.name);
 
       return members;
     },
@@ -209,34 +203,34 @@ if (Meteor.isServer) {
 
       const members = await MembersCollection.find({}, { fields: { 'profile.rankId': 1, 'profile.id': 1, 'profile.name': 1, 'profile.squadId': 1 } }).fetchAsync();
 
-      // Batch load ranks and squads
-      const rankIds = [...new Set(members.map(m => m.profile?.rankId).filter(Boolean))];
-      const squadIds = [...new Set(members.map(m => m.profile?.squadId).filter(Boolean))];
+      const rankIds = [...new Set(members.map(m => m.profile?.rankId).filter((x): x is string => Boolean(x)))];
+      const squadIds = [...new Set(members.map(m => m.profile?.squadId).filter((x): x is string => Boolean(x)))];
       const ranks = await RanksCollection.find({ _id: { $in: rankIds } }).fetchAsync();
       const squads = await SquadsCollection.find({ _id: { $in: squadIds } }).fetchAsync();
       const rankNameById = new Map(ranks.map(r => [r._id, r.name]));
       const squadNameById = new Map(squads.map(s => [s._id, s.name]));
 
-      const groups = {};
+      const groups: Record<string, { label: string; value: string }[]> = {};
       for (const member of members) {
         const squadName = member.profile?.squadId ? squadNameById.get(member.profile.squadId) || '-' : 'Unassigned';
         if (!groups[squadName]) groups[squadName] = [];
         groups[squadName].push({
-          label: getFullName(rankNameById.get(member.profile?.rankId), member.profile?.id, member.profile?.name),
+          label: getFullName(rankNameById.get(member.profile?.rankId as string), member.profile?.id, member.profile?.name),
           value: member._id,
         });
       }
 
       return Object.entries(groups).map(([label, options]) => ({ label, options }));
     },
-    'members.profileAccess': async function (targetUserId) {
+    'members.profileAccess': async function (targetUserId: string) {
       if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
 
-      const viewerRole = await RolesCollection.findOneAsync({ _id: (await MembersCollection.findOneAsync(this.userId))?.profile?.roleId ?? null });
-      const isOfficerOrAdmin = viewerRole?.roles === true;
-      return { canViewContact: isOfficerOrAdmin || this.userId === targetUserId };
+      const viewer = await MembersCollection.findOneAsync(this.userId);
+      const viewerRole = await RolesCollection.findOneAsync({ _id: viewer?.profile?.roleId ?? null } as never);
+      const viewerIsOfficerOrAdmin = (viewerRole as Role | undefined)?.roles === true;
+      return { canViewContact: viewerIsOfficerOrAdmin || this.userId === targetUserId };
     },
-    'members.attendanceBreakdown': async function (targetUserId) {
+    'members.attendanceBreakdown': async function (targetUserId?: string) {
       if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
       const userId = targetUserId || this.userId;
 
@@ -246,14 +240,14 @@ if (Meteor.isServer) {
       }
 
       const now = dayjs();
-      const quarterStart = now.startOf('quarter').toDate();
+      const quarterStart = now.startOf('quarter' as dayjs.OpUnitType).toDate();
       const total = { present: 0, absent: 0, excused: 0, zeus: 0, total: 0 };
       const quarterly = { present: 0, absent: 0, excused: 0, zeus: 0, total: 0 };
       let missionCount = 0;
 
       await AttendancesCollection.find({ [userId]: { $exists: true } }).forEachAsync(async attendance => {
-        const val = attendance[userId];
-        if (val === -2) return; // skip cancelled
+        const val = (attendance as Record<string, unknown>)[userId] as number;
+        if (val === -2) return;
 
         total.total += 1;
         if (val === 1) { total.present += 1; missionCount += 1; }
@@ -261,8 +255,7 @@ if (Meteor.isServer) {
         else if (val === -1) total.absent += 1;
         else if (val === 0) total.excused += 1;
 
-        // Check if event is in current quarter
-        const event = await EventsCollection.findOneAsync({ _id: attendance.eventId });
+        const event = await EventsCollection.findOneAsync({ _id: attendance.eventId as unknown as string });
         if (event && event.start >= quarterStart) {
           quarterly.total += 1;
           if (val === 1) quarterly.present += 1;
@@ -274,17 +267,16 @@ if (Meteor.isServer) {
 
       return { total, quarterly, missionCount };
     },
-    'members.profileStats': async function (userOrTargetId, role) {
+    'members.profileStats': async function (userOrTargetId: Meteor.User | string | undefined, role?: Role) {
       if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
 
-      let user = userOrTargetId;
-      // Support passing a targetUserId string
+      let user: Meteor.User | null | undefined = typeof userOrTargetId === 'object' ? userOrTargetId : undefined;
+
       if (typeof userOrTargetId === 'string') {
         if (userOrTargetId !== this.userId) {
           const hasPermission = await checkPermission(this.userId, 'members', 'read');
           if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
 
-          // Squad scope check
           const viewerRole = await getUserRole(this.userId);
           if (!isOfficerOrAdmin(viewerRole)) {
             const viewer = await MembersCollection.findOneAsync(this.userId);
@@ -302,13 +294,14 @@ if (Meteor.isServer) {
       if (!user) throw new Meteor.Error(404, 'User not found');
 
       const roleId = user.profile?.roleId;
-      if (!role) role = await RolesCollection.findOneAsync({ _id: roleId ?? null });
+      if (!role) role = (await RolesCollection.findOneAsync({ _id: roleId ?? null } as never)) as Role | undefined;
 
       let inactivityPoints = user.profile?.staticInactivityPoints || 0;
       let attendancePoints = user.profile?.staticAttendancePoints || 0;
-      await AttendancesCollection.find({ [user._id]: { $exists: true } }).forEachAsync(attendance => {
-        const val = attendance[user._id];
-        if (val === -2) return; // skip cancelled events
+      const userIdKey = user._id;
+      await AttendancesCollection.find({ [userIdKey]: { $exists: true } }).forEachAsync(attendance => {
+        const val = (attendance as Record<string, unknown>)[userIdKey] as number;
+        if (val === -2) return;
         if (val === -1) inactivityPoints += 1;
         attendancePoints += val === 2 ? 1 : (val || 0);
       });

@@ -19,6 +19,7 @@ export interface MemberProfile {
   staticAttendancePoints?: number;
   staticInactivityPoints?: number;
   hasCustomArmour?: boolean;
+  taskFilter?: Record<string, unknown>;
 }
 
 export interface Member {

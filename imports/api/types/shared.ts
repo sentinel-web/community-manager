@@ -11,8 +11,11 @@ export interface ColoredEntity {
 
 export type AttendanceStatus = -2 | -1 | 0 | 1 | 2;
 
-export interface Attendances {
-  [eventId: string]: {
-    [memberId: string]: AttendanceStatus;
-  };
+export interface AttendanceDoc {
+  _id?: string;
+  eventId?: string;
+  [memberId: string]: AttendanceStatus | string | undefined;
 }
+
+/** Alias for back-compat with older references in crud.lib generics. */
+export type Attendances = AttendanceDoc;
