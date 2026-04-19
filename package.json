@@ -31,7 +31,7 @@
   "meteor": {
     "mainModule": {
       "client": "client/main.jsx",
-      "server": "server/main.js"
+      "server": "server/main.ts"
     },
     "testModule": "tests/main.js"
   },

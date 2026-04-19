@@ -7,6 +7,7 @@ import MembersCollection from '../imports/api/collections/members.collection';
 import RegistrationsCollection from '../imports/api/collections/registrations.collection';
 import RolesCollection from '../imports/api/collections/roles.collection';
 import TasksCollection from '../imports/api/collections/tasks.collection';
+import type { Role } from '/imports/api/types';
 import './apis/backup.server';
 import './apis/dashboard.server';
 import './apis/demoData.server';
@@ -26,11 +27,11 @@ import { CACHE, SQUAD_SCOPED_PERMISSIONS } from './config';
 
 // === Permission System ===
 
-// Modules that use boolean permissions (true/false)
-const BOOLEAN_MODULES = ['dashboard', 'orbat', 'logs', 'settings'];
+export type CrudOperation = 'read' | 'create' | 'update' | 'delete';
 
-// Modules that use CRUD permissions (read/create/update/delete)
-const CRUD_MODULES = [
+const BOOLEAN_MODULES: readonly string[] = ['dashboard', 'orbat', 'logs', 'settings'];
+
+const CRUD_MODULES: readonly string[] = [
   'discoveryTypes',
   'events',
   'eventTypes',
@@ -47,18 +48,17 @@ const CRUD_MODULES = [
   'taskStatus',
 ];
 
-// Map collection names to permission modules
-const COLLECTION_TO_MODULE = {
-  attendances: 'events', // attendances are part of events module
+const COLLECTION_TO_MODULE: Record<string, string> = {
+  attendances: 'events',
   discoveryTypes: 'discoveryTypes',
   events: 'events',
   eventTypes: 'eventTypes',
   medals: 'medals',
   members: 'members',
   positions: 'positions',
-  profilePictures: 'members', // profile pictures are part of members module
+  profilePictures: 'members',
   questionnaires: 'questionnaires',
-  questionnaireResponses: 'questionnaires', // responses use questionnaires permission module
+  questionnaireResponses: 'questionnaires',
   ranks: 'ranks',
   registrations: 'registrations',
   roles: 'roles',
@@ -68,17 +68,17 @@ const COLLECTION_TO_MODULE = {
   taskStatus: 'taskStatus',
 };
 
-// Role cache for performance (TTL configurable via Meteor.settings)
-const roleCache = new Map();
-const CACHE_TTL = 60000; // 1 minute
-const CACHE_CLEANUP_INTERVAL = 300000; // 5 minutes
-const CACHE_MAX_SIZE = 1000; // Maximum number of entries
+interface RoleCacheEntry {
+  role: Role | null;
+  timestamp: number;
+}
 
-/**
- * Cleans up expired entries from the role cache.
- * Runs periodically to prevent unbounded memory growth.
- */
-function cleanupRoleCache() {
+const roleCache = new Map<string, RoleCacheEntry>();
+const CACHE_TTL = 60000;
+const CACHE_CLEANUP_INTERVAL = 300000;
+const CACHE_MAX_SIZE = 1000;
+
+function cleanupRoleCache(): void {
   const now = Date.now();
   for (const [key, value] of roleCache.entries()) {
     if (now - value.timestamp >= CACHE_TTL) {
@@ -87,56 +87,39 @@ function cleanupRoleCache() {
   }
 }
 
-// Start periodic cache cleanup on server
 if (Meteor.isServer) {
   Meteor.setInterval(cleanupRoleCache, CACHE_CLEANUP_INTERVAL);
 }
 
-/**
- * Normalizes role permissions from old boolean format to new CRUD object format.
- * - Boolean modules remain unchanged (dashboard, orbat, logs, settings)
- * - CRUD modules: `true` becomes { read: true, create: true, update: true, delete: true }
- * - CRUD modules: `false` or undefined becomes { read: false, create: false, update: false, delete: false }
- */
-export function normalizeRolePermissions(role) {
+export function normalizeRolePermissions(role: Role | null | undefined): Role | null {
   if (!role) return null;
 
-  const normalized = { ...role };
+  const normalized: Role = { ...role };
 
-  // Preserve admin all-access flag before normalization.
-  // The 'roles' field has dual purpose: it's both a CRUD permission module name
-  // and the admin flag (roles === true means full access to everything).
   const isAdmin = role.roles === true;
 
   for (const module of CRUD_MODULES) {
-    const permission = role[module];
+    const key = module as keyof Role;
+    const permission = role[key];
     if (permission === true) {
-      // Old format: true means full access
-      normalized[module] = { read: true, create: true, update: true, delete: true };
+      (normalized as unknown as Record<string, unknown>)[module] = { read: true, create: true, update: true, delete: true };
     } else if (permission === false || permission === undefined) {
-      // Old format: false or undefined means no access
-      normalized[module] = { read: false, create: false, update: false, delete: false };
+      (normalized as unknown as Record<string, unknown>)[module] = { read: false, create: false, update: false, delete: false };
     }
-    // If already an object, leave it as-is
   }
 
-  // Restore admin flag so isOfficerOrAdmin and checkPermission work correctly
   if (isAdmin) normalized.roles = true;
 
   return normalized;
 }
 
-/**
- * Gets a user's role with caching.
- * Returns the normalized role object.
- */
-export async function getUserRole(userId) {
+export async function getUserRole(userId: string | null | undefined): Promise<Role | null> {
   if (!userId) return null;
 
   const user = await MembersCollection.findOneAsync(userId);
   if (!user?.profile?.roleId) return null;
 
-  const roleId = user.profile.roleId;
+  const roleId = user.profile.roleId as string;
   const cacheKey = roleId;
   const cached = roleCache.get(cacheKey);
 
@@ -144,12 +127,11 @@ export async function getUserRole(userId) {
     return cached.role;
   }
 
-  const role = await RolesCollection.findOneAsync(roleId);
+  const role = (await RolesCollection.findOneAsync(roleId)) as Role | undefined;
   const normalizedRole = normalizeRolePermissions(role);
 
-  // Evict oldest entries if cache exceeds max size
   if (roleCache.size >= CACHE_MAX_SIZE) {
-    let oldestKey = null;
+    let oldestKey: string | null = null;
     let oldestTime = Infinity;
     for (const [key, value] of roleCache.entries()) {
       if (value.timestamp < oldestTime) {
@@ -165,34 +147,27 @@ export async function getUserRole(userId) {
   return normalizedRole;
 }
 
-/**
- * Checks if a user has permission for a specific operation on a module.
- * @param {string} userId - The user's ID
- * @param {string} module - The permission module (e.g., 'members', 'events')
- * @param {string} operation - The operation ('read', 'create', 'update', 'delete')
- * @returns {Promise<boolean>} - Whether the user has permission
- */
-export async function checkPermission(userId, module, operation) {
+export async function checkPermission(
+  userId: string | null | undefined,
+  module: string,
+  operation?: CrudOperation,
+): Promise<boolean> {
   const role = await getUserRole(userId);
 
   if (!role) return false;
 
-  // Handle special admin role that has `roles: true`
   if (role.roles === true) return true;
 
-  const permission = role[module];
+  const permission = (role as unknown as Record<string, unknown>)[module];
 
-  // Boolean modules
   if (BOOLEAN_MODULES.includes(module)) {
     return permission === true;
   }
 
-  // CRUD modules
-  if (typeof permission === 'object' && permission !== null) {
-    return permission[operation] === true;
+  if (typeof permission === 'object' && permission !== null && operation) {
+    return (permission as Record<string, boolean>)[operation] === true;
   }
 
-  // Fallback for old boolean format on CRUD modules
   if (permission === true) {
     return true;
   }
@@ -200,11 +175,7 @@ export async function checkPermission(userId, module, operation) {
   return false;
 }
 
-/**
- * Clears the role cache for a specific role or all roles.
- * Call this when roles are updated.
- */
-export function clearRoleCache(roleId) {
+export function clearRoleCache(roleId?: string): void {
   if (roleId) {
     roleCache.delete(roleId);
   } else {
@@ -212,64 +183,40 @@ export function clearRoleCache(roleId) {
   }
 }
 
-/**
- * Gets the permission module for a collection name.
- */
-export function getPermissionModule(collectionName) {
+export function getPermissionModule(collectionName: string): string | null {
   return COLLECTION_TO_MODULE[collectionName] || null;
 }
 
-/**
- * Checks if a user has a special permission flag on their role.
- * Special flags: canManageSpecializations, canManageRecruits, canCreateEvents, canManageTasks
- * @param {string} userId - The user's ID
- * @param {string} flag - The special permission flag to check
- * @returns {Promise<boolean>}
- */
-export async function checkSpecialPermission(userId, flag) {
+export async function checkSpecialPermission(userId: string | null | undefined, flag: string): Promise<boolean> {
   const role = await getUserRole(userId);
   if (!role) return false;
-  return role[flag] === true;
+  return (role as unknown as Record<string, unknown>)[flag] === true;
 }
 
-// Export constants for use in other modules
 export { BOOLEAN_MODULES, CRUD_MODULES };
 
-/**
- * Checks if a role represents an officer or admin.
- * Officers/admins bypass squad-scoped filtering.
- */
-export function isOfficerOrAdmin(role) {
+export function isOfficerOrAdmin(role: Role | null | undefined): boolean {
   if (!role) return false;
   return role.roles === true;
 }
 
-/**
- * Gets squad scope filter for a user.
- * Non-officers get filtered to their own squad; officers/admins get no filter.
- * @param {string} userId - The user's ID
- * @returns {Promise<Object>} - MongoDB filter to apply, or empty object for officers
- */
-export async function getSquadScope(userId) {
+export async function getSquadScope(
+  userId: string | null | undefined,
+): Promise<{ 'profile.squadId'?: string }> {
   if (!SQUAD_SCOPED_PERMISSIONS.enabled) return {};
 
   const role = await getUserRole(userId);
   if (isOfficerOrAdmin(role)) return {};
 
+  if (!userId) return {};
   const user = await MembersCollection.findOneAsync(userId);
-  const squadId = user?.profile?.squadId;
+  const squadId = user?.profile?.squadId as string | undefined;
   if (!squadId) return {};
 
   return { 'profile.squadId': squadId };
 }
 
-/**
- * Creates test data for development environments only.
- * WARNING: This creates an admin user with default credentials.
- * Never run in production - gated by NODE_ENV check.
- */
-async function createTestData() {
-  // Always ensure admin role has full permissions (idempotent)
+async function createTestData(): Promise<void> {
   await RolesCollection.upsertAsync({ _id: 'admin' }, { $set: { name: 'admin', roles: true } });
   const user = await MembersCollection.findOneAsync({ username: 'admin' });
   if (user) return;
@@ -277,38 +224,24 @@ async function createTestData() {
   await Accounts.createUserAsync({ username: 'admin', password: 'admin', profile: { name: 'Admin', roleId: 'admin' } });
 }
 
-/**
- * Creates database indexes for common queries.
- * Indexes improve query performance by avoiding full collection scans.
- * createIndex() is idempotent - safe to call on every startup.
- */
-async function createDatabaseIndexes() {
-  // Members (Meteor.users) indexes
-  // Note: Meteor already creates a unique, sparse index on 'username'
+async function createDatabaseIndexes(): Promise<void> {
   await MembersCollection.rawCollection().createIndex({ 'profile.squadId': 1 });
   await MembersCollection.rawCollection().createIndex({ 'profile.rankId': 1 });
 
-  // Attendances indexes
   await AttendancesCollection.rawCollection().createIndex({ eventId: 1 });
 
-  // Logs indexes
   await LogsCollection.rawCollection().createIndex({ createdAt: -1 });
   await LogsCollection.rawCollection().createIndex({ action: 1 });
 
-  // Events indexes
   await EventsCollection.rawCollection().createIndex({ eventType: 1 });
 
-  // Tasks indexes
   await TasksCollection.rawCollection().createIndex({ status: 1 });
 
-  // Registrations indexes
   await RegistrationsCollection.rawCollection().createIndex({ discoveryType: 1 });
 }
 
 if (Meteor.isServer) {
   Meteor.startup(async () => {
-    // Only create test data in development environments
-    // In production, admin users must be created manually or via secure setup
     if (process.env.NODE_ENV !== 'production') {
       await createTestData();
     }
@@ -316,11 +249,10 @@ if (Meteor.isServer) {
   });
 }
 
-const collectionNames = [
+const collectionNames: readonly string[] = [
   'attendances',
   'discoveryTypes',
   'eventTypes',
-  // 'members', // ! handled separately
   'medals',
   'positions',
   'profilePictures',
@@ -329,15 +261,13 @@ const collectionNames = [
   'ranks',
   'registrations',
   'roles',
-  // 'settings', // ! handled separately
   'specializations',
   'squads',
   'taskStatus',
   'tasks',
 ];
 
-// Events: custom publication in events.server.js (filters private events for non-officers)
-const methodOnlyCollections = ['events'];
+const methodOnlyCollections: readonly string[] = ['events'];
 
 if (Meteor.isServer) {
   for (const collectionName of collectionNames) {
@@ -349,25 +279,25 @@ if (Meteor.isServer) {
   }
 }
 
-export function validateUserId(userId) {
+export function validateUserId(userId: unknown): asserts userId is string {
   if (!userId || typeof userId !== 'string') {
     throw new Meteor.Error('validateUserId', 'not-authorized', JSON.stringify(userId));
   }
 }
 
-function validateOptionalString(string) {
+function validateOptionalString(string: unknown): void {
   if (string && typeof string !== 'string') {
     throw new Meteor.Error('validateOptionalString', 'Invalid string', JSON.stringify(string));
   }
 }
 
-function validateRequiredString(string) {
+function validateRequiredString(string: unknown): asserts string is string {
   if (!string || typeof string !== 'string') {
     throw new Meteor.Error('validateRequiredString', 'Invalid string', JSON.stringify(string));
   }
 }
 
-export function validateString(string, optional) {
+export function validateString(string: unknown, optional: boolean): asserts string is string {
   if (optional) {
     validateOptionalString(string);
   } else {
@@ -375,19 +305,19 @@ export function validateString(string, optional) {
   }
 }
 
-function validateOptionalNumber(number) {
+function validateOptionalNumber(number: unknown): void {
   if (number && typeof number !== 'number') {
     throw new Meteor.Error('validateOptionalNumber', 'Invalid number', JSON.stringify(number));
   }
 }
 
-function validateRequiredNumber(number) {
+function validateRequiredNumber(number: unknown): asserts number is number {
   if (typeof number !== 'number') {
     throw new Meteor.Error('validateRequiredNumber', 'Invalid number', JSON.stringify(number));
   }
 }
 
-export function validateNumber(number, optional) {
+export function validateNumber(number: unknown, optional: boolean): asserts number is number {
   if (optional) {
     validateOptionalNumber(number);
   } else {
@@ -395,19 +325,19 @@ export function validateNumber(number, optional) {
   }
 }
 
-function validateOptionalBoolean(boolean) {
+function validateOptionalBoolean(boolean: unknown): void {
   if (boolean && typeof boolean !== 'boolean') {
     throw new Meteor.Error('validateOptionalBoolean', 'Invalid boolean', JSON.stringify(boolean));
   }
 }
 
-function validateRequiredBoolean(boolean) {
+function validateRequiredBoolean(boolean: unknown): asserts boolean is boolean {
   if (typeof boolean !== 'boolean') {
     throw new Meteor.Error('validateRequiredBoolean', 'Invalid boolean', JSON.stringify(boolean));
   }
 }
 
-export function validateBoolean(boolean, optional) {
+export function validateBoolean(boolean: unknown, optional: boolean): asserts boolean is boolean {
   if (optional) {
     validateOptionalBoolean(boolean);
   } else {
@@ -415,19 +345,19 @@ export function validateBoolean(boolean, optional) {
   }
 }
 
-function validateOptionalDate(date) {
+function validateOptionalDate(date: unknown): void {
   if (date && typeof date !== 'object') {
     throw new Meteor.Error('validateOptionalDate', 'Invalid date', JSON.stringify(date));
   }
 }
 
-function validateRequiredDate(date) {
+function validateRequiredDate(date: unknown): asserts date is Date {
   if (!date || typeof date !== 'object') {
     throw new Meteor.Error('validateRequiredDate', 'Invalid date', JSON.stringify(date));
   }
 }
 
-export function validateDate(date, optional) {
+export function validateDate(date: unknown, optional: boolean): asserts date is Date {
   if (optional) {
     validateOptionalDate(date);
   } else {
@@ -435,19 +365,19 @@ export function validateDate(date, optional) {
   }
 }
 
-function validateOptionalArray(array) {
+function validateOptionalArray(array: unknown): void {
   if (array && !Array.isArray(array)) {
     throw new Meteor.Error('validateOptionalArray', 'Invalid array', JSON.stringify(array));
   }
 }
 
-function validateRequiredArray(array) {
+function validateRequiredArray(array: unknown): asserts array is unknown[] {
   if (!array || !Array.isArray(array)) {
     throw new Meteor.Error('validateRequiredArray', 'Invalid array', JSON.stringify(array));
   }
 }
 
-export function validateArray(array, optional) {
+export function validateArray(array: unknown, optional: boolean): asserts array is unknown[] {
   if (optional) {
     validateOptionalArray(array);
   } else {
@@ -455,7 +385,7 @@ export function validateArray(array, optional) {
   }
 }
 
-function validateOptionalArrayOfStrings(array) {
+function validateOptionalArrayOfStrings(array: unknown): void {
   if (array && !Array.isArray(array)) {
     throw new Meteor.Error('validateOptionalArrayOfStrings', 'Invalid array', JSON.stringify(array));
   }
@@ -464,7 +394,7 @@ function validateOptionalArrayOfStrings(array) {
   }
 }
 
-function validateRequiredArrayOfStrings(array) {
+function validateRequiredArrayOfStrings(array: unknown): asserts array is string[] {
   if (!array || !Array.isArray(array)) {
     throw new Meteor.Error('validateRequiredArrayOfStrings', 'Invalid array', JSON.stringify(array));
   }
@@ -473,7 +403,7 @@ function validateRequiredArrayOfStrings(array) {
   }
 }
 
-export function validateArrayOfStrings(array, optional) {
+export function validateArrayOfStrings(array: unknown, optional: boolean): asserts array is string[] {
   if (optional) {
     validateOptionalArrayOfStrings(array);
   } else {
@@ -481,19 +411,19 @@ export function validateArrayOfStrings(array, optional) {
   }
 }
 
-function validateOptionalObject(object) {
+function validateOptionalObject(object: unknown): void {
   if (object && typeof object !== 'object') {
     throw new Meteor.Error('validateOptionalObject', 'Invalid object', JSON.stringify(object));
   }
 }
 
-function validateRequiredObject(object) {
+function validateRequiredObject(object: unknown): void {
   if (!object || typeof object !== 'object') {
     throw new Meteor.Error('validateRequiredObject', 'Invalid object', JSON.stringify(object));
   }
 }
 
-export function validateObject(object, optional) {
+export function validateObject(object: unknown, optional: boolean): void {
   if (optional) {
     validateOptionalObject(object);
   } else {
@@ -501,7 +431,7 @@ export function validateObject(object, optional) {
   }
 }
 
-export function validatePublish(userId, filter, options) {
+export function validatePublish(userId: unknown, filter: unknown, options: unknown): void {
   validateUserId(userId);
   validateObject(filter, false);
   validateObject(options, false);
