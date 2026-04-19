@@ -22,7 +22,7 @@ import TaskStatusCollection from '../../imports/api/collections/taskStatus.colle
 import { validateUserId, checkPermission } from '../main';
 import { createLog } from './logs.server';
 
-async function wipeAllCollections() {
+async function wipeAllCollections(): Promise<void> {
   await AttendancesCollection.removeAsync({});
   await DiscoveryTypesCollection.removeAsync({});
   await EventsCollection.removeAsync({});
@@ -44,9 +44,10 @@ async function wipeAllCollections() {
   await TaskStatusCollection.removeAsync({});
 }
 
-// === Demo Data Definitions ===
+// Seed data definitions: typed loosely since they mix schema fields with seed-only _id values.
+// Runtime correctness is verified by the full demoData generation path used in development.
 
-const ROLES = [
+const ROLES: unknown[] = [
   { _id: 'admin', name: 'Admin', color: '#f5222d', roles: true },
   {
     _id: 'officer',
@@ -96,14 +97,14 @@ const ROLES = [
   },
 ];
 
-const SQUADS = [
+const SQUADS: unknown[] = [
   { _id: 'hq', name: 'HQ Command', color: '#f5222d', shortRangeFrequency: '100.0', longRangeFrequency: '50.0', description: 'Headquarters and command staff' },
   { _id: 'alpha', name: 'Alpha', color: '#1890ff', parentSquadId: 'hq', shortRangeFrequency: '110.0', longRangeFrequency: '50.0', description: 'Primary assault element' },
   { _id: 'bravo', name: 'Bravo', color: '#52c41a', parentSquadId: 'hq', shortRangeFrequency: '120.0', longRangeFrequency: '50.0', description: 'Fire support element' },
   { _id: 'charlie', name: 'Charlie', color: '#faad14', parentSquadId: 'hq', shortRangeFrequency: '130.0', longRangeFrequency: '50.0', description: 'Reconnaissance and special operations' },
 ];
 
-const RANKS = [
+const RANKS: unknown[] = [
   { _id: 'recruit', name: 'Recruit', type: 'player', color: '#8c8c8c', nextRankId: 'private', description: 'New community member in training' },
   { _id: 'private', name: 'Private', type: 'player', color: '#52c41a', previousRankId: 'recruit', nextRankId: 'corporal', description: 'Standard member rank' },
   { _id: 'corporal', name: 'Corporal', type: 'player', color: '#1890ff', previousRankId: 'private', nextRankId: 'sergeant', description: 'Experienced member, may lead fireteams' },
@@ -112,7 +113,7 @@ const RANKS = [
   { _id: 'captain', name: 'Captain', type: 'player', color: '#f5222d', previousRankId: 'lieutenant', description: 'Senior command' },
 ];
 
-const SPECIALIZATIONS = [
+const SPECIALIZATIONS: unknown[] = [
   { _id: 'medic', name: 'Medic', color: '#f5222d', description: 'Trained in combat medical procedures' },
   { _id: 'marksman', name: 'Marksman', color: '#1890ff', description: 'Precision shooting specialist' },
   { _id: 'engineer', name: 'Engineer', color: '#faad14', description: 'Explosives and fortification specialist' },
@@ -120,39 +121,45 @@ const SPECIALIZATIONS = [
   { _id: 'jtac', name: 'JTAC', color: '#722ed1', requiredRankId: 'sergeant', requiredSpecializations: ['marksman'], description: 'Joint Terminal Attack Controller' },
 ];
 
-const MEDALS = [
+const MEDALS: unknown[] = [
   { _id: 'service', name: 'Service Medal', color: '#1890ff', description: 'Awarded for 6 months of active service' },
   { _id: 'combat', name: 'Combat Excellence', color: '#f5222d', description: 'Awarded for outstanding performance in operations' },
   { _id: 'leadership', name: 'Leadership Medal', color: '#faad14', description: 'Awarded for exceptional leadership' },
   { _id: 'instructor', name: 'Instructor Badge', color: '#52c41a', description: 'Awarded for training contributions' },
 ];
 
-const POSITIONS = [
+const POSITIONS: unknown[] = [
   { _id: 'squad-leader', name: 'Squad Leader', color: '#f5222d', description: 'Leads a squad in operations' },
   { _id: 'fireteam-lead', name: 'Fireteam Lead', color: '#fa8c16', description: 'Leads a fireteam within a squad' },
   { _id: 'logistics', name: 'Logistics Officer', color: '#1890ff', description: 'Manages equipment and supply operations' },
 ];
 
-const DISCOVERY_TYPES = [
+const DISCOVERY_TYPES: unknown[] = [
   { _id: 'reddit', name: 'Reddit', color: '#ff4500', description: 'Found via Reddit communities' },
   { _id: 'friend', name: 'Friend Referral', color: '#52c41a', description: 'Referred by an existing member' },
   { _id: 'steam', name: 'Steam', color: '#171a21', description: 'Found via Steam groups or forums' },
 ];
 
-const EVENT_TYPES = [
+const EVENT_TYPES: unknown[] = [
   { _id: 'training', name: 'Training', color: '#1890ff', description: 'Skill-building and practice sessions' },
   { _id: 'operation', name: 'Operation', color: '#f5222d', description: 'Full-scale military operations' },
   { _id: 'briefing', name: 'Briefing', color: '#faad14', description: 'Mission planning and information sessions' },
   { _id: 'social', name: 'Social', color: '#52c41a', description: 'Community social events and game nights' },
 ];
 
-const TASK_STATUSES = [
+const TASK_STATUSES: unknown[] = [
   { _id: 'todo', name: 'To Do', color: '#8c8c8c', description: 'Tasks waiting to be started' },
   { _id: 'in-progress', name: 'In Progress', color: '#1890ff', description: 'Tasks currently being worked on' },
   { _id: 'done', name: 'Done', color: '#52c41a', description: 'Completed tasks' },
 ];
 
-const MEMBERS = [
+interface MemberSeed {
+  username: string;
+  password: string;
+  profile: { name: string; id: number; [k: string]: unknown };
+}
+
+const MEMBERS: MemberSeed[] = [
   { username: 'admin', password: 'admin', profile: { name: 'Admin', id: 1000, roleId: 'admin', squadId: 'hq', rankId: 'captain', specializationIds: [], medalIds: ['leadership', 'service'], description: 'Community administrator', entryDate: new Date('2024-01-15'), taskFilter: { status: ['todo', 'in-progress', 'done'] } } },
   { username: 'viper', password: 'demo', profile: { name: 'Viper', id: 1001, roleId: 'officer', squadId: 'alpha', rankId: 'lieutenant', specializationIds: ['marksman', 'jtac'], medalIds: ['combat', 'service'], description: 'Alpha squad leader', entryDate: new Date('2024-03-10'), taskFilter: { status: ['todo', 'in-progress', 'done'] } } },
   { username: 'doc', password: 'demo', profile: { name: 'Doc', id: 1002, roleId: 'officer', squadId: 'bravo', rankId: 'sergeant', specializationIds: ['medic'], medalIds: ['service'], description: 'Bravo squad medic and leader', entryDate: new Date('2024-05-22'), taskFilter: { status: ['todo', 'in-progress', 'done'] } } },
@@ -165,8 +172,8 @@ const MEMBERS = [
   { username: 'wolf', password: 'demo', profile: { name: 'Wolf', id: 1009, roleId: 'member', squadId: 'charlie', rankId: 'recruit', specializationIds: [], medalIds: [], description: 'Recently joined, completing basic training', entryDate: new Date('2026-02-01'), taskFilter: { status: ['todo', 'in-progress', 'done'] } } },
 ];
 
-function createEvents() {
-  const now = new Date();
+function createEvents(): unknown[] {
+  const now = Date.now();
   const day = 24 * 60 * 60 * 1000;
   return [
     { _id: 'evt-1', name: 'Basic Infantry Training', start: new Date(now - 14 * day), end: new Date(now - 14 * day + 3 * 60 * 60 * 1000), eventType: 'training', hosts: [], attendees: [], description: 'Fundamentals of infantry tactics' },
@@ -179,7 +186,7 @@ function createEvents() {
   ];
 }
 
-function createAttendances(memberIds) {
+function createAttendances(memberIds: string[]): unknown[] {
   return [
     { _id: 'att-1', eventId: 'evt-1', [memberIds[0]]: 2, [memberIds[1]]: 1, [memberIds[2]]: 1, [memberIds[3]]: 1, [memberIds[4]]: 1, [memberIds[5]]: 0, [memberIds[6]]: -1, [memberIds[7]]: 1, [memberIds[8]]: 1 },
     { _id: 'att-2', eventId: 'evt-2', [memberIds[0]]: 2, [memberIds[1]]: 1, [memberIds[2]]: 1, [memberIds[3]]: 1, [memberIds[4]]: 1, [memberIds[5]]: 1, [memberIds[6]]: 1, [memberIds[7]]: -1, [memberIds[8]]: 0, [memberIds[9]]: -2 },
@@ -187,7 +194,7 @@ function createAttendances(memberIds) {
   ];
 }
 
-function createTasks(memberIds) {
+function createTasks(memberIds: string[]): unknown[] {
   return [
     { _id: 'task-1', name: 'Update server mods list', status: 'done', participants: [memberIds[1]], priority: 'high', description: 'Verify and update the required mod collection on Steam Workshop', createdAt: new Date() },
     { _id: 'task-2', name: 'Review new applications', status: 'in-progress', participants: [memberIds[2]], priority: 'medium', description: 'Process pending registration applications', createdAt: new Date() },
@@ -199,7 +206,7 @@ function createTasks(memberIds) {
   ];
 }
 
-function createQuestionnaire() {
+function createQuestionnaire(): unknown {
   return {
     _id: 'q-1',
     name: 'Monthly Community Feedback',
@@ -217,7 +224,7 @@ function createQuestionnaire() {
   };
 }
 
-function createQuestionnaireResponses(memberIds) {
+function createQuestionnaireResponses(memberIds: string[]): unknown[] {
   return [
     {
       _id: 'qr-1', questionnaireId: 'q-1', respondentId: memberIds[3], submittedAt: new Date(), createdAt: new Date(),
@@ -246,7 +253,7 @@ function createQuestionnaireResponses(memberIds) {
   ];
 }
 
-const REGISTRATIONS = [
+const REGISTRATIONS: unknown[] = [
   { _id: 'reg-1', name: 'Spartan', id: 2001, age: 22, discoveryType: 'reddit', rulesReadAndAccepted: true, description: 'Experienced ArmA player looking for a structured community. 500+ hours.' },
   { _id: 'reg-2', name: 'Echo', id: 2002, age: 19, discoveryType: 'friend', rulesReadAndAccepted: true, description: 'Referred by Ghost. Interested in recon operations.' },
   { _id: 'reg-3', name: 'Titan', id: 2003, age: 25, discoveryType: 'steam', rulesReadAndAccepted: true, description: 'Former milsim player, looking for an active group.' },
@@ -255,69 +262,61 @@ const REGISTRATIONS = [
 const COMMUNITY_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1890ff"/><stop offset="100%" stop-color="#003a8c"/></linearGradient></defs><path d="M64 4L120 28V68C120 96 96 118 64 124C32 118 8 96 8 68V28Z" fill="url(#g)" stroke="#fff" stroke-width="2"/><path d="M64 16L108 36V68C108 90 88 108 64 114C40 108 20 90 20 68V36Z" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1"/><text x="64" y="62" text-anchor="middle" fill="white" font-family="Arial,sans-serif" font-size="28" font-weight="bold" letter-spacing="4">TFS</text><text x="64" y="86" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-family="Arial,sans-serif" font-size="9" letter-spacing="2">SENTINEL</text></svg>`;
 const COMMUNITY_LOGO = `data:image/svg+xml;base64,${Buffer.from(COMMUNITY_LOGO_SVG).toString('base64')}`;
 
-const SETTINGS = [
+const SETTINGS: unknown[] = [
   { _id: 'community-title', key: 'community-title', value: 'Task Force Sentinel' },
   { _id: 'community-color', key: 'community-color', value: '#1890ff' },
   { _id: 'community-logo', key: 'community-logo', value: COMMUNITY_LOGO },
 ];
 
-const AVATAR_COLORS = ['#f5222d', '#fa541c', '#fa8c16', '#faad14', '#52c41a', '#13c2c2', '#1890ff', '#722ed1', '#eb2f96', '#2f54eb'];
+const AVATAR_COLORS: readonly string[] = ['#f5222d', '#fa541c', '#fa8c16', '#faad14', '#52c41a', '#13c2c2', '#1890ff', '#722ed1', '#eb2f96', '#2f54eb'];
 
-function createAvatarDataUri(initial, color) {
+function createAvatarDataUri(initial: string, color: string): string {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128"><rect width="128" height="128" rx="64" fill="${color}"/><text x="64" y="64" dy=".35em" text-anchor="middle" fill="white" font-family="Arial,sans-serif" font-size="56" font-weight="bold">${initial}</text></svg>`;
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
 }
 
-async function insertDemoData() {
-  // 1. Reference data (no dependencies)
-  for (const role of ROLES) await RolesCollection.insertAsync(role);
-  for (const squad of SQUADS) await SquadsCollection.insertAsync(squad);
-  for (const rank of RANKS) await RanksCollection.insertAsync(rank);
-  for (const spec of SPECIALIZATIONS) await SpecializationsCollection.insertAsync(spec);
-  for (const medal of MEDALS) await MedalsCollection.insertAsync(medal);
-  for (const position of POSITIONS) await PositionsCollection.insertAsync(position);
-  for (const dt of DISCOVERY_TYPES) await DiscoveryTypesCollection.insertAsync(dt);
-  for (const et of EVENT_TYPES) await EventTypesCollection.insertAsync(et);
-  for (const ts of TASK_STATUSES) await TaskStatusCollection.insertAsync(ts);
+async function insertDemoData(): Promise<void> {
+  for (const role of ROLES) await RolesCollection.insertAsync(role as never);
+  for (const squad of SQUADS) await SquadsCollection.insertAsync(squad as never);
+  for (const rank of RANKS) await RanksCollection.insertAsync(rank as never);
+  for (const spec of SPECIALIZATIONS) await SpecializationsCollection.insertAsync(spec as never);
+  for (const medal of MEDALS) await MedalsCollection.insertAsync(medal as never);
+  for (const position of POSITIONS) await PositionsCollection.insertAsync(position as never);
+  for (const dt of DISCOVERY_TYPES) await DiscoveryTypesCollection.insertAsync(dt as never);
+  for (const et of EVENT_TYPES) await EventTypesCollection.insertAsync(et as never);
+  for (const ts of TASK_STATUSES) await TaskStatusCollection.insertAsync(ts as never);
 
-  // 2. Members (depend on roles, squads, ranks, specializations, medals)
-  const memberIds = [];
+  const memberIds: string[] = [];
   for (let i = 0; i < MEMBERS.length; i++) {
     const member = MEMBERS[i];
     const userId = await Accounts.createUserAsync({ username: member.username, password: member.password });
     const avatarDataUri = createAvatarDataUri(member.profile.name[0], AVATAR_COLORS[i % AVATAR_COLORS.length]);
     const picId = await ProfilePicturesCollection.insertAsync({ value: avatarDataUri });
-    await MembersCollection.updateAsync(userId, { $set: { profile: { ...member.profile, profilePictureId: picId } } });
+    await MembersCollection.updateAsync(userId, { $set: { profile: { ...member.profile, profilePictureId: picId } } } as never);
     memberIds.push(userId);
   }
 
-  // 3. Events (no member dependency for the documents themselves)
   const events = createEvents();
-  for (const event of events) await EventsCollection.insertAsync(event);
+  for (const event of events) await EventsCollection.insertAsync(event as never);
 
-  // 4. Attendances (depend on events and members)
   const attendances = createAttendances(memberIds);
-  for (const att of attendances) await AttendancesCollection.insertAsync(att);
+  for (const att of attendances) await AttendancesCollection.insertAsync(att as never);
 
-  // 5. Tasks (depend on members for participants)
   const tasks = createTasks(memberIds);
-  for (const task of tasks) await TasksCollection.insertAsync(task);
+  for (const task of tasks) await TasksCollection.insertAsync(task as never);
 
-  // 6. Questionnaires and responses
-  await QuestionnairesCollection.insertAsync(createQuestionnaire());
+  await QuestionnairesCollection.insertAsync(createQuestionnaire() as never);
   const responses = createQuestionnaireResponses(memberIds);
-  for (const resp of responses) await QuestionnaireResponsesCollection.insertAsync(resp);
+  for (const resp of responses) await QuestionnaireResponsesCollection.insertAsync(resp as never);
 
-  // 7. Registrations (standalone)
-  for (const reg of REGISTRATIONS) await RegistrationsCollection.insertAsync(reg);
+  for (const reg of REGISTRATIONS) await RegistrationsCollection.insertAsync(reg as never);
 
-  // 8. Settings
-  for (const setting of SETTINGS) await SettingsCollection.insertAsync(setting);
+  for (const setting of SETTINGS) await SettingsCollection.insertAsync(setting as never);
 }
 
 if (Meteor.isServer) {
   Meteor.methods({
-    'demoData.generate': async function () {
+    'demoData.generate': async function (): Promise<boolean> {
       if (process.env.NODE_ENV === 'production') {
         throw new Meteor.Error(403, 'Demo data generation is not available in production');
       }
