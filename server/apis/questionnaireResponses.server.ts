@@ -4,8 +4,9 @@ import QuestionnaireResponsesCollection from '../../imports/api/collections/ques
 import MembersCollection from '../../imports/api/collections/members.collection';
 import { checkPermission, validateString, validateArray, validateObject } from '../main';
 import { createLog } from './logs.server';
+import type { Answer, Questionnaire, QuestionnaireInterval } from '/imports/api/types';
 
-export function getIntervalCutoffDate(interval) {
+export function getIntervalCutoffDate(interval: QuestionnaireInterval | string | undefined): Date | null {
   if (!interval || interval === 'once') return null;
   if (interval === 'unlimited') return new Date(0);
 
@@ -22,14 +23,20 @@ export function getIntervalCutoffDate(interval) {
   }
 }
 
-export async function canUserRespond(questionnaire, userId) {
+export interface CanRespondResult {
+  canRespond: boolean;
+  reason?: string;
+  nextAllowedDate?: Date;
+}
+
+export async function canUserRespond(questionnaire: Questionnaire, userId: string): Promise<CanRespondResult> {
   if (questionnaire.allowAnonymous) return { canRespond: true };
 
   const interval = questionnaire.interval || 'once';
 
   if (interval === 'unlimited') return { canRespond: true };
 
-  const filter = {
+  const filter: Record<string, unknown> = {
     questionnaireId: questionnaire._id,
     respondentId: userId,
   };
@@ -49,7 +56,7 @@ export async function canUserRespond(questionnaire, userId) {
     return { canRespond: false, reason: 'You have already submitted a response' };
   }
 
-  const nextAllowedDate = new Date(existingResponse.submittedAt);
+  const nextAllowedDate = new Date(existingResponse.submittedAt ?? new Date());
   switch (interval) {
     case 'daily':
       nextAllowedDate.setDate(nextAllowedDate.getDate() + 1);
@@ -69,9 +76,14 @@ export async function canUserRespond(questionnaire, userId) {
   };
 }
 
+interface SubmittedAnswer {
+  questionIndex: number;
+  value: unknown;
+}
+
 if (Meteor.isServer) {
   Meteor.methods({
-    'questionnaireResponses.submit': async function (questionnaireId, answers) {
+    'questionnaireResponses.submit': async function (questionnaireId: string, answers: SubmittedAnswer[]): Promise<string> {
       if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
       validateString(questionnaireId, false);
       validateArray(answers, false);
@@ -83,13 +95,11 @@ if (Meteor.isServer) {
       if (!questionnaire) throw new Meteor.Error(404, 'Questionnaire not found');
       if (questionnaire.status !== 'active') throw new Meteor.Error(400, 'Questionnaire is not active');
 
-      // Check if user can respond based on interval settings
       const { canRespond, reason } = await canUserRespond(questionnaire, this.userId);
       if (!canRespond) {
         throw new Meteor.Error(400, reason);
       }
 
-      // Validate required questions are answered
       const requiredQuestions = (questionnaire.questions || [])
         .map((q, index) => ({ ...q, index }))
         .filter(q => q.required);
@@ -104,7 +114,6 @@ if (Meteor.isServer) {
         }
       }
 
-      // Validate answer types match question types
       for (const answer of answers) {
         const question = questionnaire.questions?.[answer.questionIndex];
         if (!question) continue;
@@ -131,13 +140,12 @@ if (Meteor.isServer) {
         }
       }
 
-      // Build response document with question snapshots
-      const responseAnswers = answers.map(answer => {
+      const responseAnswers: Answer[] = answers.map(answer => {
         const question = questionnaire.questions?.[answer.questionIndex];
         return {
           questionIndex: answer.questionIndex,
           questionText: question?.text || '',
-          questionType: question?.type || '',
+          questionType: question?.type || 'text',
           value: answer.value,
         };
       });
@@ -162,7 +170,7 @@ if (Meteor.isServer) {
       return id;
     },
 
-    'questionnaireResponses.hasResponded': async function (questionnaireId) {
+    'questionnaireResponses.hasResponded': async function (questionnaireId: string): Promise<boolean> {
       if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
       validateString(questionnaireId, false);
 
@@ -177,7 +185,7 @@ if (Meteor.isServer) {
       return !!existingResponse;
     },
 
-    'questionnaireResponses.getForQuestionnaire': async function (questionnaireId, options = {}) {
+    'questionnaireResponses.getForQuestionnaire': async function (questionnaireId: string, options: Record<string, unknown> = {}) {
       if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
       validateString(questionnaireId, false);
       validateObject(options, true);
@@ -190,7 +198,6 @@ if (Meteor.isServer) {
         { sort: { submittedAt: -1 }, ...options }
       ).fetchAsync();
 
-      // Enrich with respondent names
       const enrichedResponses = await Promise.all(
         responses.map(async response => {
           let respondentName = 'Anonymous';
@@ -208,7 +215,7 @@ if (Meteor.isServer) {
       return enrichedResponses;
     },
 
-    'questionnaireResponses.countForQuestionnaire': async function (questionnaireId) {
+    'questionnaireResponses.countForQuestionnaire': async function (questionnaireId: string): Promise<number> {
       if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
       validateString(questionnaireId, false);
 
@@ -218,7 +225,7 @@ if (Meteor.isServer) {
       return await QuestionnaireResponsesCollection.countDocuments({ questionnaireId });
     },
 
-    'questionnaireResponses.revoke': async function (responseId) {
+    'questionnaireResponses.revoke': async function (responseId: string): Promise<boolean> {
       if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
       validateString(responseId, false);
 
@@ -228,12 +235,10 @@ if (Meteor.isServer) {
       const response = await QuestionnaireResponsesCollection.findOneAsync(responseId);
       if (!response) throw new Meteor.Error(404, 'Response not found');
 
-      // Only allow users to revoke their own responses
       if (response.respondentId !== this.userId) {
         throw new Meteor.Error(403, 'You can only revoke your own responses');
       }
 
-      // Anonymous responses cannot be revoked (no way to verify ownership)
       if (!response.respondentId) {
         throw new Meteor.Error(400, 'Anonymous responses cannot be revoked');
       }
@@ -248,11 +253,10 @@ if (Meteor.isServer) {
       return true;
     },
 
-    'questionnaireResponses.setIgnored': async function (responseId, ignored) {
+    'questionnaireResponses.setIgnored': async function (responseId: string, ignored: boolean): Promise<boolean> {
       if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
       validateString(responseId, false);
 
-      // Require update permission for ignoring responses
       const hasPermission = await checkPermission(this.userId, 'questionnaires', 'update');
       if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
 
