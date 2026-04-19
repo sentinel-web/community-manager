@@ -16,11 +16,10 @@ if (Meteor.isServer) {
 
       const result = await Promise.all(
         activeQuestionnaires.map(async questionnaire => {
-          const { canRespond, reason, nextAllowedDate } = await canUserRespond(questionnaire, this.userId);
+          const { canRespond, reason, nextAllowedDate } = await canUserRespond(questionnaire, this.userId!);
 
-          // Get total response count and latest response for this user
           let responseCount = 0;
-          let latestResponseId = null;
+          let latestResponseId: string | null = null;
           if (!questionnaire.allowAnonymous) {
             responseCount = await QuestionnaireResponsesCollection.countDocuments({
               questionnaireId: questionnaire._id,
