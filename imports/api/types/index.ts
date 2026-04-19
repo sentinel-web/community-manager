@@ -7,3 +7,4 @@ export * from './rank';
 export * from './role';
 export * from './questionnaire';
 export * from './misc';
+export * from './crud';
