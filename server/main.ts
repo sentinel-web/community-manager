@@ -297,7 +297,7 @@ function validateRequiredString(string: unknown): asserts string is string {
   }
 }
 
-export function validateString(string: unknown, optional: boolean): asserts string is string {
+export function validateString(string: unknown, optional: boolean = false): asserts string is string {
   if (optional) {
     validateOptionalString(string);
   } else {
@@ -317,7 +317,7 @@ function validateRequiredNumber(number: unknown): asserts number is number {
   }
 }
 
-export function validateNumber(number: unknown, optional: boolean): asserts number is number {
+export function validateNumber(number: unknown, optional: boolean = false): asserts number is number {
   if (optional) {
     validateOptionalNumber(number);
   } else {
@@ -337,7 +337,7 @@ function validateRequiredBoolean(boolean: unknown): asserts boolean is boolean {
   }
 }
 
-export function validateBoolean(boolean: unknown, optional: boolean): asserts boolean is boolean {
+export function validateBoolean(boolean: unknown, optional: boolean = false): asserts boolean is boolean {
   if (optional) {
     validateOptionalBoolean(boolean);
   } else {
@@ -357,7 +357,7 @@ function validateRequiredDate(date: unknown): asserts date is Date {
   }
 }
 
-export function validateDate(date: unknown, optional: boolean): asserts date is Date {
+export function validateDate(date: unknown, optional: boolean = false): asserts date is Date {
   if (optional) {
     validateOptionalDate(date);
   } else {
@@ -377,7 +377,7 @@ function validateRequiredArray(array: unknown): asserts array is unknown[] {
   }
 }
 
-export function validateArray(array: unknown, optional: boolean): asserts array is unknown[] {
+export function validateArray(array: unknown, optional: boolean = false): asserts array is unknown[] {
   if (optional) {
     validateOptionalArray(array);
   } else {
@@ -403,7 +403,7 @@ function validateRequiredArrayOfStrings(array: unknown): asserts array is string
   }
 }
 
-export function validateArrayOfStrings(array: unknown, optional: boolean): asserts array is string[] {
+export function validateArrayOfStrings(array: unknown, optional: boolean = false): asserts array is string[] {
   if (optional) {
     validateOptionalArrayOfStrings(array);
   } else {
@@ -423,7 +423,7 @@ function validateRequiredObject(object: unknown): void {
   }
 }
 
-export function validateObject(object: unknown, optional: boolean): void {
+export function validateObject(object: unknown, optional: boolean = false): void {
   if (optional) {
     validateOptionalObject(object);
   } else {
