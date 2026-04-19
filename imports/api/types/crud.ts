@@ -5,6 +5,7 @@ import type {
   EventType,
   LogEntry,
   Medal,
+  Member,
   Position,
   ProfilePicture,
   Questionnaire,
@@ -25,6 +26,7 @@ export interface CrudCollectionMap {
   eventTypes: EventType;
   logs: LogEntry;
   medals: Medal;
+  members: Member;
   positions: Position;
   profilePictures: ProfilePicture;
   questionnaireResponses: QuestionnaireResponse;

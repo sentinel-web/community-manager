@@ -1,4 +1,5 @@
 import { Meteor } from 'meteor/meteor';
+import type { Mongo } from 'meteor/mongo';
 import {
   validateObject,
   validateString,
@@ -9,10 +10,9 @@ import {
   clearRoleCache,
 } from './main';
 import { createLog } from './apis/logs.server';
+import type { CrudCollectionMap, CrudCollectionName } from '/imports/api/types';
 
-// Special permission fallbacks: when standard CRUD permission is denied,
-// check these role flags as an alternative authorization path
-const SPECIAL_PERMISSION_FALLBACK = {
+const SPECIAL_PERMISSION_FALLBACK: Record<string, { create?: string; update?: string }> = {
   events: { create: 'canCreateEvents' },
   tasks: { create: 'canManageTasks', update: 'canManageTasks' },
 };
@@ -36,67 +36,67 @@ import SquadsCollection from '../imports/api/collections/squads.collection';
 import TasksCollection from '../imports/api/collections/tasks.collection';
 import TaskStatusCollection from '../imports/api/collections/taskStatus.collection';
 
-export function getCollection(collection) {
+export function getCollection<K extends CrudCollectionName>(
+  collection: K,
+): Mongo.Collection<CrudCollectionMap[K]> {
   if (!collection) throw new Meteor.Error(400, 'No collection name');
   switch (collection) {
     case 'attendances':
-      return AttendancesCollection;
+      return AttendancesCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
     case 'discoveryTypes':
-      return DiscoveryTypesCollection;
+      return DiscoveryTypesCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
     case 'events':
-      return EventsCollection;
+      return EventsCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
     case 'eventTypes':
-      return EventTypesCollection;
+      return EventTypesCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
     case 'logs':
-      return LogsCollection;
+      return LogsCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
     case 'medals':
-      return MedalsCollection;
+      return MedalsCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
     case 'members':
-      return MembersCollection;
+      return MembersCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
     case 'positions':
-      return PositionsCollection;
+      return PositionsCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
     case 'profilePictures':
-      return ProfilePicturesCollection;
+      return ProfilePicturesCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
     case 'questionnaires':
-      return QuestionnairesCollection;
+      return QuestionnairesCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
     case 'questionnaireResponses':
-      return QuestionnaireResponsesCollection;
+      return QuestionnaireResponsesCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
     case 'ranks':
-      return RanksCollection;
+      return RanksCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
     case 'registrations':
-      return RegistrationsCollection;
+      return RegistrationsCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
     case 'roles':
-      return RolesCollection;
+      return RolesCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
     case 'specializations':
-      return SpecializationsCollection;
+      return SpecializationsCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
     case 'squads':
-      return SquadsCollection;
+      return SquadsCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
     case 'tasks':
-      return TasksCollection;
+      return TasksCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
     case 'taskStatus':
-      return TaskStatusCollection;
+      return TaskStatusCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
     default:
       throw new Meteor.Error(404, `Collection "${collection}" not found`);
   }
 }
 
-// Default limit for publications to prevent memory exhaustion
 const DEFAULT_PUBLISH_LIMIT = 100;
 const MAX_PUBLISH_LIMIT = 1000;
 
-function createCollectionPublish(collection) {
+function createCollectionPublish(collection: CrudCollectionName): void {
   if (Meteor.isServer) {
     const Collection = getCollection(collection);
-    Meteor.publish(collection, function (filter = {}, options = {}) {
+    Meteor.publish(collection, function (filter: Record<string, unknown> = {}, options: Record<string, unknown> = {}) {
       if (!this.userId) return this.ready();
-      if (validateObject(filter, false)) return this.ready();
-      if (validateObject(options, false)) return this.ready();
+      validateObject(filter, false);
+      validateObject(options, false);
 
-      // Apply default limit if none specified, cap at maximum (immutable)
-      const limitedOptions = { ...options };
+      const limitedOptions: Record<string, unknown> = { ...options };
       if (!limitedOptions.limit) {
         limitedOptions.limit = DEFAULT_PUBLISH_LIMIT;
-      } else if (limitedOptions.limit > MAX_PUBLISH_LIMIT) {
+      } else if ((limitedOptions.limit as number) > MAX_PUBLISH_LIMIT) {
         limitedOptions.limit = MAX_PUBLISH_LIMIT;
       }
 
@@ -105,20 +105,19 @@ function createCollectionPublish(collection) {
   }
 }
 
-function createCollectionMethods(collection) {
+function createCollectionMethods(collection: CrudCollectionName): void {
   try {
     if (Meteor.isServer) {
       const Collection = getCollection(collection);
-      const unsafeCollections = ['registrations'];
+      const unsafeCollections: readonly string[] = ['registrations'];
       const permissionModule = getPermissionModule(collection);
 
       Meteor.methods({
-        [`${collection}.read`]: async function (filter = {}, options = {}) {
+        [`${collection}.read`]: async function (filter: Record<string, unknown> = {}, options: Record<string, unknown> = {}) {
           if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
-          if (validateObject(filter, false)) throw new Meteor.Error(400, 'Invalid filter');
-          if (validateObject(options, false)) throw new Meteor.Error(400, 'Invalid options');
+          validateObject(filter, false);
+          validateObject(options, false);
 
-          // Check read permission
           if (permissionModule) {
             const hasPermission = await checkPermission(this.userId, permissionModule, 'read');
             if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
@@ -126,11 +125,10 @@ function createCollectionMethods(collection) {
 
           return await Collection.find(filter, options).fetchAsync();
         },
-        [`${collection}.insert`]: async function (payload = {}) {
+        [`${collection}.insert`]: async function (payload: Record<string, unknown> = {}) {
           if (!this.userId && !unsafeCollections.includes(collection)) throw new Meteor.Error(401, 'Unauthorized');
-          if (validateObject(payload, false)) throw new Meteor.Error(400, 'Invalid payload');
+          validateObject(payload, false);
 
-          // Check create permission (skip for unsafe collections like registrations)
           if (permissionModule && this.userId) {
             const hasPermission = await checkPermission(this.userId, permissionModule, 'create');
             if (!hasPermission) {
@@ -143,18 +141,17 @@ function createCollectionMethods(collection) {
           if (collection === 'tasks') {
             payload.createdAt = new Date();
           }
-          const id = await Collection.insertAsync(payload);
+          const id = await Collection.insertAsync(payload as unknown as CrudCollectionMap[typeof collection]);
           if (collection !== 'logs') {
             await createLog(`${collection}.created`, { id, ...payload });
           }
           return id;
         },
-        [`${collection}.update`]: async function (id = '', data = {}) {
+        [`${collection}.update`]: async function (id: string = '', data: Record<string, unknown> = {}) {
           if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
-          if (validateString(id, false)) throw new Meteor.Error(400, 'Invalid id');
-          if (validateObject(data, false)) throw new Meteor.Error(400, 'Invalid data');
+          validateString(id, false);
+          validateObject(data, false);
 
-          // Check update permission
           if (permissionModule) {
             const hasPermission = await checkPermission(this.userId, permissionModule, 'update');
             if (!hasPermission) {
@@ -164,23 +161,21 @@ function createCollectionMethods(collection) {
             }
           }
 
-          const result = await Collection.updateAsync({ _id: id }, { $set: data });
+          const result = await Collection.updateAsync({ _id: id } as never, { $set: data } as never);
           if (collection !== 'logs') {
             await createLog(`${collection}.updated`, { id, changes: data });
           }
 
-          // Clear role cache when roles are updated
           if (collection === 'roles') {
             clearRoleCache(id);
           }
 
           return result;
         },
-        [`${collection}.remove`]: async function (id = '') {
+        [`${collection}.remove`]: async function (id: string = '') {
           if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
-          if (validateString(id, false)) throw new Meteor.Error(400, 'Invalid id');
+          validateString(id, false);
 
-          // Check delete permission
           if (permissionModule) {
             const hasPermission = await checkPermission(this.userId, permissionModule, 'delete');
             if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
@@ -188,21 +183,20 @@ function createCollectionMethods(collection) {
 
           const doc = await Collection.findOneAsync(id);
           if (!doc) throw new Meteor.Error(404, 'Document not found');
-          const result = await Collection.removeAsync({ _id: id });
+          const result = await Collection.removeAsync({ _id: id } as never);
           if (collection !== 'logs') {
             await createLog(`${collection}.deleted`, { id });
           }
 
-          // Clear role cache when roles are deleted
           if (collection === 'roles') {
             clearRoleCache(id);
           }
 
           return result;
         },
-        [`${collection}.bulkRemove`]: async function (ids = []) {
+        [`${collection}.bulkRemove`]: async function (ids: string[] = []) {
           if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
-          if (validateArrayOfStrings(ids, false)) throw new Meteor.Error(400, 'Invalid ids');
+          validateArrayOfStrings(ids, false);
           if (ids.length === 0) throw new Meteor.Error(400, 'No ids provided');
           if (ids.length > 100) throw new Meteor.Error(400, 'Maximum 100 items per bulk delete');
 
@@ -212,7 +206,7 @@ function createCollectionMethods(collection) {
           }
 
           let removed = 0;
-          const errors = [];
+          const errors: string[] = [];
 
           for (const id of ids) {
             try {
@@ -221,7 +215,7 @@ function createCollectionMethods(collection) {
                 errors.push(`Document ${id} not found`);
                 continue;
               }
-              await Collection.removeAsync({ _id: id });
+              await Collection.removeAsync({ _id: id } as never);
               if (collection !== 'logs') {
                 await createLog(`${collection}.deleted`, { id });
               }
@@ -230,17 +224,16 @@ function createCollectionMethods(collection) {
               }
               removed++;
             } catch (error) {
-              errors.push(`Failed to delete ${id}: ${error.message}`);
+              errors.push(`Failed to delete ${id}: ${(error as Error).message}`);
             }
           }
 
           return { removed, errors };
         },
-        [`${collection}.count`]: async function (filter = {}) {
+        [`${collection}.count`]: async function (filter: Record<string, unknown> = {}) {
           if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
-          if (validateObject(filter, false)) throw new Meteor.Error(400, 'Invalid filter');
+          validateObject(filter, false);
 
-          // Check read permission for count
           if (permissionModule) {
             const hasPermission = await checkPermission(this.userId, permissionModule, 'read');
             if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
@@ -248,27 +241,26 @@ function createCollectionMethods(collection) {
 
           return await Collection.countDocuments(filter);
         },
-        [`${collection}.options`]: async function (filter = {}, options = {}) {
+        [`${collection}.options`]: async function (filter: Record<string, unknown> = {}, options: Record<string, unknown> = {}) {
           if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
-          if (validateObject(filter, false)) throw new Meteor.Error(400, 'Invalid filter');
-          if (validateObject(options, false)) throw new Meteor.Error(400, 'Invalid options');
+          validateObject(filter, false);
+          validateObject(options, false);
 
-          // Check read permission for options
           if (permissionModule) {
             const hasPermission = await checkPermission(this.userId, permissionModule, 'read');
             if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
           }
 
-          return await Collection.find(filter, options).mapAsync(item => {
-            const name = item.profile?.name || item.name;
+          return await Collection.find(filter, options).mapAsync((item: any) => {
+            const profile = item.profile as { name?: string } | undefined;
+            const name = profile?.name || (item.name as string | undefined);
             return { key: item._id, label: name, title: name, value: item._id, raw: item };
           });
         },
       });
     }
   } catch (error) {
-    // Log error for debugging - method registration failures are critical
-    createLog('crud.methodCreationError', { collection, error: error.message });
+    createLog('crud.methodCreationError', { collection, error: (error as Error).message });
   }
 }
 

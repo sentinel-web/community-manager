@@ -1,3 +1,11 @@
+declare module 'meteor/mongo' {
+  namespace Mongo {
+    interface Collection<T, U = T> {
+      countDocuments(selector?: Selector<T> | Record<string, unknown>): Promise<number>;
+    }
+  }
+}
+
 declare module 'meteor/meteor' {
   namespace Meteor {
     interface UserProfile {

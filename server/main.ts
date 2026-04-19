@@ -7,7 +7,7 @@ import MembersCollection from '../imports/api/collections/members.collection';
 import RegistrationsCollection from '../imports/api/collections/registrations.collection';
 import RolesCollection from '../imports/api/collections/roles.collection';
 import TasksCollection from '../imports/api/collections/tasks.collection';
-import type { Role } from '/imports/api/types';
+import type { CrudCollectionName, Role } from '/imports/api/types';
 import './apis/backup.server';
 import './apis/dashboard.server';
 import './apis/demoData.server';
@@ -249,7 +249,7 @@ if (Meteor.isServer) {
   });
 }
 
-const collectionNames: readonly string[] = [
+const collectionNames: readonly CrudCollectionName[] = [
   'attendances',
   'discoveryTypes',
   'eventTypes',
@@ -267,7 +267,7 @@ const collectionNames: readonly string[] = [
   'tasks',
 ];
 
-const methodOnlyCollections: readonly string[] = ['events'];
+const methodOnlyCollections: readonly CrudCollectionName[] = ['events'];
 
 if (Meteor.isServer) {
   for (const collectionName of collectionNames) {
