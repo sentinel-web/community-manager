@@ -2,7 +2,7 @@ import { Meteor } from 'meteor/meteor';
 import LogsCollection from '../../imports/api/collections/logs.collection';
 import { checkPermission, validateObject, validateString, validateUserId } from '../main';
 
-export async function createLog(action, payload = {}) {
+export async function createLog(action: string, payload: Record<string, unknown> = {}): Promise<string> {
   const now = new Date();
   return await LogsCollection.insertAsync({
     action,
