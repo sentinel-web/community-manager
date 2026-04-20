@@ -4,13 +4,18 @@ import React, { useCallback, useState } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import RegistrationModal from '../registration/RegistrationModal';
 
+interface LoginValues {
+  username: string;
+  password: string;
+}
+
 export default function Login() {
   const { t } = useTranslation();
   const { notification } = App.useApp();
   const [open, setOpen] = useState(false);
 
   const handleSubmit = useCallback(
-    values => {
+    (values: LoginValues) => {
       const { username, password } = values;
       Meteor.loginWithPassword({ username }, password, error => {
         if (error) {
