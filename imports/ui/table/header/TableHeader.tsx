@@ -1,9 +1,22 @@
 import { Button, Col, Input, Row } from 'antd';
-import PropTypes from 'prop-types';
-import React from 'react';
+import React, { ChangeEvent, ReactNode } from 'react';
 import { useTranslation } from '../../../i18n/LanguageContext';
 
-export default function TableHeader({ handleChange = () => {}, value = '', handleCreate = () => {}, extra = <></>, canCreate = true }) {
+interface TableHeaderProps {
+  handleChange?: (event: ChangeEvent<HTMLInputElement>) => void;
+  value?: string;
+  handleCreate?: () => void;
+  extra?: ReactNode;
+  canCreate?: boolean;
+}
+
+export default function TableHeader({
+  handleChange = () => {},
+  value = '',
+  handleCreate = () => {},
+  extra = <></>,
+  canCreate = true,
+}: TableHeaderProps) {
   const { t } = useTranslation();
 
   return (
@@ -22,10 +35,3 @@ export default function TableHeader({ handleChange = () => {}, value = '', handl
     </Row>
   );
 }
-TableHeader.propTypes = {
-  handleChange: PropTypes.func,
-  value: PropTypes.string,
-  handleCreate: PropTypes.func,
-  extra: PropTypes.node,
-  canCreate: PropTypes.bool,
-};

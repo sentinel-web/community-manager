@@ -1,10 +1,24 @@
 import { Alert, Button, Space } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
-import PropTypes from 'prop-types';
 import React from 'react';
 import { useTranslation } from '../../../i18n/LanguageContext';
+import type { BoundGroupAction } from '../../section/types';
 
-export default function GroupActionsBar({ selectedCount = 0, onDelete, groupActions = [], onClearSelection, loading = false }) {
+interface GroupActionsBarProps {
+  selectedCount?: number;
+  onDelete?: () => void;
+  groupActions?: BoundGroupAction[];
+  onClearSelection?: () => void;
+  loading?: boolean;
+}
+
+export default function GroupActionsBar({
+  selectedCount = 0,
+  onDelete,
+  groupActions = [],
+  onClearSelection,
+  loading = false,
+}: GroupActionsBarProps) {
   const { t } = useTranslation();
 
   const actions = (
@@ -26,24 +40,6 @@ export default function GroupActionsBar({ selectedCount = 0, onDelete, groupActi
   );
 
   return (
-    <Alert
-      type="info"
-      message={t('common.selectedCount', { count: selectedCount })}
-      action={actions}
-      style={{ marginBottom: 16 }}
-    />
+    <Alert type="info" message={t('common.selectedCount', { count: selectedCount })} action={actions} style={{ marginBottom: 16 }} />
   );
 }
-GroupActionsBar.propTypes = {
-  selectedCount: PropTypes.number,
-  onDelete: PropTypes.func,
-  groupActions: PropTypes.arrayOf(
-    PropTypes.shape({
-      key: PropTypes.string.isRequired,
-      label: PropTypes.string.isRequired,
-      handler: PropTypes.func.isRequired,
-    })
-  ),
-  onClearSelection: PropTypes.func,
-  loading: PropTypes.bool,
-};

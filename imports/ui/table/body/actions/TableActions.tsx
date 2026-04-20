@@ -1,9 +1,26 @@
 import { App, Button, Col, Row } from 'antd';
-import PropTypes from 'prop-types';
-import React, { useCallback } from 'react';
+import React, { ComponentType, MouseEvent, useCallback } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 
-export default function TableActions({ record, handleDelete, handleEdit, extra, canUpdate = true, canDelete = true }) {
+type ClickEvent = MouseEvent<HTMLElement>;
+
+interface TableActionsProps<T> {
+  record: T;
+  handleDelete: (e: ClickEvent, record: T) => void;
+  handleEdit: (e: ClickEvent, record: T) => void;
+  extra?: ComponentType<{ record: T }>;
+  canUpdate?: boolean;
+  canDelete?: boolean;
+}
+
+export default function TableActions<T>({
+  record,
+  handleDelete,
+  handleEdit,
+  extra,
+  canUpdate = true,
+  canDelete = true,
+}: TableActionsProps<T>) {
   const { modal } = App.useApp();
   const { t } = useTranslation();
   const styles = {
@@ -12,7 +29,7 @@ export default function TableActions({ record, handleDelete, handleEdit, extra, 
     },
   };
   const handleRemove = useCallback(
-    e => {
+    (e: ClickEvent) => {
       modal.confirm({
         title: t('modals.deleteEntry'),
         content: t('modals.deleteEntryConfirm'),
@@ -27,7 +44,6 @@ export default function TableActions({ record, handleDelete, handleEdit, extra, 
     [modal, handleDelete, record, t]
   );
 
-  // Don't render anything if no actions are available
   if (!canUpdate && !canDelete && !extra) {
     return null;
   }
@@ -43,7 +59,7 @@ export default function TableActions({ record, handleDelete, handleEdit, extra, 
       )}
       {canDelete && (
         <Col flex="auto">
-          <Button style={styles.button} onClick={e => handleRemove(e, record)} danger>
+          <Button style={styles.button} onClick={e => handleRemove(e)} danger>
             {t('common.delete')}
           </Button>
         </Col>
@@ -52,11 +68,3 @@ export default function TableActions({ record, handleDelete, handleEdit, extra, 
     </Row>
   );
 }
-TableActions.propTypes = {
-  record: PropTypes.any,
-  handleDelete: PropTypes.func,
-  handleEdit: PropTypes.func,
-  extra: PropTypes.any,
-  canUpdate: PropTypes.bool,
-  canDelete: PropTypes.bool,
-};

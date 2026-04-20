@@ -1,9 +1,14 @@
 import { Button, Col, Row } from 'antd';
-import PropTypes from 'prop-types';
 import React from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 
-const FormFooter = ({ setOpen, cancelText, submitText }) => {
+interface FormFooterProps {
+  setOpen: (open: boolean) => void;
+  cancelText?: string;
+  submitText?: string;
+}
+
+const FormFooter = ({ setOpen, cancelText, submitText }: FormFooterProps) => {
   const { t } = useTranslation();
 
   return (
@@ -20,11 +25,6 @@ const FormFooter = ({ setOpen, cancelText, submitText }) => {
       </Col>
     </Row>
   );
-};
-FormFooter.propTypes = {
-  setOpen: PropTypes.func,
-  cancelText: PropTypes.string,
-  submitText: PropTypes.string,
 };
 
 export default FormFooter;
