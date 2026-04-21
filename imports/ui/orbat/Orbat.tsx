@@ -1,19 +1,34 @@
 import { App, Card, Descriptions, Empty, Popover, Select, Space, Typography } from 'antd';
+import type { DescriptionsProps } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import PropTypes from 'prop-types';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Tree, TreeNode } from 'react-organizational-chart';
 import getLegibleTextColor from '../../helpers/colors/getLegibleTextColor';
 import { useTranslation } from '../../i18n/LanguageContext';
+import type { LanguageContextValue } from '../../i18n/LanguageContext';
+import type { Squad } from '/imports/api/types';
 import { turnBase64ToImage } from '../profile-picture-input/ProfilePictureInput';
 import useTheme from '../theme/theme.hook';
 import { useTourRef } from '../tour/TourContext';
 
+interface OrbatNode {
+  id: string;
+  name: string;
+  descritpion: string;
+  info?: string;
+  parentId?: string;
+  src: string | null;
+  color?: string;
+  children: OrbatNode[];
+}
+
+type OrbatPopoverItem = NonNullable<DescriptionsProps['items']>[number];
+
 export default function Orbat() {
   const { message } = App.useApp();
   const [ready, setReady] = useState(true);
-  const [squads, setSquads] = useState([]);
-  const [options, setOptions] = useState([]);
+  const [squads, setSquads] = useState<Squad[]>([]);
+  const [options, setOptions] = useState<OrbatNode[]>([]);
   const [viewType, setViewType] = useState('simple');
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -22,7 +37,7 @@ export default function Orbat() {
   useEffect(() => {
     setReady(false);
     Meteor.callAsync('orbat.squads')
-      .then(squads => {
+      .then((squads: Squad[]) => {
         setSquads(squads);
         setReady(true);
       })
@@ -32,27 +47,21 @@ export default function Orbat() {
       });
   }, [message]);
 
-  const findParentRecursive = useCallback((options, parentId) => {
-    if (!parentId) {
-      return null;
-    }
+  const findParentRecursive = useCallback((options: OrbatNode[], parentId: string | undefined): OrbatNode | null => {
+    if (!parentId) return null;
     for (const o of options) {
-      if (o.id === parentId) {
-        return o;
-      }
+      if (o.id === parentId) return o;
       const found = findParentRecursive(o.children, parentId);
-      if (found) {
-        return found;
-      }
+      if (found) return found;
     }
     return null;
   }, []);
 
-  const getOptions = useCallback(async () => {
-    const preparedOrbatOptions = [];
-    const roots = [];
-    const parents = [];
-    const children = [];
+  const getOptions = useCallback(async (): Promise<OrbatNode[]> => {
+    const preparedOrbatOptions: OrbatNode[] = [];
+    const roots: Squad[] = [];
+    const parents: Squad[] = [];
+    const children: Squad[] = [];
     for (const squad of squads) {
       if (!squad.parentSquadId && !roots.find(s => s._id === squad._id)) {
         roots.push(squad);
@@ -63,10 +72,10 @@ export default function Orbat() {
       }
     }
 
-    const prepareData = async squad => {
+    const prepareData = async (squad: Squad) => {
       const src = squad.image ? (await turnBase64ToImage(squad.image)).src : null;
-      const data = {
-        id: squad._id,
+      const data: OrbatNode = {
+        id: squad._id ?? '',
         name: squad.name,
         descritpion: `(SR: ${squad.shortRangeFrequency || 'N/A'} Mhz)`,
         info: squad.description,
@@ -86,7 +95,6 @@ export default function Orbat() {
     for (const squad of [...roots, ...parents, ...children]) {
       await prepareData(squad);
     }
-
     return preparedOrbatOptions;
   }, [squads, findParentRecursive]);
 
@@ -95,7 +103,7 @@ export default function Orbat() {
   }, [getOptions]);
 
   const mapOption = useCallback(
-    option => {
+    (option: OrbatNode) => {
       return (
         <TreeNode key={option.id} label={<ORBAT_Label option={option} viewType={viewType} />}>
           {option.children?.map(mapOption)}
@@ -106,7 +114,7 @@ export default function Orbat() {
   );
 
   return (
-    <div ref={chartRef}>
+    <div ref={chartRef as React.RefObject<HTMLDivElement>}>
       <Card
         loading={!ready}
         title={<Typography.Title level={3}>{t('orbat.title')}</Typography.Title>}
@@ -127,7 +135,13 @@ export default function Orbat() {
   );
 }
 
-const OrbatViewSelector = ({ viewType, handleChange, t }) => {
+interface OrbatViewSelectorProps {
+  viewType: string;
+  handleChange: (value: string) => void;
+  t: LanguageContextValue['t'];
+}
+
+const OrbatViewSelector = ({ viewType, handleChange, t }: OrbatViewSelectorProps) => {
   const viewTypes = useMemo(
     () => [
       { value: 'simple', label: t('orbat.simple') },
@@ -137,19 +151,19 @@ const OrbatViewSelector = ({ viewType, handleChange, t }) => {
   );
   return <Select style={{ minWidth: 125 }} value={viewType} onChange={handleChange} options={viewTypes} optionFilterProp="label" showSearch />;
 };
-OrbatViewSelector.propTypes = {
-  viewType: PropTypes.string,
-  handleChange: PropTypes.func,
-  t: PropTypes.func,
-};
 
-const ORBAT_Label = ({ option, viewType }) => {
-  const [items, setItems] = useState([]);
+interface ORBAT_LabelProps {
+  option: OrbatNode;
+  viewType: string;
+}
+
+const ORBAT_Label = ({ option, viewType }: ORBAT_LabelProps) => {
+  const [items, setItems] = useState<OrbatPopoverItem[]>([]);
 
   useEffect(() => {
     let isMounted = true;
     Meteor.callAsync('orbat.popover.items', option.id)
-      .then(data => {
+      .then((data: OrbatPopoverItem[]) => {
         if (isMounted) setItems(data);
       })
       .catch(() => {});
@@ -163,12 +177,13 @@ const ORBAT_Label = ({ option, viewType }) => {
   }
   return <ORBAT_SimpleLabel option={option} items={items} />;
 };
-ORBAT_Label.propTypes = {
-  option: PropTypes.object,
-  viewType: PropTypes.string,
-};
 
-const ORBAT_SimpleLabel = ({ option, items }) => {
+interface ORBAT_SimpleLabelProps {
+  option: OrbatNode;
+  items: OrbatPopoverItem[];
+}
+
+const ORBAT_SimpleLabel = ({ option, items }: ORBAT_SimpleLabelProps) => {
   const hoverStyle = { cursor: 'pointer' };
 
   return (
@@ -188,7 +203,7 @@ const ORBAT_SimpleLabel = ({ option, items }) => {
       >
         <img
           style={{ ...hoverStyle, maxWidth: '128px', aspectRatio: '1/1', objectFit: 'contain' }}
-          src={option.src}
+          src={option.src ?? undefined}
           alt="-"
           title={option.info || option.name}
         />
@@ -204,12 +219,13 @@ const ORBAT_SimpleLabel = ({ option, items }) => {
     </div>
   );
 };
-ORBAT_SimpleLabel.propTypes = {
-  option: PropTypes.object,
-  items: PropTypes.array,
-};
 
-const ORBAT_AdvancedLabel = ({ option, items }) => {
+interface ORBAT_AdvancedLabelProps {
+  option: OrbatNode;
+  items: OrbatPopoverItem[];
+}
+
+const ORBAT_AdvancedLabel = ({ option, items }: ORBAT_AdvancedLabelProps) => {
   const { t } = useTranslation();
   const bgColor = option.color;
   const textColor = bgColor ? getLegibleTextColor(bgColor) : undefined;
@@ -236,8 +252,4 @@ const ORBAT_AdvancedLabel = ({ option, items }) => {
       </Space>
     </Card>
   );
-};
-ORBAT_AdvancedLabel.propTypes = {
-  option: PropTypes.object,
-  items: PropTypes.array,
 };
