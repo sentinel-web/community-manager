@@ -30,13 +30,9 @@ interface BackupData {
 }
 
 // Wire format: mirrors the return shape of backup.validate
-interface ValidationResult {
-  valid: boolean;
-  error?: string;
-  version?: string;
-  timestamp?: string;
-  meta?: BackupMeta;
-}
+type ValidationResult =
+  | { valid: true; version: string; timestamp: string; meta: BackupMeta }
+  | { valid: false; error: string };
 
 // Wire format: mirrors RestoreResult from server/apis/backup.server.ts
 interface RestoreResult {
@@ -51,7 +47,7 @@ export default function Backup() {
   const [loading, setLoading] = useState(false);
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
   const [backupData, setBackupData] = useState<BackupData | null>(null);
-  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [validationResult, setValidationResult] = useState<Extract<ValidationResult, { valid: true }> | null>(null);
   const [restoring, setRestoring] = useState(false);
   const [createSafetyBackup, setCreateSafetyBackup] = useState(true);
   const [safetyBackupData, setSafetyBackupData] = useState<BackupData | null>(null);
@@ -87,7 +83,7 @@ export default function Backup() {
     }
   }, [t]);
 
-  const handleFileUpload = useCallback(async (file: RcFile) => {
+  const handleFileUpload = useCallback(async (file: RcFile): Promise<false | undefined> => {
     // Validate file size
     if (file.size > MAX_BACKUP_SIZE) {
       message.error(t('backup.fileTooLarge'));
@@ -274,7 +270,7 @@ function BackupSection({ loading, onBackup, t }: BackupSectionProps) {
 }
 
 interface RestoreSectionProps {
-  onFileUpload: (file: RcFile) => boolean | Promise<boolean | undefined>;
+  onFileUpload: (file: RcFile) => Promise<false | undefined>;
   t: LanguageContextValue['t'];
 }
 
@@ -313,7 +309,7 @@ function RestoreSection({ onFileUpload, t }: RestoreSectionProps) {
 
 interface RestoreConfirmModalProps {
   open: boolean;
-  validationResult: ValidationResult | null;
+  validationResult: Extract<ValidationResult, { valid: true }> | null;
   restoring: boolean;
   createSafetyBackup: boolean;
   onCreateSafetyBackupChange: (checked: boolean) => void;
@@ -361,11 +357,11 @@ function RestoreConfirmModal({ open, validationResult, restoring, createSafetyBa
             <Descriptions bordered size="small" column={1}>
               <Descriptions.Item label={t('backup.version')}>{validationResult.version}</Descriptions.Item>
               <Descriptions.Item label={t('backup.created')}>{validationResult.timestamp ? dayjs(validationResult.timestamp).format('YYYY-MM-DD HH:mm:ss') : 'Unknown'}</Descriptions.Item>
-              <Descriptions.Item label={t('backup.totalDocuments')}>{validationResult.meta?.totalDocuments || 0}</Descriptions.Item>
+              <Descriptions.Item label={t('backup.totalDocuments')}>{validationResult.meta.totalDocuments || 0}</Descriptions.Item>
             </Descriptions>
           </Col>
         )}
-        {validationResult?.meta?.collectionCounts && (
+        {validationResult && validationResult.meta.collectionCounts && (
           <Col span={24}>
             <Typography.Title level={5}>{t('backup.collectionCounts')}</Typography.Title>
             <Descriptions bordered size="small" column={2}>
