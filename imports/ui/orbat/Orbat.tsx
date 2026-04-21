@@ -1,5 +1,4 @@
 import { App, Card, Descriptions, Empty, Popover, Select, Space, Typography } from 'antd';
-import type { DescriptionsProps } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Tree, TreeNode } from 'react-organizational-chart';
@@ -22,7 +21,10 @@ interface OrbatNode {
   children: OrbatNode[];
 }
 
-type OrbatPopoverItem = NonNullable<DescriptionsProps['items']>[number];
+interface OrbatPopoverItem {
+  label: string;
+  children: string;
+}
 
 export default function Orbat() {
   const { message } = App.useApp();
