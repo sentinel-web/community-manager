@@ -2,15 +2,13 @@ import React, { useCallback } from 'react';
 import { Select } from 'antd';
 import { GlobalOutlined } from '@ant-design/icons';
 import { useLanguage } from '../../i18n/LanguageContext';
+import type { Locale } from '../../i18n';
 
-/**
- * Language selector dropdown component
- */
 export default function LanguageSelector() {
   const { language, setLanguage, locales, t } = useLanguage();
 
   const handleChange = useCallback(
-    value => {
+    (value: Locale) => {
       setLanguage(value);
     },
     [setLanguage]

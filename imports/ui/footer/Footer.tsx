@@ -1,5 +1,6 @@
 import { DownOutlined, IdcardOutlined, LockFilled, LogoutOutlined } from '@ant-design/icons';
 import { App, Avatar, Button, Col, Dropdown, Form, Grid, Input, List, Modal, Row, Typography } from 'antd';
+import type { DropdownProps } from 'antd';
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
 import { useTracker } from 'meteor/react-meteor-data';
@@ -7,12 +8,17 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import ProfileModal from '../members/ProfileModal';
 
+interface ChangePasswordValues {
+  oldPassword: string;
+  newPassword: string;
+}
+
 export default function Footer() {
   const breakpoints = Grid.useBreakpoint();
   const user = useTracker(() => Meteor.user(), []);
   const { modal, message } = App.useApp();
   const { t } = useTranslation();
-  const [imageSrc, setImageSrc] = useState(null);
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [showProfile, setShowProfile] = useState(false);
 
   const toggleProfile = useCallback(() => {
@@ -35,7 +41,7 @@ export default function Footer() {
   }, [user?.profile?.profilePictureId]);
 
   const startChangePassword = useCallback(() => {
-    function handleSubmit({ oldPassword, newPassword }) {
+    function handleSubmit({ oldPassword, newPassword }: ChangePasswordValues) {
       Accounts.changePassword(oldPassword, newPassword, error => {
         if (error) {
           message.error({ content: error.message });
@@ -92,7 +98,7 @@ export default function Footer() {
                     <Row>
                       <Col span={24}>
                         <Typography.Text strong ellipsis>
-                          {item.profile.name}
+                          {item.profile?.name}
                         </Typography.Text>
                       </Col>
                       <Col span={24}>
@@ -110,7 +116,7 @@ export default function Footer() {
       </Col>
       <Col>
         <Dropdown
-          placement="right"
+          placement={'right' as unknown as DropdownProps['placement']}
           trigger={['click']}
           menu={{
             items: [

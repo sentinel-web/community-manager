@@ -1,9 +1,15 @@
 import { Button, Col, Row } from 'antd';
-import PropTypes from 'prop-types';
 import React from 'react';
 import { useTranslation } from '../../../i18n/LanguageContext';
 
-export default function TableFooter({ count = 0, ready = false, handleLoadMore, disabled = false }) {
+interface TableFooterProps {
+  count?: number;
+  ready?: boolean;
+  handleLoadMore?: () => void;
+  disabled?: boolean;
+}
+
+export default function TableFooter({ count = 0, ready = false, handleLoadMore, disabled = false }: TableFooterProps) {
   const { t } = useTranslation();
 
   return (
@@ -15,13 +21,9 @@ export default function TableFooter({ count = 0, ready = false, handleLoadMore, 
           </Button>
         </Col>
       )}
-      <Col>{t('common.total')}: {!ready ? t('common.loading') : count}</Col>
+      <Col>
+        {t('common.total')}: {!ready ? t('common.loading') : count}
+      </Col>
     </Row>
   );
 }
-TableFooter.propTypes = {
-  count: PropTypes.number,
-  ready: PropTypes.bool,
-  handleLoadMore: PropTypes.func,
-  disabled: PropTypes.bool,
-};

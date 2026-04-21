@@ -21,34 +21,27 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import { Button, Dropdown, Grid } from 'antd';
+import type { MenuProps } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
 import React, { useCallback, useEffect, useMemo } from 'react';
 import RolesCollection from '../../api/collections/roles.collection';
+import type { Role } from '../../api/types';
 import useNavigation from './navigation.hook';
 import { useTranslation } from '../../i18n/LanguageContext';
 
-/**
- * Checks if a role has access to a module.
- * Handles both boolean permissions (true/false) and CRUD object permissions.
- * For CRUD modules, access means having at least `read` permission.
- * @param {object} role - The role object containing permission definitions.
- * @param {string} module - The module name to check access for.
- * @returns {boolean} True if the role has access to the module.
- */
-function hasAccess(role, module) {
+type PermissionModule = keyof Role;
+
+function hasAccess(role: Role | undefined, module: PermissionModule): boolean {
   if (!role) return false;
 
-  // Admin bypass: roles === true grants access to all modules
   if (role.roles === true) return true;
 
   const permission = role[module];
 
-  // Boolean permission (true/false)
   if (permission === true) return true;
   if (permission === false || permission === undefined) return false;
 
-  // CRUD object permission - check for read access
   if (typeof permission === 'object' && permission !== null) {
     return permission.read === true;
   }
@@ -56,12 +49,7 @@ function hasAccess(role, module) {
   return false;
 }
 
-/**
- * Determines the current navigation value based on the URL pathname.
- * Parses window.location.pathname to identify which section is active.
- * @returns {string} The navigation key corresponding to the current route (e.g., 'dashboard', 'events', 'members').
- */
-export function getNavigationValue() {
+export function getNavigationValue(): string {
   const pathname = window.location.pathname;
   if (pathname === '/') {
     return 'dashboard';
@@ -129,11 +117,6 @@ export function getNavigationValue() {
   return 'dashboard';
 }
 
-/**
- * Navigation dropdown component.
- * Renders a dropdown menu with navigation items based on user permissions.
- * No props - uses Meteor reactive data and NavigationContext internally.
- */
 export default function Navigation() {
   const breakpoints = Grid.useBreakpoint();
   const user = useTracker(() => Meteor.user(), []);
@@ -152,18 +135,18 @@ export default function Navigation() {
   }, [navigationValue, setNavigationValue]);
 
   const handleNavigationClick = useCallback(
-    ({ key }) => {
+    ({ key }: { key: string }) => {
       setNavigationValue(key);
-      window.history.pushState(null, null, `${window.location.origin}/${key}`);
+      window.history.pushState(null, '', `${window.location.origin}/${key}`);
     },
     [setNavigationValue]
   );
 
-  useSubscribe('roles', { _id: user?.profile?.roleId ?? null }, { limit: 1 });
-  const roles = useFind(() => RolesCollection.find({ _id: user?.profile?.roleId ?? null }, { limit: 1 }), [user?.profile?.roleId]);
+  useSubscribe('roles', { _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 });
+  const roles = useFind(() => RolesCollection.find({ _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 }), [user?.profile?.roleId]);
   const items = useMemo(() => {
     const role = roles?.[0];
-    const newItems = [];
+    const newItems: NonNullable<MenuProps['items']> = [];
     if (!role) {
       return [];
     }
@@ -345,10 +328,10 @@ export default function Navigation() {
     <nav>
       {user && (
         <Dropdown
-          trigger="click"
+          trigger={['click']}
           menu={{
             selectedKeys: [navigationValue],
-            items: items,
+            items,
             onClick: handleNavigationClick,
           }}
         >

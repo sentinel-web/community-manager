@@ -7,14 +7,19 @@ import useSettings from '../settings/settings.hook';
 import Title from '../title/Title';
 import { useTourRef } from '../tour/TourContext';
 
+interface CommunitySettings {
+  communityTitle?: string;
+  communityLogo?: string;
+}
+
 export default function Header() {
-  const { communityTitle, communityLogo } = useSettings();
+  const { communityTitle, communityLogo } = useSettings() as CommunitySettings;
   const breakpoints = Grid.useBreakpoint();
   const headerRef = useTourRef('header-controls');
 
   useEffect(() => {
     if (communityLogo) {
-      document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach(link => {
+      document.querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="apple-touch-icon"]').forEach(link => {
         link.href = communityLogo;
       });
     }
@@ -35,13 +40,13 @@ export default function Header() {
           </Col>
           {breakpoints.lg && (
             <Col flex="auto">
-              <Title text={communityTitle?.length > 0 ? communityTitle : undefined} />
+              <Title text={communityTitle && communityTitle.length > 0 ? communityTitle : undefined} />
             </Col>
           )}
         </Row>
       </Col>
       <Col>
-        <div ref={headerRef} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div ref={headerRef as React.RefObject<HTMLDivElement>} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <LanguageSelector />
           <Navigation />
         </div>

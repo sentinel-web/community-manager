@@ -1,6 +1,23 @@
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+import type { LanguageContextValue } from '../../i18n/LanguageContext';
+import type { TourContextValue } from './TourContext';
 
-export default function getTourSteps(t, refs, actions) {
+type TranslateFn = LanguageContextValue['t'];
+type RefsRef = TourContextValue['refs'];
+type ActionsRef = TourContextValue['actions'];
+
+export interface TourStep {
+  title: string;
+  description: string;
+  target: () => HTMLElement | null | undefined;
+  page: string | null;
+  refKey: string;
+  action?: (actions: ActionsRef) => void | Promise<void>;
+  cleanup?: (actions: ActionsRef) => void;
+}
+
+const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
+
+export default function getTourSteps(t: TranslateFn, refs: RefsRef, actions: ActionsRef): TourStep[] {
   return [
     {
       title: t('tour.step1Title'),
@@ -23,14 +40,14 @@ export default function getTourSteps(t, refs, actions) {
       page: 'members',
       refKey: 'members-expanded',
       action: async () => {
-        const expandBtn = document.querySelector('.ant-table-row-expand-icon');
+        const expandBtn = document.querySelector<HTMLElement>('.ant-table-row-expand-icon');
         if (expandBtn) {
           expandBtn.click();
           await sleep(300);
         }
       },
       cleanup: () => {
-        const expandBtn = document.querySelector('.ant-table-row-expand-icon-expanded');
+        const expandBtn = document.querySelector<HTMLElement>('.ant-table-row-expand-icon-expanded');
         if (expandBtn) expandBtn.click();
       },
     },

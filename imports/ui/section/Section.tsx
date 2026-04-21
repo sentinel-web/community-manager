@@ -1,96 +1,122 @@
 import { App, Col, Row } from 'antd';
+import type { ExpandableConfig } from 'antd/es/table/interface';
 import { Meteor } from 'meteor/meteor';
+import { Mongo } from 'meteor/mongo';
 import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
-import PropTypes from 'prop-types';
-import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { ComponentType, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import RolesCollection from '../../api/collections/roles.collection';
+import type { Role, CrudPermission } from '../../api/types';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
+import type { DrawerContextValue } from '../app/types';
 import TableContainer from '../table/body/TableContainer';
 import TableFooter from '../table/footer/TableFooter';
 import GroupActionsBar from '../table/header/GroupActionsBar';
 import TableHeader from '../table/header/TableHeader';
 import Table from '../table/Table';
 import SectionCard from './SectionCard';
+import type { BoundGroupAction, ColumnsFactory, GroupAction, RowClickEvent, SectionPermissions } from './types';
 
-/**
- * Gets CRUD permissions for a module from a role.
- * Handles both boolean permissions and CRUD object permissions.
- */
-function getModulePermissions(role, module) {
+type ModuleKey = keyof Role;
+
+function getModulePermissions(role: Role | undefined, module: ModuleKey): SectionPermissions {
   if (!role) {
     return { canCreate: false, canUpdate: false, canDelete: false };
   }
 
-  // Admin role (roles: true) has full access to all modules
   if (role.roles === true) {
     return { canCreate: true, canUpdate: true, canDelete: true };
   }
 
   const permission = role[module];
 
-  // Boolean permission (true = full access)
   if (permission === true) {
     return { canCreate: true, canUpdate: true, canDelete: true };
   }
 
-  // CRUD object permission
   if (typeof permission === 'object' && permission !== null) {
+    const crud = permission as CrudPermission;
     return {
-      canCreate: permission.create === true,
-      canUpdate: permission.update === true,
-      canDelete: permission.delete === true,
+      canCreate: crud.create === true,
+      canUpdate: crud.update === true,
+      canDelete: crud.delete === true,
     };
   }
 
-  // No permission
   return { canCreate: false, canUpdate: false, canDelete: false };
 }
 
-function defaultFilterFactory(string) {
-  return { name: { $regex: string, $options: 'i' } };
+function defaultFilterFactory(input: string): Mongo.Selector<Record<string, unknown>> {
+  return { name: { $regex: input, $options: 'i' } };
 }
 
-function defaultColumnsFactory() {
+function defaultColumnsFactory(): ReturnType<ColumnsFactory<Record<string, unknown>>> {
   return [];
 }
 
-export default function Section({
+interface SectionProps<T extends { _id?: string }> {
+  title?: string;
+  collectionName?: string;
+  Collection?: Mongo.Collection<T> | null;
+  FormComponent?: ComponentType<{ setOpen: (open: boolean) => void }>;
+  filterFactory?: (input: string) => Mongo.Selector<T>;
+  columnsFactory?: ColumnsFactory<T>;
+  extra?: ReactNode;
+  headerExtra?: ReactNode;
+  customView?:
+    | ComponentType<{
+        handleEdit: (e: RowClickEvent, record: T) => void;
+        handleDelete: (e: RowClickEvent, record: T) => void;
+        datasource: T[];
+        setFilter: (filter: Mongo.Selector<T>) => void;
+        permissions: SectionPermissions;
+      }>
+    | false;
+  permissionModule?: string | null;
+  expandable?: ExpandableConfig<T>;
+  groupActions?: GroupAction[];
+}
+
+export default function Section<T extends { _id?: string }>({
   title = '',
   collectionName = '',
   Collection = null,
-  FormComponent = <></>,
-  filterFactory = defaultFilterFactory,
-  columnsFactory = defaultColumnsFactory,
+  FormComponent,
+  filterFactory = defaultFilterFactory as (input: string) => Mongo.Selector<T>,
+  columnsFactory = defaultColumnsFactory as unknown as ColumnsFactory<T>,
   extra = <></>,
   headerExtra = <></>,
   customView = false,
   permissionModule = null,
-  expandable = undefined,
+  expandable,
   groupActions = [],
-}) {
+}: SectionProps<T>) {
   const [nameInput, setNameInput] = useState('');
-  const [filter, setFilter] = useState(filterFactory(''));
-  const [options, setOptions] = useState({ limit: 20 });
-  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [filter, setFilter] = useState<Mongo.Selector<T>>(filterFactory(''));
+  const [options, setOptions] = useState<{ limit: number }>({ limit: 20 });
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
   useSubscribe(collectionName, filter, options);
-  const datasource = useFind(() => Collection?.find?.(filter, options) || [], [Collection, filter, options]);
-  const drawer = useContext(DrawerContext);
+  const datasource = useFind(
+    () => Collection?.find?.(filter, options) || ([] as unknown as Mongo.Cursor<T>),
+    [Collection, filter, options]
+  );
+  const drawer = useContext(DrawerContext) as DrawerContextValue;
   const { notification, message, modal } = App.useApp();
   const { t } = useTranslation();
 
-  // Get user's role for permission checks
   const user = useTracker(() => Meteor.user(), []);
-  useSubscribe('roles', { _id: user?.profile?.roleId ?? null }, { limit: 1 });
-  const roles = useFind(() => RolesCollection.find({ _id: user?.profile?.roleId ?? null }, { limit: 1 }), [user?.profile?.roleId]);
+  useSubscribe('roles', { _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 });
+  const roles = useFind(
+    () => RolesCollection.find({ _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 }),
+    [user?.profile?.roleId]
+  );
   const permissions = useMemo(() => {
     const role = roles?.[0];
-    const module = permissionModule || collectionName;
-    return getModulePermissions(role, module);
+    const moduleKey = (permissionModule || collectionName) as ModuleKey;
+    return getModulePermissions(role, moduleKey);
   }, [roles, permissionModule, collectionName]);
 
-  // Clear selection when filter changes
   useEffect(() => {
     setSelectedRowKeys([]);
   }, [filter]);
@@ -98,8 +124,9 @@ export default function Section({
   useEffect(() => {
     setFilter(filterFactory(nameInput));
   }, [filterFactory]);
+
   const handleNameChange = useCallback(
-    event => {
+    (event: React.ChangeEvent<HTMLInputElement>) => {
       setNameInput(event.target.value);
       const newFilter = filterFactory(event.target.value);
       setFilter(newFilter);
@@ -110,17 +137,17 @@ export default function Section({
   const handleCreate = useCallback(() => {
     drawer.setDrawerTitle(t('common.createEntry'));
     drawer.setDrawerModel({});
-    drawer.setDrawerComponent(React.createElement(FormComponent, { setOpen: drawer.setDrawerOpen }));
+    drawer.setDrawerComponent(React.createElement(FormComponent!, { setOpen: drawer.setDrawerOpen }));
     drawer.setDrawerOpen(true);
     drawer.setDrawerExtra(extra);
-  }, [drawer, t]);
+  }, [drawer, t, FormComponent, extra]);
 
   const handleEdit = useCallback(
-    (e, record) => {
+    (e: RowClickEvent, record: T) => {
       e.preventDefault();
-      drawer.setDrawerModel(record);
+      drawer.setDrawerModel(record as Record<string, unknown>);
       drawer.setDrawerTitle(t('common.editEntry'));
-      drawer.setDrawerComponent(React.createElement(FormComponent, { setOpen: drawer.setDrawerOpen }));
+      drawer.setDrawerComponent(React.createElement(FormComponent!, { setOpen: drawer.setDrawerOpen }));
       drawer.setDrawerOpen(true);
       drawer.setDrawerExtra(extra);
     },
@@ -128,16 +155,14 @@ export default function Section({
   );
 
   const handleDelete = useCallback(
-    async (e, record) => {
+    async (e: RowClickEvent, record: T) => {
       e.preventDefault();
       try {
         await Meteor.callAsync(`${collectionName}.remove`, record._id);
         message.success(t('messages.deleteSuccess'));
       } catch (error) {
-        notification.error({
-          message: error.error,
-          description: error.message,
-        });
+        const err = error as Meteor.Error;
+        notification.error({ message: err.error as string, description: err.message });
       }
     },
     [notification, message, collectionName, t]
@@ -152,7 +177,10 @@ export default function Section({
       onOk: async () => {
         setBulkActionLoading(true);
         try {
-          const result = await Meteor.callAsync(`${collectionName}.bulkRemove`, selectedRowKeys);
+          const result = (await Meteor.callAsync(`${collectionName}.bulkRemove`, selectedRowKeys)) as {
+            removed: number;
+            errors: unknown[];
+          };
           if (result.errors.length > 0) {
             message.warning(t('messages.bulkDeletePartial', { removed: result.removed, errors: result.errors.length }));
           } else {
@@ -160,10 +188,8 @@ export default function Section({
           }
           setSelectedRowKeys([]);
         } catch (error) {
-          notification.error({
-            message: error.error,
-            description: error.message,
-          });
+          const err = error as Meteor.Error;
+          notification.error({ message: err.error as string, description: err.message });
         } finally {
           setBulkActionLoading(false);
         }
@@ -175,21 +201,19 @@ export default function Section({
     setSelectedRowKeys([]);
   }, []);
 
-  // Wrap custom group action handlers with loading/error/clear logic
-  const wrappedGroupActions = useMemo(
+  const wrappedGroupActions = useMemo<BoundGroupAction[]>(
     () =>
       groupActions.map(action => ({
-        ...action,
+        key: action.key,
+        label: action.label,
         handler: async () => {
           setBulkActionLoading(true);
           try {
             await action.handler(selectedRowKeys);
             setSelectedRowKeys([]);
           } catch (error) {
-            notification.error({
-              message: error.error || t('common.error'),
-              description: error.message,
-            });
+            const err = error as Meteor.Error;
+            notification.error({ message: (err.error as string) || t('common.error'), description: err.message });
           } finally {
             setBulkActionLoading(false);
           }
@@ -249,7 +273,7 @@ export default function Section({
           {customView ? (
             React.createElement(customView, { handleEdit, handleDelete, datasource, setFilter, permissions })
           ) : (
-            <TableSection
+            <TableSection<T>
               columns={columns}
               datasource={datasource}
               handleLoadMore={handleLoadMore}
@@ -263,42 +287,30 @@ export default function Section({
     </SectionCard>
   );
 }
-Section.propTypes = {
-  title: PropTypes.string,
-  collectionName: PropTypes.string,
-  Collection: PropTypes.object,
-  FormComponent: PropTypes.object,
-  filterFactory: PropTypes.func,
-  columnsFactory: PropTypes.func,
-  extra: PropTypes.node,
-  headerExtra: PropTypes.node,
-  customView: PropTypes.bool,
-  permissionModule: PropTypes.string,
-  expandable: PropTypes.object,
-  groupActions: PropTypes.arrayOf(
-    PropTypes.shape({
-      key: PropTypes.string.isRequired,
-      label: PropTypes.string.isRequired,
-      handler: PropTypes.func.isRequired,
-    })
-  ),
-};
 
-const TableSection = ({ columns, datasource, handleLoadMore, disabled, expandable, rowSelection }) => {
+interface TableSectionProps<T extends { _id?: string }> {
+  columns: ReturnType<ColumnsFactory<T>>;
+  datasource: T[];
+  handleLoadMore: () => void;
+  disabled: boolean;
+  expandable?: ExpandableConfig<T>;
+  rowSelection?: { selectedRowKeys: React.Key[]; onChange: (keys: React.Key[]) => void };
+}
+
+function TableSection<T extends { _id?: string }>({
+  columns,
+  datasource,
+  handleLoadMore,
+  disabled,
+  expandable,
+  rowSelection,
+}: TableSectionProps<T>) {
   return (
     <>
       <TableContainer>
-        <Table columns={columns} datasource={datasource} expandable={expandable} rowSelection={rowSelection} />
+        <Table<T> columns={columns} datasource={datasource} expandable={expandable} rowSelection={rowSelection} />
       </TableContainer>
       <TableFooter ready={true} count={datasource.length} handleLoadMore={handleLoadMore} disabled={disabled} />
     </>
   );
-};
-TableSection.propTypes = {
-  columns: PropTypes.array,
-  datasource: PropTypes.array,
-  handleLoadMore: PropTypes.func,
-  disabled: PropTypes.bool,
-  expandable: PropTypes.object,
-  rowSelection: PropTypes.object,
-};
+}

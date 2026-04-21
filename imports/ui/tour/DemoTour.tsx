@@ -1,18 +1,21 @@
 import { Tour } from 'antd';
+import type { TourStepProps } from 'antd';
 import React, { useCallback, useContext, useMemo, useRef } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import useNavigation from '../navigation/navigation.hook';
 import TourContext from './TourContext';
 import getTourSteps from './tourSteps';
 
-function pollForStableElement(targetFn, timeoutMs = 3000, intervalMs = 50, stableMs = 200) {
-  return new Promise(resolve => {
+type TargetFn = () => HTMLElement | null | undefined;
+
+function pollForStableElement(targetFn: TargetFn, timeoutMs = 3000, intervalMs = 50, stableMs = 200): Promise<HTMLElement | null> {
+  return new Promise<HTMLElement | null>(resolve => {
     const start = Date.now();
-    let lastRect = null;
-    let stableSince = null;
+    let lastRect: DOMRect | null = null;
+    let stableSince: number | null = null;
 
     const check = () => {
-      if (Date.now() - start >= timeoutMs) return resolve(lastRect ? targetFn() : null);
+      if (Date.now() - start >= timeoutMs) return resolve(lastRect ? targetFn() ?? null : null);
 
       const el = targetFn();
       if (!el) {
@@ -25,7 +28,7 @@ function pollForStableElement(targetFn, timeoutMs = 3000, intervalMs = 50, stabl
       const same = lastRect && rect.width === lastRect.width && rect.height === lastRect.height;
 
       if (same) {
-        if (Date.now() - stableSince >= stableMs) return resolve(el);
+        if (stableSince !== null && Date.now() - stableSince >= stableMs) return resolve(el);
       } else {
         lastRect = rect;
         stableSince = Date.now();
@@ -46,15 +49,15 @@ export default function DemoTour() {
   const steps = useMemo(() => getTourSteps(t, refs, actions), [t, refs, actions]);
 
   const navigate = useCallback(
-    page => {
+    (page: string) => {
       setNavigationValue(page);
-      window.history.pushState(null, null, `${window.location.origin}/${page}`);
+      window.history.pushState(null, '', `${window.location.origin}/${page}`);
     },
     [setNavigationValue]
   );
 
   const handleChange = useCallback(
-    async nextStep => {
+    async (nextStep: number) => {
       if (transitioning.current) return;
       if (nextStep < 0 || nextStep >= steps.length) return;
       transitioning.current = true;
@@ -64,27 +67,22 @@ export default function DemoTour() {
         const step = steps[nextStep];
         const needsNavigation = step.page !== null && step.page !== navigationValue;
 
-        // Run cleanup on previous step
         if (prevStep?.cleanup) {
           prevStep.cleanup(actions);
         }
 
-        // Navigate if needed
-        if (needsNavigation) {
+        if (needsNavigation && step.page !== null) {
           setOpen(false);
           navigate(step.page);
         }
 
-        // Run action if defined
         if (step.action) {
-          // Brief delay for page mount after navigation
           if (needsNavigation) {
             await new Promise(r => setTimeout(r, 300));
           }
           await step.action(actions);
         }
 
-        // Poll until target element exists and dimensions have stabilized
         if (step.target) {
           await pollForStableElement(step.target, 3000, 50, 200);
         }
@@ -114,7 +112,7 @@ export default function DemoTour() {
       current={currentStep}
       onChange={handleChange}
       onClose={handleClose}
-      steps={steps}
+      steps={steps as unknown as TourStepProps[]}
       scrollIntoViewOptions={{ behavior: 'smooth', block: 'center' }}
     />
   );

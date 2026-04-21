@@ -3,39 +3,30 @@ import { Meteor } from 'meteor/meteor';
 import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
 import React, { lazy, useMemo } from 'react';
 import RolesCollection from '../../api/collections/roles.collection';
+import type { Role, CrudPermission } from '../../api/types';
 import { isDeviceUnsupported } from '../../config';
 import Login from '../login/Login';
 import useNavigation from '../navigation/navigation.hook';
 import Suspense from '../suspense/Suspense';
 
-// Map modules to their permission keys (for modules that share permissions)
-const MODULE_PERMISSION_MAP = {
-  backup: 'settings', // Backup uses settings permission
-  myQuestionnaires: 'questionnaires', // My Questionnaires uses questionnaires permission
+const MODULE_PERMISSION_MAP: Record<string, keyof Role> = {
+  backup: 'settings',
+  myQuestionnaires: 'questionnaires',
 };
 
-/**
- * Checks if a role has access to a module.
- * Handles both boolean permissions (true/false) and CRUD object permissions.
- * For CRUD modules, access means having at least `read` permission.
- */
-function checkAccess(role, module) {
+function checkAccess(role: Role | undefined, module: string): boolean {
   if (!role) return false;
 
-  // Admin bypass: roles === true grants access to all modules
   if (role.roles === true) return true;
 
-  // Map module to its permission key
-  const permissionKey = MODULE_PERMISSION_MAP[module] || module;
+  const permissionKey = (MODULE_PERMISSION_MAP[module] ?? module) as keyof Role;
   const permission = role[permissionKey];
 
-  // Boolean permission (true/false)
   if (permission === true) return true;
   if (permission === false || permission === undefined) return false;
 
-  // CRUD object permission - check for read access
   if (typeof permission === 'object' && permission !== null) {
-    return permission.read === true;
+    return (permission as CrudPermission).read === true;
   }
 
   return false;
@@ -71,8 +62,11 @@ export default function Main() {
     };
   }, []);
 
-  useSubscribe('roles', { _id: user?.profile?.roleId ?? null }, { limit: 1 });
-  const roles = useFind(() => RolesCollection.find({ _id: user?.profile?.roleId ?? null }, { limit: 1 }), [user?.profile?.roleId]);
+  useSubscribe('roles', { _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 });
+  const roles = useFind(
+    () => RolesCollection.find({ _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 }),
+    [user?.profile?.roleId]
+  );
   const hasAccess = useMemo(() => {
     const role = roles?.[0];
     return checkAccess(role, navigationValue);
