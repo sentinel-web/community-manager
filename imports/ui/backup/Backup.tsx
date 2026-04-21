@@ -1,10 +1,12 @@
 import { CloudDownloadOutlined, CloudUploadOutlined, InboxOutlined, SafetyOutlined, WarningOutlined } from '@ant-design/icons';
 import { Alert, Button, Checkbox, Col, Descriptions, Modal, Progress, Row, Space, Typography, message } from 'antd';
 import Dragger from 'antd/es/upload/Dragger';
+import type { RcFile } from 'antd/es/upload/interface';
 import dayjs from 'dayjs';
 import JSZip from 'jszip';
 import { Meteor } from 'meteor/meteor';
 import React, { useCallback, useState } from 'react';
+import type { LanguageContextValue } from '../../i18n/LanguageContext';
 import { useTranslation } from '../../i18n/LanguageContext';
 import SectionCard from '../section/SectionCard';
 import { useTourRef } from '../tour/TourContext';
@@ -12,21 +14,53 @@ import { useTourRef } from '../tour/TourContext';
 // Maximum backup file size: 50MB
 const MAX_BACKUP_SIZE = 50 * 1024 * 1024;
 
+// Wire format: mirrors BackupData from server/apis/backup.server.ts
+interface BackupMeta {
+  totalDocuments: number;
+  collectionCounts: Record<string, number>;
+  isSafetyBackup?: boolean;
+}
+
+interface BackupData {
+  version: string;
+  timestamp: string;
+  appName: string;
+  collections: Record<string, unknown[]>;
+  meta: BackupMeta;
+}
+
+// Wire format: mirrors the return shape of backup.validate
+interface ValidationResult {
+  valid: boolean;
+  error?: string;
+  version?: string;
+  timestamp?: string;
+  meta?: BackupMeta;
+}
+
+// Wire format: mirrors RestoreResult from server/apis/backup.server.ts
+interface RestoreResult {
+  success: boolean;
+  restored: Record<string, number>;
+  errors: Array<{ collection: string; error: string }>;
+  safetyBackup: BackupData | null;
+}
+
 export default function Backup() {
   const backupRef = useTourRef('backup-section');
   const [loading, setLoading] = useState(false);
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
-  const [backupData, setBackupData] = useState(null);
-  const [validationResult, setValidationResult] = useState(null);
+  const [backupData, setBackupData] = useState<BackupData | null>(null);
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [restoring, setRestoring] = useState(false);
   const [createSafetyBackup, setCreateSafetyBackup] = useState(true);
-  const [safetyBackupData, setSafetyBackupData] = useState(null);
+  const [safetyBackupData, setSafetyBackupData] = useState<BackupData | null>(null);
   const { t } = useTranslation();
 
   const handleBackup = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await Meteor.callAsync('backup.create');
+      const data = (await Meteor.callAsync('backup.create')) as BackupData;
 
       // Create ZIP archive
       const zip = new JSZip();
@@ -46,13 +80,14 @@ export default function Backup() {
       URL.revokeObjectURL(url);
       message.success(t('backup.backupDownloaded'));
     } catch (error) {
-      message.error(error.reason || error.message || t('backup.backupFailed'));
+      const err = error as Meteor.Error;
+      message.error(err.reason || err.message || t('backup.backupFailed'));
     } finally {
       setLoading(false);
     }
   }, [t]);
 
-  const handleFileUpload = useCallback(async file => {
+  const handleFileUpload = useCallback(async (file: RcFile) => {
     // Validate file size
     if (file.size > MAX_BACKUP_SIZE) {
       message.error(t('backup.fileTooLarge'));
@@ -60,7 +95,7 @@ export default function Backup() {
     }
 
     try {
-      let data;
+      let data: BackupData;
 
       // Check if it's a ZIP file or JSON file
       if (file.name.endsWith('.zip')) {
@@ -74,18 +109,18 @@ export default function Backup() {
         }
 
         const text = await jsonFile.async('string');
-        data = JSON.parse(text);
+        data = JSON.parse(text) as BackupData;
       } else if (file.name.endsWith('.json')) {
         // Legacy support for plain JSON files
         const text = await file.text();
-        data = JSON.parse(text);
+        data = JSON.parse(text) as BackupData;
       } else {
         message.error(t('backup.invalidFileType'));
         return false;
       }
 
       // Validate the backup
-      const validation = await Meteor.callAsync('backup.validate', data);
+      const validation = (await Meteor.callAsync('backup.validate', data)) as ValidationResult;
 
       if (!validation.valid) {
         message.error(validation.error);
@@ -99,7 +134,8 @@ export default function Backup() {
       if (error instanceof SyntaxError) {
         message.error(t('backup.invalidBackupJson'));
       } else {
-        message.error(error.reason || error.message || t('backup.fileReadFailed'));
+        const err = error as Meteor.Error;
+        message.error(err.reason || err.message || t('backup.fileReadFailed'));
       }
     }
     return false; // Prevent default upload behavior
@@ -110,7 +146,7 @@ export default function Backup() {
 
     setRestoring(true);
     try {
-      const result = await Meteor.callAsync('backup.restore', backupData, { createSafetyBackup });
+      const result = (await Meteor.callAsync('backup.restore', backupData, { createSafetyBackup })) as RestoreResult;
 
       if (result.success) {
         message.success(t('backup.restoreSuccess'));
@@ -129,7 +165,8 @@ export default function Backup() {
         }
       }
     } catch (error) {
-      message.error(error.reason || error.message || t('backup.restoreFailed'));
+      const err = error as Meteor.Error;
+      message.error(err.reason || err.message || t('backup.restoreFailed'));
     } finally {
       setRestoring(false);
     }
@@ -177,7 +214,7 @@ export default function Backup() {
   }, []);
 
   return (
-    <div ref={backupRef}>
+    <div ref={backupRef as React.RefObject<HTMLDivElement>}>
       <SectionCard title={t('backup.title')} ready={true}>
         <Row gutter={[24, 24]}>
           <Col xs={24} lg={12}>
@@ -210,7 +247,13 @@ export default function Backup() {
   );
 }
 
-function BackupSection({ loading, onBackup, t }) {
+interface BackupSectionProps {
+  loading: boolean;
+  onBackup: () => void;
+  t: LanguageContextValue['t'];
+}
+
+function BackupSection({ loading, onBackup, t }: BackupSectionProps) {
   return (
     <Row gutter={[16, 16]}>
       <Col span={24}>
@@ -230,7 +273,12 @@ function BackupSection({ loading, onBackup, t }) {
   );
 }
 
-function RestoreSection({ onFileUpload, t }) {
+interface RestoreSectionProps {
+  onFileUpload: (file: RcFile) => boolean | Promise<boolean | undefined>;
+  t: LanguageContextValue['t'];
+}
+
+function RestoreSection({ onFileUpload, t }: RestoreSectionProps) {
   return (
     <Row gutter={[16, 16]}>
       <Col span={24}>
@@ -263,7 +311,18 @@ function RestoreSection({ onFileUpload, t }) {
   );
 }
 
-function RestoreConfirmModal({ open, validationResult, restoring, createSafetyBackup, onCreateSafetyBackupChange, onConfirm, onCancel, t }) {
+interface RestoreConfirmModalProps {
+  open: boolean;
+  validationResult: ValidationResult | null;
+  restoring: boolean;
+  createSafetyBackup: boolean;
+  onCreateSafetyBackupChange: (checked: boolean) => void;
+  onConfirm: () => void;
+  onCancel: () => void;
+  t: LanguageContextValue['t'];
+}
+
+function RestoreConfirmModal({ open, validationResult, restoring, createSafetyBackup, onCreateSafetyBackupChange, onConfirm, onCancel, t }: RestoreConfirmModalProps) {
   return (
     <Modal
       title={
@@ -329,7 +388,14 @@ function RestoreConfirmModal({ open, validationResult, restoring, createSafetyBa
   );
 }
 
-function SafetyBackupModal({ open, onDownload, onClose, t }) {
+interface SafetyBackupModalProps {
+  open: boolean;
+  onDownload: () => void;
+  onClose: () => void;
+  t: LanguageContextValue['t'];
+}
+
+function SafetyBackupModal({ open, onDownload, onClose, t }: SafetyBackupModalProps) {
   return (
     <Modal
       title={
