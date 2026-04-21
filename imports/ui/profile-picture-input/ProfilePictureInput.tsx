@@ -80,11 +80,7 @@ export default function ProfilePictureInput({ fileList, setFileList, form, profi
       beforeUpload={(_, list) => {
         setFileList(list);
       }}
-      customRequest={() => {
-        if (fileList && fileList[0]) {
-          uploadImage(fileList[0] as unknown as Blob);
-        }
-      }}
+      customRequest={() => uploadImage(fileList![0] as unknown as Blob)}
     >
       <Spin spinning={loading}>
         {imageSrc ? (

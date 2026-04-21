@@ -1,5 +1,6 @@
 import { DownOutlined, IdcardOutlined, LockFilled, LogoutOutlined } from '@ant-design/icons';
 import { App, Avatar, Button, Col, Dropdown, Form, Grid, Input, List, Modal, Row, Typography } from 'antd';
+import type { DropdownProps } from 'antd';
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
 import { useTracker } from 'meteor/react-meteor-data';
@@ -115,7 +116,7 @@ export default function Footer() {
       </Col>
       <Col>
         <Dropdown
-          placement={'right' as 'bottomRight'}
+          placement={'right' as unknown as DropdownProps['placement']}
           trigger={['click']}
           menu={{
             items: [

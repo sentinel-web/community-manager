@@ -95,24 +95,22 @@ const CollectionSelect = ({
   const user = useTracker(() => Meteor.user(), []);
 
   const handleCreate = useCallback(() => {
-    if (!FormComponent) return;
     const usedDrawer = !drawer.drawerOpen ? drawer : subdrawer;
     usedDrawer.setDrawerTitle(`${t('common.create')} ${label ?? ''}`);
     usedDrawer.setDrawerModel({});
-    usedDrawer.setDrawerComponent(React.createElement(FormComponent, { setOpen: usedDrawer.setDrawerOpen, useSubdrawer: drawer.drawerOpen }));
+    usedDrawer.setDrawerComponent(React.createElement(FormComponent!, { setOpen: usedDrawer.setDrawerOpen, useSubdrawer: drawer.drawerOpen }));
     usedDrawer.setDrawerExtra(extra);
     usedDrawer.setDrawerOpen(true);
   }, [drawer, subdrawer, FormComponent, label, t, extra]);
 
   const handleEdit = useCallback(
     (e: MouseEvent<HTMLElement>, raw: CollectionDoc) => {
-      if (!FormComponent) return;
       e.preventDefault();
       e.stopPropagation();
       const usedDrawer = !drawer.drawerOpen ? drawer : subdrawer;
       usedDrawer.setDrawerTitle(`${t('common.edit')} ${label ?? ''}`);
       usedDrawer.setDrawerModel(raw as Record<string, unknown>);
-      usedDrawer.setDrawerComponent(React.createElement(FormComponent, { setOpen: usedDrawer.setDrawerOpen, useSubdrawer: drawer.drawerOpen }));
+      usedDrawer.setDrawerComponent(React.createElement(FormComponent!, { setOpen: usedDrawer.setDrawerOpen, useSubdrawer: drawer.drawerOpen }));
       usedDrawer.setDrawerExtra(extra);
       usedDrawer.setDrawerOpen(true);
     },

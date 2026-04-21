@@ -1,4 +1,4 @@
-import type { MouseEvent } from 'react';
+import type { Key, MouseEvent } from 'react';
 import type { ColumnsType } from 'antd/es/table';
 import type { LanguageContextValue } from '../../i18n/LanguageContext';
 
@@ -22,7 +22,7 @@ export type ColumnsFactory<T = Record<string, unknown>> = (
 export interface GroupAction {
   key: string;
   label: string;
-  handler: (selectedKeys: string[]) => void | Promise<void>;
+  handler: (selectedKeys: Key[]) => void | Promise<void>;
 }
 
 export interface BoundGroupAction {

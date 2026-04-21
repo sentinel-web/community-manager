@@ -135,21 +135,19 @@ export default function Section<T extends { _id?: string }>({
   );
 
   const handleCreate = useCallback(() => {
-    if (!FormComponent) return;
     drawer.setDrawerTitle(t('common.createEntry'));
     drawer.setDrawerModel({});
-    drawer.setDrawerComponent(React.createElement(FormComponent, { setOpen: drawer.setDrawerOpen }));
+    drawer.setDrawerComponent(React.createElement(FormComponent!, { setOpen: drawer.setDrawerOpen }));
     drawer.setDrawerOpen(true);
     drawer.setDrawerExtra(extra);
   }, [drawer, t, FormComponent, extra]);
 
   const handleEdit = useCallback(
     (e: RowClickEvent, record: T) => {
-      if (!FormComponent) return;
       e.preventDefault();
       drawer.setDrawerModel(record as Record<string, unknown>);
       drawer.setDrawerTitle(t('common.editEntry'));
-      drawer.setDrawerComponent(React.createElement(FormComponent, { setOpen: drawer.setDrawerOpen }));
+      drawer.setDrawerComponent(React.createElement(FormComponent!, { setOpen: drawer.setDrawerOpen }));
       drawer.setDrawerOpen(true);
       drawer.setDrawerExtra(extra);
     },
@@ -211,7 +209,7 @@ export default function Section<T extends { _id?: string }>({
         handler: async () => {
           setBulkActionLoading(true);
           try {
-            await action.handler(selectedRowKeys.map(String));
+            await action.handler(selectedRowKeys);
             setSelectedRowKeys([]);
           } catch (error) {
             const err = error as Meteor.Error;
