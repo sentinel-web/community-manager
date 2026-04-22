@@ -1,5 +1,5 @@
 import { CloudDownloadOutlined, CloudUploadOutlined, InboxOutlined, SafetyOutlined, WarningOutlined } from '@ant-design/icons';
-import { Alert, Button, Checkbox, Col, Descriptions, Modal, Progress, Row, Space, Typography, message } from 'antd';
+import { Alert, App, Button, Checkbox, Col, Descriptions, Modal, Progress, Row, Space, Typography } from 'antd';
 import Dragger from 'antd/es/upload/Dragger';
 import type { RcFile } from 'antd/es/upload/interface';
 import dayjs from 'dayjs';
@@ -43,6 +43,7 @@ interface RestoreResult {
 }
 
 export default function Backup() {
+  const { message } = App.useApp();
   const backupRef = useTourRef('backup-section');
   const [loading, setLoading] = useState(false);
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
