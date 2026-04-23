@@ -1,35 +1,55 @@
 import { App, Col, ColorPicker, Form, Input, Row, Switch, Upload } from 'antd';
+import type { RcFile } from 'antd/es/upload';
 import { Meteor } from 'meteor/meteor';
-import PropTypes from 'prop-types';
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
+import type { Squad } from '../../api/types/squad';
+import type { DrawerContextValue } from '../app/types';
 import { DrawerContext, SubdrawerContext } from '../app/App';
 import FormFooter from '../components/FormFooter';
 import { turnBase64ToImage, turnImageFileToBase64 } from '../profile-picture-input/ProfilePictureInput';
 import { getColorFromValues } from '../specializations/SpecializationForm';
 import SquadsSelect from './SquadsSelect';
 
-const SquadsForm = ({ setOpen, useSubdrawer = false }) => {
+interface SquadsFormProps {
+  setOpen: (open: boolean) => void;
+  useSubdrawer?: boolean;
+}
+
+interface SquadsFormValues {
+  name?: string;
+  color?: string | { toHexString?: () => string };
+  image?: string;
+  parentSquadId?: string;
+  shortRangeFrequency?: string;
+  longRangeFrequency?: string;
+  description?: string;
+  excludeFromOrbat?: boolean;
+}
+
+const SquadsForm = ({ setOpen, useSubdrawer = false }: SquadsFormProps) => {
   const { t } = useTranslation();
   const { message, notification } = App.useApp();
-  const drawer = useContext(DrawerContext);
-  const subdrawer = useContext(SubdrawerContext);
+  const drawer = useContext(DrawerContext) as DrawerContextValue;
+  const subdrawer = useContext(SubdrawerContext) as DrawerContextValue;
 
   const model = useMemo(() => {
     return useSubdrawer ? subdrawer.drawerModel || {} : drawer.drawerModel || {};
   }, [drawer, subdrawer, useSubdrawer]);
 
-  const [file, setFile] = useState(null);
-  const [imageSrc, setImageSrc] = useState(null);
+  const squad = model as unknown as Squad;
+
+  const [file, setFile] = useState<RcFile | null>(null);
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!model.image) return;
-    setImageSrc(model.image);
+    if (!squad.image) return;
+    setImageSrc(squad.image);
   }, [model]);
 
   const handleCustomRequest = async () => {
     try {
-      const base64 = await turnImageFileToBase64(file);
+      const base64 = await turnImageFileToBase64(file as Blob);
       const data = await turnBase64ToImage(base64);
       setImageSrc(data.src);
     } catch {
@@ -37,20 +57,20 @@ const SquadsForm = ({ setOpen, useSubdrawer = false }) => {
     }
   };
 
-  const handleBeforeUpload = (_, fileList) => {
+  const handleBeforeUpload = (_: RcFile, fileList: RcFile[]) => {
     return setFile(fileList[0]);
   };
 
-  const handleFinish = async values => {
+  const handleFinish = async (values: SquadsFormValues) => {
     const color = getColorFromValues(values);
     values.color = color;
     const image = imageSrc;
-    values.image = image;
-    const args = [...(model?._id ? [model._id] : []), values];
-    Meteor.callAsync(Meteor.user() && model?._id ? 'squads.update' : 'squads.insert', ...args)
+    values.image = image ?? undefined;
+    const args = [...(squad?._id ? [squad._id] : []), values];
+    Meteor.callAsync(Meteor.user() && squad?._id ? 'squads.update' : 'squads.insert', ...args)
       .then(() => {
         setOpen(false);
-        message.success(model?._id ? t('messages.squadUpdated') : t('messages.squadCreated'));
+        message.success(squad?._id ? t('messages.squadUpdated') : t('messages.squadCreated'));
       })
       .catch(error => {
         notification.error({
@@ -85,7 +105,7 @@ const SquadsForm = ({ setOpen, useSubdrawer = false }) => {
           </Form.Item>
         </Col>
       </Row>
-      <SquadsSelect label={t('squads.parentSquad')} name="parentSquadId" rules={[{ required: false, type: 'string' }]} defaultValue={model.parentSquadId} />
+      <SquadsSelect label={t('squads.parentSquad')} name="parentSquadId" rules={[{ required: false, type: 'string' }]} defaultValue={squad.parentSquadId} />
       <Form.Item label={t('squads.shortRangeFrequency')} name="shortRangeFrequency" rules={[{ required: false, type: 'string' }]}>
         <Input placeholder={t('forms.placeholders.enterShortRangeFrequency')} />
       </Form.Item>
@@ -101,10 +121,6 @@ const SquadsForm = ({ setOpen, useSubdrawer = false }) => {
       <FormFooter setOpen={setOpen} />
     </Form>
   );
-};
-SquadsForm.propTypes = {
-  setOpen: PropTypes.func,
-  useSubdrawer: PropTypes.bool,
 };
 
 export default SquadsForm;

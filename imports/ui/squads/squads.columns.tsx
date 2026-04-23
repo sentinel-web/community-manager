@@ -1,18 +1,30 @@
 import { Tag } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import { Meteor } from 'meteor/meteor';
-import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
+import type { Squad } from '../../api/types/squad';
 import getLegibleTextColor from '../../helpers/colors/getLegibleTextColor';
+import type { ColumnsFactory, RowClickEvent, SectionPermissions, TranslateFn } from '../section/types';
 import TableActions from '../table/body/actions/TableActions';
 
-export const SquadTags = ({ squadIds }) => {
-  const [squadNames, setSquadNames] = useState([]);
+interface SquadTagsProps {
+  squadIds: string[];
+}
+
+interface SquadOption {
+  value: string;
+  label: string;
+  raw: { color?: string };
+}
+
+export const SquadTags = ({ squadIds }: SquadTagsProps) => {
+  const [squadNames, setSquadNames] = useState<SquadOption[]>([]);
 
   useEffect(() => {
     Meteor.callAsync('squads.options')
       .then(options => {
-        const squadNames = options.filter(option => squadIds.includes(option.value)).map(option => option);
-        setSquadNames(squadNames);
+        const filtered = (options as SquadOption[]).filter(option => squadIds.includes(option.value)).map(option => option);
+        setSquadNames(filtered);
       })
       .catch(() => {});
   }, [squadIds]);
@@ -27,26 +39,31 @@ export const SquadTags = ({ squadIds }) => {
     </>
   );
 };
-SquadTags.propTypes = {
-  squadIds: PropTypes.array,
-};
 
-const getSquadsColumns = (handleEdit, handleDelete, permissions = {}, t = k => k) => {
+const defaultPermissions: SectionPermissions = { canCreate: true, canUpdate: true, canDelete: true };
+const defaultT: TranslateFn = k => k;
+
+const getSquadsColumns: ColumnsFactory<Squad> = (
+  handleEdit: (e: RowClickEvent, record: Squad) => void,
+  handleDelete: (e: RowClickEvent, record: Squad) => void,
+  permissions: SectionPermissions = defaultPermissions,
+  t: TranslateFn = defaultT,
+) => {
   const { canUpdate = true, canDelete = true } = permissions;
 
-  const columns = [
+  const columns: ColumnsType<Squad> = [
     {
       title: t('columns.image'),
       dataIndex: 'image',
       key: 'image',
-      render: image => (image ? <img src={image} alt="squad" width="50" height="50" /> : '-'),
+      render: (image: string | undefined) => (image ? <img src={image} alt="squad" width="50" height="50" /> : '-'),
     },
     {
       title: t('common.name'),
       dataIndex: 'name',
       key: 'name',
-      sorter: (a, b) => String(a.name).localeCompare(String(b.name)),
-      render: (name, record) =>
+      sorter: (a: Squad, b: Squad) => String(a.name).localeCompare(String(b.name)),
+      render: (name: string | undefined, record: Squad) =>
         name ? (
           record.color ? (
             <Tag color={record.color}>
@@ -63,15 +80,15 @@ const getSquadsColumns = (handleEdit, handleDelete, permissions = {}, t = k => k
       title: t('columns.shortRangeFrequency'),
       dataIndex: 'shortRangeFrequency',
       key: 'shortRangeFrequency',
-      sorter: (a, b) => String(a.shortRangeFrequency).localeCompare(String(b.shortRangeFrequency)),
-      render: shortRangeFrequency => shortRangeFrequency || '-',
+      sorter: (a: Squad, b: Squad) => String(a.shortRangeFrequency).localeCompare(String(b.shortRangeFrequency)),
+      render: (shortRangeFrequency: string | undefined) => shortRangeFrequency || '-',
     },
     {
       title: t('columns.longRangeFrequency'),
       dataIndex: 'longRangeFrequency',
       key: 'longRangeFrequency',
-      sorter: (a, b) => String(a.longRangeFrequency).localeCompare(String(b.longRangeFrequency)),
-      render: longRangeFrequency => longRangeFrequency || '-',
+      sorter: (a: Squad, b: Squad) => String(a.longRangeFrequency).localeCompare(String(b.longRangeFrequency)),
+      render: (longRangeFrequency: string | undefined) => longRangeFrequency || '-',
     },
   ];
 
@@ -80,7 +97,7 @@ const getSquadsColumns = (handleEdit, handleDelete, permissions = {}, t = k => k
       title: t('common.actions'),
       dataIndex: 'actions',
       key: 'actions',
-      render: (id, record) => (
+      render: (id: unknown, record: Squad) => (
         <TableActions record={record} handleEdit={handleEdit} handleDelete={handleDelete} canUpdate={canUpdate} canDelete={canDelete} />
       ),
     });

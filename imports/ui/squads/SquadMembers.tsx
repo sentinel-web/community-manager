@@ -1,18 +1,31 @@
 import { Empty, List, Spin, Tag } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import getLegibleTextColor from '../../helpers/colors/getLegibleTextColor';
 
-export default function SquadMembers({ squadId }) {
-  const [members, setMembers] = useState([]);
+interface SquadMemberItem {
+  _id: string;
+  id: number;
+  name: string;
+  rankName?: string;
+  rankColor?: string;
+  positionName?: string;
+  positionColor?: string;
+}
+
+interface SquadMembersProps {
+  squadId: string;
+}
+
+export default function SquadMembers({ squadId }: SquadMembersProps) {
+  const [members, setMembers] = useState<SquadMemberItem[]>([]);
   const [loading, setLoading] = useState(true);
   const { t } = useTranslation();
 
   useEffect(() => {
     Meteor.callAsync('squads.members', squadId)
-      .then(result => setMembers(result))
+      .then(result => setMembers(result as SquadMemberItem[]))
       .catch(() => setMembers([]))
       .finally(() => setLoading(false));
   }, [squadId]);
@@ -42,6 +55,3 @@ export default function SquadMembers({ squadId }) {
     />
   );
 }
-SquadMembers.propTypes = {
-  squadId: PropTypes.string.isRequired,
-};
