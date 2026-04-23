@@ -282,10 +282,7 @@ function CommunityLogoSettings({ communityLogo, handleChange = () => {}, t = k =
       <SettingTitle title={t('settings.communityLogo')} />
       <Col span={24}>
         <Dragger
-          beforeUpload={file => {
-            handleChange(file, 'community-logo');
-            return false;
-          }}
+          beforeUpload={file => handleChange(file, 'community-logo')}
           action=""
           accept=".jpg, .jpeg, .png"
           multiple={false}
