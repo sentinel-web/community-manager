@@ -8,10 +8,10 @@ interface SquadMemberItem {
   _id: string;
   id: number;
   name: string;
-  rankName?: string;
-  rankColor?: string;
-  positionName?: string;
-  positionColor?: string;
+  rankName: string | null;
+  rankColor: string | null;
+  positionName: string | null;
+  positionColor: string | null;
 }
 
 interface SquadMembersProps {
@@ -41,12 +41,12 @@ export default function SquadMembers({ squadId }: SquadMembersProps) {
         <List.Item key={member._id}>
           <span>{member.id} &quot;{member.name}&quot;</span>
           {member.rankName && (
-            <Tag color={member.rankColor} style={{ marginLeft: 8 }}>
+            <Tag color={member.rankColor ?? undefined} style={{ marginLeft: 8 }}>
               <span style={{ color: member.rankColor ? getLegibleTextColor(member.rankColor) : undefined }}>{member.rankName}</span>
             </Tag>
           )}
           {member.positionName && (
-            <Tag color={member.positionColor} style={{ marginLeft: 4 }}>
+            <Tag color={member.positionColor ?? undefined} style={{ marginLeft: 4 }}>
               <span style={{ color: member.positionColor ? getLegibleTextColor(member.positionColor) : undefined }}>{member.positionName}</span>
             </Tag>
           )}
