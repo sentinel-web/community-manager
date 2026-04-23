@@ -1,8 +1,11 @@
 import { App, Col, DatePicker, Input, Row } from 'antd';
+import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { Meteor } from 'meteor/meteor';
+import { Mongo } from 'meteor/mongo';
 import { useFind, useSubscribe } from 'meteor/react-meteor-data';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import type { LogEntry } from '../../api/types/misc';
 import LogsCollection from '../../api/collections/logs.collection';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
@@ -22,8 +25,10 @@ import LogViewer from './LogViewer';
 
 const { RangePicker } = DatePicker;
 
-function buildFilter(actionInput, dateRange) {
-  const filter = {};
+type DateRange = [Dayjs, Dayjs] | null;
+
+function buildFilter(actionInput: string, dateRange: DateRange): Mongo.Selector<LogEntry> {
+  const filter: Mongo.Selector<LogEntry> = {};
 
   if (actionInput) {
     filter.action = { $regex: actionInput, $options: 'i' };
@@ -41,11 +46,11 @@ function buildFilter(actionInput, dateRange) {
 
 export default function Logs() {
   const logsRef = useTourRef('logs-section');
-  const defaultDateRange = useMemo(() => [dayjs().subtract(7, 'day'), dayjs()], []);
+  const defaultDateRange = useMemo<DateRange>(() => [dayjs().subtract(7, 'day'), dayjs()], []);
   const [actionInput, setActionInput] = useState('');
-  const [dateRange, setDateRange] = useState(defaultDateRange);
-  const [filter, setFilter] = useState(() => buildFilter('', defaultDateRange));
-  const [options, setOptions] = useState({ limit: 20, sort: { timestamp: -1 } });
+  const [dateRange, setDateRange] = useState<DateRange>(defaultDateRange);
+  const [filter, setFilter] = useState<Mongo.Selector<LogEntry>>(() => buildFilter('', defaultDateRange));
+  const [options, setOptions] = useState<{ limit: number; sort: { timestamp: number } }>({ limit: 20, sort: { timestamp: -1 } });
   const { t } = useTranslation();
 
   useSubscribe('logs', filter, options);
@@ -58,18 +63,18 @@ export default function Logs() {
     setFilter(buildFilter(actionInput, dateRange));
   }, [actionInput, dateRange]);
 
-  const handleActionChange = useCallback(event => {
+  const handleActionChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setActionInput(event.target.value);
   }, []);
 
-  const handleDateRangeChange = useCallback(dates => {
+  const handleDateRangeChange = useCallback((dates: DateRange) => {
     setDateRange(dates);
   }, []);
 
   const handleView = useCallback(
-    (e, record) => {
+    (e: React.MouseEvent<HTMLElement>, record: LogEntry) => {
       e.preventDefault();
-      drawer.setDrawerModel(record);
+      drawer.setDrawerModel(record as unknown as Record<string, unknown>);
       drawer.setDrawerTitle(t('logs.viewLog'));
       drawer.setDrawerComponent(React.createElement(LogViewer));
       drawer.setDrawerOpen(true);
@@ -79,15 +84,16 @@ export default function Logs() {
   );
 
   const handleDelete = useCallback(
-    async (e, record) => {
+    async (e: React.MouseEvent<HTMLElement>, record: LogEntry) => {
       e.preventDefault();
       try {
         await Meteor.callAsync('logs.remove', record._id);
         message.success(t('messages.deleteSuccess'));
       } catch (error) {
+        const err = error as Meteor.Error;
         notification.error({
-          message: error.error,
-          description: error.message,
+          message: err.error as string,
+          description: err.message,
         });
       }
     },
@@ -103,7 +109,7 @@ export default function Logs() {
   const loadMoreDisabled = useMemo(() => datasource?.length < options?.limit, [options, datasource]);
 
   return (
-    <div ref={logsRef}>
+    <div ref={logsRef as React.RefObject<HTMLDivElement>}>
       <SectionCard title={t('logs.title')} ready={true}>
         <Row gutter={[16, 16]}>
           <Col span={24}>
@@ -118,7 +124,7 @@ export default function Logs() {
           </Col>
           <Col span={24}>
             <TableContainer>
-              <Table columns={columns} datasource={datasource} />
+              <Table<LogEntry> columns={columns} datasource={datasource} />
             </TableContainer>
             <TableFooter ready={true} count={datasource.length} handleLoadMore={handleLoadMore} disabled={loadMoreDisabled} />
           </Col>

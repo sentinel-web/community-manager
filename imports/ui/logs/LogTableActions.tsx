@@ -1,9 +1,15 @@
 import { App, Button, Col, Row } from 'antd';
-import PropTypes from 'prop-types';
 import React, { useCallback } from 'react';
+import type { LogEntry } from '../../api/types/misc';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 
-export default function LogTableActions({ record, handleDelete, handleView }) {
+interface LogTableActionsProps {
+  record: LogEntry;
+  handleDelete: (e: React.MouseEvent<HTMLElement>, record: LogEntry) => void;
+  handleView: (e: React.MouseEvent<HTMLElement>, record: LogEntry) => void;
+}
+
+export default function LogTableActions({ record, handleDelete, handleView }: LogTableActionsProps) {
   const { modal } = App.useApp();
   const { t } = useTranslation();
   const styles = {
@@ -12,7 +18,7 @@ export default function LogTableActions({ record, handleDelete, handleView }) {
     },
   };
   const handleRemove = useCallback(
-    e => {
+    (e: React.MouseEvent<HTMLElement>) => {
       modal.confirm({
         title: t('logs.deleteLog'),
         content: t('logs.deleteLogConfirm'),
@@ -35,15 +41,10 @@ export default function LogTableActions({ record, handleDelete, handleView }) {
         </Button>
       </Col>
       <Col flex="auto">
-        <Button style={styles.button} onClick={e => handleRemove(e, record)} danger>
+        <Button style={styles.button} onClick={e => handleRemove(e)} danger>
           {t('common.delete')}
         </Button>
       </Col>
     </Row>
   );
 }
-LogTableActions.propTypes = {
-  record: PropTypes.any,
-  handleDelete: PropTypes.func,
-  handleView: PropTypes.func,
-};

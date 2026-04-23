@@ -1,15 +1,16 @@
 import { CopyOutlined } from '@ant-design/icons';
 import { App, Button, Descriptions, Typography } from 'antd';
 import dayjs from 'dayjs';
-import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useMemo } from 'react';
+import type { LogEntry } from '../../api/types/misc';
 import { DrawerContext } from '../app/App';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 
 const { Text } = Typography;
 
 const LogViewer = () => {
-  const { drawerModel: log } = useContext(DrawerContext);
+  const { drawerModel } = useContext(DrawerContext);
+  const log = drawerModel as unknown as LogEntry;
   const { message } = App.useApp();
   const { t } = useTranslation();
 
@@ -64,7 +65,5 @@ const LogViewer = () => {
 
   return <Descriptions column={1} bordered items={items} />;
 };
-
-LogViewer.propTypes = {};
 
 export default LogViewer;
