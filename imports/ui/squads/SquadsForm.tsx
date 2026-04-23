@@ -19,7 +19,7 @@ interface SquadsFormProps {
 interface SquadsFormValues {
   name?: string;
   color?: string | { toHexString?: () => string };
-  image?: string;
+  image?: string | null;
   parentSquadId?: string;
   shortRangeFrequency?: string;
   longRangeFrequency?: string;
@@ -65,7 +65,7 @@ const SquadsForm = ({ setOpen, useSubdrawer = false }: SquadsFormProps) => {
     const color = getColorFromValues(values);
     values.color = color;
     const image = imageSrc;
-    values.image = image ?? undefined;
+    values.image = image;
     const args = [...(squad?._id ? [squad._id] : []), values];
     Meteor.callAsync(Meteor.user() && squad?._id ? 'squads.update' : 'squads.insert', ...args)
       .then(() => {
