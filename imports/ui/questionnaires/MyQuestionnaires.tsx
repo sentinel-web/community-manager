@@ -1,31 +1,55 @@
 import { CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined, FormOutlined } from '@ant-design/icons';
 import { App, Button, Card, Col, Empty, Popconfirm, Row, Space, Spin, Tag, Tooltip, Typography } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useEffect, useState } from 'react';
+import type { QuestionnaireInterval } from '../../api/types/questionnaire';
 import { useTranslation } from '../../i18n/LanguageContext';
+import type { DrawerContextValue } from '../app/types';
 import { DrawerContext } from '../app/App';
+import type { TranslateFn } from '../section/types';
 import SectionCard from '../section/SectionCard';
 import QuestionnaireResponseForm from './QuestionnaireResponseForm';
 
 const { Text, Paragraph } = Typography;
 
+/** Shape returned by the `questionnaires.getActiveForUser` server method */
+interface ActiveQuestionnaire {
+  _id: string;
+  name: string;
+  description?: string;
+  questionCount?: number;
+  canRespond?: boolean;
+  responseReason?: string;
+  nextAllowedDate?: string | Date;
+  responseCount?: number;
+  allowAnonymous?: boolean;
+  interval?: QuestionnaireInterval;
+  latestResponseId?: string;
+}
+
+interface QuestionnaireCardProps {
+  questionnaire: ActiveQuestionnaire;
+  onFillOut: (questionnaire: ActiveQuestionnaire) => void;
+  onRevoke: (responseId: string) => void;
+  t: TranslateFn;
+}
+
 export default function MyQuestionnaires() {
-  const [questionnaires, setQuestionnaires] = useState([]);
+  const [questionnaires, setQuestionnaires] = useState<ActiveQuestionnaire[]>([]);
   const [loading, setLoading] = useState(true);
   const { notification } = App.useApp();
-  const drawer = useContext(DrawerContext);
+  const drawer = useContext(DrawerContext) as DrawerContextValue;
   const { t } = useTranslation();
 
   const loadQuestionnaires = useCallback(async () => {
     try {
       setLoading(true);
       const result = await Meteor.callAsync('questionnaires.getActiveForUser');
-      setQuestionnaires(result);
+      setQuestionnaires(result as ActiveQuestionnaire[]);
     } catch (error) {
       notification.error({
-        message: error.error,
-        description: error.message,
+        message: (error as Meteor.Error).error,
+        description: (error as Meteor.Error).message,
       });
     } finally {
       setLoading(false);
@@ -37,9 +61,9 @@ export default function MyQuestionnaires() {
   }, [loadQuestionnaires]);
 
   const handleFillOut = useCallback(
-    questionnaire => {
+    (questionnaire: ActiveQuestionnaire) => {
       drawer.setDrawerTitle(questionnaire.name);
-      drawer.setDrawerModel(questionnaire);
+      drawer.setDrawerModel(questionnaire as unknown as Record<string, unknown>);
       drawer.setDrawerComponent(
         React.createElement(QuestionnaireResponseForm, {
           setOpen: drawer.setDrawerOpen,
@@ -52,15 +76,15 @@ export default function MyQuestionnaires() {
   );
 
   const handleRevoke = useCallback(
-    async responseId => {
+    async (responseId: string) => {
       try {
         await Meteor.callAsync('questionnaireResponses.revoke', responseId);
         notification.success({ message: t('questionnaires.revokeSuccess') });
         loadQuestionnaires();
       } catch (error) {
         notification.error({
-          message: error.error,
-          description: error.message,
+          message: (error as Meteor.Error).error,
+          description: (error as Meteor.Error).message,
         });
       }
     },
@@ -88,11 +112,11 @@ export default function MyQuestionnaires() {
   );
 }
 
-const QuestionnaireCard = ({ questionnaire, onFillOut, onRevoke, t }) => {
+const QuestionnaireCard = ({ questionnaire, onFillOut, onRevoke, t }: QuestionnaireCardProps) => {
   const { name, description, questionCount, canRespond, responseReason, nextAllowedDate, responseCount, allowAnonymous, interval, latestResponseId } =
     questionnaire;
 
-  const intervalLabels = {
+  const intervalLabels: Record<QuestionnaireInterval, string> = {
     once: t('questionnaires.intervalOnceLabel'),
     daily: t('questionnaires.intervalDaily'),
     weekly: t('questionnaires.intervalWeekly'),
@@ -100,7 +124,7 @@ const QuestionnaireCard = ({ questionnaire, onFillOut, onRevoke, t }) => {
     unlimited: t('questionnaires.intervalUnlimited'),
   };
 
-  const intervalLabel = intervalLabels[interval] || intervalLabels.once;
+  const intervalLabel = interval ? intervalLabels[interval] || intervalLabels.once : intervalLabels.once;
   const canRevoke = !allowAnonymous && latestResponseId && !canRespond;
 
   const renderAction = () => {
@@ -140,7 +164,7 @@ const QuestionnaireCard = ({ questionnaire, onFillOut, onRevoke, t }) => {
         key="revoke"
         title={t('questionnaires.revokeResponse')}
         description={t('questionnaires.revokeConfirm')}
-        onConfirm={() => onRevoke(latestResponseId)}
+        onConfirm={() => onRevoke(latestResponseId!)}
         okText={t('common.yes')}
         cancelText={t('common.no')}
       >
@@ -152,13 +176,13 @@ const QuestionnaireCard = ({ questionnaire, onFillOut, onRevoke, t }) => {
   };
 
   const renderTags = () => {
-    const tags = [];
+    const tags: React.ReactNode[] = [];
     if (allowAnonymous) tags.push(<Tag key="anon" color="blue">{t('questionnaires.anonymous')}</Tag>);
     if (interval && interval !== 'once') tags.push(<Tag key="interval" color="cyan">{intervalLabel}</Tag>);
     return tags.length > 0 ? <Space size={4}>{tags}</Space> : null;
   };
 
-  const actions = [renderAction(), renderRevokeAction()].filter(Boolean);
+  const actions = [renderAction(), renderRevokeAction()].filter(Boolean) as React.ReactNode[];
 
   return (
     <Card title={name} extra={renderTags()} actions={actions}>
@@ -168,29 +192,11 @@ const QuestionnaireCard = ({ questionnaire, onFillOut, onRevoke, t }) => {
             {description}
           </Paragraph>
         )}
-        <Text>{t('questionnaires.questionCount', { count: questionCount })}</Text>
-        {responseCount > 0 && (
+        <Text>{t('questionnaires.questionCount', { count: questionCount ?? 0 })}</Text>
+        {responseCount !== undefined && responseCount > 0 && (
           <Text type="secondary">{t('questionnaires.responseCount', { count: responseCount })}</Text>
         )}
       </Space>
     </Card>
   );
-};
-QuestionnaireCard.propTypes = {
-  questionnaire: PropTypes.shape({
-    _id: PropTypes.string.isRequired,
-    name: PropTypes.string.isRequired,
-    description: PropTypes.string,
-    questionCount: PropTypes.number,
-    canRespond: PropTypes.bool,
-    responseReason: PropTypes.string,
-    nextAllowedDate: PropTypes.oneOfType([PropTypes.string, PropTypes.instanceOf(Date)]),
-    responseCount: PropTypes.number,
-    allowAnonymous: PropTypes.bool,
-    interval: PropTypes.string,
-    latestResponseId: PropTypes.string,
-  }).isRequired,
-  onFillOut: PropTypes.func.isRequired,
-  onRevoke: PropTypes.func.isRequired,
-  t: PropTypes.func.isRequired,
 };
