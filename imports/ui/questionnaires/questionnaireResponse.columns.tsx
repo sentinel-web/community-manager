@@ -2,12 +2,9 @@ import { EyeInvisibleOutlined, EyeOutlined } from '@ant-design/icons';
 import { Button, Space, Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import React from 'react';
-import type { Answer, QuestionnaireResponse } from '../../api/types/questionnaire';
+import type { Answer } from '../../api/types/questionnaire';
 import type { RowClickEvent, TranslateFn } from '../section/types';
-
-interface QuestionnaireResponseRow extends QuestionnaireResponse {
-  respondentName?: string;
-}
+import type { QuestionnaireResponseRow } from './types';
 
 const getQuestionnaireResponseColumns = (
   handleViewDetails: (e: RowClickEvent, record: QuestionnaireResponseRow) => void,

@@ -3,7 +3,7 @@ import { Meteor } from 'meteor/meteor';
 import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import RolesCollection from '../../api/collections/roles.collection';
-import type { Questionnaire, QuestionnaireResponse } from '../../api/types/questionnaire';
+import type { Questionnaire } from '../../api/types/questionnaire';
 import type { Role } from '../../api/types/role';
 import { useTranslation } from '../../i18n/LanguageContext';
 import type { DrawerContextValue } from '../app/types';
@@ -14,12 +14,9 @@ import TableFooter from '../table/footer/TableFooter';
 import Table from '../table/Table';
 import getQuestionnaireResponseColumns from './questionnaireResponse.columns';
 import ResponseDetailView from './ResponseDetailView';
+import type { QuestionnaireResponseRow } from './types';
 
 const { Text } = Typography;
-
-interface QuestionnaireResponseRow extends QuestionnaireResponse {
-  respondentName?: string;
-}
 
 function getUpdatePermission(role: Role | undefined): boolean {
   if (!role) return false;

@@ -97,7 +97,7 @@ const QuestionnaireForm = ({ setOpen }: QuestionnaireFormProps) => {
         });
       }
     },
-    [setOpen, endpoint, questionnaire, isUpdate, message, notification, t]
+    [setOpen, endpoint, questionnaire?._id, questionnaire?.createdAt, isUpdate, message, notification, t]
   );
 
   const [form] = Form.useForm<QuestionnaireFormValues>();
