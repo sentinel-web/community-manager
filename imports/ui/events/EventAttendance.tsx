@@ -3,28 +3,38 @@ import { App, Button, Col, Row, Select, Tag } from 'antd';
 import dayjs from 'dayjs';
 import { Meteor } from 'meteor/meteor';
 import { useFind, useSubscribe } from 'meteor/react-meteor-data';
-import PropTypes from 'prop-types';
 import React, { useMemo, useState } from 'react';
+import type { ColumnsType } from 'antd/es/table';
 import AttendancesCollection from '../../api/collections/attendances.collection';
 import MembersCollection from '../../api/collections/members.collection';
 import RanksCollection from '../../api/collections/ranks.collection';
+import type { AttendanceStatus } from '../../api/types/shared';
+import type { EventDoc } from '../../api/types/event';
 import { useTranslation } from '../../i18n/LanguageContext';
+import type { TranslateFn } from '../section/types';
+import type { TourElementRef } from '../tour/TourContext';
 import TableContainer from '../table/body/TableContainer';
 import Table from '../table/Table';
 import { useTourRef } from '../tour/TourContext';
 
-function MemberName({ memberId, memberNameMap }) {
-  // Use pre-computed name from parent to avoid N+1 queries
-  return memberNameMap.get(memberId) || 'Unknown';
+interface MemberNameProps {
+  memberId: string;
+  memberNameMap: Map<string, string>;
 }
-MemberName.propTypes = {
-  memberId: PropTypes.string,
-  memberNameMap: PropTypes.instanceOf(Map),
-};
 
-function AttendanceOption({ value, setEditting }) {
+function MemberName({ memberId, memberNameMap }: MemberNameProps) {
+  // Use pre-computed name from parent to avoid N+1 queries
+  return <>{memberNameMap.get(memberId) || 'Unknown'}</>;
+}
+
+interface AttendanceOptionProps {
+  value: AttendanceStatus;
+  setEditting: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+function AttendanceOption({ value, setEditting }: AttendanceOptionProps) {
   const { t } = useTranslation();
-  const colorMap = useMemo(() => {
+  const colorMap = useMemo<Record<string, string>>(() => {
     return {
       '-2': 'default',
       '-1': 'red',
@@ -56,23 +66,29 @@ function AttendanceOption({ value, setEditting }) {
     </Row>
   );
 }
-AttendanceOption.propTypes = {
-  value: PropTypes.number,
-  setEditting: PropTypes.func,
-};
 
-function AttendanceSelect({ value, eventId, memberId, setEditting }) {
+interface AttendanceSelectProps {
+  value: AttendanceStatus | null | undefined;
+  eventId: string;
+  memberId: string;
+  setEditting: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+function AttendanceSelect({ value, eventId, memberId, setEditting }: AttendanceSelectProps) {
   const { t } = useTranslation();
   const { notification } = App.useApp();
-  const handleChange = newValue => {
+  const handleChange = (newValue: AttendanceStatus) => {
     if (value === newValue) return;
     Meteor.callAsync('attendances.read', { eventId }, { limit: 1 })
       .then(res => {
-        const endpoint = res.length ? 'attendances.update' : 'attendances.insert';
-        const args = res.length ? [res[0]._id, { [memberId]: newValue }] : [{ eventId, [memberId]: newValue }];
+        const attendanceRes = res as Array<{ _id: string }>;
+        const endpoint = attendanceRes.length ? 'attendances.update' : 'attendances.insert';
+        const args = attendanceRes.length
+          ? [attendanceRes[0]._id, { [memberId]: newValue }]
+          : [{ eventId, [memberId]: newValue }];
         return Meteor.callAsync(endpoint, ...args);
       })
-      .catch(error => {
+      .catch((error: Meteor.Error) => {
         notification.error({
           message: t('common.error'),
           description: error.reason || error.message,
@@ -82,11 +98,11 @@ function AttendanceSelect({ value, eventId, memberId, setEditting }) {
 
   const options = useMemo(
     () => [
-      { value: -2, label: t('events.eventCancelled') },
-      { value: -1, label: t('events.absent') },
-      { value: 0, label: t('events.excused') },
-      { value: 1, label: t('events.present') },
-      { value: 2, label: t('events.presentZeus') },
+      { value: -2 as AttendanceStatus, label: t('events.eventCancelled') },
+      { value: -1 as AttendanceStatus, label: t('events.absent') },
+      { value: 0 as AttendanceStatus, label: t('events.excused') },
+      { value: 1 as AttendanceStatus, label: t('events.present') },
+      { value: 2 as AttendanceStatus, label: t('events.presentZeus') },
     ],
     [t]
   );
@@ -109,14 +125,14 @@ function AttendanceSelect({ value, eventId, memberId, setEditting }) {
     </Row>
   );
 }
-AttendanceSelect.propTypes = {
-  value: PropTypes.number,
-  eventId: PropTypes.string,
-  memberId: PropTypes.string,
-  setEditting: PropTypes.func,
-};
 
-function AttendanceRender({ value, eventId, memberId }) {
+interface AttendanceRenderProps {
+  value: AttendanceStatus | null | undefined;
+  eventId: string;
+  memberId: string;
+}
+
+function AttendanceRender({ value, eventId, memberId }: AttendanceRenderProps) {
   const [editting, setEditting] = useState(false);
   return editting || value === null || value === undefined ? (
     <AttendanceSelect value={value} eventId={eventId} memberId={memberId} setEditting={setEditting} />
@@ -124,62 +140,72 @@ function AttendanceRender({ value, eventId, memberId }) {
     <AttendanceOption value={value} setEditting={setEditting} />
   );
 }
-AttendanceRender.propTypes = {
-  value: PropTypes.number,
-  eventId: PropTypes.string,
-  memberId: PropTypes.string,
-};
 
-function transformEventsIntoColumns(events, memberNameMap, t) {
-  const columns = [
+interface AttendanceRow {
+  _id: string;
+  ip: number;
+  points: number;
+  memberId: string;
+  [eventId: string]: AttendanceStatus | string | number | null | undefined;
+}
+
+function transformEventsIntoColumns(events: EventDoc[], memberNameMap: Map<string, string>, t: TranslateFn): ColumnsType<AttendanceRow> {
+  const columns: ColumnsType<AttendanceRow> = [
     {
       title: t('common.name'),
       dataIndex: 'memberId',
       key: 'memberId',
       ellipsis: true,
-      render: memberId => <MemberName memberId={memberId} memberNameMap={memberNameMap} />,
+      render: (memberId: string) => <MemberName memberId={memberId} memberNameMap={memberNameMap} />,
     },
     {
       title: t('events.inactivityPoints'),
       dataIndex: 'ip',
       key: 'ip',
       ellipsis: true,
-      sorter: (a, b) => a.ip - b.ip,
+      sorter: (a, b) => (a.ip as number) - (b.ip as number),
     },
     {
       title: t('events.attendancePoints'),
       dataIndex: 'points',
       key: 'points',
       ellipsis: true,
-      sorter: (a, b) => a.points - b.points,
+      sorter: (a, b) => (a.points as number) - (b.points as number),
     },
   ];
   columns.push(
     ...(events
-      ?.sort?.((a, b) => a.start - b.start)
-      ?.map?.(event => {
-        return {
-          title: dayjs(event.start).format('YYYY-MM-DD'),
-          dataIndex: event._id,
-          key: event._id,
-          ellipsis: true,
-          render: (value, record) => <AttendanceRender value={value} eventId={event._id} memberId={record.memberId} />,
-        };
-      }) || [])
+      ?.sort?.((a, b) => (a.start as unknown as number) - (b.start as unknown as number))
+      ?.map?.(event => ({
+        title: dayjs(event.start).format('YYYY-MM-DD'),
+        dataIndex: event._id as string,
+        key: event._id as string,
+        ellipsis: true,
+        render: (value: AttendanceStatus | null | undefined, record: AttendanceRow) => (
+          <AttendanceRender value={value} eventId={event._id as string} memberId={record.memberId} />
+        ),
+      })) || [])
   );
   return columns;
 }
 
-export default function EventAttendance({ datasource }) {
+interface EventAttendanceProps {
+  datasource: EventDoc[];
+}
+
+export default function EventAttendance({ datasource }: EventAttendanceProps) {
   const attendanceRef = useTourRef('events-attendance');
   const { t } = useTranslation();
   // Attendance grid needs all members and attendances for the selected events
   useSubscribe('attendances', { eventId: { $in: datasource.map(event => event._id) } }, { limit: 1000 });
-  const attendances = useFind(() => AttendancesCollection.find({ eventId: { $in: datasource.map(event => event._id) } }), [datasource]);
+  const attendances = useFind(
+    () => AttendancesCollection.find({ eventId: { $in: datasource.map(event => event._id) as string[] } } as never),
+    [datasource]
+  );
 
   // Get unique attendee IDs from datasource events to filter members subscription
   const attendeeIds = useMemo(() => {
-    const ids = new Set();
+    const ids = new Set<string>();
     datasource.forEach(event => {
       (event.attendees || []).forEach(id => ids.add(id));
       (event.hosts || []).forEach(id => ids.add(id));
@@ -188,7 +214,7 @@ export default function EventAttendance({ datasource }) {
   }, [datasource]);
   useSubscribe('members', attendeeIds.length ? { _id: { $in: attendeeIds } } : {}, {});
   const members = useFind(
-    () => MembersCollection.find(attendeeIds.length ? { _id: { $in: attendeeIds } } : {}, { sort: { squadId: 1, rankId: 1 } }),
+    () => MembersCollection.find(attendeeIds.length ? { _id: { $in: attendeeIds } } : {}, { sort: { squadId: 1, rankId: 1 } } as never),
     [attendeeIds]
   );
   useSubscribe('ranks', {}, {});
@@ -199,7 +225,7 @@ export default function EventAttendance({ datasource }) {
     const rankNameById = new Map(ranks.map(r => [r._id, r.name]));
     return new Map(
       members.map(m => {
-        const rankName = rankNameById.get(m.profile?.rankId) ?? '';
+        const rankName = rankNameById.get(m.profile?.rankId as string) ?? '';
         const id = m.profile?.id ?? '';
         const name = m.profile?.name ?? '';
         return [m._id, `${rankName}-${id} "${name}"`];
@@ -210,10 +236,10 @@ export default function EventAttendance({ datasource }) {
   const columns = useMemo(() => transformEventsIntoColumns(datasource, memberNameMap, t), [datasource, memberNameMap, t]);
   const rows = useMemo(() => {
     return members.map(member => {
-      let ip = member.profile.staticInactivityPoints || 0;
-      let points = member.profile.staticAttendancePoints || 0;
+      let ip = (member.profile?.staticInactivityPoints as number) || 0;
+      let points = (member.profile?.staticAttendancePoints as number) || 0;
       attendances.forEach(attendance => {
-        const val = attendance[member._id];
+        const val = (attendance as unknown as Record<string, AttendanceStatus | undefined>)[member._id];
         if (val === -2 || val == null) return; // skip cancelled/missing
         if (val === -1) ip += 1;
         points += val === 2 ? 1 : Number(val);
@@ -223,21 +249,21 @@ export default function EventAttendance({ datasource }) {
         ip,
         points,
         memberId: member._id,
-        ...datasource.reduce((acc, event) => {
-          acc[event._id] = attendances.find(attendance => attendance.eventId === event._id)?.[member._id];
+        ...datasource.reduce<Record<string, AttendanceStatus | null | undefined>>((acc, event) => {
+          const attendanceDoc = attendances.find(a => (a as unknown as { eventId: string }).eventId === event._id);
+          acc[event._id as string] = attendanceDoc
+            ? (attendanceDoc as unknown as Record<string, AttendanceStatus>)[member._id]
+            : undefined;
           return acc;
         }, {}),
-      };
+      } as AttendanceRow;
     });
   }, [members, datasource, attendances]);
   return (
-    <div ref={attendanceRef}>
+    <div ref={attendanceRef as React.RefObject<HTMLDivElement>}>
       <TableContainer>
         <Table columns={columns} datasource={rows} />
       </TableContainer>
     </div>
   );
 }
-EventAttendance.propTypes = {
-  datasource: PropTypes.array,
-};

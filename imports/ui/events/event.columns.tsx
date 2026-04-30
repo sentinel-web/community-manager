@@ -1,20 +1,18 @@
 import React from 'react';
+import type { ColumnsType } from 'antd/es/table';
 import TableActions from '../table/body/actions/TableActions';
+import type { SectionPermissions, TranslateFn, RowClickEvent } from '../section/types';
+import type { EventDoc } from '../../api/types/event';
 
-/**
- * Factory function to generate table columns for events.
- * @param {function} handleEdit - Callback function to handle editing an event. Called with (event, record).
- * @param {function} handleDelete - Callback function to handle deleting an event. Called with (event, record).
- * @param {object} [permissions={}] - Permission flags for the current user.
- * @param {boolean} [permissions.canUpdate=true] - Whether the user can update events.
- * @param {boolean} [permissions.canDelete=true] - Whether the user can delete events.
- * @param {function} [t=k=>k] - Translation function for i18n.
- * @returns {Array} Array of column configuration objects for Ant Design Table.
- */
-const getEventColumns = (handleEdit, handleDelete, permissions = {}, t = k => k) => {
+const getEventColumns = (
+  handleEdit: (e: RowClickEvent, record: EventDoc) => void,
+  handleDelete: (e: RowClickEvent, record: EventDoc) => void,
+  permissions: SectionPermissions = { canCreate: true, canUpdate: true, canDelete: true },
+  t: TranslateFn = k => k
+): ColumnsType<EventDoc> => {
   const { canUpdate = true, canDelete = true } = permissions;
 
-  const columns = [
+  const columns: ColumnsType<EventDoc> = [
     {
       title: t('common.name'),
       dataIndex: 'name',
@@ -37,7 +35,7 @@ const getEventColumns = (handleEdit, handleDelete, permissions = {}, t = k => k)
       title: t('common.actions'),
       dataIndex: '_id',
       key: '_id',
-      render: (id, record) => (
+      render: (_id: string, record: EventDoc) => (
         <TableActions record={record} handleEdit={handleEdit} handleDelete={handleDelete} canUpdate={canUpdate} canDelete={canDelete} />
       ),
     });

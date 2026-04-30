@@ -2,13 +2,33 @@ import { Button, Col, Descriptions, Modal, Row, Space, Spin, Tag } from 'antd';
 import dayjs from 'dayjs';
 import { Meteor } from 'meteor/meteor';
 import { useTracker } from 'meteor/react-meteor-data';
-import PropTypes from 'prop-types';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
+import type { EventDoc } from '../../api/types/event';
 
-export default function EventDetailPopover({ event, open, setOpen, onEdit }) {
+interface ResolvedMember {
+  _id: string;
+  name: string;
+}
+
+interface EventDetail extends EventDoc {
+  eventTypeName: string | null;
+  eventTypeColor: string | null;
+  resolvedHosts: ResolvedMember[];
+  resolvedAttendees: ResolvedMember[];
+  isSignedUp: boolean;
+}
+
+interface EventDetailPopoverProps {
+  event?: EventDoc | null;
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  onEdit?: (event: EventDoc) => void;
+}
+
+export default function EventDetailPopover({ event, open, setOpen, onEdit }: EventDetailPopoverProps) {
   const { t } = useTranslation();
-  const [detail, setDetail] = useState(null);
+  const [detail, setDetail] = useState<EventDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [rsvpLoading, setRsvpLoading] = useState(false);
   const currentUserId = useTracker(() => Meteor.userId(), []);
@@ -17,7 +37,7 @@ export default function EventDetailPopover({ event, open, setOpen, onEdit }) {
     if (!event?._id || !open) return;
     setLoading(true);
     Meteor.callAsync('events.detail', event._id)
-      .then(setDetail)
+      .then(data => setDetail(data as EventDetail))
       .finally(() => setLoading(false));
   }, [event?._id, open]);
 
@@ -26,19 +46,19 @@ export default function EventDetailPopover({ event, open, setOpen, onEdit }) {
     setRsvpLoading(true);
     Meteor.callAsync('events.rsvp', event._id)
       .then(isNowSignedUp => {
-        setDetail(prev => prev ? { ...prev, isSignedUp: isNowSignedUp } : prev);
+        setDetail(prev => (prev ? { ...prev, isSignedUp: isNowSignedUp as boolean } : prev));
       })
       .finally(() => setRsvpLoading(false));
   }, [event?._id]);
 
   const handleEdit = useCallback(() => {
     setOpen(false);
-    onEdit?.(event);
+    if (event) onEdit?.(event);
   }, [event, onEdit, setOpen]);
 
   const handleClose = useCallback(() => setOpen(false), [setOpen]);
 
-  const isSignedUp = detail?.isSignedUp ?? (event?.attendees || []).includes(currentUserId);
+  const isSignedUp = detail?.isSignedUp ?? (event?.attendees || []).includes(currentUserId as string);
 
   return (
     <Modal
@@ -69,7 +89,7 @@ export default function EventDetailPopover({ event, open, setOpen, onEdit }) {
               <Descriptions.Item label={t('events.eventName')}>{detail.name}</Descriptions.Item>
               {detail.eventTypeName && (
                 <Descriptions.Item label={t('events.eventType')}>
-                  <Tag color={detail.eventTypeColor}>{detail.eventTypeName}</Tag>
+                  <Tag color={detail.eventTypeColor ?? undefined}>{detail.eventTypeName}</Tag>
                 </Descriptions.Item>
               )}
               <Descriptions.Item label={t('events.startDate')}>
@@ -99,9 +119,3 @@ export default function EventDetailPopover({ event, open, setOpen, onEdit }) {
     </Modal>
   );
 }
-EventDetailPopover.propTypes = {
-  event: PropTypes.object,
-  open: PropTypes.bool,
-  setOpen: PropTypes.func,
-  onEdit: PropTypes.func,
-};
