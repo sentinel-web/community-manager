@@ -12,7 +12,7 @@ export default function Specializations() {
   const sectionRef = useTourRef('specializations-section');
 
   return (
-    <div ref={sectionRef as React.RefObject<HTMLDivElement>}>
+    <div ref={sectionRef}>
       <Section<Specialization>
         title={t('specializations.title')}
         collectionName="specializations"

@@ -13,7 +13,7 @@ export default function Registration() {
   const filterFactory = useCallback((string: string) => ({ name: { $regex: string, $options: 'i' } }), []);
 
   return (
-    <div ref={sectionRef as React.RefObject<HTMLDivElement>}>
+    <div ref={sectionRef}>
       <Section<RegistrationDoc>
         title={t('registrations.title')}
         collectionName="registrations"

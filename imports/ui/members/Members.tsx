@@ -51,7 +51,7 @@ export default function Members() {
   );
 
   return (
-    <div ref={tableRef as React.RefObject<HTMLDivElement>}>
+    <div ref={tableRef}>
       <Section<Member>
         title={t('members.title')}
         collectionName="members"

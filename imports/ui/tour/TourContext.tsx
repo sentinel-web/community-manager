@@ -80,12 +80,12 @@ export function TourProvider({ children }: TourProviderProps) {
   return <TourContext.Provider value={value}>{children}</TourContext.Provider>;
 }
 
-export function useTourRef(key: string): TourElementRef {
-  const ref = useRef<HTMLElement | null>(null);
+export function useTourRef<T extends HTMLElement = HTMLDivElement>(key: string): MutableRefObject<T | null> {
+  const ref = useRef<T | null>(null);
   const { registerRef, unregisterRef } = useContext(TourContext);
 
   useEffect(() => {
-    registerRef(key, ref);
+    registerRef(key, ref as MutableRefObject<HTMLElement | null>);
     return () => unregisterRef(key);
   }, [key, registerRef, unregisterRef]);
 

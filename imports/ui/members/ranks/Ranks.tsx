@@ -12,7 +12,7 @@ const Ranks = () => {
   const sectionRef = useTourRef('ranks-section');
 
   return (
-    <div ref={sectionRef as React.RefObject<HTMLDivElement>}>
+    <div ref={sectionRef}>
       <Section<Rank>
         title={t('members.ranks')}
         collectionName="ranks"

@@ -260,7 +260,7 @@ export default function EventAttendance({ datasource }: EventAttendanceProps) {
     });
   }, [members, datasource, attendances]);
   return (
-    <div ref={attendanceRef as React.RefObject<HTMLDivElement>}>
+    <div ref={attendanceRef}>
       <TableContainer>
         <Table columns={columns} datasource={rows} />
       </TableContainer>

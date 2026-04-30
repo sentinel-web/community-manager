@@ -46,7 +46,7 @@ export default function Header() {
         </Row>
       </Col>
       <Col>
-        <div ref={headerRef as React.RefObject<HTMLDivElement>} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div ref={headerRef} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <LanguageSelector />
           <Navigation />
         </div>

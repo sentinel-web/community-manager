@@ -116,7 +116,7 @@ export default function Orbat() {
   );
 
   return (
-    <div ref={chartRef as React.RefObject<HTMLDivElement>}>
+    <div ref={chartRef}>
       <Card
         loading={!ready}
         title={<Typography.Title level={3}>{t('orbat.title')}</Typography.Title>}

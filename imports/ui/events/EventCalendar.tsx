@@ -147,7 +147,7 @@ const EventCalendar = ({ datasource, setFilter }: EventCalendarProps) => {
   );
 
   return (
-    <div ref={calendarRef as React.RefObject<HTMLDivElement>}>
+    <div ref={calendarRef}>
       <div style={{ height: window.innerHeight * 0.75 }}>
         <EventDetailPopover event={detailEvent} open={detailOpen} setOpen={setDetailOpen} onEdit={e => openForm(e as unknown as Record<string, unknown>)} />
         <DnDCalendar

@@ -73,7 +73,7 @@ export default function Settings() {
   }, []);
 
   return (
-    <div ref={settingsRef as React.RefObject<HTMLDivElement>}>
+    <div ref={settingsRef}>
       <SectionCard title={t('settings.title')} ready={ready}>
         <Row gutter={[16, 16]}>
           <Col span={24}>

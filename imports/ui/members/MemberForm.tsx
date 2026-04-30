@@ -11,7 +11,7 @@ import type { Member } from '../../api/types/member';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
 import type { DrawerContextValue } from '../app/types';
-import CollectionSelect from '../components/CollectionSelect';
+import CollectionSelect, { type CollectionDoc } from '../components/CollectionSelect';
 import { getDateFromValues } from '../events/EventForm';
 import ProfilePictureInput from '../profile-picture-input/ProfilePictureInput';
 import SpecializationsSelect from '../specializations/SpecializationsSelect';
@@ -56,7 +56,6 @@ interface MemberFormValues {
   profile?: MemberFormProfile;
 }
 
-type CollectionDocShape = { _id?: string; name?: string; color?: string; profile?: { name?: string }; [key: string]: unknown };
 
 export const transformDateToDays = (values: Record<string, unknown>, key = 'date'): Dayjs | undefined => {
   if (values[key]) return dayjs(values[key] as dayjs.ConfigType);
@@ -251,7 +250,7 @@ export default function MemberForm({ setOpen }: MemberFormProps) {
         label={t('members.rank')}
         placeholder={t('common.selectRank')}
         rules={[{ type: 'string' }]}
-        collection={RanksCollection as unknown as Mongo.Collection<CollectionDocShape>}
+        collection={RanksCollection as unknown as Mongo.Collection<CollectionDoc>}
         subscription="ranks"
         query={{ type: 'player' }}
       />
@@ -262,7 +261,7 @@ export default function MemberForm({ setOpen }: MemberFormProps) {
         label={t('forms.labels.navyRank')}
         placeholder={t('common.selectRank')}
         rules={[{ type: 'string' }]}
-        collection={RanksCollection as unknown as Mongo.Collection<CollectionDocShape>}
+        collection={RanksCollection as unknown as Mongo.Collection<CollectionDoc>}
         subscription="ranks"
         query={{ type: 'zeus' }}
       />
@@ -294,7 +293,7 @@ export default function MemberForm({ setOpen }: MemberFormProps) {
         subscription="roles"
         FormComponent={RolesForm}
         defaultValue={model?.profile?.roleId}
-        collection={RolesCollection as unknown as Mongo.Collection<CollectionDocShape>}
+        collection={RolesCollection as unknown as Mongo.Collection<CollectionDoc>}
       />
       <Form.Item name={['profile', 'discordTag']} label={t('members.discordTag')} rules={[{ type: 'string' }]}>
         <Input placeholder={t('forms.placeholders.enterDiscordTag')} />

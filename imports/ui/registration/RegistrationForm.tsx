@@ -9,7 +9,7 @@ import type { Registration } from '../../api/types';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
 import type { DrawerContextValue } from '../app/types';
-import CollectionSelect from '../components/CollectionSelect';
+import CollectionSelect, { type CollectionDoc } from '../components/CollectionSelect';
 import DiscoveryTypeForm from './discovery-types/DiscoveryTypesForm';
 
 interface RegistrationFormValues {
@@ -194,7 +194,7 @@ export default function RegistrationForm({ setOpen }: RegistrationFormProps) {
         label={t('forms.labels.discoveryType')}
         rules={[{ required: false, type: 'string' }]}
         placeholder={t('forms.placeholders.selectDiscoveryType')}
-        collection={DiscoveryTypesCollection as unknown as Mongo.Collection<{ _id?: string; name?: string; color?: string; [key: string]: unknown }>}
+        collection={DiscoveryTypesCollection as unknown as Mongo.Collection<CollectionDoc>}
         FormComponent={DiscoveryTypeForm}
         onChange={handleDiscoveryTypeChange}
       />

@@ -8,7 +8,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import MembersCollection from '../../api/collections/members.collection';
 import type { LanguageContextValue } from '../../i18n/LanguageContext';
 import { useTranslation } from '../../i18n/LanguageContext';
-import CollectionSelect from '../components/CollectionSelect';
+import CollectionSelect, { type CollectionDoc } from '../components/CollectionSelect';
 import MemberForm from './MemberForm';
 
 interface MembersSelectProps {
@@ -34,7 +34,7 @@ export default function MembersSelect({ multiple, name, label, rules, defaultVal
       label={label}
       rules={rules}
       mode={multiple ? 'multiple' : undefined}
-      collection={MembersCollection as unknown as Mongo.Collection<{ _id?: string; name?: string; color?: string; profile?: { name?: string }; [key: string]: unknown }>}
+      collection={MembersCollection as unknown as Mongo.Collection<CollectionDoc>}
       FormComponent={MemberForm}
       subscription="members"
       placeholder={t('common.selectMembers')}

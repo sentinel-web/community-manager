@@ -139,7 +139,7 @@ export default function MemberProfile({ memberId }: MemberProfileProps) {
 
   if (loading) {
     return (
-      <div ref={profileRef as React.RefObject<HTMLDivElement>}>
+      <div ref={profileRef}>
         <Row justify="center" style={{ padding: 40 }}>
           <Spin size="large" />
         </Row>
@@ -150,7 +150,7 @@ export default function MemberProfile({ memberId }: MemberProfileProps) {
   if (!profileStats) return null;
 
   return (
-    <div ref={profileRef as React.RefObject<HTMLDivElement>}>
+    <div ref={profileRef}>
     <Row gutter={[16, 16]}>
       {/* Header: Profile Picture + Basic Info */}
       <Col xs={24} md={8}>

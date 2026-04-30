@@ -10,7 +10,7 @@ import type { Task, TaskComment } from '../../api/types/task';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
 import type { DrawerContextValue } from '../app/types';
-import CollectionSelect from '../components/CollectionSelect';
+import CollectionSelect, { type CollectionDoc } from '../components/CollectionSelect';
 import FormFooter from '../components/FormFooter';
 import MembersSelectJs from '../members/MembersSelect';
 import TaskStatusForm from './task-status/TaskStatusForm';
@@ -103,7 +103,7 @@ export default function TaskForm({ setOpen }: TaskFormProps) {
         label={t('forms.labels.taskStatus')}
         placeholder={t('common.selectTaskStatus')}
         rules={[{ required: true, type: 'string' }]}
-        collection={TaskStatusCollection as unknown as Mongo.Collection<{ _id?: string; name?: string; color?: string; [key: string]: unknown }>}
+        collection={TaskStatusCollection as unknown as Mongo.Collection<CollectionDoc>}
         subscription="taskStatus"
         FormComponent={TaskStatusForm}
       />
@@ -134,7 +134,7 @@ export default function TaskForm({ setOpen }: TaskFormProps) {
         label={t('forms.labels.parentTask')}
         placeholder={t('common.selectTask')}
         rules={[{ required: false, type: 'string' }]}
-        collection={TasksCollection as unknown as Mongo.Collection<{ _id?: string; name?: string; color?: string; [key: string]: unknown }>}
+        collection={TasksCollection as unknown as Mongo.Collection<CollectionDoc>}
         subscription="tasks"
         FormComponent={TaskForm}
       />
