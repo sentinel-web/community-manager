@@ -2,19 +2,34 @@ import { CommentOutlined, SendOutlined } from '@ant-design/icons';
 import { App, Button, Divider, Form, Input, List, Select, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { Meteor } from 'meteor/meteor';
-import PropTypes from 'prop-types';
+import { Mongo } from 'meteor/mongo';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import TasksCollection from '../../api/collections/tasks.collection';
 import TaskStatusCollection from '../../api/collections/taskStatus.collection';
+import type { Task, TaskComment } from '../../api/types/task';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
+import type { DrawerContextValue } from '../app/types';
 import CollectionSelect from '../components/CollectionSelect';
 import FormFooter from '../components/FormFooter';
-import MembersSelect from '../members/MembersSelect';
+import MembersSelectJs from '../members/MembersSelect';
 import TaskStatusForm from './task-status/TaskStatusForm';
 
-const TaskForm = ({ setOpen }) => {
-  const { drawerModel: model } = useContext(DrawerContext);
+// MembersSelect is a JS component — cast to allow flexible prop passing from TSX
+const MembersSelect = MembersSelectJs as unknown as React.ComponentType<Record<string, unknown>>;
+
+interface MemberOption {
+  value: string;
+  label: string;
+}
+
+interface TaskFormProps {
+  setOpen: (open: boolean) => void;
+}
+
+export default function TaskForm({ setOpen }: TaskFormProps) {
+  const { drawerModel } = useContext(DrawerContext) as DrawerContextValue;
+  const model = drawerModel as unknown as Task;
   const { message, notification } = App.useApp();
   const { t } = useTranslation();
   const { isUpdate, endpoint } = useMemo(
@@ -23,26 +38,27 @@ const TaskForm = ({ setOpen }) => {
   );
 
   const handleFinish = useCallback(
-    async values => {
+    async (values: Partial<Task>) => {
       try {
         const args = isUpdate ? [model._id, values] : [values];
         await Meteor.callAsync(endpoint, ...args);
         setOpen(false);
         message.success(isUpdate ? t('messages.taskUpdated') : t('messages.taskCreated'));
       } catch (error) {
+        const err = error as Meteor.Error;
         notification.error({
-          message: error.error,
-          description: error.message,
+          message: err.error as string,
+          description: err.message,
         });
       }
     },
     [setOpen, endpoint, model?._id, isUpdate, message, notification, t]
   );
 
-  const [participantOptions, setParticipantOptions] = useState([]);
+  const [participantOptions, setParticipantOptions] = useState<MemberOption[]>([]);
   useEffect(() => {
     Meteor.callAsync('members.options')
-      .then(res => setParticipantOptions(res))
+      .then((res: MemberOption[]) => setParticipantOptions(res))
       .catch(() => {});
   }, []);
 
@@ -50,12 +66,14 @@ const TaskForm = ({ setOpen }) => {
 
   // Comments state
   const [commentText, setCommentText] = useState('');
-  const [comments, setComments] = useState(model?.comments || []);
+  const [comments, setComments] = useState<TaskComment[]>(model?.comments || []);
   const [commentLoading, setCommentLoading] = useState(false);
 
   const memberNames = useMemo(() => {
-    const map = {};
-    participantOptions.forEach(o => { map[o.value] = o.label; });
+    const map: Record<string, string> = {};
+    participantOptions.forEach(o => {
+      map[o.value] = o.label;
+    });
     return map;
   }, [participantOptions]);
 
@@ -64,11 +82,12 @@ const TaskForm = ({ setOpen }) => {
     setCommentLoading(true);
     try {
       await Meteor.callAsync('tasks.addComment', model._id, commentText.trim());
-      setComments(prev => [...prev, { userId: Meteor.userId(), text: commentText.trim(), createdAt: new Date() }]);
+      setComments(prev => [...prev, { userId: Meteor.userId() as string, text: commentText.trim(), createdAt: new Date() }]);
       setCommentText('');
       message.success(t('tasks.commentAdded'));
     } catch (error) {
-      notification.error({ message: error.error, description: error.message });
+      const err = error as Meteor.Error;
+      notification.error({ message: err.error as string, description: err.message });
     }
     setCommentLoading(false);
   }, [commentText, model?._id, message, notification, t]);
@@ -84,7 +103,7 @@ const TaskForm = ({ setOpen }) => {
         label={t('forms.labels.taskStatus')}
         placeholder={t('common.selectTaskStatus')}
         rules={[{ required: true, type: 'string' }]}
-        collection={TaskStatusCollection}
+        collection={TaskStatusCollection as unknown as Mongo.Collection<{ _id?: string; name?: string; color?: string; [key: string]: unknown }>}
         subscription="taskStatus"
         FormComponent={TaskStatusForm}
       />
@@ -115,7 +134,7 @@ const TaskForm = ({ setOpen }) => {
         label={t('forms.labels.parentTask')}
         placeholder={t('common.selectTask')}
         rules={[{ required: false, type: 'string' }]}
-        collection={TasksCollection}
+        collection={TasksCollection as unknown as Mongo.Collection<{ _id?: string; name?: string; color?: string; [key: string]: unknown }>}
         subscription="tasks"
         FormComponent={TaskForm}
       />
@@ -166,9 +185,4 @@ const TaskForm = ({ setOpen }) => {
       )}
     </Form>
   );
-};
-TaskForm.propTypes = {
-  setOpen: PropTypes.func,
-};
-
-export default TaskForm;
+}

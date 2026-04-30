@@ -1,20 +1,29 @@
 import dayjs from 'dayjs';
 import { Meteor } from 'meteor/meteor';
-import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
+import type { ColumnsType } from 'antd/es/table';
 import TaskStatusCollection from '../../api/collections/taskStatus.collection';
+import type { Task } from '../../api/types/task';
+import type { LanguageContextValue } from '../../i18n/LanguageContext';
+import type { SectionPermissions } from '../section/types';
 import TableActions from '../table/body/actions/TableActions';
 import TaskStatusTag from './task-status/TaskStatusTag';
 
-export const Participants = ({ participants }) => {
-  const [value, setValue] = useState('loading...');
+type TFn = LanguageContextValue['t'];
+
+interface ParticipantsProps {
+  participants?: string[];
+}
+
+export function Participants({ participants }: ParticipantsProps) {
+  const [value, setValue] = useState<string>('loading...');
 
   useEffect(() => {
     if (!participants?.length) setValue('-');
     const filter = { _id: { $in: participants } };
     const options = { fields: { 'profile.name': 1, 'profile.id': 1, 'profile.rankId': 1 } };
     Meteor.callAsync('members.participantNames', filter, options)
-      .then(res => {
+      .then((res: string) => {
         if (!res?.length) setValue('-');
         else setValue(res);
       })
@@ -22,15 +31,17 @@ export const Participants = ({ participants }) => {
   }, [participants]);
 
   return <>{value}</>;
-};
-Participants.propTypes = {
-  participants: PropTypes.array,
-};
+}
 
-const getTaskColumns = (handleTaskEdit, handleTaskDelete, permissions = {}, t = k => k) => {
+export function getTaskColumns(
+  handleTaskEdit: (e: React.MouseEvent<HTMLElement>, record: Task) => void,
+  handleTaskDelete: (e: React.MouseEvent<HTMLElement>, record: Task) => void,
+  permissions: SectionPermissions = { canCreate: true, canUpdate: true, canDelete: true },
+  t: TFn = k => k,
+): ColumnsType<Task> {
   const { canUpdate = true, canDelete = true } = permissions;
 
-  const columns = [
+  const columns: ColumnsType<Task> = [
     {
       title: t('common.name'),
       dataIndex: 'name',
@@ -57,7 +68,7 @@ const getTaskColumns = (handleTaskEdit, handleTaskDelete, permissions = {}, t = 
       sorter: (a, b) => {
         const aStatus = a.status ? TaskStatusCollection.findOne({ _id: a.status })?.name : a.status;
         const bStatus = b.status ? TaskStatusCollection.findOne({ _id: b.status })?.name : b.status;
-        return aStatus.localeCompare(bStatus);
+        return (aStatus ?? '').localeCompare(bStatus ?? '');
       },
       ellipsis: true,
       render: status => (status ? <TaskStatusTag taskStatusId={status} /> : '-'),
@@ -65,7 +76,7 @@ const getTaskColumns = (handleTaskEdit, handleTaskDelete, permissions = {}, t = 
     {
       title: t('tasks.createdAt'),
       dataIndex: 'createdAt',
-      sorter: (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0),
+      sorter: (a, b) => new Date(a.createdAt || 0).valueOf() - new Date(b.createdAt || 0).valueOf(),
       render: createdAt => (createdAt ? dayjs(createdAt).format('YYYY-MM-DD') : '-'),
       ellipsis: true,
     },
@@ -82,7 +93,6 @@ const getTaskColumns = (handleTaskEdit, handleTaskDelete, permissions = {}, t = 
   }
 
   return columns;
-};
+}
 
-export { getTaskColumns };
 export default getTaskColumns;

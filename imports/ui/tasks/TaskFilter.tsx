@@ -1,23 +1,33 @@
 import { App, Form, Select } from 'antd';
+import { Mongo } from 'meteor/mongo';
 import { Meteor } from 'meteor/meteor';
-import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useMemo } from 'react';
 import TaskStatusCollection from '../../api/collections/taskStatus.collection';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
+import type { DrawerContextValue } from '../app/types';
 import CollectionSelect from '../components/CollectionSelect';
 import FormFooter from '../components/FormFooter';
-import MembersSelect from '../members/MembersSelect';
+import MembersSelectJs from '../members/MembersSelect';
 import TaskStatusForm from './task-status/TaskStatusForm';
+import type { TaskFilterModel } from './types';
 
-const TaskFilter = ({ setOpen }) => {
+// MembersSelect is a JS component — cast to allow flexible prop passing from TSX
+const MembersSelect = MembersSelectJs as unknown as React.ComponentType<Record<string, unknown>>;
+
+interface TaskFilterProps {
+  setOpen: (open: boolean) => void;
+}
+
+export default function TaskFilter({ setOpen }: TaskFilterProps) {
   const { t } = useTranslation();
-  const { drawerModel: model } = useContext(DrawerContext);
+  const { drawerModel } = useContext(DrawerContext) as DrawerContextValue;
+  const model = drawerModel as unknown as TaskFilterModel;
   const { notification } = App.useApp();
   const [form] = Form.useForm();
 
   const handleFinish = useCallback(
-    async values => {
+    async (values: TaskFilterModel) => {
       Meteor.callAsync('members.saveTaskFilter', values)
         .then(() => {
           setOpen(false);
@@ -52,7 +62,7 @@ const TaskFilter = ({ setOpen }) => {
         rules={[{ required: false, type: 'array' }]}
         placeholder={t('common.status')}
         FormComponent={TaskStatusForm}
-        collection={TaskStatusCollection}
+        collection={TaskStatusCollection as unknown as Mongo.Collection<{ _id?: string; name?: string; color?: string; [key: string]: unknown }>}
         mode="multiple"
         subscription="taskStatus"
       />
@@ -60,16 +70,10 @@ const TaskFilter = ({ setOpen }) => {
         name="participants"
         label={t('tasks.participants')}
         rules={[{ required: false, type: 'array' }]}
-        placeholder={t('forms.placeholders.selectParticipants')}
         defaultValue={model?.participants}
         multiple
       />
       <FormFooter setOpen={setOpen} />
     </Form>
   );
-};
-TaskFilter.propTypes = {
-  setOpen: PropTypes.func,
-};
-
-export default TaskFilter;
+}
