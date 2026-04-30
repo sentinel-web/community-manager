@@ -1,11 +1,19 @@
 import { Tag } from 'antd';
 import React from 'react';
+import type { ColumnsType } from 'antd/es/table';
 import TableActions from '../../table/body/actions/TableActions';
+import type { SectionPermissions, TranslateFn, RowClickEvent } from '../../section/types';
+import type { TaskStatus } from '../../../api/types/misc';
 
-const getTaskStatusColumns = (handleEdit, handleDelete, permissions = {}, t = k => k) => {
+const getTaskStatusColumns = (
+  handleEdit: (e: RowClickEvent, record: TaskStatus) => void,
+  handleDelete: (e: RowClickEvent, record: TaskStatus) => void,
+  permissions: SectionPermissions = { canCreate: true, canUpdate: true, canDelete: true },
+  t: TranslateFn = k => k
+): ColumnsType<TaskStatus> => {
   const { canUpdate = true, canDelete = true } = permissions;
 
-  const columns = [
+  const columns: ColumnsType<TaskStatus> = [
     {
       title: t('common.name'),
       dataIndex: 'name',
@@ -26,7 +34,7 @@ const getTaskStatusColumns = (handleEdit, handleDelete, permissions = {}, t = k 
       key: 'color',
       ellipsis: true,
       sorter: (a, b) => (a.color || '').localeCompare(b.color || ''),
-      render: color => <Tag color={color || 'transparent'}>{color}</Tag>,
+      render: (color: string | null) => <Tag color={color || 'transparent'}>{color}</Tag>,
     },
   ];
 
@@ -35,7 +43,7 @@ const getTaskStatusColumns = (handleEdit, handleDelete, permissions = {}, t = k 
       title: t('common.actions'),
       dataIndex: '_id',
       key: '_id',
-      render: (id, record) => (
+      render: (_id: string, record: TaskStatus) => (
         <TableActions record={record} handleEdit={handleEdit} handleDelete={handleDelete} canUpdate={canUpdate} canDelete={canDelete} />
       ),
     });

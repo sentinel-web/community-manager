@@ -1,5 +1,6 @@
 import React from 'react';
 import TaskStatusCollection from '../../../api/collections/taskStatus.collection';
+import type { TaskStatus } from '../../../api/types/misc';
 import { useTranslation } from '../../../i18n/LanguageContext';
 import Section from '../../section/Section';
 import TaskStatusForm from './TaskStatusForm';
@@ -9,7 +10,7 @@ const TaskStatuses = () => {
   const { t } = useTranslation();
 
   return (
-    <Section
+    <Section<TaskStatus>
       title={t('tasks.taskStatuses')}
       collectionName="taskStatus"
       Collection={TaskStatusCollection}
