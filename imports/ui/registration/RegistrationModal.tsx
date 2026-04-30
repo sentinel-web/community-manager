@@ -1,4 +1,4 @@
-import { Form, Modal } from 'antd';
+import { Modal } from 'antd';
 import React, { useCallback } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import RegistrationForm from './RegistrationForm';
@@ -9,17 +9,15 @@ interface RegistrationModalProps {
 }
 
 export default function RegistrationModal({ open, setOpen }: RegistrationModalProps) {
-  const [form] = Form.useForm();
   const { t } = useTranslation();
 
   const handleClose = useCallback(() => {
     setOpen(false);
-    form.resetFields();
-  }, [setOpen, form.resetFields]);
+  }, [setOpen]);
 
   return (
     <Modal title={t('modals.registration')} open={open} onCancel={handleClose} footer={null} centered destroyOnHidden>
-      <RegistrationForm form={form} setOpen={setOpen} />
+      <RegistrationForm setOpen={setOpen} />
     </Modal>
   );
 }

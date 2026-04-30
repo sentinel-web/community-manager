@@ -10,15 +10,10 @@ import CollectionSelect from '../components/CollectionSelect';
 import FormFooter from '../components/FormFooter';
 import MembersSelectJs from '../members/MembersSelect';
 import TaskStatusForm from './task-status/TaskStatusForm';
+import type { TaskFilterModel } from './types';
 
 // MembersSelect is a JS component — cast to allow flexible prop passing from TSX
 const MembersSelect = MembersSelectJs as unknown as React.ComponentType<Record<string, unknown>>;
-
-interface TaskFilterModel {
-  type?: string;
-  status?: string[];
-  participants?: string[];
-}
 
 interface TaskFilterProps {
   setOpen: (open: boolean) => void;

@@ -15,18 +15,13 @@ import KanbanBoard from './KanbanBoard';
 import { getTaskColumns } from './task.columns';
 import TaskFilter from './TaskFilter';
 import TaskForm from './TaskForm';
+import type { TaskFilterModel } from './types';
 
 const empty = <></>;
 
-interface TaskFilter {
-  type?: string;
-  status?: string[];
-  participants?: string[];
-}
-
 export default function Tasks() {
   const tasksRef = useTourRef('tasks-section');
-  const filter = useTracker(() => Meteor.user()?.profile?.taskFilter as TaskFilter | undefined, []);
+  const filter = useTracker(() => Meteor.user()?.profile?.taskFilter as TaskFilterModel | undefined, []);
   const drawer = useContext(DrawerContext) as DrawerContextValue;
   const { t } = useTranslation();
 

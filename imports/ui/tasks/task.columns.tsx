@@ -16,14 +16,14 @@ interface ParticipantsProps {
 }
 
 export function Participants({ participants }: ParticipantsProps) {
-  const [value, setValue] = useState<string | string[]>('loading...');
+  const [value, setValue] = useState<string>('loading...');
 
   useEffect(() => {
     if (!participants?.length) setValue('-');
     const filter = { _id: { $in: participants } };
     const options = { fields: { 'profile.name': 1, 'profile.id': 1, 'profile.rankId': 1 } };
     Meteor.callAsync('members.participantNames', filter, options)
-      .then((res: string[]) => {
+      .then((res: string) => {
         if (!res?.length) setValue('-');
         else setValue(res);
       })

@@ -1,5 +1,4 @@
 import { Alert, App, Button, Col, Form, Input, InputNumber, Row, Switch, Tooltip } from 'antd';
-import type { FormInstance } from 'antd';
 import type { ValidateStatus } from 'antd/es/form/FormItem';
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
@@ -27,12 +26,10 @@ interface RegistrationFormValues {
 
 interface RegistrationFormProps {
   setOpen: (open: boolean) => void;
-  form?: FormInstance;
 }
 
 export default function RegistrationForm({ setOpen }: RegistrationFormProps) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [form] = Form.useForm<any>();
+  const [form] = Form.useForm<RegistrationFormValues>();
   const drawer = useContext(DrawerContext) as DrawerContextValue;
   const { message, notification } = App.useApp();
   const { t } = useTranslation();
@@ -67,7 +64,7 @@ export default function RegistrationForm({ setOpen }: RegistrationFormProps) {
     const value = form.getFieldValue('name');
     setNameError('validating');
     Meteor.callAsync('registrations.validateName', value, (model as Registration)?._id)
-      .then(result => {
+      .then((result: boolean) => {
         setNameError(result ? 'success' : 'error');
         setDisableSubmit(!result);
       })
@@ -80,7 +77,7 @@ export default function RegistrationForm({ setOpen }: RegistrationFormProps) {
     const value = form.getFieldValue('id');
     setIdError('validating');
     Meteor.callAsync('registrations.validateId', value, (model as Registration)?._id)
-      .then(result => {
+      .then((result: boolean) => {
         setIdError(result ? 'success' : 'error');
         setDisableSubmit(!result);
       })
@@ -125,21 +122,21 @@ export default function RegistrationForm({ setOpen }: RegistrationFormProps) {
         })
         .finally(() => setLoading(false));
     },
-    [setOpen, form, model, message, notification],
+    [setOpen, form, model, message, notification, t],
   );
 
   const handleValuesChange = useCallback(
-    (changedValues: Partial<RegistrationFormValues>, values?: Partial<RegistrationFormValues>) => {
-      if ('name' in (values ?? {})) {
+    (changedValues: Partial<RegistrationFormValues>, values: RegistrationFormValues) => {
+      if ('name' in values) {
         validateName();
       }
-      if ('id' in (values ?? {})) {
+      if ('id' in values) {
         validateId();
       }
-      if ('rulesReadAndAccepted' in (changedValues ?? {}) && 'rulesReadAndAccepted' in (values ?? {})) {
-        setDisableSubmit(!values?.rulesReadAndAccepted);
+      if ('rulesReadAndAccepted' in changedValues && 'rulesReadAndAccepted' in values) {
+        setDisableSubmit(!values.rulesReadAndAccepted);
       }
-      if ('discoveryType' in (changedValues ?? {})) {
+      if ('discoveryType' in changedValues) {
         handleDiscoveryTypeChange();
       }
     },
@@ -147,7 +144,7 @@ export default function RegistrationForm({ setOpen }: RegistrationFormProps) {
   );
 
   useEffect(() => {
-    handleValuesChange(model as unknown as Partial<RegistrationFormValues>);
+    handleValuesChange(model as unknown as Partial<RegistrationFormValues>, model as unknown as RegistrationFormValues);
   }, [model, handleValuesChange]);
 
   return (

@@ -2,6 +2,7 @@ import { App, Button, Form, Input, Modal, Space } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import React, { useCallback, useEffect, useState } from 'react';
 import type { Registration } from '../../api/types';
+import type { Member } from '../../api/types/member';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 
 interface ConfirmModalProps {
@@ -85,7 +86,7 @@ export default function RegistrationExtra({ record }: RegistrationExtraProps) {
   const [createdAlready, setCreatedAlready] = useState(true);
 
   useEffect(() => {
-    Meteor.callAsync('members.findOne', { 'profile.registrationId': record._id }, { fields: { service: 0 } }).then(res => {
+    Meteor.callAsync('members.findOne', { 'profile.registrationId': record._id }, { fields: { service: 0 } }).then((res: Member | undefined) => {
       if (res) setCreatedAlready(true);
       else setCreatedAlready(false);
     });
