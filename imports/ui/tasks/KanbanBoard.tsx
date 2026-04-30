@@ -37,10 +37,11 @@ export default function KanbanBoard({ datasource, handleEdit, handleDelete }: Ka
 
   const columns = useMemo(() => {
     const result: Record<string, Task[]> = datasource?.reduce<Record<string, Task[]>>((acc, task) => {
-      if (!acc[task.status ?? '']) acc[task.status ?? ''] = [];
-      acc[task.status ?? ''].push(task);
+      const key = task.status as string;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(task);
       return acc;
-    }, {}) ?? {};
+    }, {}) || {};
     return result;
   }, [datasource]);
 
