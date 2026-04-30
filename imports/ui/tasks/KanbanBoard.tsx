@@ -3,16 +3,29 @@ import { Badge, Button, Card, Col, Empty, Grid, Row, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { Meteor } from 'meteor/meteor';
 import { useTracker } from 'meteor/react-meteor-data';
-import PropTypes from 'prop-types';
 import React, { useMemo } from 'react';
 import { DragDropContext, Draggable, Droppable } from 'react-beautiful-dnd';
+import type { Task } from '../../api/types/task';
 import { useTranslation } from '../../i18n/LanguageContext';
+import type { RowClickEvent } from '../section/types';
 import TaskStatusTag from './task-status/TaskStatusTag';
 import { Participants } from './task.columns';
 
-const KanbanBoard = ({ datasource, handleEdit, handleDelete }) => {
+interface DropResult {
+  destination?: { droppableId: string; index: number } | null;
+  source: { droppableId: string; index: number };
+  draggableId: string;
+}
+
+interface KanbanBoardProps {
+  datasource?: Task[];
+  handleEdit: (e: RowClickEvent, record: Task) => void;
+  handleDelete: (e: RowClickEvent, record: Task) => void;
+}
+
+export default function KanbanBoard({ datasource, handleEdit, handleDelete }: KanbanBoardProps) {
   const { t } = useTranslation();
-  const onDragEnd = result => {
+  const onDragEnd = (result: DropResult) => {
     const { destination, source, draggableId } = result;
     if (!destination) return;
     if (destination.droppableId === source.droppableId && destination.index === source.index) return;
@@ -20,16 +33,15 @@ const KanbanBoard = ({ datasource, handleEdit, handleDelete }) => {
     Meteor.callAsync('tasks.update', draggableId, { status: destination.droppableId });
   };
 
-  const options = useTracker(() => Meteor.user()?.profile?.taskFilter?.status || [], []);
+  const options = useTracker(() => (Meteor.user()?.profile?.taskFilter?.status as string[] | undefined) || [], []);
 
   const columns = useMemo(() => {
-    return (
-      datasource?.reduce((acc, task) => {
-        if (!acc[task.status]) acc[task.status] = [];
-        acc[task.status].push(task);
-        return acc;
-      }, {}) || {}
-    );
+    const result: Record<string, Task[]> = datasource?.reduce<Record<string, Task[]>>((acc, task) => {
+      if (!acc[task.status ?? '']) acc[task.status ?? ''] = [];
+      acc[task.status ?? ''].push(task);
+      return acc;
+    }, {}) ?? {};
+    return result;
   }, [datasource]);
 
   const breakpoints = Grid.useBreakpoint();
@@ -42,7 +54,7 @@ const KanbanBoard = ({ datasource, handleEdit, handleDelete }) => {
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <Row gutter={[16, 16]}>
-        {options.map(status => (
+        {options.map((status: string) => (
           <Col key={status} span={colSpan}>
             <Droppable droppableId={status}>
               {provided => (
@@ -50,7 +62,7 @@ const KanbanBoard = ({ datasource, handleEdit, handleDelete }) => {
                   <Card title={<TaskStatusTag taskStatusId={status} />}>
                     {!columns[status]?.length && <Empty />}
                     {columns[status]?.map((task, index) => (
-                      <Draggable key={`${status}-${task._id}`} draggableId={task._id} index={index}>
+                      <Draggable key={`${status}-${task._id}`} draggableId={task._id ?? ''} index={index}>
                         {provided => (
                           <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
                             <Card
@@ -75,9 +87,11 @@ const KanbanBoard = ({ datasource, handleEdit, handleDelete }) => {
                                 </pre>
                               )}
                               <Participants participants={task.participants} />
-                              {task.completedBy?.length > 0 && (
+                              {task.completedBy && task.completedBy.length > 0 && (
                                 <div style={{ marginTop: 4 }}>
-                                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('tasks.completedBy')}{' '}</Typography.Text>
+                                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                    {t('tasks.completedBy')}{' '}
+                                  </Typography.Text>
                                   <Participants participants={task.completedBy} />
                                 </div>
                               )}
@@ -89,7 +103,7 @@ const KanbanBoard = ({ datasource, handleEdit, handleDelete }) => {
                                     </Typography.Text>
                                   </Col>
                                 )}
-                                {task.comments?.length > 0 && (
+                                {task.comments && task.comments.length > 0 && (
                                   <Col>
                                     <Badge count={task.comments.length} size="small">
                                       <CommentOutlined style={{ fontSize: 16 }} />
@@ -112,11 +126,4 @@ const KanbanBoard = ({ datasource, handleEdit, handleDelete }) => {
       </Row>
     </DragDropContext>
   );
-};
-KanbanBoard.propTypes = {
-  datasource: PropTypes.array,
-  handleEdit: PropTypes.func,
-  handleDelete: PropTypes.func,
-};
-
-export default KanbanBoard;
+}
