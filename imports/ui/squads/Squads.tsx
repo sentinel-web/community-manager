@@ -20,7 +20,7 @@ export default function Squads() {
   );
 
   return (
-    <div ref={sectionRef as React.RefObject<HTMLDivElement>}>
+    <div ref={sectionRef}>
       <Section<Squad>
         title={t('squads.title')}
         collectionName="squads"

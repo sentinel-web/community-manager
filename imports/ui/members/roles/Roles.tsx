@@ -12,7 +12,7 @@ const Roles = () => {
   const sectionRef = useTourRef('roles-section');
 
   return (
-    <div ref={sectionRef as React.RefObject<HTMLDivElement>}>
+    <div ref={sectionRef}>
       <Section<Role>
         Collection={RolesCollection}
         collectionName="roles"

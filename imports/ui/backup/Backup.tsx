@@ -211,7 +211,7 @@ export default function Backup() {
   }, []);
 
   return (
-    <div ref={backupRef as React.RefObject<HTMLDivElement>}>
+    <div ref={backupRef}>
       <SectionCard title={t('backup.title')} ready={true}>
         <Row gutter={[24, 24]}>
           <Col xs={24} lg={12}>

@@ -6,7 +6,7 @@ import TaskStatusCollection from '../../api/collections/taskStatus.collection';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
 import type { DrawerContextValue } from '../app/types';
-import CollectionSelect from '../components/CollectionSelect';
+import CollectionSelect, { type CollectionDoc } from '../components/CollectionSelect';
 import FormFooter from '../components/FormFooter';
 import MembersSelectJs from '../members/MembersSelect';
 import TaskStatusForm from './task-status/TaskStatusForm';
@@ -62,7 +62,7 @@ export default function TaskFilter({ setOpen }: TaskFilterProps) {
         rules={[{ required: false, type: 'array' }]}
         placeholder={t('common.status')}
         FormComponent={TaskStatusForm}
-        collection={TaskStatusCollection as unknown as Mongo.Collection<{ _id?: string; name?: string; color?: string; [key: string]: unknown }>}
+        collection={TaskStatusCollection as unknown as Mongo.Collection<CollectionDoc>}
         mode="multiple"
         subscription="taskStatus"
       />

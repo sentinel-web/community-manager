@@ -21,18 +21,22 @@ This is a **Meteor.js 3.4+** full-stack application for managing ArmA III commun
 ### Directory Structure
 
 ```
-client/main.jsx         # Client entry point
-server/main.js          # Server setup, permissions, validation, test data
-server/apis/            # API implementations (members, events, backup, logs, etc.)
-server/crud.lib.js      # Generic CRUD method/publish generator
-server/config.js        # Server settings with Meteor.settings overrides
-imports/api/collections/  # MongoDB collection definitions (16 collections)
-imports/ui/             # React components organized by feature
-imports/i18n/           # Localization (i18n) - LanguageContext, locales/
-imports/helpers/        # Utility functions
-imports/config.js       # UI constants (breakpoints, layout ratios)
+client/main.tsx         # Client entry point
+server/main.ts          # Server setup, permissions, validation, test data
+server/apis/            # API implementations (members, events, backup, logs, etc.) — *.server.ts
+server/crud.lib.ts      # Generic CRUD method/publish generator
+server/config.ts        # Server settings with Meteor.settings overrides
+imports/api/collections/  # MongoDB collection definitions (*.collection.ts)
+imports/api/types/      # Shared TS interfaces mirroring server return shapes
+imports/ui/             # React components organized by feature (.tsx)
+imports/i18n/           # Localization — LanguageContext.tsx, locales/
+imports/helpers/        # Utility functions (.ts)
+imports/config.ts       # UI constants (breakpoints, layout ratios)
+imports/types/          # Ambient module declarations (.d.ts)
 settings.example.json   # Example configuration overrides
 ```
+
+The codebase is **fully TypeScript** with `strict: true`. No `.jsx` or untyped `.js` files in `imports/`, `server/`, or `client/`.
 
 ### Key Patterns
 
@@ -191,10 +195,16 @@ When making tradeoffs, follow this hierarchy. Never compromise security for conv
 ### Client-Side
 
 **React Components**
-- Function components only, no class components
-- PropTypes required for all props (define after component)
-- Destructure props with defaults: `function Component({ title = '', items = [] })`
+- Function components only, no class components. No `React.FC`.
+- TypeScript interface for props **above** the component: `interface FooProps { ... } function Foo({ x, y }: FooProps)`
+- Destructure props with defaults in the signature: `function Component({ title = '', items = [] }: ComponentProps)`
 - Use `useCallback` for event handlers, `useMemo` for computed values
+- Narrow `useCallback`/`useMemo` deps to specific fields (e.g. `[questionnaire?._id, questionnaire?.createdAt]`), not whole objects
+- Drawer model double-cast: `drawer.drawerModel as unknown as ConcreteType` for read; `setDrawerModel(x as unknown as Record<string, unknown>)` for write
+- Section generic: `<Section<EntityType> Collection={EntityCollection} columnsFactory={getEntityColumns} ... />`
+- Section column factory: `const getEntityColumns: ColumnsFactory<Entity> = (handleEdit, handleDelete, permissions, t) => [...]`
+- For nullable string fields at antd DOM boundaries (Tag, Picker), convert with `?? undefined` *only* at the DOM site — never on a server-write path
+- Color render preservation: `<Tag color={color || 'transparent'}>` (NOT `?? undefined`)
 
 **Meteor Data Hooks**
 ```javascript
@@ -204,20 +214,26 @@ const user = useTracker(() => Meteor.user(), []);        // Reactive Meteor data
 ```
 
 **Meteor Method Calls**
-```javascript
-// Use callAsync with try/catch or .then/.catch
+```typescript
+// Use callAsync with try/catch or .then/.catch.
+// Narrow the return type since Meteor.callAsync<T> is not typed: cast the result.
 try {
-  const result = await Meteor.callAsync('collection.method', ...args);
+  const result = (await Meteor.callAsync('collection.method', ...args)) as ReturnShape;
   message.success('Success');
 } catch (error) {
-  notification.error({ message: error.error, description: error.message });
+  // Catch variables are 'unknown' under strict; narrow before access.
+  const err = error as Meteor.Error;
+  notification.error({ message: err.error as string, description: err.message });
 }
 ```
 
 **Forms (Ant Design)**
 - Use `<Form layout="vertical" initialValues={model} onFinish={handleFinish}>`
 - Form.Item with `name`, `label`, `rules` props
-- Get notification/message from `App.useApp()` hook
+- For nested form paths (e.g. members `profile.X`), use `name={['profile', 'X']}` and type `name?: NamePath` on Select wrappers
+- Type the form: `const [form] = Form.useForm<EntityFormValues>()` when the values shape is well-defined; `Form.useForm<Record<string, unknown>>()` for dynamic-key forms (e.g. RolesForm permissions)
+- Get notification/message from `App.useApp()` hook (never the static antd singleton — won't render inside drawer context)
+- For nullable wire-format fields, mirror server's `string | null` exactly; only convert at the antd DOM boundary with `?? undefined`
 
 **Drawer Pattern**
 - Access via `useContext(DrawerContext)` or `useContext(SubdrawerContext)`
@@ -293,9 +309,12 @@ Custom skills in `.claude/skills/` automate common development tasks:
 
 **Client-Side**
 - Missing dependency array in `useFind()`, `useCallback()`, `useMemo()`
+- Widened `useCallback`/`useMemo` deps to whole objects instead of narrow fields (causes spurious re-runs)
 - Forgetting `useSubscribe()` before `useFind()` (data won't load)
 - Not using `App.useApp()` for notifications (won't render in drawer context)
-- Missing PropTypes for component props
+- Forgetting to narrow `Meteor.callAsync` return type (defaults to `unknown` under strict)
+- Using `?.` on `member.profile.X` access — masks crashes; use `!` non-null assertion to preserve original behavior
+- Switching `<Tag color={X || 'transparent'}>` to `?? undefined` — removes the visual fallback for nullable colors
 - Using `useEffect` for derived state instead of `useMemo`
 
 **Forms**
@@ -310,4 +329,5 @@ Custom skills in `.claude/skills/` automate common development tasks:
 ## Code Style
 
 - Prettier: 2-space indent, single quotes, trailing commas (es5), 150 char width, `arrowParens: "avoid"`
-- PropTypes for React component props validation
+- TypeScript: `strict: true` (no implicit any, strict null checks, unknown catch variables, etc.)
+- TypeScript interfaces above each component for props validation

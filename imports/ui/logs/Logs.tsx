@@ -25,7 +25,7 @@ import LogViewer from './LogViewer';
 
 const { RangePicker } = DatePicker;
 
-type DateRange = [Dayjs, Dayjs] | null;
+type DateRange = [Dayjs | null, Dayjs | null] | null;
 
 function buildFilter(actionInput: string, dateRange: DateRange): Mongo.Selector<LogEntry> {
   const filter: Mongo.Selector<LogEntry> = {};
@@ -109,7 +109,7 @@ export default function Logs() {
   const loadMoreDisabled = useMemo(() => datasource?.length < options?.limit, [options, datasource]);
 
   return (
-    <div ref={logsRef as React.RefObject<HTMLDivElement>}>
+    <div ref={logsRef}>
       <SectionCard title={t('logs.title')} ready={true}>
         <Row gutter={[16, 16]}>
           <Col span={24}>

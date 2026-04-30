@@ -56,7 +56,7 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div ref={statsRef as React.RefObject<HTMLDivElement>}>
+    <div ref={statsRef}>
       <Card
         type="inner"
         loading={loading}

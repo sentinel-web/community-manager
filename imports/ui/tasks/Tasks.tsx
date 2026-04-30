@@ -49,7 +49,7 @@ export default function Tasks() {
   );
 
   return (
-    <div ref={tasksRef as React.RefObject<HTMLDivElement>}>
+    <div ref={tasksRef}>
       <Section<Task>
         title={t('tasks.title')}
         collectionName="tasks"

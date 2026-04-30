@@ -34,7 +34,7 @@ const Questionnaires = () => {
   );
 
   return (
-    <div ref={sectionRef as React.RefObject<HTMLDivElement>}>
+    <div ref={sectionRef}>
       <Section<Questionnaire>
         Collection={QuestionnairesCollection}
         collectionName="questionnaires"

@@ -31,7 +31,7 @@ if (Meteor.isServer) {
         await createLog('settings.updated', { key });
         return result;
       } catch (error) {
-        throw new Meteor.Error(error.message);
+        throw new Meteor.Error((error as Error).message);
       }
     },
     'settings.remove': async function (key = null) {
@@ -43,7 +43,7 @@ if (Meteor.isServer) {
         await createLog('settings.deleted', { key });
         return result;
       } catch (error) {
-        throw new Meteor.Error(error.message);
+        throw new Meteor.Error((error as Error).message);
       }
     },
     'settings.findOne': async function (filter = {}) {
@@ -56,8 +56,8 @@ if (Meteor.isServer) {
         if (!setting) throw new Meteor.Error(404, 'Setting not found');
         return setting.value;
       } catch (error) {
-        if (error.error === 404) throw error;
-        throw new Meteor.Error(error.message);
+        if ((error as Meteor.Error).error === 404) throw error;
+        throw new Meteor.Error((error as Error).message);
       }
     },
   });

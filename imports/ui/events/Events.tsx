@@ -72,7 +72,7 @@ export default function Events() {
   useTourAction('events-switch-attendance', () => handleViewTypeChange('attendance'));
 
   return (
-    <div ref={eventsRef as React.RefObject<HTMLDivElement>}>
+    <div ref={eventsRef}>
       <Section<EventDoc>
         title={t('events.title')}
         collectionName="events"

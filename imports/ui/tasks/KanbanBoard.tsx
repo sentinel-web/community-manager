@@ -4,18 +4,12 @@ import dayjs from 'dayjs';
 import { Meteor } from 'meteor/meteor';
 import { useTracker } from 'meteor/react-meteor-data';
 import React, { useMemo } from 'react';
-import { DragDropContext, Draggable, Droppable } from 'react-beautiful-dnd';
+import { DragDropContext, Draggable, Droppable, type DropResult } from 'react-beautiful-dnd';
 import type { Task } from '../../api/types/task';
 import { useTranslation } from '../../i18n/LanguageContext';
 import type { RowClickEvent } from '../section/types';
 import TaskStatusTag from './task-status/TaskStatusTag';
 import { Participants } from './task.columns';
-
-interface DropResult {
-  destination?: { droppableId: string; index: number } | null;
-  source: { droppableId: string; index: number };
-  draggableId: string;
-}
 
 interface KanbanBoardProps {
   datasource?: Task[];

@@ -4,7 +4,7 @@ import { Mongo } from 'meteor/mongo';
 import React from 'react';
 import RanksCollection from '../../../api/collections/ranks.collection';
 import { useTranslation } from '../../../i18n/LanguageContext';
-import CollectionSelect from '../../components/CollectionSelect';
+import CollectionSelect, { type CollectionDoc } from '../../components/CollectionSelect';
 import RanksForm from './RanksForm';
 
 interface RanksSelectProps {
@@ -23,7 +23,7 @@ const RanksSelect = ({ multiple, name, label, rules, defaultValue }: RanksSelect
       name={name}
       label={label}
       rules={rules}
-      collection={RanksCollection as unknown as Mongo.Collection<{ _id?: string; name?: string; color?: string; profile?: { name?: string }; [key: string]: unknown }>}
+      collection={RanksCollection as unknown as Mongo.Collection<CollectionDoc>}
       mode={multiple ? 'multiple' : undefined}
       FormComponent={RanksForm}
       subscription="ranks"
