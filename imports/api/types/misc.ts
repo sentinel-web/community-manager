@@ -4,7 +4,9 @@ export type Medal = ColoredEntity;
 export type EventType = ColoredEntity;
 export type TaskStatus = ColoredEntity;
 export type DiscoveryType = ColoredEntity;
-export type Position = ColoredEntity;
+export interface Position extends ColoredEntity {
+  order?: number;
+}
 
 export interface Specialization extends ColoredEntity {
   linkToFile?: string;

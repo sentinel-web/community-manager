@@ -1,4 +1,5 @@
 import type { Rule } from 'antd/es/form';
+import { Mongo } from 'meteor/mongo';
 import React from 'react';
 import MedalsCollection from '../../../api/collections/medals.collection';
 import { useTranslation } from '../../../i18n/LanguageContext';
@@ -22,7 +23,7 @@ export default function MedalsSelect({ multiple, name, label, rules, defaultValu
       label={label}
       rules={rules}
       mode={multiple ? 'multiple' : undefined}
-      collection={MedalsCollection as never}
+      collection={MedalsCollection as unknown as Mongo.Collection<{ _id?: string; name?: string; color?: string; profile?: { name?: string }; [key: string]: unknown }>}
       FormComponent={MedalsForm}
       subscription="medals"
       placeholder={t('common.selectMedals')}

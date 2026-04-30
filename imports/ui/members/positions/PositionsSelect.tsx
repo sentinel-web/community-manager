@@ -1,4 +1,5 @@
 import type { Rule } from 'antd/es/form';
+import { Mongo } from 'meteor/mongo';
 import React from 'react';
 import PositionsCollection from '../../../api/collections/positions.collection';
 import { useTranslation } from '../../../i18n/LanguageContext';
@@ -22,7 +23,7 @@ export default function PositionsSelect({ multiple, name, label, rules, defaultV
       label={label}
       rules={rules}
       mode={multiple ? 'multiple' : undefined}
-      collection={PositionsCollection as never}
+      collection={PositionsCollection as unknown as Mongo.Collection<{ _id?: string; name?: string; color?: string; profile?: { name?: string }; [key: string]: unknown }>}
       FormComponent={PositionsForm}
       subscription="positions"
       placeholder={t('common.selectPosition')}

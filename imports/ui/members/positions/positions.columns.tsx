@@ -4,35 +4,30 @@ import type { Position } from '../../../api/types/misc';
 import type { ColumnsFactory } from '../../section/types';
 import TableActions from '../../table/body/actions/TableActions';
 
-// Position in the DB has an optional numeric order field not captured in the shared ColoredEntity alias
-export interface PositionDoc extends Position {
-  order?: number;
-}
-
-const getPositionColumns: ColumnsFactory<PositionDoc> = (handleEdit, handleDelete, permissions, t) => {
+const getPositionColumns: ColumnsFactory<Position> = (handleEdit, handleDelete, permissions, t) => {
   const { canUpdate = true, canDelete = true } = permissions;
 
-  const columns: ReturnType<ColumnsFactory<PositionDoc>> = [
+  const columns: ReturnType<ColumnsFactory<Position>> = [
     {
       title: t('common.name'),
       dataIndex: 'name',
       key: 'name',
       ellipsis: true,
-      sorter: (a: PositionDoc, b: PositionDoc) => (a.name || '').localeCompare(b.name || ''),
+      sorter: (a: Position, b: Position) => (a.name || '').localeCompare(b.name || ''),
     },
     {
       title: t('positions.order'),
       dataIndex: 'order',
       key: 'order',
       ellipsis: true,
-      sorter: (a: PositionDoc, b: PositionDoc) => (a.order || 0) - (b.order || 0),
+      sorter: (a: Position, b: Position) => (a.order || 0) - (b.order || 0),
     },
     {
       title: t('common.color'),
       dataIndex: 'color',
       key: 'color',
       ellipsis: true,
-      sorter: (a: PositionDoc, b: PositionDoc) => (a.color || '').localeCompare(b.color || ''),
+      sorter: (a: Position, b: Position) => (a.color || '').localeCompare(b.color || ''),
       render: (color: string) => <Tag color={color || 'transparent'}>{color}</Tag>,
     },
     {
@@ -40,7 +35,7 @@ const getPositionColumns: ColumnsFactory<PositionDoc> = (handleEdit, handleDelet
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
-      sorter: (a: PositionDoc, b: PositionDoc) => (a.description || '').localeCompare(b.description || ''),
+      sorter: (a: Position, b: Position) => (a.description || '').localeCompare(b.description || ''),
     },
   ];
 
@@ -49,7 +44,7 @@ const getPositionColumns: ColumnsFactory<PositionDoc> = (handleEdit, handleDelet
       title: t('common.actions'),
       dataIndex: '_id',
       key: '_id',
-      render: (_id: string, record: PositionDoc) => (
+      render: (_id: string, record: Position) => (
         <TableActions record={record} handleEdit={handleEdit} handleDelete={handleDelete} canUpdate={canUpdate} canDelete={canDelete} />
       ),
     });

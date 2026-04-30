@@ -6,7 +6,7 @@ import { getColorFromValues } from '/imports/helpers/colors/getColorFromValues';
 import { DrawerContext, SubdrawerContext } from '../../app/App';
 import type { DrawerContextValue } from '../../app/types';
 import FormFooter from '../../components/FormFooter';
-import type { PositionDoc } from './positions.columns';
+import type { Position } from '../../../api/types/misc';
 
 interface PositionsFormProps {
   setOpen: (open: boolean) => void;
@@ -28,7 +28,7 @@ export default function PositionsForm({ setOpen, useSubdrawer }: PositionsFormPr
 
   const drawer = useContext(useSubdrawer ? SubdrawerContext : DrawerContext) as DrawerContextValue;
   const model = useMemo(() => {
-    return drawer.drawerModel as unknown as PositionDoc & { _id?: string };
+    return drawer.drawerModel as unknown as Position & { _id?: string };
   }, [drawer]);
 
   useEffect(() => {

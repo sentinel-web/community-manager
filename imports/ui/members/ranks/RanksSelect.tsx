@@ -1,4 +1,5 @@
 import type { Rule } from 'antd/es/form';
+import { Mongo } from 'meteor/mongo';
 import React from 'react';
 import RanksCollection from '../../../api/collections/ranks.collection';
 import { useTranslation } from '../../../i18n/LanguageContext';
@@ -21,7 +22,7 @@ const RanksSelect = ({ multiple, name, label, rules, defaultValue }: RanksSelect
       name={name}
       label={label}
       rules={rules}
-      collection={RanksCollection as never}
+      collection={RanksCollection as unknown as Mongo.Collection<{ _id?: string; name?: string; color?: string; profile?: { name?: string }; [key: string]: unknown }>}
       mode={multiple ? 'multiple' : undefined}
       FormComponent={RanksForm}
       subscription="ranks"
