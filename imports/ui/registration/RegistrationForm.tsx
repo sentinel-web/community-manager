@@ -144,7 +144,7 @@ export default function RegistrationForm({ setOpen }: RegistrationFormProps) {
   );
 
   useEffect(() => {
-    handleValuesChange(model as unknown as Partial<RegistrationFormValues>, model as unknown as RegistrationFormValues);
+    handleValuesChange(model as unknown as Partial<RegistrationFormValues>, {} as RegistrationFormValues);
   }, [model, handleValuesChange]);
 
   return (
