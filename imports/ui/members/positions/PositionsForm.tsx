@@ -1,41 +1,54 @@
 import { App, ColorPicker, Form, Input, InputNumber } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
+import { getColorFromValues } from '/imports/helpers/colors/getColorFromValues';
 import { DrawerContext, SubdrawerContext } from '../../app/App';
+import type { DrawerContextValue } from '../../app/types';
 import FormFooter from '../../components/FormFooter';
-import { getColorFromValues } from '../../specializations/SpecializationForm';
+import type { PositionDoc } from './positions.columns';
 
-export default function PositionsForm({ setOpen, useSubdrawer }) {
+interface PositionsFormProps {
+  setOpen: (open: boolean) => void;
+  useSubdrawer?: boolean;
+}
+
+interface PositionFormValues {
+  name: string;
+  description?: string;
+  color?: { toHexString?: () => string } | string;
+  order?: number;
+}
+
+export default function PositionsForm({ setOpen, useSubdrawer }: PositionsFormProps) {
   const { t } = useTranslation();
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<PositionFormValues>();
   const { message, notification } = App.useApp();
   const [loading, setLoading] = useState(false);
 
-  const drawer = useContext(useSubdrawer ? SubdrawerContext : DrawerContext);
+  const drawer = useContext(useSubdrawer ? SubdrawerContext : DrawerContext) as DrawerContextValue;
   const model = useMemo(() => {
-    return drawer.drawerModel || {};
+    return drawer.drawerModel as unknown as PositionDoc & { _id?: string };
   }, [drawer]);
 
   useEffect(() => {
     if (Object.keys(model).length > 0) {
-      form.setFieldsValue(model);
+      form.setFieldsValue(model as unknown as PositionFormValues);
     } else {
       form.setFieldsValue({
         name: '',
         description: '',
-        color: null,
-        order: null,
+        color: undefined,
+        order: undefined,
       });
     }
   }, [model, form.setFieldsValue]);
 
   const handleSubmit = useCallback(
-    values => {
+    (values: PositionFormValues) => {
       setLoading(true);
       const { name, description, order } = values;
-      const args = [...(model?._id ? [model._id] : []), { name, color: getColorFromValues(values), description, order }];
+      const args = [...(model?._id ? [model._id] : []), { name, color: getColorFromValues(values as unknown as Record<string, unknown>), description, order }];
       Meteor.callAsync(Meteor.user() && model?._id ? 'positions.update' : 'positions.insert', ...args)
         .then(() => {
           setOpen(false);
@@ -44,8 +57,8 @@ export default function PositionsForm({ setOpen, useSubdrawer }) {
         })
         .catch(error => {
           notification.error({
-            message: error.error,
-            description: error.message,
+            message: (error as Meteor.Error).error as string,
+            description: (error as Meteor.Error).message,
           });
         })
         .finally(() => setLoading(false));
@@ -71,7 +84,3 @@ export default function PositionsForm({ setOpen, useSubdrawer }) {
     </Form>
   );
 }
-PositionsForm.propTypes = {
-  setOpen: PropTypes.func,
-  useSubdrawer: PropTypes.bool,
-};

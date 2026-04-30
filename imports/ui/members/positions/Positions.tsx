@@ -4,17 +4,18 @@ import { useTranslation } from '../../../i18n/LanguageContext';
 import Section from '../../section/Section';
 import PositionsForm from './PositionsForm';
 import getPositionColumns from './positions.columns';
+import type { PositionDoc } from './positions.columns';
 
 const Positions = () => {
   const { t } = useTranslation();
 
   return (
-    <Section
+    <Section<PositionDoc>
       title={t('navigation.positions')}
       collectionName="positions"
       FormComponent={PositionsForm}
       columnsFactory={getPositionColumns}
-      Collection={PositionsCollection}
+      Collection={PositionsCollection as never}
     />
   );
 };
