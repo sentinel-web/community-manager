@@ -1,4 +1,3 @@
-/* global describe, it, before, after */
 import assert from 'node:assert';
 import MedalsCollection from '../../imports/api/collections/medals.collection';
 import EventsCollection from '../../imports/api/collections/events.collection';
@@ -12,15 +11,16 @@ import {
   findLatestAuditLog,
   TEST_PREFIX,
 } from './fixtures';
+import type { Medal, SelectOption } from '/imports/api/types';
 
 // Medals stands in for "plain CRUD collection with no side-effects" — findings
 // here generalize to all 16 collections that share the crud.lib factory.
 
 describe('crud.lib — medals happy path + permission enforcement', () => {
-  let adminUserId;
-  let readerUserId;
-  let unauthorizedUserId;
-  let insertedMedalId;
+  let adminUserId: string;
+  let readerUserId: string;
+  let unauthorizedUserId: string;
+  let insertedMedalId: string;
 
   before(async () => {
     const [adminRoleId, readerRoleId, noPermRoleId] = await Promise.all([
@@ -44,14 +44,15 @@ describe('crud.lib — medals happy path + permission enforcement', () => {
   });
 
   it('admin can insert a document and receives a string id', async () => {
-    insertedMedalId = await callAs(adminUserId, 'medals.insert', {
+    insertedMedalId = (await callAs(adminUserId, 'medals.insert', {
       name: '__test_medal_alpha',
       color: '#ff0000',
-    });
+    })) as string;
     assert.strictEqual(typeof insertedMedalId, 'string');
     assert.ok(insertedMedalId.length > 0);
 
     const doc = await MedalsCollection.findOneAsync(insertedMedalId);
+    assert.ok(doc, 'Expected medal document to be persisted');
     assert.strictEqual(doc.name, '__test_medal_alpha');
   });
 
@@ -71,7 +72,7 @@ describe('crud.lib — medals happy path + permission enforcement', () => {
   });
 
   it('reader can read but cannot update', async () => {
-    const list = await callAs(readerUserId, 'medals.read', { _id: insertedMedalId });
+    const list = (await callAs(readerUserId, 'medals.read', { _id: insertedMedalId })) as Medal[];
     assert.strictEqual(list.length, 1);
 
     await assertRejectsWithCode(
@@ -83,6 +84,7 @@ describe('crud.lib — medals happy path + permission enforcement', () => {
   it('admin can update and audit log captures the changes', async () => {
     await callAs(adminUserId, 'medals.update', insertedMedalId, { color: '#0000ff' });
     const doc = await MedalsCollection.findOneAsync(insertedMedalId);
+    assert.ok(doc, 'Expected medal document after update');
     assert.strictEqual(doc.color, '#0000ff');
 
     const log = await findLatestAuditLog('medals.updated', insertedMedalId);
@@ -98,8 +100,10 @@ describe('crud.lib — medals happy path + permission enforcement', () => {
   });
 
   it('options returns selectable {key,label,value} shape for reader', async () => {
-    const [first, ...rest] = await callAs(readerUserId, 'medals.options', { _id: insertedMedalId });
+    const options = (await callAs(readerUserId, 'medals.options', { _id: insertedMedalId })) as SelectOption<Medal>[];
+    const [first, ...rest] = options;
     assert.strictEqual(rest.length, 0);
+    assert.ok(first, 'Expected at least one option');
     assert.strictEqual(first.key, insertedMedalId);
     assert.strictEqual(first.value, insertedMedalId);
     assert.ok('label' in first && 'raw' in first);
@@ -142,7 +146,7 @@ describe('crud.lib — medals happy path + permission enforcement', () => {
   });
 
   // validateObject throws Meteor.Error('validateRequiredObject', ...) before
-  // crud.lib.js can throw its own Meteor.Error(400, ...). The 400 throws in
+  // crud.lib.ts can throw its own Meteor.Error(400, ...). The 400 throws in
   // crud.lib are therefore unreachable — tracked as follow-up.
   it('insert rejects non-object payload (validator-level)', async () => {
     await assertRejectsWithCode(
@@ -160,8 +164,8 @@ describe('crud.lib — medals happy path + permission enforcement', () => {
 });
 
 describe('crud.lib — special permission fallback (events.canCreateEvents)', () => {
-  let specialUserId;
-  let weakUserId;
+  let specialUserId: string;
+  let weakUserId: string;
 
   before(async () => {
     const [specialRoleId, weakRoleId] = await Promise.all([
@@ -182,11 +186,11 @@ describe('crud.lib — special permission fallback (events.canCreateEvents)', ()
   });
 
   it('allows insert when fallback flag is set despite missing create permission', async () => {
-    const eventId = await callAs(specialUserId, 'events.insert', {
+    const eventId = (await callAs(specialUserId, 'events.insert', {
       name: 'Fallback-permitted event',
       start: new Date(),
       end: new Date(Date.now() + 3600 * 1000),
-    });
+    })) as string;
     assert.ok(eventId, 'Expected event insert to succeed via canCreateEvents fallback');
 
     const doc = await EventsCollection.findOneAsync(eventId);
@@ -208,9 +212,9 @@ describe('crud.lib — special permission fallback (events.canCreateEvents)', ()
 describe('crud.lib — role cache invalidates on roles.update / roles.remove', () => {
   // Guard against silent-permission bugs: a user whose role is downgraded or
   // deleted must lose access on the very next call, not ride a cached role.
-  let demotableUserId;
-  let demotableRoleId;
-  let adminUserId;
+  let demotableUserId: string;
+  let demotableRoleId: string;
+  let adminUserId: string;
 
   before(async () => {
     const [adminRoleId, roleId] = await Promise.all([

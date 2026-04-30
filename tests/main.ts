@@ -1,9 +1,9 @@
-import './helpers/colors/getLegibleTextColor.test.js';
+import './helpers/colors/getLegibleTextColor.test';
 import './helpers/colors/getLuminance.test';
-import './helpers/colors/hexToRgb.test.js';
-import './helpers/colors/parseColor.test.js';
-import './server/crudMethods.test.js';
-import './server/getCollection.test.js';
-import './server/permissions.test.js';
-import './server/questionnaireInterval.test.js';
-import './server/validation.test.js';
+import './helpers/colors/hexToRgb.test';
+import './helpers/colors/parseColor.test';
+import './server/crudMethods.test';
+import './server/getCollection.test';
+import './server/permissions.test';
+import './server/questionnaireInterval.test';
+import './server/validation.test';

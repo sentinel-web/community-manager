@@ -1,8 +1,8 @@
-/* global describe, it */
 import assert from 'node:assert';
+import type { getIntervalCutoffDate as getIntervalCutoffDateType } from '../../server/apis/questionnaireResponses.server';
 
 // Use require() to avoid circular dependency issues during module initialization.
-function loadHelpers() {
+function loadHelpers(): { getIntervalCutoffDate: typeof getIntervalCutoffDateType } {
   return require('../../server/apis/questionnaireResponses.server');
 }
 
@@ -12,7 +12,7 @@ const TOLERANCE_MS = 1000; // 1 second tolerance for timing
 describe('getIntervalCutoffDate', () => {
   it('returns null for null input', () => {
     const { getIntervalCutoffDate } = loadHelpers();
-    assert.strictEqual(getIntervalCutoffDate(null), null);
+    assert.strictEqual(getIntervalCutoffDate(null as unknown as undefined), null);
   });
 
   it('returns null for undefined input', () => {
@@ -33,6 +33,7 @@ describe('getIntervalCutoffDate', () => {
   it('returns epoch date for "unlimited"', () => {
     const { getIntervalCutoffDate } = loadHelpers();
     const result = getIntervalCutoffDate('unlimited');
+    assert.ok(result);
     assert.strictEqual(result.getTime(), 0);
   });
 
@@ -40,7 +41,6 @@ describe('getIntervalCutoffDate', () => {
     const { getIntervalCutoffDate } = loadHelpers();
     const before = Date.now() - ONE_DAY_MS;
     const result = getIntervalCutoffDate('daily');
-    const after = Date.now() - ONE_DAY_MS;
     assert.ok(result instanceof Date);
     assert.ok(Math.abs(result.getTime() - before) < TOLERANCE_MS);
   });

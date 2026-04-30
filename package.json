@@ -32,7 +32,7 @@
       "client": "client/main.tsx",
       "server": "server/main.ts"
     },
-    "testModule": "tests/main.js"
+    "testModule": "tests/main.ts"
   },
   "devDependencies": {
     "@eslint/css": "^0.8.1",

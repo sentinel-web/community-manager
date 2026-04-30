@@ -1,14 +1,16 @@
-/* global describe, it */
 import assert from 'node:assert';
+import type { Meteor } from 'meteor/meteor';
+import type { getCollection as getCollectionType } from '../../server/crud.lib';
+import type { CrudCollectionName } from '/imports/api/types';
 
 // Use require() instead of import to avoid circular dependency issues
-// between crud.lib.js and main.js during module initialization.
+// between crud.lib.ts and main.ts during module initialization.
 // By the time tests run, all modules are fully initialized.
-function loadGetCollection() {
+function loadGetCollection(): typeof getCollectionType {
   return require('../../server/crud.lib').getCollection;
 }
 
-const VALID_COLLECTIONS = [
+const VALID_COLLECTIONS: CrudCollectionName[] = [
   'attendances',
   'discoveryTypes',
   'events',
@@ -41,21 +43,21 @@ describe('getCollection', () => {
 
   it('throws Meteor.Error(400) for null input', () => {
     const getCollection = loadGetCollection();
-    assert.throws(() => getCollection(null), error => error.error === 400);
+    assert.throws(() => getCollection(null as unknown as CrudCollectionName), (error: unknown) => (error as Meteor.Error).error === 400);
   });
 
   it('throws Meteor.Error(400) for undefined input', () => {
     const getCollection = loadGetCollection();
-    assert.throws(() => getCollection(undefined), error => error.error === 400);
+    assert.throws(() => getCollection(undefined as unknown as CrudCollectionName), (error: unknown) => (error as Meteor.Error).error === 400);
   });
 
   it('throws Meteor.Error(400) for empty string', () => {
     const getCollection = loadGetCollection();
-    assert.throws(() => getCollection(''), error => error.error === 400);
+    assert.throws(() => getCollection('' as CrudCollectionName), (error: unknown) => (error as Meteor.Error).error === 400);
   });
 
   it('throws Meteor.Error(404) for unknown collection name', () => {
     const getCollection = loadGetCollection();
-    assert.throws(() => getCollection('nonExistent'), error => error.error === 404);
+    assert.throws(() => getCollection('nonExistent' as CrudCollectionName), (error: unknown) => (error as Meteor.Error).error === 404);
   });
 });

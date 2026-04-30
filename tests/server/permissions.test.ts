@@ -1,4 +1,3 @@
-/* global describe, it */
 import assert from 'node:assert';
 import {
   normalizeRolePermissions,
@@ -7,6 +6,7 @@ import {
   BOOLEAN_MODULES,
   CRUD_MODULES,
 } from '../../server/main';
+import type { Role } from '/imports/api/types';
 
 describe('normalizeRolePermissions', () => {
   it('returns null for null input', () => {
@@ -18,39 +18,45 @@ describe('normalizeRolePermissions', () => {
   });
 
   it('converts boolean true to full CRUD object', () => {
-    const role = { name: 'test', members: true };
+    const role: Role = { name: 'test', members: true };
     const result = normalizeRolePermissions(role);
+    assert.ok(result);
     assert.deepStrictEqual(result.members, { read: true, create: true, update: true, delete: true });
   });
 
   it('converts boolean false to empty CRUD object', () => {
-    const role = { name: 'test', members: false };
+    const role: Role = { name: 'test', members: false };
     const result = normalizeRolePermissions(role);
+    assert.ok(result);
     assert.deepStrictEqual(result.members, { read: false, create: false, update: false, delete: false });
   });
 
   it('converts undefined permission to empty CRUD object', () => {
-    const role = { name: 'test' };
+    const role: Role = { name: 'test' };
     const result = normalizeRolePermissions(role);
+    assert.ok(result);
     assert.deepStrictEqual(result.members, { read: false, create: false, update: false, delete: false });
   });
 
   it('preserves existing CRUD objects', () => {
     const crudObj = { read: true, create: false, update: true, delete: false };
-    const role = { name: 'test', members: crudObj };
+    const role: Role = { name: 'test', members: crudObj };
     const result = normalizeRolePermissions(role);
+    assert.ok(result);
     assert.deepStrictEqual(result.members, crudObj);
   });
 
   it('preserves admin flag (roles === true)', () => {
-    const role = { name: 'admin', roles: true, members: true };
+    const role: Role = { name: 'admin', roles: true, members: true };
     const result = normalizeRolePermissions(role);
+    assert.ok(result);
     assert.strictEqual(result.roles, true);
   });
 
   it('does not modify boolean module permissions', () => {
-    const role = { name: 'test', dashboard: true, orbat: false, logs: true, settings: false };
+    const role: Role = { name: 'test', dashboard: true, orbat: false, logs: true, settings: false };
     const result = normalizeRolePermissions(role);
+    assert.ok(result);
     assert.strictEqual(result.dashboard, true);
     assert.strictEqual(result.orbat, false);
     assert.strictEqual(result.logs, true);
@@ -58,11 +64,12 @@ describe('normalizeRolePermissions', () => {
   });
 
   it('normalizes all CRUD modules', () => {
-    const role = { name: 'full' };
+    const role = { name: 'full' } as Record<string, unknown>;
     for (const mod of CRUD_MODULES) {
       role[mod] = true;
     }
-    const result = normalizeRolePermissions(role);
+    const result = normalizeRolePermissions(role as unknown as Role) as Record<string, unknown> | null;
+    assert.ok(result);
     for (const mod of CRUD_MODULES) {
       // 'roles' is special - it's the admin flag and gets restored
       if (mod === 'roles') continue;
@@ -71,8 +78,9 @@ describe('normalizeRolePermissions', () => {
   });
 
   it('preserves non-permission fields', () => {
-    const role = { _id: '123', name: 'test', color: '#ff0000' };
+    const role: Role = { _id: '123', name: 'test', color: '#ff0000' };
     const result = normalizeRolePermissions(role);
+    assert.ok(result);
     assert.strictEqual(result._id, '123');
     assert.strictEqual(result.name, 'test');
     assert.strictEqual(result.color, '#ff0000');
@@ -127,7 +135,7 @@ describe('getPermissionModule', () => {
   });
 
   it('returns correct module for all mapped collections', () => {
-    const expectedMappings = {
+    const expectedMappings: Record<string, string> = {
       attendances: 'events',
       discoveryTypes: 'discoveryTypes',
       events: 'events',
@@ -154,7 +162,7 @@ describe('getPermissionModule', () => {
 
 describe('BOOLEAN_MODULES', () => {
   it('contains dashboard, orbat, logs, settings', () => {
-    assert.deepStrictEqual(BOOLEAN_MODULES.sort(), ['dashboard', 'logs', 'orbat', 'settings']);
+    assert.deepStrictEqual([...BOOLEAN_MODULES].sort(), ['dashboard', 'logs', 'orbat', 'settings']);
   });
 });
 

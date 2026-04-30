@@ -1,4 +1,3 @@
-/* global describe, it */
 import assert from 'node:assert';
 import getLegibleTextColor from '../../../imports/helpers/colors/getLegibleTextColor';
 import getLuminance from '../../../imports/helpers/colors/getLuminance';
