@@ -25,7 +25,7 @@ import LogViewer from './LogViewer';
 
 const { RangePicker } = DatePicker;
 
-type DateRange = [Dayjs, Dayjs] | null;
+type DateRange = [Dayjs | null, Dayjs | null] | null;
 
 function buildFilter(actionInput: string, dateRange: DateRange): Mongo.Selector<LogEntry> {
   const filter: Mongo.Selector<LogEntry> = {};
