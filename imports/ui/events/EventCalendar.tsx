@@ -12,7 +12,6 @@ import EventTypesCollection from '../../api/collections/eventTypes.collection';
 import getLegibleTextColor from '../../helpers/colors/getLegibleTextColor';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { EventDoc } from '../../api/types/event';
-import type { TourElementRef } from '../tour/TourContext';
 import { DrawerContext } from '../app/App';
 import type { DrawerContextValue } from '../app/types';
 import EventDetailPopover from './EventDetailPopover';

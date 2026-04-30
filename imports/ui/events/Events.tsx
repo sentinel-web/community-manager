@@ -4,16 +4,16 @@ import dayjs from 'dayjs';
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
 import { useTracker } from 'meteor/react-meteor-data';
-import React, { useCallback, ComponentType, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import EventTypesCollection from '../../api/collections/eventTypes.collection';
 import EventsCollection from '../../api/collections/events.collection';
 import type { CollectionDoc } from '../components/CollectionSelect';
 import { useTranslation } from '../../i18n/LanguageContext';
-import type { TranslateFn, ColumnsFactory } from '../section/types';
-import type { TourElementRef } from '../tour/TourContext';
+import type { TranslateFn } from '../section/types';
 import CollectionSelect from '../components/CollectionSelect';
 import Section from '../section/Section';
 import { useTourRef, useTourAction } from '../tour/TourContext';
+import type { EventDoc } from '../../api/types/event';
 import EventAttendance from './EventAttendance';
 import EventCalendar from './EventCalendar';
 import EventForm from './EventForm';
@@ -21,15 +21,6 @@ import EventTypesForm from './event-types/EventTypesForm';
 import getEventColumns from './event.columns';
 
 type ViewType = 'calendar' | 'attendance' | 'table';
-
-// Section uses CollectionDoc generics; cast once here
-type SectionCustomView = ComponentType<{
-  handleEdit: (e: React.MouseEvent<HTMLElement>, record: CollectionDoc) => void;
-  handleDelete: (e: React.MouseEvent<HTMLElement>, record: CollectionDoc) => void;
-  datasource: CollectionDoc[];
-  setFilter: (filter: Mongo.Selector<CollectionDoc>) => void;
-  permissions: { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
-}>;
 
 export default function Events() {
   const [viewType, setViewType] = useState<ViewType>('calendar');
@@ -39,19 +30,19 @@ export default function Events() {
   const { t } = useTranslation();
   const userId = useTracker(() => Meteor.userId(), []);
 
-  const customView = useMemo<SectionCustomView | false>(() => {
+  const customView = useMemo(() => {
     switch (viewType) {
       case 'calendar':
-        return EventCalendar as unknown as SectionCustomView;
+        return EventCalendar;
       case 'attendance':
-        return EventAttendance as unknown as SectionCustomView;
+        return EventAttendance;
       default:
-        return false;
+        return false as const;
     }
   }, [viewType]);
 
   const filterFactory = useCallback(
-    (string: string): Mongo.Selector<CollectionDoc> => {
+    (string: string): Mongo.Selector<EventDoc> => {
       const eventTypesFilter = eventTypes?.length ? { eventType: { $in: eventTypes } } : {};
       const filter: Record<string, unknown> = {
         ...eventTypesFilter,
@@ -62,7 +53,7 @@ export default function Events() {
       if (relevantOnly && userId) {
         filter.$or = [{ hosts: userId }, { attendees: userId }];
       }
-      return filter as Mongo.Selector<CollectionDoc>;
+      return filter as Mongo.Selector<EventDoc>;
     },
     [dateRange, eventTypes, relevantOnly, userId]
   );
@@ -82,13 +73,13 @@ export default function Events() {
 
   return (
     <div ref={eventsRef as React.RefObject<HTMLDivElement>}>
-      <Section
+      <Section<EventDoc>
         title={t('events.title')}
         collectionName="events"
         customView={customView}
-        Collection={EventsCollection as unknown as Mongo.Collection<CollectionDoc>}
+        Collection={EventsCollection}
         FormComponent={EventForm}
-        columnsFactory={getEventColumns as unknown as ColumnsFactory<CollectionDoc>}
+        columnsFactory={getEventColumns}
         filterFactory={filterFactory}
         extra={<></>}
         headerExtra={

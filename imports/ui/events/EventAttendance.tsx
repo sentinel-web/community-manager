@@ -2,6 +2,7 @@ import { EditFilled, SaveFilled } from '@ant-design/icons';
 import { App, Button, Col, Row, Select, Tag } from 'antd';
 import dayjs from 'dayjs';
 import { Meteor } from 'meteor/meteor';
+import { Mongo } from 'meteor/mongo';
 import { useFind, useSubscribe } from 'meteor/react-meteor-data';
 import React, { useMemo, useState } from 'react';
 import type { ColumnsType } from 'antd/es/table';
@@ -12,7 +13,6 @@ import type { AttendanceStatus } from '../../api/types/shared';
 import type { EventDoc } from '../../api/types/event';
 import { useTranslation } from '../../i18n/LanguageContext';
 import type { TranslateFn } from '../section/types';
-import type { TourElementRef } from '../tour/TourContext';
 import TableContainer from '../table/body/TableContainer';
 import Table from '../table/Table';
 import { useTourRef } from '../tour/TourContext';
@@ -199,7 +199,7 @@ export default function EventAttendance({ datasource }: EventAttendanceProps) {
   // Attendance grid needs all members and attendances for the selected events
   useSubscribe('attendances', { eventId: { $in: datasource.map(event => event._id) } }, { limit: 1000 });
   const attendances = useFind(
-    () => AttendancesCollection.find({ eventId: { $in: datasource.map(event => event._id) as string[] } } as never),
+    () => AttendancesCollection.find({ eventId: { $in: datasource.map(event => event._id) as string[] } }),
     [datasource]
   );
 
@@ -214,7 +214,7 @@ export default function EventAttendance({ datasource }: EventAttendanceProps) {
   }, [datasource]);
   useSubscribe('members', attendeeIds.length ? { _id: { $in: attendeeIds } } : {}, {});
   const members = useFind(
-    () => MembersCollection.find(attendeeIds.length ? { _id: { $in: attendeeIds } } : {}, { sort: { squadId: 1, rankId: 1 } } as never),
+    () => MembersCollection.find(attendeeIds.length ? { _id: { $in: attendeeIds } } : {}, { sort: { 'profile.squadId': 1, 'profile.rankId': 1 } } as Mongo.Options<Meteor.User>),
     [attendeeIds]
   );
   useSubscribe('ranks', {}, {});
@@ -239,7 +239,7 @@ export default function EventAttendance({ datasource }: EventAttendanceProps) {
       let ip = (member.profile!.staticInactivityPoints as number) || 0;
       let points = (member.profile!.staticAttendancePoints as number) || 0;
       attendances.forEach(attendance => {
-        const val = (attendance as unknown as Record<string, AttendanceStatus | undefined>)[member._id];
+        const val = attendance[member._id] as AttendanceStatus | undefined;
         if (val === -2 || val == null) return; // skip cancelled/missing
         if (val === -1) ip += 1;
         points += val === 2 ? 1 : Number(val);
@@ -250,9 +250,9 @@ export default function EventAttendance({ datasource }: EventAttendanceProps) {
         points,
         memberId: member._id,
         ...datasource.reduce<Record<string, AttendanceStatus | null | undefined>>((acc, event) => {
-          const attendanceDoc = attendances.find(a => (a as unknown as { eventId: string }).eventId === event._id);
+          const attendanceDoc = attendances.find(a => a.eventId === event._id);
           acc[event._id as string] = attendanceDoc
-            ? (attendanceDoc as unknown as Record<string, AttendanceStatus>)[member._id]
+            ? (attendanceDoc[member._id] as AttendanceStatus | undefined)
             : undefined;
           return acc;
         }, {}),
