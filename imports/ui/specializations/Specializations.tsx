@@ -1,4 +1,5 @@
 import React from 'react';
+import type { Specialization } from '../../api/types/misc';
 import SpecializationsCollection from '../../api/collections/specializations.collection';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useTourRef } from '../tour/TourContext';
@@ -11,8 +12,8 @@ export default function Specializations() {
   const sectionRef = useTourRef('specializations-section');
 
   return (
-    <div ref={sectionRef}>
-      <Section
+    <div ref={sectionRef as React.RefObject<HTMLDivElement>}>
+      <Section<Specialization>
         title={t('specializations.title')}
         collectionName="specializations"
         Collection={SpecializationsCollection}
