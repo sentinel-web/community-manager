@@ -34,7 +34,7 @@ const getEventTypeColumns = (
       key: 'color',
       ellipsis: true,
       sorter: (a, b) => (a.color || '').localeCompare(b.color || ''),
-      render: (color: string | null) => <Tag color={color ?? undefined}>{color}</Tag>,
+      render: (color: string | null) => <Tag color={color || 'transparent'}>{color}</Tag>,
     },
   ];
 

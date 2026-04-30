@@ -236,8 +236,8 @@ export default function EventAttendance({ datasource }: EventAttendanceProps) {
   const columns = useMemo(() => transformEventsIntoColumns(datasource, memberNameMap, t), [datasource, memberNameMap, t]);
   const rows = useMemo(() => {
     return members.map(member => {
-      let ip = (member.profile?.staticInactivityPoints as number) || 0;
-      let points = (member.profile?.staticAttendancePoints as number) || 0;
+      let ip = (member.profile!.staticInactivityPoints as number) || 0;
+      let points = (member.profile!.staticAttendancePoints as number) || 0;
       attendances.forEach(attendance => {
         const val = (attendance as unknown as Record<string, AttendanceStatus | undefined>)[member._id];
         if (val === -2 || val == null) return; // skip cancelled/missing
