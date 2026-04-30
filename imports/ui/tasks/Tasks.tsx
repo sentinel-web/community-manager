@@ -9,7 +9,6 @@ import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
 import type { DrawerContextValue } from '../app/types';
 import Section from '../section/Section';
-import type { TourElementRef } from '../tour/TourContext';
 import { useTourRef } from '../tour/TourContext';
 import KanbanBoard from './KanbanBoard';
 import { getTaskColumns } from './task.columns';
