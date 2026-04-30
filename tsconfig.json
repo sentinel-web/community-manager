@@ -18,8 +18,8 @@
       "/imports/*": ["./imports/*"],
       "meteor/*": [".meteor/local/types/packages.d.ts"]
     },
-    "types": ["node"]
+    "types": ["node", "mocha"]
   },
-  "include": ["imports/**/*", "server/**/*", "client/**/*", ".meteor/local/types/**/*.d.ts"],
+  "include": ["imports/**/*", "server/**/*", "client/**/*", "tests/**/*", ".meteor/local/types/**/*.d.ts"],
   "exclude": ["node_modules", ".meteor/local", "e2e", "dist", "build"]
 }
