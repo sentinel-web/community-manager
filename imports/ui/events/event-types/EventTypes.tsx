@@ -1,5 +1,6 @@
 import React from 'react';
 import EventTypesCollection from '../../../api/collections/eventTypes.collection';
+import type { EventType } from '../../../api/types';
 import { useTranslation } from '../../../i18n/LanguageContext';
 import Section from '../../section/Section';
 import EventTypesForm from './EventTypesForm';
@@ -9,7 +10,7 @@ const EventTypes = () => {
   const { t } = useTranslation();
 
   return (
-    <Section
+    <Section<EventType>
       title={t('events.eventTypes')}
       collectionName="eventTypes"
       Collection={EventTypesCollection}

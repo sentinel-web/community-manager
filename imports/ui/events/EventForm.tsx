@@ -1,14 +1,19 @@
 import { DeleteOutlined, SaveOutlined, TeamOutlined, UsergroupAddOutlined } from '@ant-design/icons';
 import { App, Button, Col, ColorPicker, DatePicker, Form, Input, Row, Select, Switch } from 'antd';
-import dayjs from 'dayjs';
+import type { FormInstance } from 'antd';
+import dayjs, { Dayjs } from 'dayjs';
 import { Meteor } from 'meteor/meteor';
+import { Mongo } from 'meteor/mongo';
 import { useFind, useSubscribe } from 'meteor/react-meteor-data';
-import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useMemo, useState } from 'react';
 import EventTypesCollection from '../../api/collections/eventTypes.collection';
 import SquadsCollection from '../../api/collections/squads.collection';
+import type { EventDoc } from '../../api/types/event';
+import type { CollectionDoc } from '../components/CollectionSelect';
 import { useTranslation } from '../../i18n/LanguageContext';
+import type { TranslateFn } from '../section/types';
 import { DrawerContext } from '../app/App';
+import type { DrawerContextValue } from '../app/types';
 import CollectionSelect from '../components/CollectionSelect';
 import MembersSelect from '../members/MembersSelect';
 import { getColorFromValues } from '../specializations/SpecializationForm';
@@ -20,34 +25,56 @@ const styles = {
   },
 };
 
-export const getDateFromValues = (values, key = 'date') => {
-  if (values[key]) return values[key].toDate();
-  return values[key];
+/** Form values — DatePicker yields Dayjs objects, not Date. */
+interface EventFormValues {
+  start: Dayjs | null;
+  end: Dayjs | null;
+  name: string;
+  eventType?: string;
+  hosts?: string[];
+  attendees?: string[];
+  isPrivate?: boolean;
+  color?: unknown;
+  preset?: string;
+  description?: string;
+}
+
+export const getDateFromValues = (values: Record<string, unknown>, key = 'date'): Date | undefined => {
+  const val = values[key];
+  if (val && typeof (val as Dayjs).toDate === 'function') return (val as Dayjs).toDate();
+  return val as Date | undefined;
 };
 
-const EventForm = ({ setOpen }) => {
+interface EventFormProps {
+  setOpen: (open: boolean) => void;
+}
+
+const EventForm = ({ setOpen }: EventFormProps) => {
   const { message, notification, modal } = App.useApp();
   const { t } = useTranslation();
-  const drawer = useContext(DrawerContext);
+  const drawer = useContext(DrawerContext) as DrawerContextValue;
 
   const model = useMemo(() => {
-    const data = drawer.drawerModel || {};
+    const data = (drawer.drawerModel || {}) as unknown as EventDoc;
     return {
       ...data,
       start: data.start ? dayjs(data.start) : null,
       end: data.end ? dayjs(data.end) : null,
       hosts: data.hosts || (data._id ? [] : [Meteor.userId()]),
-    };
+    } as EventFormValues & { _id?: string };
   }, [drawer]);
 
   const handleFinish = useCallback(
-    values => {
-      values.color = getColorFromValues(values);
-      values.start = getDateFromValues(values, 'start');
-      values.end = getDateFromValues(values, 'end');
-      const args = [...(model?._id ? [model._id] : []), values];
+    (values: EventFormValues) => {
+      const wireValues = {
+        ...values,
+        color: getColorFromValues(values as unknown as Record<string, unknown>),
+        start: getDateFromValues(values as unknown as Record<string, unknown>, 'start'),
+        end: getDateFromValues(values as unknown as Record<string, unknown>, 'end'),
+      };
+      const args = [...(model?._id ? [model._id] : []), wireValues];
       const endpoint = model?._id ? 'events.update' : 'events.insert';
-      const handleError = error => {
+      const handleError = (error: Meteor.Error) => {
         notification.error({
           message: error.error,
           description: error.message,
@@ -77,7 +104,7 @@ const EventForm = ({ setOpen }) => {
             message.success(t('messages.eventDeleted'));
             setOpen(false);
           })
-          .catch(error => {
+          .catch((error: Meteor.Error) => {
             notification.error({
               message: error.error,
               description: error.message,
@@ -87,7 +114,7 @@ const EventForm = ({ setOpen }) => {
     });
   }, [modal, message, setOpen, model, notification, t]);
 
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<EventFormValues>();
 
   return (
     <Form form={form} layout="vertical" initialValues={model} onFinish={handleFinish}>
@@ -106,7 +133,7 @@ const EventForm = ({ setOpen }) => {
         label={t('events.eventType')}
         placeholder={t('common.selectEventType')}
         rules={[{ type: 'string' }]}
-        collection={EventTypesCollection}
+        collection={EventTypesCollection as unknown as Mongo.Collection<CollectionDoc>}
         subscription="eventTypes"
         FormComponent={EventTypesForm}
       />
@@ -121,7 +148,7 @@ const EventForm = ({ setOpen }) => {
         </Col>
         <Col flex="auto">
           <Form.Item name="color" label={t('common.color')}>
-            <ColorPicker placeholder={t('forms.placeholders.enterColor')} />
+            <ColorPicker />
           </Form.Item>
         </Col>
       </Row>
@@ -148,12 +175,14 @@ const EventForm = ({ setOpen }) => {
     </Form>
   );
 };
-EventForm.propTypes = {
-  setOpen: PropTypes.func,
-};
 
-const SquadQuickAdd = ({ form, t }) => {
-  const [selectedSquad, setSelectedSquad] = useState(undefined);
+interface SquadQuickAddProps {
+  form: FormInstance<EventFormValues>;
+  t: TranslateFn;
+}
+
+const SquadQuickAdd = ({ form, t }: SquadQuickAddProps) => {
+  const [selectedSquad, setSelectedSquad] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const { notification } = App.useApp();
   useSubscribe('squads', {}, {});
@@ -161,8 +190,8 @@ const SquadQuickAdd = ({ form, t }) => {
   const squadOptions = useMemo(() => squads.map(s => ({ label: s.name, value: s._id })), [squads]);
 
   const mergeAttendees = useCallback(
-    newIds => {
-      const current = form.getFieldValue('attendees') || [];
+    (newIds: string[]) => {
+      const current: string[] = form.getFieldValue('attendees') || [];
       const merged = [...new Set([...current, ...newIds])];
       form.setFieldsValue({ attendees: merged });
     },
@@ -173,10 +202,12 @@ const SquadQuickAdd = ({ form, t }) => {
     if (!selectedSquad) return;
     setLoading(true);
     try {
-      const members = await Meteor.callAsync('members.read', { 'profile.squadId': selectedSquad }, { fields: { _id: 1 } });
+      const members = (await Meteor.callAsync('members.read', { 'profile.squadId': selectedSquad }, { fields: { _id: 1 } })) as Array<{
+        _id: string;
+      }>;
       mergeAttendees(members.map(m => m._id));
     } catch (error) {
-      notification.error({ message: error.error, description: error.message });
+      notification.error({ message: (error as Meteor.Error).error, description: (error as Meteor.Error).message });
     }
     setLoading(false);
   }, [selectedSquad, mergeAttendees, notification]);
@@ -184,10 +215,10 @@ const SquadQuickAdd = ({ form, t }) => {
   const handleAddAll = useCallback(async () => {
     setLoading(true);
     try {
-      const members = await Meteor.callAsync('members.read', {}, { fields: { _id: 1 } });
+      const members = (await Meteor.callAsync('members.read', {}, { fields: { _id: 1 } })) as Array<{ _id: string }>;
       mergeAttendees(members.map(m => m._id));
     } catch (error) {
-      notification.error({ message: error.error, description: error.message });
+      notification.error({ message: (error as Meteor.Error).error, description: (error as Meteor.Error).message });
     }
     setLoading(false);
   }, [mergeAttendees, notification]);
@@ -218,10 +249,6 @@ const SquadQuickAdd = ({ form, t }) => {
       </Col>
     </Row>
   );
-};
-SquadQuickAdd.propTypes = {
-  form: PropTypes.object,
-  t: PropTypes.func,
 };
 
 export default EventForm;
