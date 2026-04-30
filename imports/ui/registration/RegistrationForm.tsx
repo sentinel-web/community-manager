@@ -1,32 +1,54 @@
 import { Alert, App, Button, Col, Form, Input, InputNumber, Row, Switch, Tooltip } from 'antd';
+import type { FormInstance } from 'antd';
+import type { ValidateStatus } from 'antd/es/form/FormItem';
 import { Meteor } from 'meteor/meteor';
+import { Mongo } from 'meteor/mongo';
 import { useFind, useSubscribe } from 'meteor/react-meteor-data';
-import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import DiscoveryTypesCollection from '../../api/collections/discoveryTypes.collection';
+import type { Registration } from '../../api/types';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
+import type { DrawerContextValue } from '../app/types';
 import CollectionSelect from '../components/CollectionSelect';
 import DiscoveryTypeForm from './discovery-types/DiscoveryTypesForm';
 
-export default function RegistrationForm({ setOpen }) {
-  const [form] = Form.useForm();
-  const drawer = useContext(DrawerContext);
+interface RegistrationFormValues {
+  name: string;
+  id: number | null;
+  age: number | null;
+  discoveryType: string | null;
+  discoveryTypeDetails?: string;
+  steamProfileLink?: string;
+  discordTag?: string;
+  rulesReadAndAccepted: boolean;
+  description?: string;
+}
+
+interface RegistrationFormProps {
+  setOpen: (open: boolean) => void;
+  form?: FormInstance;
+}
+
+export default function RegistrationForm({ setOpen }: RegistrationFormProps) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [form] = Form.useForm<any>();
+  const drawer = useContext(DrawerContext) as DrawerContextValue;
   const { message, notification } = App.useApp();
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [disableSubmit, setDisableSubmit] = useState(false);
-  const [nameError, setNameError] = useState(undefined);
-  const [idError, setIdError] = useState(undefined);
+  const [nameError, setNameError] = useState<ValidateStatus | undefined>(undefined);
+  const [idError, setIdError] = useState<ValidateStatus | undefined>(undefined);
 
-  const model = useMemo(() => {
+  const model = useMemo((): Registration | Record<string, never> => {
     if (!Meteor.user()) return {};
-    return drawer.drawerModel || {};
+    return (drawer.drawerModel as unknown as Registration) || {};
   }, [drawer.drawerModel]);
 
   useEffect(() => {
     if (Object.keys(model).length > 0) {
-      form.setFieldsValue(model);
+      form.setFieldsValue(model as unknown as RegistrationFormValues);
     } else {
       form.setFieldsValue({
         name: '',
@@ -44,7 +66,7 @@ export default function RegistrationForm({ setOpen }) {
   const validateName = useCallback(() => {
     const value = form.getFieldValue('name');
     setNameError('validating');
-    Meteor.callAsync('registrations.validateName', value, model?._id)
+    Meteor.callAsync('registrations.validateName', value, (model as Registration)?._id)
       .then(result => {
         setNameError(result ? 'success' : 'error');
         setDisableSubmit(!result);
@@ -52,12 +74,12 @@ export default function RegistrationForm({ setOpen }) {
       .catch(() => {
         setNameError('warning');
       });
-  }, [form.getFieldValue, model?._id]);
+  }, [form.getFieldValue, (model as Registration)?._id]);
 
   const validateId = useCallback(() => {
     const value = form.getFieldValue('id');
     setIdError('validating');
-    Meteor.callAsync('registrations.validateId', value, model?._id)
+    Meteor.callAsync('registrations.validateId', value, (model as Registration)?._id)
       .then(result => {
         setIdError(result ? 'success' : 'error');
         setDisableSubmit(!result);
@@ -65,7 +87,7 @@ export default function RegistrationForm({ setOpen }) {
       .catch(() => {
         setIdError('warning');
       });
-  }, [form.getFieldValue, model?._id]);
+  }, [form.getFieldValue, (model as Registration)?._id]);
 
   useSubscribe('discoveryTypes', {}, {});
   const discoveryTypes = useFind(() => DiscoveryTypesCollection.find({}), []);
@@ -81,32 +103,33 @@ export default function RegistrationForm({ setOpen }) {
   }, [form, discoveryTypes]);
 
   const handleSubmit = useCallback(
-    values => {
+    (values: RegistrationFormValues) => {
       setLoading(true);
       const { name, id, age, discoveryType, discoveryTypeDetails, steamProfileLink, discordTag, rulesReadAndAccepted, description } = values;
       const args = [
-        ...(model?._id ? [model._id] : []),
+        ...((model as Registration)?._id ? [(model as Registration)._id] : []),
         { name, id, age, discoveryType, discoveryTypeDetails, steamProfileLink, discordTag, rulesReadAndAccepted, description },
       ];
-      Meteor.callAsync(Meteor.user() && model?._id ? 'registrations.update' : 'registrations.insert', ...args)
+      Meteor.callAsync(Meteor.user() && (model as Registration)?._id ? 'registrations.update' : 'registrations.insert', ...args)
         .then(() => {
           setOpen(false);
           form.resetFields();
           message.success(t('messages.registrationSuccessful'));
         })
         .catch(error => {
+          const err = error as Meteor.Error;
           notification.error({
-            message: error.error,
-            description: error.message,
+            message: err.error as string,
+            description: err.message,
           });
         })
         .finally(() => setLoading(false));
     },
-    [setOpen, form, model, message, notification]
+    [setOpen, form, model, message, notification],
   );
 
   const handleValuesChange = useCallback(
-    (changedValues, values) => {
+    (changedValues: Partial<RegistrationFormValues>, values?: Partial<RegistrationFormValues>) => {
       if ('name' in (values ?? {})) {
         validateName();
       }
@@ -114,17 +137,17 @@ export default function RegistrationForm({ setOpen }) {
         validateId();
       }
       if ('rulesReadAndAccepted' in (changedValues ?? {}) && 'rulesReadAndAccepted' in (values ?? {})) {
-        setDisableSubmit(!values.rulesReadAndAccepted);
+        setDisableSubmit(!values?.rulesReadAndAccepted);
       }
       if ('discoveryType' in (changedValues ?? {})) {
         handleDiscoveryTypeChange();
       }
     },
-    [validateId, validateName, handleDiscoveryTypeChange]
+    [validateId, validateName, handleDiscoveryTypeChange],
   );
 
   useEffect(() => {
-    handleValuesChange(model ?? {});
+    handleValuesChange(model as unknown as Partial<RegistrationFormValues>);
   }, [model, handleValuesChange]);
 
   return (
@@ -168,13 +191,13 @@ export default function RegistrationForm({ setOpen }) {
         <InputNumber min={16} step={1} placeholder={t('forms.placeholders.enterAge')} />
       </Form.Item>
       <CollectionSelect
-        defaultValue={model?.discoveryType}
+        defaultValue={(model as Registration)?.discoveryType ?? undefined}
         name="discoveryType"
         subscription="discoveryTypes"
         label={t('forms.labels.discoveryType')}
         rules={[{ required: false, type: 'string' }]}
         placeholder={t('forms.placeholders.selectDiscoveryType')}
-        collection={DiscoveryTypesCollection}
+        collection={DiscoveryTypesCollection as unknown as Mongo.Collection<{ _id?: string; name?: string; color?: string; [key: string]: unknown }>}
         FormComponent={DiscoveryTypeForm}
         onChange={handleDiscoveryTypeChange}
       />
@@ -214,6 +237,3 @@ export default function RegistrationForm({ setOpen }) {
     </Form>
   );
 }
-RegistrationForm.propTypes = {
-  setOpen: PropTypes.func,
-};

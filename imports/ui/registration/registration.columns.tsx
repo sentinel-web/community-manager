@@ -1,12 +1,23 @@
+import type { ColumnsType } from 'antd/es/table';
 import React from 'react';
+import type { Registration } from '../../api/types';
+import type { LanguageContextValue } from '../../i18n/LanguageContext';
+import type { SectionPermissions } from '../section/types';
 import TableActions from '../table/body/actions/TableActions';
 import DiscoveryTypeTag from './discovery-types/DiscoveryTypeTag';
 import RegistrationExtra from './RegistrationExtra';
 
-export default function getRegistrationColumns(handleEdit, handleDelete, permissions = {}, t = k => k) {
+type TFn = LanguageContextValue['t'];
+
+export default function getRegistrationColumns(
+  handleEdit: (e: React.MouseEvent<HTMLElement>, record: Registration) => void,
+  handleDelete: (e: React.MouseEvent<HTMLElement>, record: Registration) => void,
+  permissions: SectionPermissions = { canCreate: true, canUpdate: true, canDelete: true },
+  t: TFn = k => k,
+): ColumnsType<Registration> {
   const { canUpdate = true, canDelete = true } = permissions;
 
-  const columns = [
+  const columns: ColumnsType<Registration> = [
     {
       title: t('common.name'),
       dataIndex: 'name',
@@ -29,15 +40,22 @@ export default function getRegistrationColumns(handleEdit, handleDelete, permiss
       title: t('columns.discoveryType'),
       dataIndex: 'discoveryType',
       key: 'discoveryType',
-      sorter: (a, b) => a.discoveryType.localeCompare(b.discoveryType),
-      render: discoveryType => <DiscoveryTypeTag discoveryTypeId={discoveryType} />,
+      sorter: (a, b) => (a.discoveryType ?? '').localeCompare(b.discoveryType ?? ''),
+      render: (discoveryType: string) => <DiscoveryTypeTag discoveryTypeId={discoveryType} />,
     },
     {
       title: t('columns.steamProfileLink'),
       dataIndex: 'steamProfileLink',
       key: 'steamProfileLink',
       ellipsis: true,
-      render: link => (link ? <a href={link} target="_blank" rel="noopener noreferrer">{link}</a> : '-'),
+      render: (link: string | null | undefined) =>
+        link ? (
+          <a href={link} target="_blank" rel="noopener noreferrer">
+            {link}
+          </a>
+        ) : (
+          '-'
+        ),
     },
     {
       title: t('columns.discordTag'),
@@ -50,7 +68,7 @@ export default function getRegistrationColumns(handleEdit, handleDelete, permiss
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
-      sorter: (a, b) => a.description.localeCompare(b.description),
+      sorter: (a, b) => (a.description ?? '').localeCompare(b.description ?? ''),
     },
   ];
 
@@ -59,7 +77,7 @@ export default function getRegistrationColumns(handleEdit, handleDelete, permiss
       title: t('common.actions'),
       dataIndex: '_id',
       key: '_id',
-      render: (id, record) => (
+      render: (_id: string, record: Registration) => (
         <TableActions
           record={record}
           handleEdit={handleEdit}

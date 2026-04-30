@@ -1,10 +1,14 @@
 import { Form, Modal } from 'antd';
-import PropTypes from 'prop-types';
 import React, { useCallback } from 'react';
-import RegistrationForm from './RegistrationForm';
 import { useTranslation } from '/imports/i18n/LanguageContext';
+import RegistrationForm from './RegistrationForm';
 
-export default function RegistrationModal({ open, setOpen }) {
+interface RegistrationModalProps {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+}
+
+export default function RegistrationModal({ open, setOpen }: RegistrationModalProps) {
   const [form] = Form.useForm();
   const { t } = useTranslation();
 
@@ -19,7 +23,3 @@ export default function RegistrationModal({ open, setOpen }) {
     </Modal>
   );
 }
-RegistrationModal.propTypes = {
-  open: PropTypes.bool,
-  setOpen: PropTypes.func,
-};

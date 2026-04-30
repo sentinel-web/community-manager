@@ -1,10 +1,16 @@
 import { App, Button, Form, Input, Modal, Space } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import PropTypes from 'prop-types';
 import React, { useCallback, useEffect, useState } from 'react';
+import type { Registration } from '../../api/types';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 
-const ConfirmModal = ({ open, setOpen, record }) => {
+interface ConfirmModalProps {
+  open: boolean;
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  record: Registration;
+}
+
+const ConfirmModal = ({ open, setOpen, record }: ConfirmModalProps) => {
   const { t } = useTranslation();
   const { message, notification } = App.useApp();
   const [loading, setLoading] = useState(false);
@@ -34,9 +40,10 @@ const ConfirmModal = ({ open, setOpen, record }) => {
       message.success(t('registrations.memberCreated'));
       setOpen(false);
     } catch (error) {
+      const err = error as Meteor.Error;
       notification.error({
-        message: error.error,
-        description: error.message,
+        message: err.error as string,
+        description: err.message,
       });
     } finally {
       setLoading(false);
@@ -66,13 +73,12 @@ const ConfirmModal = ({ open, setOpen, record }) => {
     </Modal>
   );
 };
-ConfirmModal.propTypes = {
-  open: PropTypes.bool,
-  setOpen: PropTypes.func,
-  record: PropTypes.object,
-};
 
-export default function RegistrationExtra({ record }) {
+interface RegistrationExtraProps {
+  record: Registration;
+}
+
+export default function RegistrationExtra({ record }: RegistrationExtraProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
@@ -94,6 +100,3 @@ export default function RegistrationExtra({ record }) {
     </Space>
   );
 }
-RegistrationExtra.propTypes = {
-  record: PropTypes.object,
-};
