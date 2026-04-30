@@ -1,43 +1,58 @@
 import { App, ColorPicker, Form, Input, Select } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
+import { getColorFromValues } from '/imports/helpers/colors/getColorFromValues';
+import type { Rank } from '../../../api/types/rank';
 import { DrawerContext, SubdrawerContext } from '../../app/App';
+import type { DrawerContextValue } from '../../app/types';
 import FormFooter from '../../components/FormFooter';
-import { getColorFromValues } from '../../specializations/SpecializationForm';
 import RanksSelect from './RanksSelect';
 
-export default function RanksForm({ setOpen, useSubdrawer }) {
+interface RanksFormProps {
+  setOpen: (open: boolean) => void;
+  useSubdrawer?: boolean;
+}
+
+interface RankFormValues {
+  name: string;
+  type: 'player' | 'zeus';
+  description?: string;
+  color?: { toHexString?: () => string } | string;
+  previousRankId?: string;
+  nextRankId?: string;
+}
+
+export default function RanksForm({ setOpen, useSubdrawer }: RanksFormProps) {
   const { t } = useTranslation();
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<RankFormValues>();
   const { message, notification } = App.useApp();
   const [loading, setLoading] = useState(false);
 
-  const drawer = useContext(useSubdrawer ? SubdrawerContext : DrawerContext);
+  const drawer = useContext(useSubdrawer ? SubdrawerContext : DrawerContext) as DrawerContextValue;
   const model = useMemo(() => {
-    return drawer.drawerModel || {};
+    return drawer.drawerModel as unknown as Rank & { _id?: string };
   }, [drawer]);
 
   useEffect(() => {
     if (Object.keys(model).length > 0) {
-      form.setFieldsValue(model);
+      form.setFieldsValue(model as unknown as RankFormValues);
     } else {
       form.setFieldsValue({
         name: '',
         description: '',
-        color: null,
-        previousRankId: null,
-        nextRankId: null,
+        color: undefined,
+        previousRankId: undefined,
+        nextRankId: undefined,
       });
     }
   }, [model, form.setFieldsValue]);
 
   const handleSubmit = useCallback(
-    values => {
+    (values: RankFormValues) => {
       setLoading(true);
       const { name, description, previousRankId, nextRankId, type } = values;
-      const args = [...(model?._id ? [model._id] : []), { name, color: getColorFromValues(values), description, previousRankId, nextRankId, type }];
+      const args = [...(model?._id ? [model._id] : []), { name, color: getColorFromValues(values as unknown as Record<string, unknown>), description, previousRankId, nextRankId, type }];
       Meteor.callAsync(Meteor.user() && model?._id ? 'ranks.update' : 'ranks.insert', ...args)
         .then(() => {
           setOpen(false);
@@ -46,8 +61,8 @@ export default function RanksForm({ setOpen, useSubdrawer }) {
         })
         .catch(error => {
           notification.error({
-            message: error.error,
-            description: error.message,
+            message: (error as Meteor.Error).error as string,
+            description: (error as Meteor.Error).message,
           });
         })
         .finally(() => setLoading(false));
@@ -75,13 +90,19 @@ export default function RanksForm({ setOpen, useSubdrawer }) {
       <Form.Item name="color" label={t('common.color')}>
         <ColorPicker format="hex" />
       </Form.Item>
-      <RanksSelect name="previousRankId" label={t('members.previousRank')} rules={[{ required: false, type: 'string' }]} defaultValue={model?.previousRankId} />
-      <RanksSelect name="nextRankId" label={t('members.nextRank')} rules={[{ required: false, type: 'string' }]} defaultValue={model?.nextRankId} />
+      <RanksSelect
+        name="previousRankId"
+        label={t('members.previousRank')}
+        rules={[{ required: false, type: 'string' }]}
+        defaultValue={model?.previousRankId as string | undefined}
+      />
+      <RanksSelect
+        name="nextRankId"
+        label={t('members.nextRank')}
+        rules={[{ required: false, type: 'string' }]}
+        defaultValue={model?.nextRankId as string | undefined}
+      />
       <FormFooter setOpen={setOpen} />
     </Form>
   );
 }
-RanksForm.propTypes = {
-  setOpen: PropTypes.func,
-  useSubdrawer: PropTypes.bool,
-};

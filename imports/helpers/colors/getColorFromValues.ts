@@ -1,10 +1,10 @@
-type ColorPickerValue = { toHexString?: () => string } | string | null | undefined;
-
 interface FormValuesWithColor {
-  color?: ColorPickerValue;
+  color?: unknown;
   [key: string]: unknown;
 }
 
 export function getColorFromValues(values: FormValuesWithColor): string | null | undefined {
-  return values?.color ? (values.color as { toHexString?: () => string })?.toHexString?.() || (values.color as string) : values?.color;
+  const color = values?.color;
+  if (!color) return color as null | undefined;
+  return (color as { toHexString?: () => string })?.toHexString?.() || (color as string);
 }

@@ -1,13 +1,17 @@
 import { Tag, Tooltip } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
+import type { Rank } from '../../../api/types/rank';
 
-export default function RankTag({ rankId }) {
-  const [match, setMatch] = useState(null);
+interface RankTagProps {
+  rankId?: string;
+}
+
+export default function RankTag({ rankId }: RankTagProps) {
+  const [match, setMatch] = useState<Rank | null>(null);
   useEffect(() => {
     if (!rankId) setMatch(null);
-    else Meteor.callAsync('ranks.read', { _id: rankId }, { limit: 1 }).then(res => setMatch(res[0]));
+    else Meteor.callAsync('ranks.read', { _id: rankId }, { limit: 1 }).then(res => setMatch((res as Rank[])[0]));
   }, [rankId]);
 
   if (!rankId) return <Tag>-</Tag>;
@@ -18,6 +22,3 @@ export default function RankTag({ rankId }) {
     </Tooltip>
   );
 }
-RankTag.propTypes = {
-  rankId: PropTypes.string,
-};
