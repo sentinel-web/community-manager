@@ -45,7 +45,7 @@ const Positions = lazy(() => import('../members/positions/Positions'));
 const Ranks = lazy(() => import('../members/ranks/Ranks'));
 const Squads = lazy(() => import('../squads/Squads'));
 const Registrations = lazy(() => import('../registration/Registration'));
-const DiscoveryTypes = lazy(() => import('../registration/discovery-types/DiscoverTypes'));
+const DiscoveryTypes = lazy(() => import('../registration/discovery-types/DiscoveryTypes'));
 const Roles = lazy(() => import('../members/roles/Roles'));
 const Logs = lazy(() => import('../logs/Logs'));
 const Settings = lazy(() => import('../settings/Settings'));

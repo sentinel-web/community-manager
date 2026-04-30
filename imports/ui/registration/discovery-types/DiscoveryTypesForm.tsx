@@ -1,22 +1,27 @@
 import { App, ColorPicker, Form, Input, Switch } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import { DrawerContext, SubdrawerContext } from '../../app/App';
+import type { DrawerContextValue } from '../../app/types';
 import FormFooter from '../../components/FormFooter';
-import { getColorFromValues } from '../../specializations/SpecializationForm';
+import { getColorFromValues } from '/imports/helpers/colors/getColorFromValues';
 
-export default function DiscoveryTypeForm({ setOpen, useSubdrawer }) {
+interface DiscoveryTypeFormProps {
+  setOpen: (open: boolean) => void;
+  useSubdrawer?: boolean;
+}
+
+export default function DiscoveryTypeForm({ setOpen, useSubdrawer = false }: DiscoveryTypeFormProps) {
   const { t } = useTranslation();
   const [form] = Form.useForm();
   const { message, notification } = App.useApp();
   const [loading, setLoading] = useState(false);
 
-  const drawer = useContext(useSubdrawer ? SubdrawerContext : DrawerContext);
+  const drawerCtx = useContext(useSubdrawer ? SubdrawerContext : DrawerContext) as DrawerContextValue;
   const model = useMemo(() => {
-    return drawer.drawerModel || {};
-  }, [drawer]);
+    return drawerCtx.drawerModel || {};
+  }, [drawerCtx]);
 
   useEffect(() => {
     if (Object.keys(model).length > 0) {
@@ -34,17 +39,20 @@ export default function DiscoveryTypeForm({ setOpen, useSubdrawer }) {
   }, [model, form.setFieldsValue]);
 
   const handleSubmit = useCallback(
-    values => {
+    (values: Record<string, unknown>) => {
       setLoading(true);
-      const { name, description, hasTextInput } = values;
-      const args = [...(model?._id ? [model._id] : []), { name, color: getColorFromValues(values), description, hasTextInput: !!hasTextInput }];
+      const { name, description, hasTextInput } = values as { name: string; description?: string; hasTextInput?: boolean };
+      const args = [
+        ...(model?._id ? [model._id] : []),
+        { name, color: getColorFromValues(values), description, hasTextInput: !!hasTextInput },
+      ];
       Meteor.callAsync(Meteor.user() && model?._id ? 'discoveryTypes.update' : 'discoveryTypes.insert', ...args)
         .then(() => {
           setOpen(false);
           form.resetFields();
           message.success(model?._id ? t('messages.discoveryTypeUpdated') : t('messages.discoveryTypeCreated'));
         })
-        .catch(error => {
+        .catch((error: Meteor.Error) => {
           notification.error({
             message: error.error,
             description: error.message,
@@ -73,7 +81,3 @@ export default function DiscoveryTypeForm({ setOpen, useSubdrawer }) {
     </Form>
   );
 }
-DiscoveryTypeForm.propTypes = {
-  setOpen: PropTypes.func,
-  useSubdrawer: PropTypes.bool,
-};
