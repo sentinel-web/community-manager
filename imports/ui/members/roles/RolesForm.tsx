@@ -1,18 +1,37 @@
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { App, Card, Checkbox, ColorPicker, Form, Input, Space, Switch, Typography } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useMemo } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
+import { getColorFromValues } from '/imports/helpers/colors/getColorFromValues';
+import type { TranslateFn } from '../../section/types';
+import type { CrudPermission, Role } from '../../../api/types/role';
 import { DrawerContext } from '../../app/App';
+import type { DrawerContextValue } from '../../app/types';
 import FormFooter from '../../components/FormFooter';
-import { getColorFromValues } from '../../specializations/SpecializationForm';
 
-// Modules that use boolean permissions (true/false)
-const BOOLEAN_MODULES = ['dashboard', 'orbat', 'logs', 'settings'];
+interface RolesFormProps {
+  setOpen: (open: boolean) => void;
+}
+
+interface RuleInputProps {
+  name: string;
+  label: string;
+}
+
+interface CrudPermissionInputProps {
+  name: string;
+  label: string;
+  t: TranslateFn;
+}
+
+interface CrudModuleEntry {
+  name: string;
+  labelKey: string;
+}
 
 // Modules that use CRUD permissions - label keys reference navigation translations
-const CRUD_MODULES = [
+const CRUD_MODULES: CrudModuleEntry[] = [
   { name: 'members', labelKey: 'navigation.members' },
   { name: 'events', labelKey: 'navigation.events' },
   { name: 'tasks', labelKey: 'navigation.tasks' },
@@ -33,7 +52,7 @@ const CRUD_MODULES = [
  * Normalizes permission value for form initial values.
  * Converts old boolean format to CRUD object format.
  */
-function normalizePermissionForForm(value) {
+function normalizePermissionForForm(value: boolean | CrudPermission | undefined): CrudPermission {
   if (value === true) {
     return { read: true, create: true, update: true, delete: true };
   }
@@ -46,19 +65,20 @@ function normalizePermissionForForm(value) {
 /**
  * Prepares model for form initialization by normalizing CRUD permissions.
  */
-function prepareModelForForm(model) {
+function prepareModelForForm(model: Role | null | undefined): Record<string, unknown> {
   if (!model) return {};
 
-  const prepared = { ...model };
+  const prepared: Record<string, unknown> = { ...model };
   for (const { name } of CRUD_MODULES) {
-    prepared[name] = normalizePermissionForForm(model[name]);
+    prepared[name] = normalizePermissionForForm(model[name as keyof Role] as boolean | CrudPermission | undefined);
   }
   return prepared;
 }
 
-const RolesForm = ({ setOpen }) => {
+const RolesForm = ({ setOpen }: RolesFormProps) => {
   const { t } = useTranslation();
-  const { drawerModel: model } = useContext(DrawerContext);
+  const { drawerModel } = useContext(DrawerContext) as DrawerContextValue;
+  const model = drawerModel as unknown as Role & { _id?: string };
   const { message, notification } = App.useApp();
   const { isUpdate, endpoint } = useMemo(
     () => (model?._id ? { isUpdate: true, endpoint: 'roles.update' } : { isUpdate: false, endpoint: 'roles.insert' }),
@@ -66,7 +86,7 @@ const RolesForm = ({ setOpen }) => {
   );
 
   const handleFinish = useCallback(
-    async values => {
+    async (values: Record<string, unknown>) => {
       try {
         const args = [...(model?._id ? [model._id] : []), { ...values, color: getColorFromValues(values) }];
         await Meteor.callAsync(endpoint, ...args);
@@ -74,8 +94,8 @@ const RolesForm = ({ setOpen }) => {
         message.success(isUpdate ? t('messages.roleUpdated') : t('messages.roleCreated'));
       } catch (error) {
         notification.error({
-          message: error.error,
-          description: error.message,
+          message: (error as Meteor.Error).error as string,
+          description: (error as Meteor.Error).message,
         });
       }
     },
@@ -124,23 +144,16 @@ const RolesForm = ({ setOpen }) => {
     </Form>
   );
 };
-RolesForm.propTypes = {
-  setOpen: PropTypes.func,
-};
 
-const RuleInput = ({ name, label }) => {
+const RuleInput = ({ name, label }: RuleInputProps) => {
   return (
     <Form.Item name={name} label={label} rules={[{ required: false, type: 'boolean' }]} valuePropName="checked">
       <Switch checkedChildren={<CheckOutlined />} unCheckedChildren={<CloseOutlined />} />
     </Form.Item>
   );
 };
-RuleInput.propTypes = {
-  name: PropTypes.string,
-  label: PropTypes.string,
-};
 
-const CrudPermissionInput = ({ name, label, t }) => {
+const CrudPermissionInput = ({ name, label, t }: CrudPermissionInputProps) => {
   return (
     <Card size="small" title={label} style={{ marginBottom: 16 }}>
       <Space wrap>
@@ -159,11 +172,6 @@ const CrudPermissionInput = ({ name, label, t }) => {
       </Space>
     </Card>
   );
-};
-CrudPermissionInput.propTypes = {
-  name: PropTypes.string,
-  label: PropTypes.string,
-  t: PropTypes.func,
 };
 
 export default RolesForm;
