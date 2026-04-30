@@ -16,6 +16,7 @@
   "dependencies": {
     "@ant-design/icons": "^5.4.0",
     "@babel/runtime": "^7.25.4",
+    "@swc/helpers": "^0.5.17",
     "antd": "^5.20.2",
     "jszip": "^3.10.1",
     "meteor-node-stubs": "^1.2.7",
@@ -39,7 +40,12 @@
     "@eslint/js": "^9.28.0",
     "@eslint/json": "^1.2.0",
     "@eslint/markdown": "^6.5.0",
+    "@meteorjs/rspack": "^2.0.1",
     "@playwright/test": "^1.49.0",
+    "@rsdoctor/rspack-plugin": "^1.5.7",
+    "@rspack/cli": "^1.7.1",
+    "@rspack/core": "^1.7.1",
+    "@rspack/plugin-react-refresh": "^1.4.3",
     "@types/meteor": "^2.9.11",
     "@types/mocha": "^10.0.10",
     "@types/node": "^20.14.0",
@@ -48,6 +54,7 @@
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-react": "^7.37.5",
     "globals": "^16.2.0",
+    "react-refresh": "^0.17.0",
     "typescript": "5.9.3"
   }
 }
