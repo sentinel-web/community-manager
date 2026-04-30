@@ -1,18 +1,31 @@
 import { Empty, List, Spin, Tag } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import getLegibleTextColor from '../../helpers/colors/getLegibleTextColor';
 
-export default function SquadMembers({ squadId }) {
-  const [members, setMembers] = useState([]);
+interface SquadMemberItem {
+  _id: string;
+  id: number;
+  name: string;
+  rankName: string | null;
+  rankColor: string | null;
+  positionName: string | null;
+  positionColor: string | null;
+}
+
+interface SquadMembersProps {
+  squadId: string;
+}
+
+export default function SquadMembers({ squadId }: SquadMembersProps) {
+  const [members, setMembers] = useState<SquadMemberItem[]>([]);
   const [loading, setLoading] = useState(true);
   const { t } = useTranslation();
 
   useEffect(() => {
     Meteor.callAsync('squads.members', squadId)
-      .then(result => setMembers(result))
+      .then(result => setMembers(result as SquadMemberItem[]))
       .catch(() => setMembers([]))
       .finally(() => setLoading(false));
   }, [squadId]);
@@ -28,12 +41,12 @@ export default function SquadMembers({ squadId }) {
         <List.Item key={member._id}>
           <span>{member.id} &quot;{member.name}&quot;</span>
           {member.rankName && (
-            <Tag color={member.rankColor} style={{ marginLeft: 8 }}>
+            <Tag color={member.rankColor ?? undefined} style={{ marginLeft: 8 }}>
               <span style={{ color: member.rankColor ? getLegibleTextColor(member.rankColor) : undefined }}>{member.rankName}</span>
             </Tag>
           )}
           {member.positionName && (
-            <Tag color={member.positionColor} style={{ marginLeft: 4 }}>
+            <Tag color={member.positionColor ?? undefined} style={{ marginLeft: 4 }}>
               <span style={{ color: member.positionColor ? getLegibleTextColor(member.positionColor) : undefined }}>{member.positionName}</span>
             </Tag>
           )}
@@ -42,6 +55,3 @@ export default function SquadMembers({ squadId }) {
     />
   );
 }
-SquadMembers.propTypes = {
-  squadId: PropTypes.string.isRequired,
-};

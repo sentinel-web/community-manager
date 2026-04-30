@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import type { Squad } from '../../api/types/squad';
 import SquadsCollection from '../../api/collections/squads.collection';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useTourRef } from '../tour/TourContext';
@@ -13,14 +14,14 @@ export default function Squads() {
 
   const expandable = useMemo(
     () => ({
-      expandedRowRender: record => <SquadMembers squadId={record._id} />,
+      expandedRowRender: (record: Squad) => <SquadMembers squadId={record._id!} />,
     }),
     []
   );
 
   return (
-    <div ref={sectionRef}>
-      <Section
+    <div ref={sectionRef as React.RefObject<HTMLDivElement>}>
+      <Section<Squad>
         title={t('squads.title')}
         collectionName="squads"
         Collection={SquadsCollection}

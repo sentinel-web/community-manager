@@ -1,21 +1,30 @@
 import { App, Form, Input, InputNumber, Rate, Select, Typography } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import PropTypes from 'prop-types';
 import React, { useCallback, useContext } from 'react';
+import type { Question, Questionnaire } from '../../api/types/questionnaire';
 import { useTranslation } from '../../i18n/LanguageContext';
+import type { DrawerContextValue } from '../app/types';
 import { DrawerContext } from '../app/App';
 import FormFooter from '../components/FormFooter';
 
 const { Text } = Typography;
 
-const QuestionnaireResponseForm = ({ setOpen, onSuccess }) => {
-  const { drawerModel: questionnaire } = useContext(DrawerContext);
+interface QuestionnaireResponseFormProps {
+  setOpen: (open: boolean) => void;
+  onSuccess?: () => void;
+}
+
+type ResponseFormValues = Record<string, string | number | string[] | undefined>;
+
+const QuestionnaireResponseForm = ({ setOpen, onSuccess }: QuestionnaireResponseFormProps) => {
+  const { drawerModel } = useContext(DrawerContext) as DrawerContextValue;
+  const questionnaire = drawerModel as unknown as Questionnaire;
   const { message, notification } = App.useApp();
   const { t } = useTranslation();
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<ResponseFormValues>();
 
   const handleFinish = useCallback(
-    async values => {
+    async (values: ResponseFormValues) => {
       try {
         const answers = (questionnaire.questions || []).map((question, index) => ({
           questionIndex: index,
@@ -28,15 +37,15 @@ const QuestionnaireResponseForm = ({ setOpen, onSuccess }) => {
         if (onSuccess) onSuccess();
       } catch (error) {
         notification.error({
-          message: error.error,
-          description: error.message,
+          message: (error as Meteor.Error).error,
+          description: (error as Meteor.Error).message,
         });
       }
     },
     [setOpen, questionnaire, message, notification, onSuccess, t]
   );
 
-  const renderQuestionField = (question, index) => {
+  const renderQuestionField = (question: Question, index: number) => {
     const fieldName = `question_${index}`;
     const rules = question.required ? [{ required: true, message: t('questionnaires.questionRequired') }] : [];
 
@@ -108,10 +117,6 @@ const QuestionnaireResponseForm = ({ setOpen, onSuccess }) => {
       <FormFooter setOpen={setOpen} submitText={t('questionnaires.submitResponse')} />
     </Form>
   );
-};
-QuestionnaireResponseForm.propTypes = {
-  setOpen: PropTypes.func.isRequired,
-  onSuccess: PropTypes.func,
 };
 
 export default QuestionnaireResponseForm;

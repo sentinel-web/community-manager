@@ -3,17 +3,22 @@ import { Meteor } from 'meteor/meteor';
 import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import RolesCollection from '../../api/collections/roles.collection';
+import type { Questionnaire } from '../../api/types/questionnaire';
+import type { Role } from '../../api/types/role';
 import { useTranslation } from '../../i18n/LanguageContext';
+import type { DrawerContextValue } from '../app/types';
 import { DrawerContext, SubdrawerContext } from '../app/App';
+import type { RowClickEvent } from '../section/types';
 import TableContainer from '../table/body/TableContainer';
 import TableFooter from '../table/footer/TableFooter';
 import Table from '../table/Table';
 import getQuestionnaireResponseColumns from './questionnaireResponse.columns';
 import ResponseDetailView from './ResponseDetailView';
+import type { QuestionnaireResponseRow } from './types';
 
 const { Text } = Typography;
 
-function getUpdatePermission(role) {
+function getUpdatePermission(role: Role | undefined): boolean {
   if (!role) return false;
   const permission = role.questionnaires;
   if (permission === true) return true;
@@ -24,20 +29,20 @@ function getUpdatePermission(role) {
 }
 
 export default function QuestionnaireResponses() {
-  const drawer = useContext(DrawerContext);
-  const subdrawer = useContext(SubdrawerContext);
-  const { drawerModel: questionnaire } = drawer;
+  const drawer = useContext(DrawerContext) as DrawerContextValue;
+  const subdrawer = useContext(SubdrawerContext) as DrawerContextValue;
+  const questionnaire = drawer.drawerModel as unknown as Questionnaire;
   const { notification, message } = App.useApp();
   const { t } = useTranslation();
 
-  const [responses, setResponses] = useState([]);
+  const [responses, setResponses] = useState<QuestionnaireResponseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [limit, setLimit] = useState(20);
 
   // Get user's role for permission check
   const user = useTracker(() => Meteor.user(), []);
-  useSubscribe('roles', { _id: user?.profile?.roleId ?? null }, { limit: 1 });
-  const roles = useFind(() => RolesCollection.find({ _id: user?.profile?.roleId ?? null }, { limit: 1 }), [user?.profile?.roleId]);
+  useSubscribe('roles', { _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 });
+  const roles = useFind(() => RolesCollection.find({ _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 }), [user?.profile?.roleId]);
   const canUpdate = useMemo(() => getUpdatePermission(roles?.[0]), [roles]);
 
   const loadResponses = useCallback(async () => {
@@ -45,11 +50,11 @@ export default function QuestionnaireResponses() {
     try {
       setLoading(true);
       const result = await Meteor.callAsync('questionnaireResponses.getForQuestionnaire', questionnaire._id, { limit });
-      setResponses(result);
+      setResponses(result as QuestionnaireResponseRow[]);
     } catch (error) {
       notification.error({
-        message: error.error,
-        description: error.message,
+        message: (error as Meteor.Error).error,
+        description: (error as Meteor.Error).message,
       });
     } finally {
       setLoading(false);
@@ -61,10 +66,10 @@ export default function QuestionnaireResponses() {
   }, [loadResponses]);
 
   const handleViewDetails = useCallback(
-    (e, response) => {
+    (e: RowClickEvent, response: QuestionnaireResponseRow) => {
       e.preventDefault();
       subdrawer.setDrawerTitle(t('questionnaires.responseDetails'));
-      subdrawer.setDrawerModel({ response, questionnaire });
+      subdrawer.setDrawerModel({ response, questionnaire } as unknown as Record<string, unknown>);
       subdrawer.setDrawerComponent(React.createElement(ResponseDetailView, { setOpen: subdrawer.setDrawerOpen }));
       subdrawer.setDrawerOpen(true);
     },
@@ -72,7 +77,7 @@ export default function QuestionnaireResponses() {
   );
 
   const handleToggleIgnored = useCallback(
-    async (e, response) => {
+    async (e: RowClickEvent, response: QuestionnaireResponseRow) => {
       e.preventDefault();
       try {
         await Meteor.callAsync('questionnaireResponses.setIgnored', response._id, !response.ignored);
@@ -80,8 +85,8 @@ export default function QuestionnaireResponses() {
         loadResponses();
       } catch (error) {
         notification.error({
-          message: error.error,
-          description: error.message,
+          message: (error as Meteor.Error).error,
+          description: (error as Meteor.Error).message,
         });
       }
     },

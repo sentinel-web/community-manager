@@ -1,14 +1,28 @@
 import { Rate, Space, Tag, Typography } from 'antd';
-import PropTypes from 'prop-types';
 import React, { useContext } from 'react';
+import type { Answer, Question, Questionnaire } from '../../api/types/questionnaire';
 import { useTranslation } from '../../i18n/LanguageContext';
+import type { TranslateFn } from '../section/types';
+import type { DrawerContextValue } from '../app/types';
 import { SubdrawerContext } from '../app/App';
+import type { QuestionnaireResponseRow } from './types';
 
 const { Text, Title } = Typography;
 
+interface ResponseDetailModel {
+  response: QuestionnaireResponseRow;
+  questionnaire: Questionnaire;
+}
+
+interface AnswerDisplayProps {
+  question: Question;
+  answer: Answer | undefined;
+  t: TranslateFn;
+}
+
 const ResponseDetailView = () => {
-  const { drawerModel } = useContext(SubdrawerContext);
-  const { response, questionnaire } = drawerModel || {};
+  const { drawerModel } = useContext(SubdrawerContext) as DrawerContextValue;
+  const { response, questionnaire } = (drawerModel as unknown as ResponseDetailModel) || {};
   const { t } = useTranslation();
 
   if (!response || !questionnaire) {
@@ -42,7 +56,7 @@ const ResponseDetailView = () => {
 
 export default ResponseDetailView;
 
-const AnswerDisplay = ({ question, answer, t }) => {
+const AnswerDisplay = ({ question, answer, t }: AnswerDisplayProps) => {
   const value = answer?.value;
   const isEmpty = value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
 
@@ -53,19 +67,19 @@ const AnswerDisplay = ({ question, answer, t }) => {
 
     switch (question.type) {
       case 'rating':
-        return <Rate disabled value={value} />;
+        return <Rate disabled value={value as number} />;
       case 'multiselect':
         return (
           <Space wrap>
-            {value.map((v, i) => (
+            {(value as string[]).map((v, i) => (
               <Tag key={i}>{v}</Tag>
             ))}
           </Space>
         );
       case 'select':
-        return <Tag>{value}</Tag>;
+        return <Tag>{value as string}</Tag>;
       case 'textarea':
-        return <Text style={{ whiteSpace: 'pre-wrap' }}>{value}</Text>;
+        return <Text style={{ whiteSpace: 'pre-wrap' }}>{value as string}</Text>;
       default:
         return <Text>{String(value)}</Text>;
     }
@@ -80,16 +94,4 @@ const AnswerDisplay = ({ question, answer, t }) => {
       <div style={{ marginTop: 4 }}>{renderValue()}</div>
     </div>
   );
-};
-AnswerDisplay.propTypes = {
-  question: PropTypes.shape({
-    text: PropTypes.string,
-    type: PropTypes.string,
-    required: PropTypes.bool,
-  }),
-  answer: PropTypes.shape({
-    questionIndex: PropTypes.number,
-    value: PropTypes.any,
-  }),
-  t: PropTypes.func,
 };
