@@ -1,5 +1,8 @@
 import React from 'react';
 import EventTypesCollection from '../../../api/collections/eventTypes.collection';
+import { Mongo } from 'meteor/mongo';
+import type { CollectionDoc } from '../../components/CollectionSelect';
+import type { ColumnsFactory } from '../../section/types';
 import { useTranslation } from '../../../i18n/LanguageContext';
 import Section from '../../section/Section';
 import EventTypesForm from './EventTypesForm';
@@ -12,9 +15,9 @@ const EventTypes = () => {
     <Section
       title={t('events.eventTypes')}
       collectionName="eventTypes"
-      Collection={EventTypesCollection}
+      Collection={EventTypesCollection as unknown as Mongo.Collection<CollectionDoc>}
       FormComponent={EventTypesForm}
-      columnsFactory={getEventTypeColumns}
+      columnsFactory={getEventTypeColumns as unknown as ColumnsFactory<CollectionDoc>}
     />
   );
 };

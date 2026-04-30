@@ -1,21 +1,19 @@
 import { Tag } from 'antd';
 import React from 'react';
+import type { ColumnsType } from 'antd/es/table';
 import TableActions from '../../table/body/actions/TableActions';
+import type { SectionPermissions, TranslateFn, RowClickEvent } from '../../section/types';
+import type { EventType } from '../../../api/types/misc';
 
-/**
- * Factory function to generate table columns for event types.
- * @param {function} handleEdit - Callback function to handle editing an event type. Called with (event, record).
- * @param {function} handleDelete - Callback function to handle deleting an event type. Called with (event, record).
- * @param {object} [permissions={}] - Permission flags for the current user.
- * @param {boolean} [permissions.canUpdate=true] - Whether the user can update event types.
- * @param {boolean} [permissions.canDelete=true] - Whether the user can delete event types.
- * @param {function} [t=k=>k] - Translation function for i18n.
- * @returns {Array} Array of column configuration objects for Ant Design Table.
- */
-const getEventTypeColumns = (handleEdit, handleDelete, permissions = {}, t = k => k) => {
+const getEventTypeColumns = (
+  handleEdit: (e: RowClickEvent, record: EventType) => void,
+  handleDelete: (e: RowClickEvent, record: EventType) => void,
+  permissions: SectionPermissions = { canCreate: true, canUpdate: true, canDelete: true },
+  t: TranslateFn = k => k
+): ColumnsType<EventType> => {
   const { canUpdate = true, canDelete = true } = permissions;
 
-  const columns = [
+  const columns: ColumnsType<EventType> = [
     {
       title: t('common.name'),
       dataIndex: 'name',
@@ -36,7 +34,7 @@ const getEventTypeColumns = (handleEdit, handleDelete, permissions = {}, t = k =
       key: 'color',
       ellipsis: true,
       sorter: (a, b) => (a.color || '').localeCompare(b.color || ''),
-      render: color => <Tag color={color || 'transparent'}>{color}</Tag>,
+      render: (color: string | null) => <Tag color={color ?? undefined}>{color}</Tag>,
     },
   ];
 
@@ -45,7 +43,7 @@ const getEventTypeColumns = (handleEdit, handleDelete, permissions = {}, t = k =
       title: t('common.actions'),
       dataIndex: '_id',
       key: '_id',
-      render: (id, record) => (
+      render: (_id: string, record: EventType) => (
         <TableActions record={record} handleEdit={handleEdit} handleDelete={handleDelete} canUpdate={canUpdate} canDelete={canDelete} />
       ),
     });

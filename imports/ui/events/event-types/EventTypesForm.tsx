@@ -1,22 +1,27 @@
 import { App, ColorPicker, Form, Input } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import { DrawerContext, SubdrawerContext } from '../../app/App';
+import type { DrawerContextValue } from '../../app/types';
 import FormFooter from '../../components/FormFooter';
 import { getColorFromValues } from '../../specializations/SpecializationForm';
 
-export default function EventTypesForm({ setOpen, useSubdrawer }) {
+interface EventTypesFormProps {
+  setOpen: (open: boolean) => void;
+  useSubdrawer?: boolean;
+}
+
+export default function EventTypesForm({ setOpen, useSubdrawer = false }: EventTypesFormProps) {
   const { t } = useTranslation();
   const [form] = Form.useForm();
   const { message, notification } = App.useApp();
   const [loading, setLoading] = useState(false);
 
-  const drawer = useContext(useSubdrawer ? SubdrawerContext : DrawerContext);
+  const drawerCtx = useContext(useSubdrawer ? SubdrawerContext : DrawerContext) as DrawerContextValue;
   const model = useMemo(() => {
-    return drawer.drawerModel || {};
-  }, [drawer]);
+    return drawerCtx.drawerModel || {};
+  }, [drawerCtx]);
 
   useEffect(() => {
     if (Object.keys(model).length > 0) {
@@ -31,9 +36,9 @@ export default function EventTypesForm({ setOpen, useSubdrawer }) {
   }, [model, form.setFieldsValue]);
 
   const handleSubmit = useCallback(
-    values => {
+    (values: Record<string, unknown>) => {
       setLoading(true);
-      const { name, description } = values;
+      const { name, description } = values as { name: string; description?: string };
       const args = [...(model?._id ? [model._id] : []), { name, color: getColorFromValues(values), description }];
       Meteor.callAsync(Meteor.user() && model?._id ? 'eventTypes.update' : 'eventTypes.insert', ...args)
         .then(() => {
@@ -41,7 +46,7 @@ export default function EventTypesForm({ setOpen, useSubdrawer }) {
           form.resetFields();
           message.success(model?._id ? t('messages.eventTypeUpdated') : t('messages.eventTypeCreated'));
         })
-        .catch(error => {
+        .catch((error: Meteor.Error) => {
           notification.error({
             message: error.error,
             description: error.message,
@@ -67,7 +72,3 @@ export default function EventTypesForm({ setOpen, useSubdrawer }) {
     </Form>
   );
 }
-EventTypesForm.propTypes = {
-  setOpen: PropTypes.func,
-  useSubdrawer: PropTypes.bool,
-};
