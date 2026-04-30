@@ -137,14 +137,12 @@ export class TasksPage extends BasePage {
    */
   async createTaskViaMethod(name: string): Promise<string | null> {
     return await this.page.evaluate(async (taskName: string) => {
-      // Get first available task status
-      const statuses = await (window as any).Meteor.callAsync('taskStatus.read', {}, { limit: 1 });
+      const statuses = (await window.Meteor.callAsync('taskStatus.read', {}, { limit: 1 })) as Array<{ _id: string }>;
       if (statuses.length === 0) return null;
-      // Create the task
-      return await (window as any).Meteor.callAsync('tasks.insert', {
+      return (await window.Meteor.callAsync('tasks.insert', {
         name: taskName,
         status: statuses[0]._id,
-      });
+      })) as string;
     }, name);
   }
 
@@ -153,7 +151,7 @@ export class TasksPage extends BasePage {
    */
   async deleteTaskViaMethod(taskId: string): Promise<void> {
     await this.page.evaluate(async (id: string) => {
-      await (window as any).Meteor.callAsync('tasks.remove', id);
+      await window.Meteor.callAsync('tasks.remove', id);
     }, taskId);
   }
 
