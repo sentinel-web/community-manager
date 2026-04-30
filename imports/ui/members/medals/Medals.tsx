@@ -1,5 +1,6 @@
 import React from 'react';
 import MedalsCollection from '../../../api/collections/medals.collection';
+import type { Medal } from '../../../api/types/misc';
 import { useTranslation } from '../../../i18n/LanguageContext';
 import { useTourRef } from '../../tour/TourContext';
 import Section from '../../section/Section';
@@ -11,8 +12,14 @@ const Medals = () => {
   const sectionRef = useTourRef('medals-section');
 
   return (
-    <div ref={sectionRef}>
-      <Section title={t('members.medals')} collectionName="medals" FormComponent={MedalsForm} columnsFactory={getMedalColumns} Collection={MedalsCollection} />
+    <div ref={sectionRef as React.RefObject<HTMLDivElement>}>
+      <Section<Medal>
+        title={t('members.medals')}
+        collectionName="medals"
+        FormComponent={MedalsForm}
+        columnsFactory={getMedalColumns}
+        Collection={MedalsCollection}
+      />
     </div>
   );
 };
