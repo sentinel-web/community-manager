@@ -17,6 +17,7 @@ export interface Task {
   link?: string;
   description?: string;
   parent?: string;
+  completedBy?: MemberId[];
   createdAt?: Date;
   comments?: TaskComment[];
 }

@@ -1,10 +1,9 @@
 interface FormValuesWithColor {
   color?: unknown;
-  [key: string]: unknown;
 }
 
-export function getColorFromValues(values: FormValuesWithColor): string | null | undefined {
+export function getColorFromValues(values?: FormValuesWithColor): string | undefined {
   const color = values?.color;
-  if (!color) return color as null | undefined;
+  if (!color) return undefined;
   return (color as { toHexString?: () => string })?.toHexString?.() || (color as string);
 }

@@ -12,7 +12,7 @@ import { useTranslation } from '/imports/i18n/LanguageContext';
 
 const empty = <></>;
 
-type CollectionDoc = {
+export type CollectionDoc = {
   _id?: string;
   name?: string;
   color?: string;

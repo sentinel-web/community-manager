@@ -150,8 +150,8 @@ export default function MemberForm({ setOpen }: MemberFormProps) {
         ...values,
         profile: {
           ...values.profile,
-          entryDate: getDateFromValues(values.profile, 'entryDate'),
-          exitDate: getDateFromValues(values.profile, 'exitDate'),
+          entryDate: getDateFromValues(values.profile as unknown as Record<string, unknown>, 'entryDate'),
+          exitDate: getDateFromValues(values.profile as unknown as Record<string, unknown>, 'exitDate'),
         },
       };
       const args = model?._id ? [model._id, payload] : [payload];

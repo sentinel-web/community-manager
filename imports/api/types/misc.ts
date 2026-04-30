@@ -3,7 +3,9 @@ import type { ColoredEntity } from './shared';
 export type Medal = ColoredEntity;
 export type EventType = ColoredEntity;
 export type TaskStatus = ColoredEntity;
-export type DiscoveryType = ColoredEntity;
+export interface DiscoveryType extends ColoredEntity {
+  hasTextInput?: boolean;
+}
 export interface Position extends ColoredEntity {
   order?: number;
 }
@@ -20,9 +22,12 @@ export interface Registration {
   name: string;
   id: number;
   age: number;
-  discoveryType?: string;
+  discoveryType?: string | null;
+  discoveryTypeDetails?: string | null;
+  steamProfileLink?: string | null;
+  discordTag?: string | null;
   rulesReadAndAccepted: boolean;
-  description?: string;
+  description?: string | null;
 }
 
 export interface ProfilePicture {
