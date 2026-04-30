@@ -331,3 +331,17 @@ Custom skills in `.claude/skills/` automate common development tasks:
 - Prettier: 2-space indent, single quotes, trailing commas (es5), 150 char width, `arrowParens: "avoid"`
 - TypeScript: `strict: true` (no implicit any, strict null checks, unknown catch variables, etc.)
 - TypeScript interfaces above each component for props validation
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues at `sentinel-web/community-manager`, accessed via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Five canonical labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context repo: `CONTEXT.md` and `docs/adr/` at the repo root (will be created lazily by `/grill-with-docs`). See `docs/agents/domain.md`.
