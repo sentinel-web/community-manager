@@ -9,9 +9,7 @@ import MembersSelect from '../members/MembersSelect';
 import RanksSelect from '../members/ranks/RanksSelect';
 import SpecializationsSelect from './SpecializationsSelect';
 
-export function getColorFromValues(values) {
-  return values?.color ? values.color?.toHexString?.() || values.color : values?.color;
-}
+export { getColorFromValues } from '/imports/helpers/colors/getColorFromValues';
 
 const SpecializationForm = ({ setOpen, useSubdrawer }) => {
   const { t } = useTranslation();
