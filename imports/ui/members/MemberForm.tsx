@@ -84,7 +84,7 @@ export default function MemberForm({ setOpen }: MemberFormProps) {
   useEffect(() => {
     if (Object.keys(model).length > 0) {
       const data = { ...model } as Record<string, unknown>;
-      const profile = (data.profile as Record<string, unknown>) || {};
+      const profile = data.profile as Record<string, unknown>;
       profile.entryDate = transformDateToDays(profile, 'entryDate');
       profile.exitDate = transformDateToDays(profile, 'exitDate');
       data.profile = profile;
