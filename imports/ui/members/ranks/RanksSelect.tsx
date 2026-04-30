@@ -1,4 +1,5 @@
 import type { Rule } from 'antd/es/form';
+import type { NamePath } from 'antd/es/form/interface';
 import { Mongo } from 'meteor/mongo';
 import React from 'react';
 import RanksCollection from '../../../api/collections/ranks.collection';
@@ -8,7 +9,7 @@ import RanksForm from './RanksForm';
 
 interface RanksSelectProps {
   multiple?: boolean;
-  name?: string;
+  name?: NamePath;
   label?: string;
   rules?: Rule[];
   defaultValue?: string | string[];

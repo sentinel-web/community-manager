@@ -102,7 +102,7 @@ const RolesForm = ({ setOpen }: RolesFormProps) => {
     [setOpen, endpoint, model?._id, isUpdate, message, notification, t]
   );
 
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<Record<string, unknown>>();
   const initialValues = useMemo(() => prepareModelForForm(model), [model]);
 
   return (
