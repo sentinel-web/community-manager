@@ -1,5 +1,6 @@
 import React from 'react';
 import RanksCollection from '../../../api/collections/ranks.collection';
+import type { Rank } from '../../../api/types/rank';
 import { useTranslation } from '../../../i18n/LanguageContext';
 import { useTourRef } from '../../tour/TourContext';
 import Section from '../../section/Section';
@@ -11,8 +12,14 @@ const Ranks = () => {
   const sectionRef = useTourRef('ranks-section');
 
   return (
-    <div ref={sectionRef}>
-      <Section title={t('members.ranks')} collectionName="ranks" FormComponent={RanksForm} columnsFactory={getRankColumns} Collection={RanksCollection} />
+    <div ref={sectionRef as React.RefObject<HTMLDivElement>}>
+      <Section<Rank>
+        title={t('members.ranks')}
+        collectionName="ranks"
+        FormComponent={RanksForm}
+        columnsFactory={getRankColumns}
+        Collection={RanksCollection}
+      />
     </div>
   );
 };

@@ -11,6 +11,10 @@ import RanksSelect from '../members/ranks/RanksSelect';
 import SpecializationsSelect from './SpecializationsSelect';
 import type { Specialization } from '../../api/types/misc';
 
+import { getColorFromValues } from '/imports/helpers/colors/getColorFromValues';
+
+export { getColorFromValues };
+
 /** Shared props that MembersSelect and RanksSelect accept (still .jsx, typed via cast) */
 interface SelectFieldProps {
   multiple?: boolean;
@@ -37,10 +41,6 @@ interface SpecializationFormValues {
 interface SpecializationFormProps {
   setOpen: (open: boolean) => void;
   useSubdrawer?: boolean;
-}
-
-export function getColorFromValues(values: SpecializationFormValues): string | undefined {
-  return values?.color ? (values.color as { toHexString?: () => string })?.toHexString?.() || (values.color as string) : undefined;
 }
 
 const SpecializationForm = ({ setOpen, useSubdrawer }: SpecializationFormProps) => {

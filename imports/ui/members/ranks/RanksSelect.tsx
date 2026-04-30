@@ -1,11 +1,21 @@
-import PropTypes from 'prop-types';
+import type { Rule } from 'antd/es/form';
+import type { NamePath } from 'antd/es/form/interface';
+import { Mongo } from 'meteor/mongo';
 import React from 'react';
 import RanksCollection from '../../../api/collections/ranks.collection';
 import { useTranslation } from '../../../i18n/LanguageContext';
 import CollectionSelect from '../../components/CollectionSelect';
 import RanksForm from './RanksForm';
 
-const RanksSelect = ({ multiple, name, label, rules, defaultValue }) => {
+interface RanksSelectProps {
+  multiple?: boolean;
+  name?: NamePath;
+  label?: string;
+  rules?: Rule[];
+  defaultValue?: string | string[];
+}
+
+const RanksSelect = ({ multiple, name, label, rules, defaultValue }: RanksSelectProps) => {
   const { t } = useTranslation();
   return (
     <CollectionSelect
@@ -13,7 +23,7 @@ const RanksSelect = ({ multiple, name, label, rules, defaultValue }) => {
       name={name}
       label={label}
       rules={rules}
-      collection={RanksCollection}
+      collection={RanksCollection as unknown as Mongo.Collection<{ _id?: string; name?: string; color?: string; profile?: { name?: string }; [key: string]: unknown }>}
       mode={multiple ? 'multiple' : undefined}
       FormComponent={RanksForm}
       subscription="ranks"
@@ -21,13 +31,6 @@ const RanksSelect = ({ multiple, name, label, rules, defaultValue }) => {
       extra={<></>}
     />
   );
-};
-RanksSelect.propTypes = {
-  multiple: PropTypes.bool,
-  name: PropTypes.string,
-  label: PropTypes.string,
-  rules: PropTypes.array,
-  defaultValue: PropTypes.any,
 };
 
 export default RanksSelect;

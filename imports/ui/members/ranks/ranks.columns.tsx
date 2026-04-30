@@ -1,21 +1,13 @@
 import { Tag } from 'antd';
 import React from 'react';
+import type { Rank } from '../../../api/types/rank';
+import type { ColumnsFactory } from '../../section/types';
 import TableActions from '../../table/body/actions/TableActions';
 
-/**
- * Factory function to generate table columns for ranks.
- * @param {function} handleEdit - Callback function to handle editing a rank. Called with (event, record).
- * @param {function} handleDelete - Callback function to handle deleting a rank. Called with (event, record).
- * @param {object} [permissions={}] - Permission flags for the current user.
- * @param {boolean} [permissions.canUpdate=true] - Whether the user can update ranks.
- * @param {boolean} [permissions.canDelete=true] - Whether the user can delete ranks.
- * @param {function} [t=k=>k] - Translation function for i18n.
- * @returns {Array} Array of column configuration objects for Ant Design Table.
- */
-const getRankColumns = (handleEdit, handleDelete, permissions = {}, t = k => k) => {
+const getRankColumns: ColumnsFactory<Rank> = (handleEdit, handleDelete, permissions, t) => {
   const { canUpdate = true, canDelete = true } = permissions;
 
-  const columns = [
+  const columns: ReturnType<ColumnsFactory<Rank>> = [
     {
       title: t('common.name'),
       dataIndex: 'name',
@@ -28,9 +20,9 @@ const getRankColumns = (handleEdit, handleDelete, permissions = {}, t = k => k) 
       dataIndex: 'type',
       key: 'type',
       ellipsis: true,
-      sorter: (a, b) => (a.type || '').localeCompare(b.type || ''),
-      render: type => {
-        const typeMap = {
+      sorter: (a: Rank, b: Rank) => (a.type || '').localeCompare(b.type || ''),
+      render: (type: string) => {
+        const typeMap: Record<string, string> = {
           player: t('columns.player'),
           zeus: t('columns.zeus'),
         };
@@ -42,15 +34,15 @@ const getRankColumns = (handleEdit, handleDelete, permissions = {}, t = k => k) 
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
-      sorter: (a, b) => (a.description || '').localeCompare(b.description || ''),
+      sorter: (a: Rank, b: Rank) => (a.description || '').localeCompare(b.description || ''),
     },
     {
       title: t('common.color'),
       dataIndex: 'color',
       key: 'color',
       ellipsis: true,
-      sorter: (a, b) => (a.color || '').localeCompare(b.color || ''),
-      render: color => <Tag color={color || 'transparent'}>{color}</Tag>,
+      sorter: (a: Rank, b: Rank) => (a.color || '').localeCompare(b.color || ''),
+      render: (color: string) => <Tag color={color || 'transparent'}>{color}</Tag>,
     },
   ];
 
@@ -59,7 +51,7 @@ const getRankColumns = (handleEdit, handleDelete, permissions = {}, t = k => k) 
       title: t('common.actions'),
       dataIndex: '_id',
       key: '_id',
-      render: (id, record) => (
+      render: (_id: string, record: Rank) => (
         <TableActions record={record} handleEdit={handleEdit} handleDelete={handleDelete} canUpdate={canUpdate} canDelete={canDelete} />
       ),
     });

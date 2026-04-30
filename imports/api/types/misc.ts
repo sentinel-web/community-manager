@@ -6,7 +6,9 @@ export type TaskStatus = ColoredEntity;
 export interface DiscoveryType extends ColoredEntity {
   hasTextInput?: boolean;
 }
-export type Position = ColoredEntity;
+export interface Position extends ColoredEntity {
+  order?: number;
+}
 
 export interface Specialization extends ColoredEntity {
   linkToFile?: string;

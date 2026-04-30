@@ -3,6 +3,8 @@ import type { MemberId } from './shared';
 export interface MemberProfile {
   name?: string;
   id?: number;
+  /** Legacy field — may exist on older documents before rankId migration. */
+  rank?: string;
   roleId?: string;
   squadId?: string;
   rankId?: string;

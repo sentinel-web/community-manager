@@ -1,6 +1,6 @@
 import { App, Button, Card, Col, Descriptions, Modal, Row, Select, Spin, Statistic, Tag, Typography } from 'antd';
+import type { DefaultOptionType } from 'antd/es/select';
 import { Meteor } from 'meteor/meteor';
-import PropTypes from 'prop-types';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { useTranslation } from '../../i18n/LanguageContext';
@@ -8,7 +8,19 @@ import { useTourRef } from '../tour/TourContext';
 
 const ATTENDANCE_COLORS = { present: '#52c41a', zeus: '#1890ff', excused: '#faad14', absent: '#ff4d4f' };
 
-function AttendancePieChart({ data, title }) {
+interface AttendanceBreakdownData {
+  present: number;
+  zeus: number;
+  excused: number;
+  absent: number;
+}
+
+interface AttendancePieChartProps {
+  data: AttendanceBreakdownData;
+  title: string;
+}
+
+function AttendancePieChart({ data, title }: AttendancePieChartProps) {
   const chartData = [
     { name: 'Present', value: data.present, color: ATTENDANCE_COLORS.present },
     { name: 'Zeus', value: data.zeus, color: ATTENDANCE_COLORS.zeus },
@@ -35,22 +47,53 @@ function AttendancePieChart({ data, title }) {
     </div>
   );
 }
-AttendancePieChart.propTypes = {
-  data: PropTypes.object,
-  title: PropTypes.string,
-};
 
-export default function MemberProfile({ memberId }) {
+interface ProfileStats {
+  'profile picture'?: string;
+  name?: string;
+  rankColor?: string;
+  rank?: string;
+  id?: string | number;
+  squad?: string;
+  navyRank?: string;
+  'entry date'?: string;
+  role?: string;
+  position?: string;
+  positionColor?: string;
+  'attendance points'?: number;
+  'inactivity points'?: number;
+  specializations?: Array<{ name?: string; linkToFile?: string }>;
+  medals?: string;
+  description?: string;
+  steamProfileLink?: string;
+  discordTag?: string;
+}
+
+interface ProfileAccess {
+  canViewContact: boolean;
+}
+
+interface AttendanceBreakdown {
+  missionCount: number;
+  total: AttendanceBreakdownData;
+  quarterly: AttendanceBreakdownData;
+}
+
+interface MemberProfileProps {
+  memberId?: string;
+}
+
+export default function MemberProfile({ memberId }: MemberProfileProps) {
   const { t } = useTranslation();
   const profileRef = useTourRef('members-expanded');
   const { message, notification } = App.useApp();
-  const [profileStats, setProfileStats] = useState(null);
-  const [access, setAccess] = useState({ canViewContact: false });
-  const [breakdown, setBreakdown] = useState(null);
+  const [profileStats, setProfileStats] = useState<ProfileStats | null>(null);
+  const [access, setAccess] = useState<ProfileAccess>({ canViewContact: false });
+  const [breakdown, setBreakdown] = useState<AttendanceBreakdown | null>(null);
   const [loading, setLoading] = useState(true);
   const [specModalOpen, setSpecModalOpen] = useState(false);
-  const [specOptions, setSpecOptions] = useState([]);
-  const [selectedSpec, setSelectedSpec] = useState(null);
+  const [specOptions, setSpecOptions] = useState<DefaultOptionType[]>([]);
+  const [selectedSpec, setSelectedSpec] = useState<string | null>(null);
 
   const isOwnProfile = useMemo(() => memberId === Meteor.userId(), [memberId]);
 
@@ -63,9 +106,9 @@ export default function MemberProfile({ memberId }) {
       Meteor.callAsync('members.attendanceBreakdown', memberId),
     ])
       .then(([stats, accessResult, breakdownResult]) => {
-        setProfileStats(stats);
-        setAccess(accessResult);
-        setBreakdown(breakdownResult);
+        setProfileStats(stats as ProfileStats);
+        setAccess(accessResult as ProfileAccess);
+        setBreakdown(breakdownResult as AttendanceBreakdown);
       })
       .finally(() => setLoading(false));
   }, [memberId]);
@@ -78,23 +121,25 @@ export default function MemberProfile({ memberId }) {
       setSpecModalOpen(false);
       setSelectedSpec(null);
     } catch (error) {
-      notification.error({ message: error.error, description: error.message });
+      const err = error as Meteor.Error;
+      notification.error({ message: err.error as string, description: err.message });
     }
   }, [selectedSpec, message, notification, t]);
 
   const openSpecModal = useCallback(async () => {
     try {
       const options = await Meteor.callAsync('specializations.options');
-      setSpecOptions(options);
+      setSpecOptions(options as DefaultOptionType[]);
       setSpecModalOpen(true);
     } catch (error) {
-      notification.error({ message: error.error, description: error.message });
+      const err = error as Meteor.Error;
+      notification.error({ message: err.error as string, description: err.message });
     }
   }, [notification]);
 
   if (loading) {
     return (
-      <div ref={profileRef}>
+      <div ref={profileRef as React.RefObject<HTMLDivElement>}>
         <Row justify="center" style={{ padding: 40 }}>
           <Spin size="large" />
         </Row>
@@ -105,7 +150,7 @@ export default function MemberProfile({ memberId }) {
   if (!profileStats) return null;
 
   return (
-    <div ref={profileRef}>
+    <div ref={profileRef as React.RefObject<HTMLDivElement>}>
     <Row gutter={[16, 16]}>
       {/* Header: Profile Picture + Basic Info */}
       <Col xs={24} md={8}>
@@ -286,6 +331,3 @@ export default function MemberProfile({ memberId }) {
     </div>
   );
 }
-MemberProfile.propTypes = {
-  memberId: PropTypes.string,
-};

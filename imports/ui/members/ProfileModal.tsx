@@ -1,16 +1,20 @@
 import { Modal } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
 import { getModalWidth } from '../../config';
 import { ProfileStats } from '../dashboard/Dashboard';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 
-export default function ProfileModal({ showProfile = false, toggleProfile = () => {} }) {
-  const [profileStats, setProfileStats] = useState(null);
+interface ProfileModalProps {
+  showProfile?: boolean;
+  toggleProfile?: () => void;
+}
+
+export default function ProfileModal({ showProfile = false, toggleProfile = () => {} }: ProfileModalProps) {
+  const [profileStats, setProfileStats] = useState<Record<string, unknown> | null>(null);
   const { t } = useTranslation();
   useEffect(() => {
-    Meteor.callAsync('members.profileStats').then(setProfileStats);
+    Meteor.callAsync('members.profileStats').then((data: Record<string, unknown>) => setProfileStats(data));
   }, []);
 
   return (
@@ -19,7 +23,3 @@ export default function ProfileModal({ showProfile = false, toggleProfile = () =
     </Modal>
   );
 }
-ProfileModal.propTypes = {
-  showProfile: PropTypes.bool,
-  toggleProfile: PropTypes.func,
-};

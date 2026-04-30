@@ -1,51 +1,64 @@
-import { App, ColorPicker, Form, Input } from 'antd';
+import { App, ColorPicker, Form, Input, InputNumber } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import PropTypes from 'prop-types';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
+import { getColorFromValues } from '/imports/helpers/colors/getColorFromValues';
 import { DrawerContext, SubdrawerContext } from '../../app/App';
+import type { DrawerContextValue } from '../../app/types';
 import FormFooter from '../../components/FormFooter';
-import { getColorFromValues } from '../../specializations/SpecializationForm';
+import type { Position } from '../../../api/types/misc';
 
-export default function MedalsForm({ setOpen, useSubdrawer }) {
+interface PositionsFormProps {
+  setOpen: (open: boolean) => void;
+  useSubdrawer?: boolean;
+}
+
+interface PositionFormValues {
+  name: string;
+  description?: string;
+  color?: { toHexString?: () => string } | string;
+  order?: number;
+}
+
+export default function PositionsForm({ setOpen, useSubdrawer }: PositionsFormProps) {
   const { t } = useTranslation();
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<PositionFormValues>();
   const { message, notification } = App.useApp();
   const [loading, setLoading] = useState(false);
 
-  const drawer = useContext(useSubdrawer ? SubdrawerContext : DrawerContext);
+  const drawer = useContext(useSubdrawer ? SubdrawerContext : DrawerContext) as DrawerContextValue;
   const model = useMemo(() => {
-    return drawer.drawerModel || {};
+    return drawer.drawerModel as unknown as Position & { _id?: string };
   }, [drawer]);
 
   useEffect(() => {
     if (Object.keys(model).length > 0) {
-      form.setFieldsValue(model);
+      form.setFieldsValue(model as unknown as PositionFormValues);
     } else {
       form.setFieldsValue({
         name: '',
         description: '',
-        color: null,
-        image: null,
+        color: undefined,
+        order: undefined,
       });
     }
   }, [model, form.setFieldsValue]);
 
   const handleSubmit = useCallback(
-    values => {
+    (values: PositionFormValues) => {
       setLoading(true);
-      const { name, description } = values;
-      const args = [...(model?._id ? [model._id] : []), { name, color: getColorFromValues(values), description }];
-      Meteor.callAsync(Meteor.user() && model?._id ? 'medals.update' : 'medals.insert', ...args)
+      const { name, description, order } = values;
+      const args = [...(model?._id ? [model._id] : []), { name, color: getColorFromValues(values as unknown as Record<string, unknown>), description, order }];
+      Meteor.callAsync(Meteor.user() && model?._id ? 'positions.update' : 'positions.insert', ...args)
         .then(() => {
           setOpen(false);
           form.resetFields();
-          message.success(model?._id ? t('messages.medalUpdated') : t('messages.medalCreated'));
+          message.success(model?._id ? t('messages.positionUpdated') : t('messages.positionCreated'));
         })
         .catch(error => {
           notification.error({
-            message: error.error,
-            description: error.message,
+            message: (error as Meteor.Error).error as string,
+            description: (error as Meteor.Error).message,
           });
         })
         .finally(() => setLoading(false));
@@ -58,6 +71,9 @@ export default function MedalsForm({ setOpen, useSubdrawer }) {
       <Form.Item name="name" label={t('common.name')} rules={[{ required: true, type: 'string' }]} required>
         <Input placeholder={t('forms.placeholders.enterName')} />
       </Form.Item>
+      <Form.Item name="order" label={t('positions.order')} rules={[{ type: 'number' }]}>
+        <InputNumber min={0} placeholder={t('positions.order')} />
+      </Form.Item>
       <Form.Item name="description" label={t('common.description')} rules={[{ required: false, type: 'string' }]}>
         <Input.TextArea autoSize placeholder={t('forms.placeholders.enterDescription')} />
       </Form.Item>
@@ -68,7 +84,3 @@ export default function MedalsForm({ setOpen, useSubdrawer }) {
     </Form>
   );
 }
-MedalsForm.propTypes = {
-  setOpen: PropTypes.func,
-  useSubdrawer: PropTypes.bool,
-};

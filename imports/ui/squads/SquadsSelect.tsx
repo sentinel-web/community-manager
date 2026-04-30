@@ -1,4 +1,5 @@
 import type { Rule } from 'antd/es/form';
+import type { NamePath } from 'antd/es/form/interface';
 import { Mongo } from 'meteor/mongo';
 import React from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
@@ -16,7 +17,7 @@ type CollectionDoc = {
 
 interface SquadsSelectProps {
   multiple?: boolean;
-  name?: string;
+  name?: NamePath;
   label?: string;
   rules?: Rule[];
   defaultValue?: string | string[];

@@ -1,13 +1,26 @@
 import { Form, Select } from 'antd';
+import type { Rule } from 'antd/es/form';
+import type { NamePath } from 'antd/es/form/interface';
+import type { DefaultOptionType } from 'antd/es/select';
 import { Meteor } from 'meteor/meteor';
-import PropTypes from 'prop-types';
+import { Mongo } from 'meteor/mongo';
 import React, { useEffect, useMemo, useState } from 'react';
 import MembersCollection from '../../api/collections/members.collection';
+import type { LanguageContextValue } from '../../i18n/LanguageContext';
 import { useTranslation } from '../../i18n/LanguageContext';
 import CollectionSelect from '../components/CollectionSelect';
 import MemberForm from './MemberForm';
 
-export default function MembersSelect({ multiple, name, label, rules, defaultValue, grouped }) {
+interface MembersSelectProps {
+  multiple?: boolean;
+  name?: NamePath;
+  label?: string;
+  rules?: Rule[];
+  defaultValue?: string | string[];
+  grouped?: boolean;
+}
+
+export default function MembersSelect({ multiple, name, label, rules, defaultValue, grouped }: MembersSelectProps) {
   const { t } = useTranslation();
 
   if (grouped) {
@@ -21,7 +34,7 @@ export default function MembersSelect({ multiple, name, label, rules, defaultVal
       label={label}
       rules={rules}
       mode={multiple ? 'multiple' : undefined}
-      collection={MembersCollection}
+      collection={MembersCollection as unknown as Mongo.Collection<{ _id?: string; name?: string; color?: string; profile?: { name?: string }; [key: string]: unknown }>}
       FormComponent={MemberForm}
       subscription="members"
       placeholder={t('common.selectMembers')}
@@ -29,21 +42,22 @@ export default function MembersSelect({ multiple, name, label, rules, defaultVal
     />
   );
 }
-MembersSelect.propTypes = {
-  multiple: PropTypes.bool,
-  name: PropTypes.string,
-  label: PropTypes.string,
-  rules: PropTypes.array,
-  defaultValue: PropTypes.any,
-  grouped: PropTypes.bool,
-};
 
-function GroupedMembersSelect({ multiple, name, label, rules, defaultValue, t }) {
-  const [options, setOptions] = useState([]);
+interface GroupedMembersSelectProps {
+  multiple?: boolean;
+  name?: NamePath;
+  label?: string;
+  rules?: Rule[];
+  defaultValue?: string | string[];
+  t: LanguageContextValue['t'];
+}
+
+function GroupedMembersSelect({ multiple, name, label, rules, defaultValue, t }: GroupedMembersSelectProps) {
+  const [options, setOptions] = useState<DefaultOptionType[]>([]);
 
   useEffect(() => {
     Meteor.callAsync('members.groupedOptions')
-      .then(setOptions)
+      .then((data: DefaultOptionType[]) => setOptions(data))
       .catch(() => {});
   }, []);
 
@@ -72,11 +86,3 @@ function GroupedMembersSelect({ multiple, name, label, rules, defaultValue, t })
 
   return selectComponent;
 }
-GroupedMembersSelect.propTypes = {
-  multiple: PropTypes.bool,
-  name: PropTypes.string,
-  label: PropTypes.string,
-  rules: PropTypes.array,
-  defaultValue: PropTypes.any,
-  t: PropTypes.func,
-};
