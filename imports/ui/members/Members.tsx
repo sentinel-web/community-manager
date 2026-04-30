@@ -1,13 +1,15 @@
 import { Col, Select } from 'antd';
+import { Mongo } from 'meteor/mongo';
 import React, { useCallback, useMemo, useState } from 'react';
 import MembersCollection from '../../api/collections/members.collection';
+import type { Member } from '../../api/types/member';
 import { useTranslation } from '../../i18n/LanguageContext';
-import { useTourRef } from '../tour/TourContext';
 import Section from '../section/Section';
+import { useTourRef } from '../tour/TourContext';
 import MemberForm from './MemberForm';
 import MemberProfile from './MemberProfile';
-import MembersSquadView from './MembersSquadView';
 import getMembersColumns from './members.columns';
+import MembersSquadView from './MembersSquadView';
 
 /**
  * Members management page component.
@@ -20,7 +22,7 @@ export default function Members() {
   const [viewType, setViewType] = useState('table');
 
   const filterFactory = useCallback(
-    string => ({
+    (string: string): Mongo.Selector<Member> => ({
       $or: [
         { username: { $regex: string, $options: 'i' } },
         { 'profile.name': { $regex: string, $options: 'i' } },
@@ -35,7 +37,7 @@ export default function Members() {
 
   const expandable = useMemo(
     () => ({
-      expandedRowRender: record => <MemberProfile memberId={record._id} />,
+      expandedRowRender: (record: Member) => <MemberProfile memberId={record._id} />,
     }),
     []
   );
@@ -49,8 +51,8 @@ export default function Members() {
   );
 
   return (
-    <div ref={tableRef}>
-      <Section
+    <div ref={tableRef as React.RefObject<HTMLDivElement>}>
+      <Section<Member>
         title={t('members.title')}
         collectionName="members"
         Collection={MembersCollection}

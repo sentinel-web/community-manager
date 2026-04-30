@@ -1,21 +1,28 @@
 import { Card, Col, List, Row, Tag } from 'antd';
 import { useFind, useSubscribe } from 'meteor/react-meteor-data';
-import PropTypes from 'prop-types';
 import React, { useCallback, useMemo } from 'react';
 import SquadsCollection from '../../api/collections/squads.collection';
-import { useTranslation } from '../../i18n/LanguageContext';
+import type { Member } from '../../api/types/member';
+import type { Squad } from '../../api/types/squad';
 import getLegibleTextColor from '../../helpers/colors/getLegibleTextColor';
+import { useTranslation } from '../../i18n/LanguageContext';
+import type { RowClickEvent } from '../section/types';
 import RankTag from './ranks/RankTag';
 
-export default function MembersSquadView({ datasource, handleEdit }) {
+interface MembersSquadViewProps {
+  datasource: Member[];
+  handleEdit: (e: RowClickEvent, record: Member) => void;
+}
+
+export default function MembersSquadView({ datasource, handleEdit }: MembersSquadViewProps) {
   const { t } = useTranslation();
   useSubscribe('squads', {}, {});
   const squads = useFind(() => SquadsCollection.find({}), []);
 
-  const squadMap = useMemo(() => new Map(squads.map(s => [s._id, s])), [squads]);
+  const squadMap = useMemo(() => new Map<string, Squad>(squads.map(s => [s._id!, s])), [squads]);
 
   const grouped = useMemo(() => {
-    const groups = {};
+    const groups: Record<string, Member[]> = {};
     for (const member of datasource) {
       const squadId = member.profile?.squadId || '__none__';
       if (!groups[squadId]) groups[squadId] = [];
@@ -35,7 +42,7 @@ export default function MembersSquadView({ datasource, handleEdit }) {
     return ids;
   }, [grouped, squadMap]);
 
-  const handleClick = useCallback((e, member) => handleEdit(e, member), [handleEdit]);
+  const handleClick = useCallback((e: RowClickEvent, member: Member) => handleEdit(e, member), [handleEdit]);
 
   return (
     <Row gutter={[16, 16]}>
@@ -80,7 +87,3 @@ export default function MembersSquadView({ datasource, handleEdit }) {
     </Row>
   );
 }
-MembersSquadView.propTypes = {
-  datasource: PropTypes.array,
-  handleEdit: PropTypes.func,
-};

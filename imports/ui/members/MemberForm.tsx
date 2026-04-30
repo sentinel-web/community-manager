@@ -1,12 +1,16 @@
 import { Alert, App, Button, Col, DatePicker, Divider, Form, Input, InputNumber, Row, Switch } from 'antd';
+import type { UploadFile } from 'antd/es/upload/interface';
+import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { Meteor } from 'meteor/meteor';
-import PropTypes from 'prop-types';
+import { Mongo } from 'meteor/mongo';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import RanksCollection from '../../api/collections/ranks.collection';
 import RolesCollection from '../../api/collections/roles.collection';
+import type { Member } from '../../api/types/member';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
+import type { DrawerContextValue } from '../app/types';
 import CollectionSelect from '../components/CollectionSelect';
 import { getDateFromValues } from '../events/EventForm';
 import ProfilePictureInput from '../profile-picture-input/ProfilePictureInput';
@@ -23,30 +27,68 @@ const styles = {
   },
 };
 
-export const transformDateToDays = (values, key = 'date') => {
-  if (values[key]) return dayjs(values[key]);
-  return values[key];
+type ValidationStatus = 'success' | 'warning' | 'error' | 'validating' | undefined;
+
+interface MemberFormProfile {
+  profilePictureId?: string;
+  name?: string;
+  id?: number | null;
+  rankId?: string | null;
+  navyRankId?: string | null;
+  specializationIds?: string[];
+  roleId?: string | null;
+  squadId?: string | null;
+  discordTag?: string;
+  steamProfileLink?: string;
+  staticAttendancePoints?: number | null;
+  staticInactivityPoints?: number | null;
+  medalIds?: string[];
+  positionId?: string | null;
+  description?: string;
+  entryDate?: Dayjs | null;
+  exitDate?: Dayjs | null;
+  hasCustomArmour?: boolean;
+}
+
+interface MemberFormValues {
+  username?: string;
+  password?: string;
+  profile?: MemberFormProfile;
+}
+
+type CollectionDocShape = { _id?: string; name?: string; color?: string; profile?: { name?: string }; [key: string]: unknown };
+
+export const transformDateToDays = (values: Record<string, unknown>, key = 'date'): Dayjs | undefined => {
+  if (values[key]) return dayjs(values[key] as dayjs.ConfigType);
+  return values[key] as undefined;
 };
 
-export default function MemberForm({ setOpen }) {
-  const [form] = Form.useForm();
+interface MemberFormProps {
+  setOpen: (open: boolean) => void;
+}
+
+export default function MemberForm({ setOpen }: MemberFormProps) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [form] = Form.useForm<any>();
   const { message, notification } = App.useApp();
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [disableSubmit, setDisableSubmit] = useState(false);
-  const [nameError, setNameError] = useState(undefined);
-  const [idError, setIdError] = useState(undefined);
-  const [fileList, setFileList] = useState([]);
-  const drawer = useContext(DrawerContext);
+  const [nameError, setNameError] = useState<ValidationStatus>(undefined);
+  const [idError, setIdError] = useState<ValidationStatus>(undefined);
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const drawer = useContext(DrawerContext) as DrawerContextValue;
   const model = useMemo(() => {
-    return drawer.drawerModel || {};
+    return (drawer.drawerModel as unknown as Member) || ({} as Member);
   }, [drawer]);
   useEffect(() => {
     if (Object.keys(model).length > 0) {
-      const data = { ...model };
-      data.profile.entryDate = transformDateToDays(data.profile, 'entryDate');
-      data.profile.exitDate = transformDateToDays(data.profile, 'exitDate');
-      form.setFieldsValue(data);
+      const data = { ...model } as Record<string, unknown>;
+      const profile = (data.profile as Record<string, unknown>) || {};
+      profile.entryDate = transformDateToDays(profile, 'entryDate');
+      profile.exitDate = transformDateToDays(profile, 'exitDate');
+      data.profile = profile;
+      form.setFieldsValue(data as unknown as MemberFormValues);
     } else {
       form.setFieldsValue({
         username: '',
@@ -79,7 +121,7 @@ export default function MemberForm({ setOpen }) {
     const value = form.getFieldValue('name');
     setNameError('validating');
     Meteor.callAsync('registrations.validateName', value, model?._id)
-      .then(result => {
+      .then((result: boolean) => {
         setNameError(result ? 'success' : 'error');
         setDisableSubmit(!result);
       })
@@ -92,7 +134,7 @@ export default function MemberForm({ setOpen }) {
     const value = form.getFieldValue('id');
     setIdError('validating');
     Meteor.callAsync('registrations.validateId', value, model?._id)
-      .then(result => {
+      .then((result: boolean) => {
         setIdError(result ? 'success' : 'error');
         setDisableSubmit(!result);
       })
@@ -102,7 +144,7 @@ export default function MemberForm({ setOpen }) {
   }, [form, model?._id]);
 
   const handleSubmit = useCallback(
-    values => {
+    (values: MemberFormValues) => {
       setLoading(true);
       const payload = {
         ...values,
@@ -120,18 +162,19 @@ export default function MemberForm({ setOpen }) {
           message.success(t('messages.saveSuccessful'));
         })
         .catch(error => {
+          const err = error as Meteor.Error;
           notification.error({
-            message: error.error,
-            description: error.message,
+            message: err.error as string,
+            description: err.message,
           });
         })
         .finally(() => setLoading(false));
     },
-    [form, model?._id, setOpen, message, notification]
+    [form, model?._id, setOpen, message, notification, t]
   );
 
   const handleValuesChange = useCallback(
-    (changedValues, values) => {
+    (changedValues: MemberFormValues, values: MemberFormValues) => {
       if ('name' in values) {
         validateName();
       }
@@ -139,7 +182,7 @@ export default function MemberForm({ setOpen }) {
         validateId();
       }
       if ('rulesReadAndAccepted' in changedValues && 'rulesReadAndAccepted' in values) {
-        setDisableSubmit(!values.rulesReadAndAccepted);
+        setDisableSubmit(!(values as Record<string, unknown>).rulesReadAndAccepted as boolean);
       }
     },
     [validateName, validateId]
@@ -152,7 +195,7 @@ export default function MemberForm({ setOpen }) {
   }, [setOpen, form, drawer]);
 
   useEffect(() => {
-    handleValuesChange(model ?? {}, model ?? {});
+    handleValuesChange({} as MemberFormValues, {} as MemberFormValues);
   }, [model, handleValuesChange]);
 
   return (
@@ -200,7 +243,7 @@ export default function MemberForm({ setOpen }) {
       <Form.Item name={['profile', 'name']} label={t('common.name')} rules={[{ required: true, type: 'string' }]} status={nameError} required>
         <Input placeholder={t('forms.placeholders.enterName')} />
       </Form.Item>
-      <SquadsSelect name={['profile', 'squadId']} label={t('members.squad')} rules={[{ type: 'string' }]} defaultValue={model?.profile?.squadId} />
+      <SquadsSelect multiple={false} name={['profile', 'squadId']} label={t('members.squad')} rules={[{ type: 'string' }]} defaultValue={model?.profile?.squadId} />
       <CollectionSelect
         defaultValue={model?.profile?.rankId}
         FormComponent={RanksForm}
@@ -208,7 +251,7 @@ export default function MemberForm({ setOpen }) {
         label={t('members.rank')}
         placeholder={t('common.selectRank')}
         rules={[{ type: 'string' }]}
-        collection={RanksCollection}
+        collection={RanksCollection as unknown as Mongo.Collection<CollectionDocShape>}
         subscription="ranks"
         query={{ type: 'player' }}
       />
@@ -219,7 +262,7 @@ export default function MemberForm({ setOpen }) {
         label={t('forms.labels.navyRank')}
         placeholder={t('common.selectRank')}
         rules={[{ type: 'string' }]}
-        collection={RanksCollection}
+        collection={RanksCollection as unknown as Mongo.Collection<CollectionDocShape>}
         subscription="ranks"
         query={{ type: 'zeus' }}
       />
@@ -251,7 +294,7 @@ export default function MemberForm({ setOpen }) {
         subscription="roles"
         FormComponent={RolesForm}
         defaultValue={model?.profile?.roleId}
-        collection={RolesCollection}
+        collection={RolesCollection as unknown as Mongo.Collection<CollectionDocShape>}
       />
       <Form.Item name={['profile', 'discordTag']} label={t('members.discordTag')} rules={[{ type: 'string' }]}>
         <Input placeholder={t('forms.placeholders.enterDiscordTag')} />
@@ -289,6 +332,3 @@ export default function MemberForm({ setOpen }) {
     </Form>
   );
 }
-MemberForm.propTypes = {
-  setOpen: PropTypes.func,
-};

@@ -1,6 +1,7 @@
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { App, Button, Col, Divider, Form, Row, Select, Tag } from 'antd';
 import type { Rule } from 'antd/es/form';
+import type { NamePath } from 'antd/es/form/interface';
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
 import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
@@ -27,7 +28,7 @@ interface CollectionSelectProps {
   placeholder?: string;
   mode?: 'multiple' | 'tags';
   collection?: Mongo.Collection<CollectionDoc>;
-  name?: string;
+  name?: NamePath;
   label?: string;
   rules?: Rule[];
   FormComponent?: ComponentType<{ setOpen: (open: boolean) => void; useSubdrawer?: boolean }>;

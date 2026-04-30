@@ -1,4 +1,5 @@
 import type { Rule } from 'antd/es/form';
+import type { NamePath } from 'antd/es/form/interface';
 import { Mongo } from 'meteor/mongo';
 import React from 'react';
 import MedalsCollection from '../../../api/collections/medals.collection';
@@ -8,7 +9,7 @@ import MedalsForm from './MedalsForm';
 
 interface MedalsSelectProps {
   multiple?: boolean;
-  name?: string;
+  name?: NamePath;
   label?: string;
   rules?: Rule[];
   defaultValue?: string | string[];
