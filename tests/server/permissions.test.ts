@@ -2,11 +2,17 @@ import assert from 'node:assert';
 import {
   normalizeRolePermissions,
   isOfficerOrAdmin,
-  getPermissionModule,
   BOOLEAN_MODULES,
-  CRUD_MODULES,
 } from '../../server/main';
-import type { Role } from '/imports/api/types';
+import { COLLECTION_REGISTRY } from '../../server/collection-registry';
+import type { CrudCollectionName, Role } from '/imports/api/types';
+
+// Local derivation matching server/main.ts's CRUD_MODULE_SET. Used by
+// normalizeRolePermissions tests that need the canonical CRUD-style
+// permission-module list to drive role-shape assertions.
+const CRUD_MODULE_SET: readonly string[] = [
+  ...new Set(Object.values(COLLECTION_REGISTRY).map(entry => entry.module)),
+].filter(module => !BOOLEAN_MODULES.includes(module));
 
 describe('normalizeRolePermissions', () => {
   it('returns null for null input', () => {
@@ -65,12 +71,12 @@ describe('normalizeRolePermissions', () => {
 
   it('normalizes all CRUD modules', () => {
     const role = { name: 'full' } as Record<string, unknown>;
-    for (const mod of CRUD_MODULES) {
+    for (const mod of CRUD_MODULE_SET) {
       role[mod] = true;
     }
     const result = normalizeRolePermissions(role as unknown as Role) as Record<string, unknown> | null;
     assert.ok(result);
-    for (const mod of CRUD_MODULES) {
+    for (const mod of CRUD_MODULE_SET) {
       // 'roles' is special - it's the admin flag and gets restored
       if (mod === 'roles') continue;
       assert.deepStrictEqual(result[mod], { read: true, create: true, update: true, delete: true }, `${mod} should be normalized`);
@@ -113,72 +119,72 @@ describe('isOfficerOrAdmin', () => {
   });
 });
 
-describe('getPermissionModule', () => {
-  it('returns correct module for members', () => {
-    assert.strictEqual(getPermissionModule('members'), 'members');
-  });
-
-  it('returns events module for attendances', () => {
-    assert.strictEqual(getPermissionModule('attendances'), 'events');
-  });
-
-  it('returns members module for profilePictures', () => {
-    assert.strictEqual(getPermissionModule('profilePictures'), 'members');
-  });
-
-  it('returns questionnaires module for questionnaireResponses', () => {
-    assert.strictEqual(getPermissionModule('questionnaireResponses'), 'questionnaires');
-  });
-
-  it('returns null for unknown collection', () => {
-    assert.strictEqual(getPermissionModule('unknownCollection'), null);
-  });
-
-  it('returns correct module for all mapped collections', () => {
-    const expectedMappings: Record<string, string> = {
-      attendances: 'events',
-      discoveryTypes: 'discoveryTypes',
-      events: 'events',
-      eventTypes: 'eventTypes',
-      medals: 'medals',
-      members: 'members',
-      positions: 'positions',
-      profilePictures: 'members',
-      questionnaires: 'questionnaires',
-      questionnaireResponses: 'questionnaires',
-      ranks: 'ranks',
-      registrations: 'registrations',
-      roles: 'roles',
-      specializations: 'specializations',
-      squads: 'squads',
-      tasks: 'tasks',
-      taskStatus: 'taskStatus',
-    };
-    for (const [collection, module] of Object.entries(expectedMappings)) {
-      assert.strictEqual(getPermissionModule(collection), module, `${collection} should map to ${module}`);
-    }
-  });
-});
-
 describe('BOOLEAN_MODULES', () => {
   it('contains dashboard, orbat, logs, settings', () => {
     assert.deepStrictEqual([...BOOLEAN_MODULES].sort(), ['dashboard', 'logs', 'orbat', 'settings']);
   });
 });
 
-describe('CRUD_MODULES', () => {
-  it('contains all expected modules', () => {
-    const expected = [
-      'discoveryTypes', 'events', 'eventTypes', 'medals', 'members',
-      'positions', 'questionnaires', 'ranks', 'registrations', 'roles',
-      'specializations', 'squads', 'tasks', 'taskStatus',
+describe('COLLECTION_REGISTRY', () => {
+  // Shape conformance: every member of the canonical CrudCollectionName union
+  // has a registry entry. The Record<CrudCollectionName, _> type would already
+  // enforce this at compile time; this test guards against the same omission
+  // under loosened type checks (e.g. if anyone reaches for `as` casts).
+  it('has an entry for every CrudCollectionName', () => {
+    const expected: readonly CrudCollectionName[] = [
+      'attendances',
+      'discoveryTypes',
+      'events',
+      'eventTypes',
+      'logs',
+      'medals',
+      'members',
+      'positions',
+      'profilePictures',
+      'questionnaireResponses',
+      'questionnaires',
+      'ranks',
+      'registrations',
+      'roles',
+      'specializations',
+      'squads',
+      'taskStatus',
+      'tasks',
     ];
-    assert.deepStrictEqual([...CRUD_MODULES].sort(), expected.sort());
+    for (const collection of expected) {
+      assert.ok(COLLECTION_REGISTRY[collection], `Expected registry entry for ${collection}`);
+      assert.strictEqual(typeof COLLECTION_REGISTRY[collection].module, 'string');
+    }
+    assert.deepStrictEqual([...Object.keys(COLLECTION_REGISTRY)].sort(), [...expected].sort());
   });
 
-  it('does not overlap with BOOLEAN_MODULES', () => {
-    for (const mod of CRUD_MODULES) {
-      assert.ok(!BOOLEAN_MODULES.includes(mod), `${mod} should not be in both CRUD and BOOLEAN modules`);
+  it('maps overloaded collections to their permission module owner', () => {
+    // attendances/profilePictures/questionnaireResponses do not have their
+    // own permission modules — they ride on the parent module's permissions.
+    assert.strictEqual(COLLECTION_REGISTRY.attendances.module, 'events');
+    assert.strictEqual(COLLECTION_REGISTRY.profilePictures.module, 'members');
+    assert.strictEqual(COLLECTION_REGISTRY.questionnaireResponses.module, 'questionnaires');
+  });
+
+  it('declares fallback flags only for collections that actually have them', () => {
+    assert.strictEqual(COLLECTION_REGISTRY.events.fallback?.create, 'canCreateEvents');
+    assert.strictEqual(COLLECTION_REGISTRY.tasks.fallback?.create, 'canManageTasks');
+    assert.strictEqual(COLLECTION_REGISTRY.tasks.fallback?.update, 'canManageTasks');
+    assert.strictEqual(COLLECTION_REGISTRY.medals.fallback, undefined);
+  });
+
+  it('declares allowsAnonymous only for registrations.insert', () => {
+    assert.strictEqual(COLLECTION_REGISTRY.registrations.allowsAnonymous?.insert, true);
+    assert.strictEqual(COLLECTION_REGISTRY.medals.allowsAnonymous, undefined);
+  });
+
+  it('does not declare any CRUD-style module that overlaps with BOOLEAN_MODULES', () => {
+    for (const entry of Object.values(COLLECTION_REGISTRY)) {
+      if (entry.module === 'logs') continue; // logs is intentionally a boolean module
+      assert.ok(
+        !BOOLEAN_MODULES.includes(entry.module),
+        `Module ${entry.module} should not overlap with BOOLEAN_MODULES`,
+      );
     }
   });
 });

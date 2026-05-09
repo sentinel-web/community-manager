@@ -65,10 +65,10 @@ if (Meteor.isServer) {
 
       if (isSignedUp) {
         await EventsCollection.updateAsync(eventId, { $pull: { attendees: this.userId } } as never);
-        await createLog('event.rsvp.removed', { eventId, userId: this.userId });
+        await createLog('events.rsvp.removed', { eventId, userId: this.userId });
       } else {
         await EventsCollection.updateAsync(eventId, { $addToSet: { attendees: this.userId } } as never);
-        await createLog('event.rsvp.added', { eventId, userId: this.userId });
+        await createLog('events.rsvp.added', { eventId, userId: this.userId });
       }
 
       return !isSignedUp;

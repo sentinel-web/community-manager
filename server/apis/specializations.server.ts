@@ -23,7 +23,7 @@ if (Meteor.isServer) {
       const spec = await SpecializationsCollection.findOneAsync(specializationId);
       if (!spec) throw new Meteor.Error(404, 'Specialization not found');
 
-      await createLog('specialization.requested', {
+      await createLog('specializations.requested', {
         userId: this.userId,
         specializationId,
         specializationName: spec.name,

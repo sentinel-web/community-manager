@@ -22,6 +22,7 @@ import './apis/settings.server';
 import './apis/specializations.server';
 import './apis/squads.server';
 import './apis/tasks.server';
+import { COLLECTION_REGISTRY } from './collection-registry';
 import { createCollectionMethods, createCollectionPublish } from './crud.lib';
 import { CACHE, SQUAD_SCOPED_PERMISSIONS } from './config';
 
@@ -31,42 +32,13 @@ export type CrudOperation = 'read' | 'create' | 'update' | 'delete';
 
 const BOOLEAN_MODULES: readonly string[] = ['dashboard', 'orbat', 'logs', 'settings'];
 
-const CRUD_MODULES: readonly string[] = [
-  'discoveryTypes',
-  'events',
-  'eventTypes',
-  'medals',
-  'members',
-  'positions',
-  'questionnaires',
-  'ranks',
-  'registrations',
-  'roles',
-  'specializations',
-  'squads',
-  'tasks',
-  'taskStatus',
-];
-
-const COLLECTION_TO_MODULE: Record<string, string> = {
-  attendances: 'events',
-  discoveryTypes: 'discoveryTypes',
-  events: 'events',
-  eventTypes: 'eventTypes',
-  medals: 'medals',
-  members: 'members',
-  positions: 'positions',
-  profilePictures: 'members',
-  questionnaires: 'questionnaires',
-  questionnaireResponses: 'questionnaires',
-  ranks: 'ranks',
-  registrations: 'registrations',
-  roles: 'roles',
-  specializations: 'specializations',
-  squads: 'squads',
-  tasks: 'tasks',
-  taskStatus: 'taskStatus',
-};
+// Distinct CRUD-style permission modules across the registry, minus boolean
+// modules. Used by normalizeRolePermissions to expand `role[mod] = true` into
+// the four-op object. Derived from the registry so adding a collection
+// updates this set automatically.
+const CRUD_MODULE_SET: readonly string[] = [
+  ...new Set(Object.values(COLLECTION_REGISTRY).map(entry => entry.module)),
+].filter(module => !BOOLEAN_MODULES.includes(module));
 
 interface RoleCacheEntry {
   role: Role | null;
@@ -98,7 +70,7 @@ export function normalizeRolePermissions(role: Role | null | undefined): Role | 
 
   const isAdmin = role.roles === true;
 
-  for (const module of CRUD_MODULES) {
+  for (const module of CRUD_MODULE_SET) {
     const key = module as keyof Role;
     const permission = role[key];
     if (permission === true) {
@@ -183,17 +155,13 @@ export function clearRoleCache(roleId?: string): void {
   }
 }
 
-export function getPermissionModule(collectionName: string): string | null {
-  return COLLECTION_TO_MODULE[collectionName] || null;
-}
-
 export async function checkSpecialPermission(userId: string | null | undefined, flag: string): Promise<boolean> {
   const role = await getUserRole(userId);
   if (!role) return false;
   return (role as unknown as Record<string, unknown>)[flag] === true;
 }
 
-export { BOOLEAN_MODULES, CRUD_MODULES };
+export { BOOLEAN_MODULES };
 
 export function isOfficerOrAdmin(role: Role | null | undefined): boolean {
   if (!role) return false;
