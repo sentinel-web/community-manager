@@ -74,7 +74,7 @@ if (Meteor.isServer) {
 
       try {
         const memberId = await Accounts.createUserAsync(payload as Parameters<typeof Accounts.createUserAsync>[0]);
-        await createLog('member.created', {
+        await createLog('members.created', {
           id: memberId,
           username: payload.username,
         });
@@ -106,7 +106,7 @@ if (Meteor.isServer) {
       const modifier = { $set: data };
       try {
         const result = await MembersCollection.updateAsync(selector as never, modifier as never);
-        await createLog('member.updated', {
+        await createLog('members.updated', {
           id: memberId,
           changes: data,
         });
@@ -124,7 +124,7 @@ if (Meteor.isServer) {
 
       try {
         const result = await MembersCollection.removeAsync({ _id: memberId } as never);
-        await createLog('member.deleted', { id: memberId });
+        await createLog('members.deleted', { id: memberId });
         return result;
       } catch (error) {
         throw new Meteor.Error((error as Error).message);
