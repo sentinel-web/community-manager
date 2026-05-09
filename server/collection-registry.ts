@@ -19,7 +19,7 @@ export const COLLECTION_REGISTRY: Record<CrudCollectionName, CollectionRegistryE
   eventTypes: { module: 'eventTypes' },
   logs: { module: 'logs' },
   medals: { module: 'medals' },
-  members: { module: 'members' },
+  members: { module: 'members', redact: { insert: ['password'] } },
   positions: { module: 'positions' },
   profilePictures: { module: 'members' },
   questionnaireResponses: { module: 'questionnaires' },
