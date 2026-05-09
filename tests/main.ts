@@ -4,6 +4,7 @@ import './helpers/colors/hexToRgb.test';
 import './helpers/colors/parseColor.test';
 import './server/crudMethods.test';
 import './server/getCollection.test';
+import './server/mutationPipeline.test';
 import './server/permissions.test';
 import './server/questionnaireInterval.test';
 import './server/validation.test';
