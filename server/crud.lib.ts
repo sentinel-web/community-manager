@@ -4,19 +4,12 @@ import {
   validateObject,
   validateString,
   validateArrayOfStrings,
-  getPermissionModule,
   clearRoleCache,
 } from './main';
 import { createLog } from './apis/logs.server';
 import { runMutation } from './mutation-pipeline';
+import { COLLECTION_REGISTRY } from './collection-registry';
 import type { CrudCollectionMap, CrudCollectionName } from '/imports/api/types';
-
-const SPECIAL_PERMISSION_FALLBACK: Record<string, { create?: string; update?: string }> = {
-  events: { create: 'canCreateEvents' },
-  tasks: { create: 'canManageTasks', update: 'canManageTasks' },
-};
-
-const UNSAFE_COLLECTIONS: readonly string[] = ['registrations'];
 
 import AttendancesCollection from '../imports/api/collections/attendances.collection';
 import DiscoveryTypesCollection from '../imports/api/collections/discoveryTypes.collection';
@@ -110,8 +103,10 @@ function createCollectionMethods(collection: CrudCollectionName): void {
   try {
     if (Meteor.isServer) {
       const Collection = getCollection(collection);
-      const permissionModule = getPermissionModule(collection);
-      const fallback = SPECIAL_PERMISSION_FALLBACK[collection];
+      const registryEntry = COLLECTION_REGISTRY[collection];
+      const permissionModule = registryEntry.module;
+      const fallback = registryEntry.fallback;
+      const allowsAnonymousInsert = registryEntry.allowsAnonymous?.insert === true;
       const auditAllowed = collection !== 'logs';
 
       Meteor.methods({
@@ -141,7 +136,7 @@ function createCollectionMethods(collection: CrudCollectionName): void {
               auditShape: 'insert',
               permissionModule,
               fallbackFlag: fallback?.create,
-              allowAnonymous: UNSAFE_COLLECTIONS.includes(collection),
+              allowAnonymous: allowsAnonymousInsert,
               validate: ([p]) => validateObject(p, false),
             },
             [payload] as const,
