@@ -153,7 +153,12 @@ describe('COLLECTION_REGISTRY', () => {
     ];
     for (const collection of expected) {
       assert.ok(COLLECTION_REGISTRY[collection], `Expected registry entry for ${collection}`);
-      assert.strictEqual(typeof COLLECTION_REGISTRY[collection].module, 'string');
+      const { module } = COLLECTION_REGISTRY[collection];
+      assert.strictEqual(typeof module, 'string');
+      // Non-empty guardrail: an empty module string would be falsy at the
+      // wrapper's `if (descriptor.permissionModule)` check, silently disabling
+      // the permission gate for that collection.
+      assert.ok(module.length > 0, `Registry entry for ${collection} must have a non-empty module`);
     }
     assert.deepStrictEqual([...Object.keys(COLLECTION_REGISTRY)].sort(), [...expected].sort());
   });
