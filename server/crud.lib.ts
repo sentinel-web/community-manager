@@ -4,18 +4,19 @@ import {
   validateObject,
   validateString,
   validateArrayOfStrings,
-  checkPermission,
-  checkSpecialPermission,
   getPermissionModule,
   clearRoleCache,
 } from './main';
 import { createLog } from './apis/logs.server';
+import { runMutation } from './mutation-pipeline';
 import type { CrudCollectionMap, CrudCollectionName } from '/imports/api/types';
 
 const SPECIAL_PERMISSION_FALLBACK: Record<string, { create?: string; update?: string }> = {
   events: { create: 'canCreateEvents' },
   tasks: { create: 'canManageTasks', update: 'canManageTasks' },
 };
+
+const UNSAFE_COLLECTIONS: readonly string[] = ['registrations'];
 
 import AttendancesCollection from '../imports/api/collections/attendances.collection';
 import DiscoveryTypesCollection from '../imports/api/collections/discoveryTypes.collection';
@@ -109,153 +110,172 @@ function createCollectionMethods(collection: CrudCollectionName): void {
   try {
     if (Meteor.isServer) {
       const Collection = getCollection(collection);
-      const unsafeCollections: readonly string[] = ['registrations'];
       const permissionModule = getPermissionModule(collection);
+      const fallback = SPECIAL_PERMISSION_FALLBACK[collection];
+      const auditAllowed = collection !== 'logs';
 
       Meteor.methods({
         [`${collection}.read`]: async function (filter: Record<string, unknown> = {}, options: Record<string, unknown> = {}) {
-          if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
-          validateObject(filter, false);
-          validateObject(options, false);
-
-          if (permissionModule) {
-            const hasPermission = await checkPermission(this.userId, permissionModule, 'read');
-            if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
-          }
-
-          return await Collection.find(filter, options).fetchAsync();
+          return runMutation(
+            { userId: this.userId },
+            {
+              collection,
+              operation: 'read',
+              permissionModule,
+              validate: ([f, o]) => {
+                validateObject(f, false);
+                validateObject(o, false);
+              },
+            },
+            [filter, options] as const,
+            async ([f, o]) => Collection.find(f, o).fetchAsync(),
+          );
         },
         [`${collection}.insert`]: async function (payload: Record<string, unknown> = {}) {
-          if (!this.userId && !unsafeCollections.includes(collection)) throw new Meteor.Error(401, 'Unauthorized');
-          validateObject(payload, false);
-
-          if (permissionModule && this.userId) {
-            const hasPermission = await checkPermission(this.userId, permissionModule, 'create');
-            if (!hasPermission) {
-              const fallbackFlag = SPECIAL_PERMISSION_FALLBACK[collection]?.create;
-              const hasSpecial = fallbackFlag ? await checkSpecialPermission(this.userId, fallbackFlag) : false;
-              if (!hasSpecial) throw new Meteor.Error(403, 'Permission denied');
-            }
-          }
-
-          if (collection === 'tasks') {
-            payload.createdAt = new Date();
-          }
-          const id = await Collection.insertAsync(payload as unknown as CrudCollectionMap[typeof collection]);
-          if (collection !== 'logs') {
-            await createLog(`${collection}.created`, { id, ...payload });
-          }
-          return id;
+          return runMutation(
+            { userId: this.userId },
+            {
+              collection,
+              operation: 'create',
+              action: auditAllowed ? `${collection}.created` : undefined,
+              auditShape: 'insert',
+              permissionModule,
+              fallbackFlag: fallback?.create,
+              allowAnonymous: UNSAFE_COLLECTIONS.includes(collection),
+              validate: ([p]) => validateObject(p, false),
+            },
+            [payload] as const,
+            async ([p]) => {
+              if (collection === 'tasks') {
+                p.createdAt = new Date();
+              }
+              return Collection.insertAsync(p as unknown as CrudCollectionMap[typeof collection]);
+            },
+          );
         },
         [`${collection}.update`]: async function (id: string = '', data: Record<string, unknown> = {}) {
-          if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
-          validateString(id, false);
-          validateObject(data, false);
-
-          if (permissionModule) {
-            const hasPermission = await checkPermission(this.userId, permissionModule, 'update');
-            if (!hasPermission) {
-              const fallbackFlag = SPECIAL_PERMISSION_FALLBACK[collection]?.update;
-              const hasSpecial = fallbackFlag ? await checkSpecialPermission(this.userId, fallbackFlag) : false;
-              if (!hasSpecial) throw new Meteor.Error(403, 'Permission denied');
-            }
-          }
-
-          const result = await Collection.updateAsync({ _id: id } as never, { $set: data } as never);
-          if (collection !== 'logs') {
-            await createLog(`${collection}.updated`, { id, changes: data });
-          }
-
-          if (collection === 'roles') {
-            clearRoleCache(id);
-          }
-
-          return result;
+          return runMutation(
+            { userId: this.userId },
+            {
+              collection,
+              operation: 'update',
+              action: auditAllowed ? `${collection}.updated` : undefined,
+              auditShape: 'update',
+              permissionModule,
+              fallbackFlag: fallback?.update,
+              validate: ([targetId, changes]) => {
+                validateString(targetId, false);
+                validateObject(changes, false);
+              },
+            },
+            [id, data] as const,
+            async ([targetId, changes]) => {
+              const result = await Collection.updateAsync({ _id: targetId } as never, { $set: changes } as never);
+              if (collection === 'roles') {
+                clearRoleCache(targetId);
+              }
+              return result;
+            },
+          );
         },
         [`${collection}.remove`]: async function (id: string = '') {
-          if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
-          validateString(id, false);
-
-          if (permissionModule) {
-            const hasPermission = await checkPermission(this.userId, permissionModule, 'delete');
-            if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
-          }
-
-          const doc = await Collection.findOneAsync(id);
-          if (!doc) throw new Meteor.Error(404, 'Document not found');
-          const result = await Collection.removeAsync({ _id: id } as never);
-          if (collection !== 'logs') {
-            await createLog(`${collection}.deleted`, { id });
-          }
-
-          if (collection === 'roles') {
-            clearRoleCache(id);
-          }
-
-          return result;
+          return runMutation(
+            { userId: this.userId },
+            {
+              collection,
+              operation: 'delete',
+              action: auditAllowed ? `${collection}.deleted` : undefined,
+              auditShape: 'remove',
+              permissionModule,
+              validate: ([targetId]) => validateString(targetId, false),
+            },
+            [id] as const,
+            async ([targetId]) => {
+              const doc = await Collection.findOneAsync(targetId);
+              if (!doc) throw new Meteor.Error(404, 'Document not found');
+              const result = await Collection.removeAsync({ _id: targetId } as never);
+              if (collection === 'roles') {
+                clearRoleCache(targetId);
+              }
+              return result;
+            },
+          );
         },
         [`${collection}.bulkRemove`]: async function (ids: string[] = []) {
-          if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
-          validateArrayOfStrings(ids, false);
-          if (ids.length === 0) throw new Meteor.Error(400, 'No ids provided');
-          if (ids.length > 100) throw new Meteor.Error(400, 'Maximum 100 items per bulk delete');
+          return runMutation(
+            { userId: this.userId },
+            {
+              collection,
+              operation: 'delete',
+              permissionModule,
+              validate: ([targetIds]) => {
+                validateArrayOfStrings(targetIds, false);
+                if (targetIds.length === 0) throw new Meteor.Error(400, 'No ids provided');
+                if (targetIds.length > 100) throw new Meteor.Error(400, 'Maximum 100 items per bulk delete');
+              },
+            },
+            [ids] as const,
+            async ([targetIds]) => {
+              let removed = 0;
+              const errors: string[] = [];
 
-          if (permissionModule) {
-            const hasPermission = await checkPermission(this.userId, permissionModule, 'delete');
-            if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
-          }
-
-          let removed = 0;
-          const errors: string[] = [];
-
-          for (const id of ids) {
-            try {
-              const doc = await Collection.findOneAsync(id);
-              if (!doc) {
-                errors.push(`Document ${id} not found`);
-                continue;
+              for (const id of targetIds) {
+                try {
+                  const doc = await Collection.findOneAsync(id);
+                  if (!doc) {
+                    errors.push(`Document ${id} not found`);
+                    continue;
+                  }
+                  await Collection.removeAsync({ _id: id } as never);
+                  if (auditAllowed) {
+                    await createLog(`${collection}.deleted`, { id });
+                  }
+                  if (collection === 'roles') {
+                    clearRoleCache(id);
+                  }
+                  removed++;
+                } catch (error) {
+                  errors.push(`Failed to delete ${id}: ${(error as Error).message}`);
+                }
               }
-              await Collection.removeAsync({ _id: id } as never);
-              if (collection !== 'logs') {
-                await createLog(`${collection}.deleted`, { id });
-              }
-              if (collection === 'roles') {
-                clearRoleCache(id);
-              }
-              removed++;
-            } catch (error) {
-              errors.push(`Failed to delete ${id}: ${(error as Error).message}`);
-            }
-          }
 
-          return { removed, errors };
+              return { removed, errors };
+            },
+          );
         },
         [`${collection}.count`]: async function (filter: Record<string, unknown> = {}) {
-          if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
-          validateObject(filter, false);
-
-          if (permissionModule) {
-            const hasPermission = await checkPermission(this.userId, permissionModule, 'read');
-            if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
-          }
-
-          return await Collection.countDocuments(filter);
+          return runMutation(
+            { userId: this.userId },
+            {
+              collection,
+              operation: 'read',
+              permissionModule,
+              validate: ([f]) => validateObject(f, false),
+            },
+            [filter] as const,
+            async ([f]) => Collection.countDocuments(f),
+          );
         },
         [`${collection}.options`]: async function (filter: Record<string, unknown> = {}, options: Record<string, unknown> = {}) {
-          if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
-          validateObject(filter, false);
-          validateObject(options, false);
-
-          if (permissionModule) {
-            const hasPermission = await checkPermission(this.userId, permissionModule, 'read');
-            if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
-          }
-
-          return await Collection.find(filter, options).mapAsync((item: any) => {
-            const profile = item.profile as { name?: string } | undefined;
-            const name = profile?.name || (item.name as string | undefined);
-            return { key: item._id, label: name, title: name, value: item._id, raw: item };
-          });
+          return runMutation(
+            { userId: this.userId },
+            {
+              collection,
+              operation: 'read',
+              permissionModule,
+              validate: ([f, o]) => {
+                validateObject(f, false);
+                validateObject(o, false);
+              },
+            },
+            [filter, options] as const,
+            async ([f, o]) =>
+              Collection.find(f, o).mapAsync((item: any) => {
+                const profile = item.profile as { name?: string } | undefined;
+                const name = profile?.name || (item.name as string | undefined);
+                return { key: item._id, label: name, title: name, value: item._id, raw: item };
+              }),
+          );
         },
       });
     }
