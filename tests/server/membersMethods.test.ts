@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
 import LogsCollection from '../../imports/api/collections/logs.collection';
+import MembersCollection from '../../imports/api/collections/members.collection';
 import {
   assertRejectsWithCode,
   callAs,
@@ -67,5 +68,38 @@ describe('members.insert — migrated to mutation-pipeline (#100)', () => {
     // Cleanup the user we just created (cleanupFixtures only catches test-prefixed _ids,
     // but Accounts.createUserAsync generates its own id — remove explicitly).
     await Meteor.users.removeAsync({ _id: insertedId });
+  });
+});
+
+describe('members.update — migrated to mutation-pipeline (#101)', () => {
+  let adminUserId: string;
+  let targetUserId: string;
+
+  before(async () => {
+    const adminRoleId = await createTestRole({ roles: true });
+    adminUserId = await createTestUser({ roleId: adminRoleId });
+    targetUserId = await createTestUser({ roleId: adminRoleId });
+  });
+
+  after(async () => {
+    await cleanupFixtures();
+  });
+
+  it('body error from MembersCollection.updateAsync propagates with original Meteor.Error code intact', async () => {
+    // Targets the legacy `try { ... updateAsync ... } catch (e) { throw new Meteor.Error(e.message) }`
+    // wrapper specifically — the antipattern only obscured errors thrown inside that block.
+    const originalUpdate = MembersCollection.updateAsync.bind(MembersCollection);
+    (MembersCollection as unknown as { updateAsync: unknown }).updateAsync = async () => {
+      throw new Meteor.Error('test-update-code', 'test-update-message');
+    };
+    try {
+      await assertRejectsWithCode(
+        () =>
+          callAs(adminUserId, 'members.update', targetUserId, { 'profile.description': 'probe' }),
+        'test-update-code',
+      );
+    } finally {
+      (MembersCollection as unknown as { updateAsync: typeof originalUpdate }).updateAsync = originalUpdate;
+    }
   });
 });

@@ -11,7 +11,7 @@ import RanksCollection from '../../imports/api/collections/ranks.collection';
 import RolesCollection from '../../imports/api/collections/roles.collection';
 import SpecializationsCollection from '../../imports/api/collections/specializations.collection';
 import SquadsCollection from '../../imports/api/collections/squads.collection';
-import { validateObject, validatePublish, validateUserId, checkPermission, checkSpecialPermission, getSquadScope, isOfficerOrAdmin, getUserRole } from '../main';
+import { validateObject, validatePublish, validateString, validateUserId, checkPermission, checkSpecialPermission, getSquadScope, isOfficerOrAdmin, getUserRole } from '../main';
 import { createLog } from './logs.server';
 import { runMutation } from '../mutation-pipeline';
 import { COLLECTION_REGISTRY } from '../collection-registry';
@@ -84,36 +84,44 @@ if (Meteor.isServer) {
       );
     },
     'members.update': async function (memberId: string = '', data: Record<string, unknown> = {}) {
-      validateUserId(this.userId);
-      const targetMember = await getMemberById(memberId);
-
-      const hasPermission = await checkPermission(this.userId, 'members', 'update');
-      if (!hasPermission) {
-        const isSpecOnly = data['profile.specializationIds'] && Object.keys(data).length === 1;
-        const canManageSpecs = isSpecOnly && (await checkSpecialPermission(this.userId, 'canManageSpecializations'));
-        if (!canManageSpecs) throw new Meteor.Error(403, 'Permission denied');
-      }
-
-      const role = await getUserRole(this.userId);
-      if (!isOfficerOrAdmin(role)) {
-        const viewer = await MembersCollection.findOneAsync(this.userId);
-        if (viewer?.profile?.squadId && targetMember?.profile?.squadId !== viewer.profile.squadId) {
-          throw new Meteor.Error(403, 'Cannot update members outside your squad');
-        }
-      }
-
-      const selector = { _id: memberId };
-      const modifier = { $set: data };
-      try {
-        const result = await MembersCollection.updateAsync(selector as never, modifier as never);
-        await createLog('members.updated', {
-          id: memberId,
-          changes: data,
-        });
-        return result;
-      } catch (error) {
-        throw new Meteor.Error((error as Error).message);
-      }
+      const callerUserId = this.userId;
+      return runMutation(
+        { userId: callerUserId },
+        {
+          collection: 'members',
+          operation: 'update',
+          action: 'members.updated',
+          auditShape: 'update',
+          permissionModule: 'members',
+          validate: ([id, d]) => {
+            validateString(id, false);
+            validateObject(d, false);
+          },
+          permissionOverride: async (ctx, [, d]) => {
+            // specOnly + canManageSpecializations: a non-update-permitted caller
+            // may still mutate `profile.specializationIds` alone. 1-site rule —
+            // stays as a callback per the rule of three.
+            const changes = d as Record<string, unknown>;
+            const isSpecOnly = changes['profile.specializationIds'] && Object.keys(changes).length === 1;
+            if (!isSpecOnly) return false;
+            return checkSpecialPermission(ctx.userId, 'canManageSpecializations');
+          },
+        },
+        [memberId, data] as const,
+        async ([targetId, changes]) => {
+          // Existence check + squad-scope reject stay as code in the body — both
+          // are 1-site variations and out of scope for the registry.
+          const targetMember = await getMemberById(targetId);
+          const role = await getUserRole(callerUserId);
+          if (!isOfficerOrAdmin(role)) {
+            const viewer = await MembersCollection.findOneAsync(callerUserId);
+            if (viewer?.profile?.squadId && targetMember?.profile?.squadId !== viewer.profile.squadId) {
+              throw new Meteor.Error(403, 'Cannot update members outside your squad');
+            }
+          }
+          return MembersCollection.updateAsync({ _id: targetId } as never, { $set: changes } as never);
+        },
+      );
     },
     'members.remove': async function (memberId: string = '') {
       validateUserId(this.userId);
