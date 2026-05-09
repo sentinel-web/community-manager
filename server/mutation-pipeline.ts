@@ -15,6 +15,10 @@ export interface MutationDescriptor<TArgs extends readonly unknown[], TResult> {
   readonly action?: string;
   readonly auditShape?: AuditShape;
   readonly audit?: (args: TArgs, result: TResult) => Record<string, unknown>;
+  // Top-level keys to strip from the standard audit payload before logging.
+  // Applied only to standard auditShape paths; descriptor.audit functions own
+  // their own redaction.
+  readonly redact?: readonly string[];
   readonly requireAuth?: boolean;
   readonly allowAnonymous?: boolean;
   readonly permissionModule?: string | null;
@@ -124,7 +128,15 @@ export async function runMutation<TArgs extends readonly unknown[], TResult>(
     if (descriptor.audit) {
       await createLog(descriptor.action, descriptor.audit(args, result));
     } else if (descriptor.auditShape) {
-      await createLog(descriptor.action, buildStandardPayload(descriptor.auditShape, args, result));
+      let payload = buildStandardPayload(descriptor.auditShape, args, result);
+      if (descriptor.redact?.length) {
+        const redacted: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(payload)) {
+          if (!descriptor.redact.includes(key)) redacted[key] = value;
+        }
+        payload = redacted;
+      }
+      await createLog(descriptor.action, payload);
     }
   }
 

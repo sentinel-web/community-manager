@@ -13,6 +13,8 @@ import SpecializationsCollection from '../../imports/api/collections/specializat
 import SquadsCollection from '../../imports/api/collections/squads.collection';
 import { validateObject, validatePublish, validateUserId, checkPermission, checkSpecialPermission, getSquadScope, isOfficerOrAdmin, getUserRole } from '../main';
 import { createLog } from './logs.server';
+import { runMutation } from '../mutation-pipeline';
+import { COLLECTION_REGISTRY } from '../collection-registry';
 import type { Role } from '/imports/api/types';
 
 async function getMemberById(memberId: string): Promise<Meteor.User> {
@@ -66,22 +68,20 @@ if (Meteor.isServer) {
       return member;
     },
     'members.insert': async function (payload: Record<string, unknown> = {}): Promise<string> {
-      validateUserId(this.userId);
-      validateObject(payload, false);
-
-      const hasPermission = await checkPermission(this.userId, 'members', 'create');
-      if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
-
-      try {
-        const memberId = await Accounts.createUserAsync(payload as Parameters<typeof Accounts.createUserAsync>[0]);
-        await createLog('members.created', {
-          id: memberId,
-          username: payload.username,
-        });
-        return memberId;
-      } catch (error) {
-        throw new Meteor.Error((error as Error).message);
-      }
+      return runMutation(
+        { userId: this.userId },
+        {
+          collection: 'members',
+          operation: 'create',
+          action: 'members.created',
+          auditShape: 'insert',
+          permissionModule: 'members',
+          redact: COLLECTION_REGISTRY.members.redact?.insert,
+          validate: ([p]) => validateObject(p, false),
+        },
+        [payload] as const,
+        async ([p]) => Accounts.createUserAsync(p as Parameters<typeof Accounts.createUserAsync>[0]),
+      );
     },
     'members.update': async function (memberId: string = '', data: Record<string, unknown> = {}) {
       validateUserId(this.userId);
