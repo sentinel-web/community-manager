@@ -23,6 +23,12 @@ export interface MutationDescriptor<TArgs extends readonly unknown[], TResult> {
   readonly allowAnonymous?: boolean;
   readonly permissionModule?: string | null;
   readonly fallbackFlag?: string | null;
+  // Conditional re-admit when the main permission check (and any unconditional
+  // fallbackFlag) has denied the call. Receives the same ctx + args the body
+  // will see, returns true to allow. The escape hatch for variations that
+  // depend on the data being mutated (rule of three: stays as a callback
+  // until 3+ collections need it).
+  readonly permissionOverride?: (ctx: MutationContext, args: TArgs) => Promise<boolean>;
   readonly validate?: (args: TArgs) => void;
 }
 
@@ -107,8 +113,13 @@ export async function runMutation<TArgs extends readonly unknown[], TResult>(
       const flag = descriptor.fallbackFlag;
       const hasSpecial = flag ? await checkSpecialPermission(ctx.userId, flag) : false;
       if (!hasSpecial) {
-        await emitDenial(ctx, descriptor, args);
-        throw new Meteor.Error(403, 'Permission denied');
+        const overrideAllowed = descriptor.permissionOverride
+          ? await descriptor.permissionOverride(ctx, args)
+          : false;
+        if (!overrideAllowed) {
+          await emitDenial(ctx, descriptor, args);
+          throw new Meteor.Error(403, 'Permission denied');
+        }
       }
     }
   }
