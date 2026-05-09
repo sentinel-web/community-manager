@@ -103,3 +103,33 @@ describe('members.update — migrated to mutation-pipeline (#101)', () => {
     }
   });
 });
+
+describe('members.remove — migrated to mutation-pipeline (#102)', () => {
+  let adminUserId: string;
+  let targetUserId: string;
+
+  before(async () => {
+    const adminRoleId = await createTestRole({ roles: true });
+    adminUserId = await createTestUser({ roleId: adminRoleId });
+    targetUserId = await createTestUser({ roleId: adminRoleId });
+  });
+
+  after(async () => {
+    await cleanupFixtures();
+  });
+
+  it('body error from MembersCollection.removeAsync propagates with original Meteor.Error code intact', async () => {
+    const originalRemove = MembersCollection.removeAsync.bind(MembersCollection);
+    (MembersCollection as unknown as { removeAsync: unknown }).removeAsync = async () => {
+      throw new Meteor.Error('test-remove-code', 'test-remove-message');
+    };
+    try {
+      await assertRejectsWithCode(
+        () => callAs(adminUserId, 'members.remove', targetUserId),
+        'test-remove-code',
+      );
+    } finally {
+      (MembersCollection as unknown as { removeAsync: typeof originalRemove }).removeAsync = originalRemove;
+    }
+  });
+});

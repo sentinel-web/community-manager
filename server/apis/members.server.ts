@@ -124,19 +124,24 @@ if (Meteor.isServer) {
       );
     },
     'members.remove': async function (memberId: string = '') {
-      validateUserId(this.userId);
-      await getMemberById(memberId);
-
-      const hasPermission = await checkPermission(this.userId, 'members', 'delete');
-      if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
-
-      try {
-        const result = await MembersCollection.removeAsync({ _id: memberId } as never);
-        await createLog('members.deleted', { id: memberId });
-        return result;
-      } catch (error) {
-        throw new Meteor.Error((error as Error).message);
-      }
+      return runMutation(
+        { userId: this.userId },
+        {
+          collection: 'members',
+          operation: 'delete',
+          action: 'members.deleted',
+          auditShape: 'remove',
+          permissionModule: 'members',
+          validate: ([id]) => validateString(id, false),
+        },
+        [memberId] as const,
+        async ([targetId]) => {
+          // Existence check stays as code in the body (1-site variation;
+          // not promoted to a registry field per the rule of three).
+          await getMemberById(targetId);
+          return MembersCollection.removeAsync({ _id: targetId } as never);
+        },
+      );
     },
     'members.saveTaskFilter': async function (filter: Record<string, unknown> = {}) {
       if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
