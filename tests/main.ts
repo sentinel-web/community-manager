@@ -8,6 +8,7 @@ import './server/i18n.extractParams.test';
 import './server/i18n.invariants.test';
 import './server/membersMethods.test';
 import './server/mutationPipeline.test';
+import './server/paletteRecents.test';
 import './server/paletteSearch.test';
 import './server/permissions.test';
 import './server/questionnaireInterval.test';
