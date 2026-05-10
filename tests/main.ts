@@ -10,4 +10,5 @@ import './server/membersMethods.test';
 import './server/mutationPipeline.test';
 import './server/permissions.test';
 import './server/questionnaireInterval.test';
+import './server/settingsMethods.test';
 import './server/validation.test';
