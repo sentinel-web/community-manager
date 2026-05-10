@@ -10,7 +10,7 @@ import { useTourRef } from '../tour/TourContext';
 // LocaleKey rather than the broad LocaleKey union (which would force a params arg).
 // Falls back to the raw data key string at the call site if a server-supplied
 // key isn't in the map — preserves pre-cutover defensive behavior.
-const STATS_LABEL_KEYS = {
+export const STATS_LABEL_KEYS = {
   'event count': 'dashboard.stats.event count',
   'member count': 'dashboard.stats.member count',
   'member count by medal': 'dashboard.stats.member count by medal',
@@ -24,7 +24,7 @@ const STATS_LABEL_KEYS = {
   'task count by task status': 'dashboard.stats.task count by task status',
 } as const satisfies Record<string, LocaleKey>;
 
-const PROFILE_LABEL_KEYS = {
+export const PROFILE_LABEL_KEYS = {
   'attendance points': 'dashboard.profileLabels.attendance points',
   description: 'dashboard.profileLabels.description',
   'entry date': 'dashboard.profileLabels.entry date',

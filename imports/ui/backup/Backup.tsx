@@ -16,7 +16,7 @@ import { useTourRef } from '../tour/TourContext';
 // preserves the literal LocaleKey union per entry. Falls back to the raw
 // collection name string at the call site if a server-supplied name isn't in
 // the map — preserves pre-cutover defensive behavior.
-const COLLECTION_LABEL_KEYS = {
+export const COLLECTION_LABEL_KEYS = {
   attendances: 'collections.attendances',
   discoveryTypes: 'collections.discoveryTypes',
   events: 'collections.events',
