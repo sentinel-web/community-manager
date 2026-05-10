@@ -17,8 +17,10 @@ export class SectionPage extends BasePage {
    * Navigate to the section page and wait for table or empty state
    */
   async goto(): Promise<void> {
-    await this.page.goto(this.route);
-    await this.page.waitForLoadState('domcontentloaded');
+    // Default `waitUntil` is `'load'`, which waits for all subresources — including
+    // SockJS long-polling XHRs that legitimately stay open in a Meteor app. The
+    // explicit `waitForSelector` below is the actual readiness gate.
+    await this.page.goto(this.route, { waitUntil: 'domcontentloaded' });
     await this.page.waitForSelector('.ant-table, .ant-empty', { timeout: 15000 });
   }
 

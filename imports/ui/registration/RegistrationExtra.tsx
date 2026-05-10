@@ -86,10 +86,21 @@ export default function RegistrationExtra({ record }: RegistrationExtraProps) {
   const [createdAlready, setCreatedAlready] = useState(true);
 
   useEffect(() => {
-    Meteor.callAsync('members.findOne', { 'profile.registrationId': record._id }, { fields: { service: 0 } }).then((res: Member | undefined) => {
-      if (res) setCreatedAlready(true);
-      else setCreatedAlready(false);
-    });
+    let cancelled = false;
+    Meteor.callAsync('members.findOne', { 'profile.registrationId': record._id }, { fields: { services: 0 } })
+      .then((res: Member | undefined) => {
+        if (cancelled) return;
+        setCreatedAlready(Boolean(res));
+      })
+      .catch(error => {
+        // Swallow rather than let the rejection bubble — the dev-server overlay
+        // turns unhandled rejections into a full-page "Unexpected error" that
+        // intercepts pointer events on every row in the table.
+        if (Meteor.isDevelopment) console.warn('RegistrationExtra members.findOne failed', error);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [record]);
 
   return (
