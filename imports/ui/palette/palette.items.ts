@@ -4,6 +4,15 @@ import type { PaletteItem } from './palette.types';
 
 type Translator = (key: string) => string;
 
+export interface PaletteEntityResults {
+  members: Array<{ _id: string; username?: string; profile?: { name?: string; id?: number } }>;
+  events: Array<{ _id: string; name: string }>;
+  tasks: Array<{ _id: string; name: string }>;
+  squads: Array<{ _id: string; name: string }>;
+  registrations: Array<{ _id: string; name: string }>;
+  questionnaires: Array<{ _id: string; name: string }>;
+}
+
 interface NavConfig {
   key: string;
   module: keyof Role;
@@ -30,6 +39,68 @@ const NAV_ROUTES: NavConfig[] = [
   { key: 'settings', module: 'settings', labelKey: 'navigation.settings' },
   { key: 'backup', module: 'settings', labelKey: 'navigation.backup' },
 ];
+
+export function getEntityPaletteItems(results: PaletteEntityResults, t: Translator, navigate: (route: string) => void): PaletteItem[] {
+  const items: PaletteItem[] = [];
+
+  results.members.forEach(m => {
+    const label = m.profile?.name || m.username || m._id;
+    items.push({
+      kind: 'entity',
+      key: `entity:members:${m._id}`,
+      label,
+      group: t('palette.members'),
+      onSelect: () => navigate('members'),
+    });
+  });
+  results.events.forEach(e => {
+    items.push({
+      kind: 'entity',
+      key: `entity:events:${e._id}`,
+      label: e.name,
+      group: t('palette.events'),
+      onSelect: () => navigate('events'),
+    });
+  });
+  results.tasks.forEach(task => {
+    items.push({
+      kind: 'entity',
+      key: `entity:tasks:${task._id}`,
+      label: task.name,
+      group: t('palette.tasks'),
+      onSelect: () => navigate('tasks'),
+    });
+  });
+  results.squads.forEach(s => {
+    items.push({
+      kind: 'entity',
+      key: `entity:squads:${s._id}`,
+      label: s.name,
+      group: t('palette.squads'),
+      onSelect: () => navigate('squads'),
+    });
+  });
+  results.registrations.forEach(r => {
+    items.push({
+      kind: 'entity',
+      key: `entity:registrations:${r._id}`,
+      label: r.name,
+      group: t('palette.registrations'),
+      onSelect: () => navigate('registrations'),
+    });
+  });
+  results.questionnaires.forEach(q => {
+    items.push({
+      kind: 'entity',
+      key: `entity:questionnaires:${q._id}`,
+      label: q.name,
+      group: t('palette.questionnaires'),
+      onSelect: () => navigate('questionnaires'),
+    });
+  });
+
+  return items;
+}
 
 export function getNavigatePaletteItems(role: Role | undefined, t: Translator, navigate: (route: string) => void): PaletteItem[] {
   if (!role) return [];
