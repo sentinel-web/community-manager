@@ -37,7 +37,7 @@ describe('extractParams', () => {
   });
 
   it('ignores malformed placeholders', () => {
-    assert.deepEqual([...extractParams('{name} and {{ }} and {{!@#}}')], []);
+    assert.deepEqual([...extractParams('{name} and {{ }} and {{!@#}} and {{}}')], []);
   });
 
   it('returns a Set (not an array) so callers can compare via deepEqual', () => {
