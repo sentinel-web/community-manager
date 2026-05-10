@@ -42,41 +42,41 @@ The codebase is **fully TypeScript** with `strict: true`. No `.jsx` or untyped `
 
 **Permission System**
 - Two-tier RBAC: boolean modules (dashboard, orbat, logs, settings) and CRUD modules (members, events, tasks, etc.)
-- Permission check: `checkPermission(userId, module, operation)` in `server/main.js`
+- Permission check: `checkPermission(userId, module, operation)` in `server/main.ts`
 - Role caching with 1-minute TTL for performance
 - Admin users have `roles: true` for full access
 
-**CRUD Generation** (`server/crud.lib.js`)
+**CRUD Generation** (`server/crud.lib.ts`)
 - `createCollectionMethods(collectionName)` - generates standard methods: `.read`, `.insert`, `.update`, `.delete`, `.count`, `.options`
 - `createCollectionPublish(collectionName)` - generates reactive publications (requires authentication)
 - All operations include permission checks and audit logging
 
-**Configuration** (`server/config.js`, `imports/config.js`)
+**Configuration** (`server/config.ts`, `imports/config.ts`)
 - Server settings (rate limits, cache TTL) configurable via `Meteor.settings` or `settings.json`
-- UI constants (breakpoints, layout ratios) in `imports/config.js`
+- UI constants (breakpoints, layout ratios) in `imports/config.ts`
 - See `settings.example.json` for available overrides
 
 **State Management**
-- React Context: NavigationContext, ThemeContext, DrawerContext, SubdrawerContext, LanguageContext
+- React Context: NavigationContext, ThemeContext, DrawerContext, SubdrawerContext, LanguageContext, PaletteContext, TourContext
 - Meteor hooks: `useTracker()`, `useFind()`, `useSubscribe()` for reactive data
 - Pathname-based routing without router library (reads `window.location.pathname`)
 
 **Localization (i18n)**
 - Custom lightweight i18n system in `imports/i18n/`
 - Supported languages: English (en), German (de), French (fr)
-- Locale files in `imports/i18n/locales/` as JSON
+- All translations in `imports/i18n/translations.ts` as a single typed `TranslationSet` (one entry per line, alphabetically sorted by dotted key; excluded from prettier so the dense per-line layout stays diff-friendly)
 - Use `useTranslation()` hook to get `t()` function
 - Use `useLanguage()` hook for full context (language, setLanguage, t, locales)
 - Language persisted in localStorage, auto-detects browser language
 - LanguageSelector component in header for switching languages
 
-**Validation** (server/main.js)
+**Validation** (server/main.ts)
 - `validateString()`, `validateNumber()`, `validateBoolean()`, `validateDate()`
 - `validateArray()`, `validateArrayOfStrings()`, `validateObject()`, `validateUserId()`
 
 ### Collections
 
-Members (Meteor.users), Events, Attendances, Tasks, TaskStatus, Squads, Ranks, Specializations, Medals, EventTypes, Registrations, DiscoveryTypes, Roles, ProfilePictures, Settings, Logs, Questionnaires, QuestionnaireResponses
+Members (Meteor.users), Events, Attendances, Tasks, TaskStatus, Squads, Ranks, Specializations, Medals, EventTypes, Positions, Registrations, DiscoveryTypes, Roles, ProfilePictures, Settings, Logs, Questionnaires, QuestionnaireResponses
 
 ### Collection Schemas
 
@@ -102,7 +102,7 @@ Members (Meteor.users), Events, Attendances, Tasks, TaskStatus, Squads, Ranks, S
 - `name, color, description`
 
 **Roles**
-- `name, color, description` + boolean permissions (`dashboard, orbat, logs, settings`) + CRUD permissions (`members, events, tasks, squads, ranks, specializations, medals, eventTypes, taskStatus, registrations, discoveryTypes, roles, questionnaires`)
+- `name, color, description` + boolean permissions (`dashboard, orbat, logs, settings`) + CRUD permissions (`members, events, tasks, squads, ranks, specializations, medals, eventTypes, positions, taskStatus, registrations, discoveryTypes, roles, questionnaires`)
 
 **Registrations**
 - `name, id (1000-9999), age (min 16), discoveryType, rulesReadAndAccepted, description`
@@ -138,7 +138,10 @@ Members (Meteor.users), Events, Attendances, Tasks, TaskStatus, Squads, Ranks, S
 - `events/` - Calendar, attendance, table views
 - `tasks/` - Kanban board with drag-and-drop
 - `orbat/` - Organization chart
-- `members/`, `squads/`, `logs/`, `settings/`, `backup/`
+- `palette/` - Cmd+K command palette (fuzzy ranking, recents, global UI controls)
+- `tour/` - First-run guided tour
+- `dashboard/`, `questionnaires/`, `registration/`, `members/`, `squads/`, `specializations/`, `logs/`, `settings/`, `backup/`
+- Chrome: `app/`, `header/`, `footer/`, `navigation/`, `login/`, `theme/`, `title/`, `logo/`, `profile-picture-input/`, `suspense/`, `section/`, `table/`, `components/`
 
 ## Deployment
 
@@ -166,6 +169,7 @@ docker compose up -d
 - **react-beautiful-dnd** - Drag-and-drop for Kanban task board
 - **react-big-calendar** + **rrule** - Calendar views with recurring event support
 - **react-organizational-chart** - Orbat tree visualization
+- **fuse.js** - Fuzzy ranking for the command palette (union of static + entity items)
 - **jszip** - Backup file generation
 
 ## Coding Guidelines
@@ -186,11 +190,16 @@ When making tradeoffs, follow this hierarchy. Never compromise security for conv
 - Use `Meteor.Error(code, message)` for errors (not generic Error)
 - Log mutations with `createLog(action, data)` for audit trail
 
+**Server File Conventions**
+- One API per file: each `server/apis/<feature>.server.ts` contains only methods/publications matching its name (e.g. `squads.*` lives in `squads.server.ts`, not scattered across files)
+- Alphabetical ordering: arrays/maps/switch cases in `server/main.ts` and `server/crud.lib.ts` (e.g. `collectionNames`, `COLLECTION_TO_MODULE`, the `getCollection()` switch) are kept in alphabetical order — preserve this when adding entries
+- New `server/apis/*.server.ts` files must be imported in `server/main.ts` for their methods/publications to register
+
 **Adding New Collections**
-1. Create collection file in `imports/api/collections/`
-2. Add to `getCollection()` switch in `server/crud.lib.js`
-3. Call `createCollectionMethods()` and `createCollectionPublish()` in `server/crud.lib.js`
-4. Add permission module mapping in `COLLECTION_TO_MODULE` in `server/main.js`
+1. Create collection file in `imports/api/collections/` (e.g. `foo.collection.ts`)
+2. Add to `getCollection()` switch in `server/crud.lib.ts`
+3. Call `createCollectionMethods()` and `createCollectionPublish()` in `server/crud.lib.ts`
+4. Add permission module mapping in `COLLECTION_TO_MODULE` in `server/main.ts`
 
 ### Client-Side
 
@@ -207,7 +216,7 @@ When making tradeoffs, follow this hierarchy. Never compromise security for conv
 - Color render preservation: `<Tag color={color || 'transparent'}>` (NOT `?? undefined`)
 
 **Meteor Data Hooks**
-```javascript
+```typescript
 useSubscribe(collectionName, filter, options);           // Subscribe to data
 const data = useFind(() => Collection.find(filter), [filter]);  // Reactive query
 const user = useTracker(() => Meteor.user(), []);        // Reactive Meteor data
@@ -241,7 +250,7 @@ try {
 
 ### Testing
 
-- Tests in `tests/` directory, imported through `tests/main.js`
+- Tests in `tests/` directory, imported through `tests/main.ts` (alphabetical order; imports drop the extension — Meteor's compiler-plugin chain resolves `.ts`)
 - Use Mocha with Node.js native `assert` module
 - Run with `npm test` (once) or `npm run test-app` (watch mode)
 - See [TESTING.md](TESTING.md) for comprehensive testing strategy and best practices
@@ -300,7 +309,7 @@ Custom skills in `.claude/skills/` automate common development tasks:
 ## Common Gotchas
 
 **Server-Side**
-- Forgetting to add collection to `getCollection()` switch in `server/crud.lib.js`
+- Forgetting to add collection to `getCollection()` switch in `server/crud.lib.ts`
 - Using sync methods (`find`, `insert`) instead of async (`findAsync`, `insertAsync`)
 - Using generic `Error` instead of `Meteor.Error(code, message)`
 - Missing permission module mapping in `COLLECTION_TO_MODULE`
