@@ -69,9 +69,8 @@ describe('settings.upsert — drops legacy try/catch + nullish-only value check 
     assert.strictEqual(await callAs(adminUserId, 'settings.findOne', 'community-probe-upsert'), 'second');
   });
 
-  it('accepts legitimate falsy values that the previous "no falsy" check rejected', async () => {
-    // The previous `if (!value)` rejected 0, false, and ''. The new contract
-    // only rejects null/undefined, so these should round-trip cleanly.
+  it('accepts 0, false, and empty string as legitimate setting values', async () => {
+    // Settings values can legitimately be 0, false, or '' — only nullish is invalid.
     for (const value of [0, false, '']) {
       await callAs(adminUserId, 'settings.upsert', 'community-probe-falsy', value);
       assert.strictEqual(await callAs(adminUserId, 'settings.findOne', 'community-probe-falsy'), value);

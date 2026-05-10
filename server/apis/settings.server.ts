@@ -24,7 +24,7 @@ if (Meteor.isServer) {
       if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
       validateString(key, false);
       if (value === null || value === undefined) {
-        throw new Meteor.Error('invalid-value', 'Invalid value', value as never);
+        throw new Meteor.Error('invalid-value', 'Invalid value');
       }
       const result = await SettingsCollection.upsertAsync(key, { $set: { key, value } });
       await createLog('settings.updated', { key });
