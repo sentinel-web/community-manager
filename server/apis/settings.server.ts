@@ -46,19 +46,13 @@ if (Meteor.isServer) {
         throw new Meteor.Error((error as Error).message);
       }
     },
-    'settings.findOne': async function (filter = {}) {
+    'settings.findOne': async function (key: string = '') {
       validateUserId(this.userId);
       const hasPermission = await checkPermission(this.userId, 'settings');
       if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
-      validateString(filter, false);
-      try {
-        const setting = await SettingsCollection.findOneAsync(filter);
-        if (!setting) throw new Meteor.Error(404, 'Setting not found');
-        return setting.value;
-      } catch (error) {
-        if ((error as Meteor.Error).error === 404) throw error;
-        throw new Meteor.Error((error as Error).message);
-      }
+      validateString(key, false);
+      const setting = await SettingsCollection.findOneAsync({ key });
+      return setting?.value;
     },
   });
 }
