@@ -32,7 +32,7 @@ import { useTranslation } from '../../i18n/LanguageContext';
 
 type PermissionModule = keyof Role;
 
-function hasAccess(role: Role | undefined, module: PermissionModule): boolean {
+export function hasAccess(role: Role | undefined, module: PermissionModule): boolean {
   if (!role) return false;
 
   if (role.roles === true) return true;
@@ -143,7 +143,10 @@ export default function Navigation() {
   );
 
   useSubscribe('roles', { _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 });
-  const roles = useFind(() => RolesCollection.find({ _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 }), [user?.profile?.roleId]);
+  const roles = useFind(
+    () => RolesCollection.find({ _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 }),
+    [user?.profile?.roleId]
+  );
   const items = useMemo(() => {
     const role = roles?.[0];
     const newItems: NonNullable<MenuProps['items']> = [];
