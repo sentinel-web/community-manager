@@ -114,7 +114,7 @@ if (Meteor.isServer) {
           const targetMember = await getMemberById(targetId);
           const role = await getUserRole(callerUserId);
           if (!isOfficerOrAdmin(role)) {
-            const viewer = await MembersCollection.findOneAsync(callerUserId);
+            const viewer = await MembersCollection.findOneAsync(callerUserId!);
             if (viewer?.profile?.squadId && targetMember?.profile?.squadId !== viewer.profile.squadId) {
               throw new Meteor.Error(403, 'Cannot update members outside your squad');
             }
