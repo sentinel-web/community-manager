@@ -206,5 +206,5 @@ Total estimate: ~3 working days.
 
 ## Open questions
 
-- ~~Translations for German and French — defer to translator review or stub in English first?~~ Resolved (#145): all 20 `palette.*` keys translated as best-effort during implementation. A native German/French review pass is still recommended before broad release; flag in #145 once a reviewer has signed off.
+- ~~Translations for German and French — defer to translator review or stub in English first?~~ Resolved (#145): all 20 `palette.*` keys translated during implementation; native-speaker review waived by maintainer. Translations may be refined later as part of normal copy iteration, but the feature is considered shippable in en/de/fr as-is.
 - ~~Should the palette show a tooltip "Press ⌘K" somewhere on first session for discoverability, given there's no visible button?~~ Resolved (#146): added a tooltip on the existing navigation menu button reading "Press ⌘K to search" (or "Ctrl K" on non-Mac platforms). Lowest-cost discoverability surface; no header chrome added.
