@@ -2,12 +2,11 @@ import assert from 'node:assert';
 import { extractParams, assertValidPlaceholders } from '../../imports/i18n/extract-params';
 import { translations, locales, defaultLocale, type Locale, type LocaleKey } from '../../imports/i18n';
 
-const ALL_LOCALES: readonly Locale[] = Object.keys(locales) as Locale[];
-
 // Derived from the runtime `locales` object so adding a fourth language to
-// imports/i18n/index.ts automatically grows this test rather than silently
+// imports/i18n/index.ts automatically grows these tests rather than silently
 // leaving the new locale unchecked.
-const NON_CANONICAL_LOCALES: readonly Locale[] = (Object.keys(locales) as Locale[]).filter(l => l !== defaultLocale);
+const ALL_LOCALES: readonly Locale[] = Object.keys(locales) as Locale[];
+const NON_CANONICAL_LOCALES: readonly Locale[] = ALL_LOCALES.filter(l => l !== defaultLocale);
 
 function setsEqual(a: Set<string>, b: Set<string>): boolean {
   if (a.size !== b.size) return false;
