@@ -1,6 +1,11 @@
 import assert from 'node:assert';
 import { extractParams } from '../../imports/i18n/extract-params';
-import { translations, type Locale, type LocaleKey } from '../../imports/i18n';
+import { translations, locales, defaultLocale, type Locale, type LocaleKey } from '../../imports/i18n';
+
+// Derived from the runtime `locales` object so adding a fourth language to
+// imports/i18n/index.ts automatically grows this test rather than silently
+// leaving the new locale unchecked.
+const NON_CANONICAL_LOCALES: readonly Locale[] = (Object.keys(locales) as Locale[]).filter(l => l !== defaultLocale);
 
 function setsEqual(a: Set<string>, b: Set<string>): boolean {
   if (a.size !== b.size) return false;
@@ -8,28 +13,25 @@ function setsEqual(a: Set<string>, b: Set<string>): boolean {
   return true;
 }
 
-function findParamDrift(target: Locale): string[] {
+function collectDriftMessages(target: Locale): string[] {
   const failures: string[] = [];
   for (const key of Object.keys(translations) as LocaleKey[]) {
-    const enParams = extractParams(translations[key].en);
+    const enParams = extractParams(translations[key][defaultLocale]);
     const targetParams = extractParams(translations[key][target]);
     if (!setsEqual(enParams, targetParams)) {
       const enList = [...enParams].sort().join(', ') || '(none)';
       const targetList = [...targetParams].sort().join(', ') || '(none)';
-      failures.push(`  ${key}: en=[${enList}] ${target}=[${targetList}]`);
+      failures.push(`  ${key}: ${defaultLocale}=[${enList}] ${target}=[${targetList}]`);
     }
   }
   return failures;
 }
 
 describe('LocaleSet cross-locale param invariants', () => {
-  it('every key has the same {{params}} in de as in en', () => {
-    const drift = findParamDrift('de');
-    assert.strictEqual(drift.length, 0, `${drift.length} key(s) have placeholder drift between en and de:\n${drift.join('\n')}`);
-  });
-
-  it('every key has the same {{params}} in fr as in en', () => {
-    const drift = findParamDrift('fr');
-    assert.strictEqual(drift.length, 0, `${drift.length} key(s) have placeholder drift between en and fr:\n${drift.join('\n')}`);
-  });
+  for (const target of NON_CANONICAL_LOCALES) {
+    it(`every key has the same {{params}} in ${target} as in ${defaultLocale}`, () => {
+      const drift = collectDriftMessages(target);
+      assert.strictEqual(drift.length, 0, `${drift.length} key(s) have placeholder drift between ${defaultLocale} and ${target}:\n${drift.join('\n')}`);
+    });
+  }
 });
