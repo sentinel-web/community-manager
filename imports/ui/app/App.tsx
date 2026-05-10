@@ -10,6 +10,8 @@ import type { NavigationContextValue } from '../navigation/navigation.hook';
 import useSettings from '../settings/settings.hook';
 import { getPreferedTheme } from '../theme/theme.hook';
 import type { ThemeContextValue, ThemeMode } from '../theme/theme.hook';
+import Palette from '../palette/Palette';
+import { PaletteProvider } from '../palette/PaletteContext';
 import DemoTour from '../tour/DemoTour';
 import { TourProvider } from '../tour/TourContext';
 import type { DrawerContextValue } from './types';
@@ -93,53 +95,56 @@ export default function App() {
             }}
           >
             <TourProvider>
-              <ConfigProvider
-                theme={{
-                  token: {
-                    colorPrimary: communityColor,
-                    borderRadius: 8,
-                    fontSize: 16,
-                    colorBgBase: theme === 'dark' ? '#282828' : '#f8f8f2',
-                    colorTextBase: theme === 'dark' ? '#f8f8f2' : '#282828',
-                  },
-                  algorithm: theme === 'dark' ? AntdTheme.darkAlgorithm : AntdTheme.defaultAlgorithm,
-                }}
-              >
-                <AntdApp className="app" message={{ ...message, maxCount: 1 }} notification={{ ...notification, maxCount: 3 }}>
-                  <Layout>
-                    <Layout.Header>
-                      <Header />
-                    </Layout.Header>
-                    <Layout.Content style={{ flex: 1, overflow: 'auto' }}>
-                      <Main />
-                    </Layout.Content>
-                    <Layout.Footer>
-                      <Footer />
-                    </Layout.Footer>
-                  </Layout>
-                  {Meteor.isDevelopment && <DemoTour />}
-                  <Drawer
-                    width={getDrawerWidth(window.innerWidth)}
-                    open={drawerOpen}
-                    onClose={() => setDrawerOpen(false)}
-                    title={drawerTitle}
-                    extra={drawerExtra}
-                    destroyOnHidden
-                  >
-                    {drawerComponent}
+              <PaletteProvider>
+                <ConfigProvider
+                  theme={{
+                    token: {
+                      colorPrimary: communityColor,
+                      borderRadius: 8,
+                      fontSize: 16,
+                      colorBgBase: theme === 'dark' ? '#282828' : '#f8f8f2',
+                      colorTextBase: theme === 'dark' ? '#f8f8f2' : '#282828',
+                    },
+                    algorithm: theme === 'dark' ? AntdTheme.darkAlgorithm : AntdTheme.defaultAlgorithm,
+                  }}
+                >
+                  <AntdApp className="app" message={{ ...message, maxCount: 1 }} notification={{ ...notification, maxCount: 3 }}>
+                    <Layout>
+                      <Layout.Header>
+                        <Header />
+                      </Layout.Header>
+                      <Layout.Content style={{ flex: 1, overflow: 'auto' }}>
+                        <Main />
+                      </Layout.Content>
+                      <Layout.Footer>
+                        <Footer />
+                      </Layout.Footer>
+                    </Layout>
+                    {Meteor.isDevelopment && <DemoTour />}
+                    <Palette />
                     <Drawer
                       width={getDrawerWidth(window.innerWidth)}
-                      open={subdrawerOpen}
-                      onClose={() => setSubdrawerOpen(false)}
-                      title={subdrawerTitle}
-                      extra={subdrawerExtra}
+                      open={drawerOpen}
+                      onClose={() => setDrawerOpen(false)}
+                      title={drawerTitle}
+                      extra={drawerExtra}
                       destroyOnHidden
                     >
-                      {subdrawerComponent}
+                      {drawerComponent}
+                      <Drawer
+                        width={getDrawerWidth(window.innerWidth)}
+                        open={subdrawerOpen}
+                        onClose={() => setSubdrawerOpen(false)}
+                        title={subdrawerTitle}
+                        extra={subdrawerExtra}
+                        destroyOnHidden
+                      >
+                        {subdrawerComponent}
+                      </Drawer>
                     </Drawer>
-                  </Drawer>
-                </AntdApp>
-              </ConfigProvider>
+                  </AntdApp>
+                </ConfigProvider>
+              </PaletteProvider>
             </TourProvider>
           </SubdrawerContext.Provider>
         </DrawerContext.Provider>
