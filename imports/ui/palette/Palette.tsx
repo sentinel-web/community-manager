@@ -129,7 +129,7 @@ export default function Palette() {
     const trimmed = query.trim().toLowerCase();
     const matches = (item: PaletteItem) => item.label.toLowerCase().includes(trimmed);
     const sortByRecency = (items: PaletteItem[]) =>
-      [...items].sort((a, b) => ((recencyBoost.get(`${a.kind}:${a.key}`) ?? 0) < (recencyBoost.get(`${b.kind}:${b.key}`) ?? 0) ? 1 : -1));
+      [...items].sort((a, b) => (recencyBoost.get(`${b.kind}:${b.key}`) ?? 0) - (recencyBoost.get(`${a.kind}:${a.key}`) ?? 0));
     if (!trimmed) {
       return [...recentItems, ...sortByRecency(createItems), ...globalItems, ...sortByRecency(navigateItems)];
     }
