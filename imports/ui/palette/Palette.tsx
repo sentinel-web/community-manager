@@ -12,6 +12,7 @@ import useTheme from '../theme/theme.hook';
 import { PaletteContext } from './PaletteContext';
 import { getCreatePaletteItems, getEntityPaletteItems, getGlobalPaletteItems, getNavigatePaletteItems } from './palette.items';
 import type { PaletteEntityResults } from './palette.items';
+import { addRecent, frecencyScore, readRecents, type RecentEntry } from './palette.recents';
 import type { PaletteItem } from './palette.types';
 
 const EMPTY_ENTITY_RESULTS: PaletteEntityResults = {
@@ -41,6 +42,7 @@ export default function Palette() {
   const [query, setQuery] = useState('');
   const [highlighted, setHighlighted] = useState(0);
   const [entityResults, setEntityResults] = useState<PaletteEntityResults>(EMPTY_ENTITY_RESULTS);
+  const [recents, setRecents] = useState<RecentEntry[]>([]);
   const inputRef = useRef<React.ComponentRef<typeof Input>>(null);
 
   const navigate = useCallback(
@@ -87,14 +89,56 @@ export default function Palette() {
   );
   const entityItems = useMemo<PaletteItem[]>(() => getEntityPaletteItems(entityResults, t, navigate), [entityResults, t, navigate]);
 
+  const recentItems = useMemo<PaletteItem[]>(() => {
+    if (recents.length === 0) return [];
+    const groupLabel = t('palette.recent');
+    const staticItems: PaletteItem[] = [...createItems, ...globalItems, ...navigateItems];
+    const itemByKey = new Map(staticItems.map(item => [`${item.kind}:${item.key}`, item] as const));
+    return recents
+      .slice(0, 5)
+      .map(entry => {
+        const id = `${entry.kind}:${entry.key}`;
+        const original = itemByKey.get(id);
+        if (original) {
+          return { ...original, key: `recent:${id}`, group: groupLabel };
+        }
+        if (entry.kind !== 'entity') return null;
+        const collection = entry.key.split(':')[1];
+        if (!collection) return null;
+        return {
+          kind: 'entity',
+          key: `recent:${id}`,
+          label: entry.label,
+          group: groupLabel,
+          onSelect: () => navigate(collection),
+        } as PaletteItem;
+      })
+      .filter((item): item is PaletteItem => item !== null);
+  }, [recents, createItems, globalItems, navigateItems, t, navigate]);
+
+  const recencyBoost = useMemo(() => {
+    const map = new Map<string, number>();
+    const now = Date.now();
+    recents.forEach(entry => {
+      map.set(`${entry.kind}:${entry.key}`, frecencyScore(entry, now));
+    });
+    return map;
+  }, [recents]);
+
   const filteredItems = useMemo<PaletteItem[]>(() => {
     const trimmed = query.trim().toLowerCase();
     const matches = (item: PaletteItem) => item.label.toLowerCase().includes(trimmed);
+    const sortByRecency = (items: PaletteItem[]) =>
+      [...items].sort((a, b) => ((recencyBoost.get(`${a.kind}:${a.key}`) ?? 0) < (recencyBoost.get(`${b.kind}:${b.key}`) ?? 0) ? 1 : -1));
     if (!trimmed) {
-      return [...createItems, ...globalItems, ...navigateItems];
+      return [...recentItems, ...sortByRecency(createItems), ...globalItems, ...sortByRecency(navigateItems)];
     }
-    return [...entityItems, ...createItems.filter(matches), ...globalItems.filter(matches), ...navigateItems.filter(matches)];
-  }, [navigateItems, createItems, globalItems, entityItems, query]);
+    const filteredCreate = sortByRecency(createItems.filter(matches));
+    const filteredGlobal = globalItems.filter(matches);
+    const filteredNav = sortByRecency(navigateItems.filter(matches));
+    const filteredEntity = sortByRecency(entityItems);
+    return [...filteredEntity, ...filteredCreate, ...filteredGlobal, ...filteredNav];
+  }, [recentItems, navigateItems, createItems, globalItems, entityItems, query, recencyBoost]);
 
   const groupedItems = useMemo(() => {
     const groups: { label: string; items: PaletteItem[] }[] = [];
@@ -116,6 +160,7 @@ export default function Palette() {
       setQuery('');
       setHighlighted(0);
       setEntityResults(EMPTY_ENTITY_RESULTS);
+      setRecents(readRecents());
     }
   }, [open]);
 
@@ -144,6 +189,19 @@ export default function Palette() {
     };
   }, [query, open]);
 
+  const recordSelection = useCallback((item: PaletteItem) => {
+    const baseKey = item.key.startsWith('recent:') ? item.key.slice('recent:'.length).split(':').slice(1).join(':') : item.key;
+    addRecent({ kind: item.kind, key: baseKey, label: item.label });
+  }, []);
+
+  const selectItem = useCallback(
+    (item: PaletteItem) => {
+      recordSelection(item);
+      item.onSelect();
+    },
+    [recordSelection]
+  );
+
   const onKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>) => {
       if (event.key === 'ArrowDown') {
@@ -155,10 +213,10 @@ export default function Palette() {
       } else if (event.key === 'Enter') {
         event.preventDefault();
         const item = filteredItems[highlighted];
-        if (item) item.onSelect();
+        if (item) selectItem(item);
       }
     },
-    [filteredItems, highlighted]
+    [filteredItems, highlighted, selectItem]
   );
 
   const setNavOnPopstate = useCallback(() => {
@@ -219,7 +277,7 @@ export default function Palette() {
                     role="option"
                     aria-selected={isHighlighted}
                     onMouseEnter={() => setHighlighted(itemIndex)}
-                    onClick={() => item.onSelect()}
+                    onClick={() => selectItem(item)}
                     style={{
                       padding: '8px 16px',
                       cursor: 'pointer',
