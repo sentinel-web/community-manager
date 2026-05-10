@@ -1,5 +1,5 @@
 import assert from 'node:assert';
-import { extractParams, type ExtractParams } from '../../imports/i18n/extract-params';
+import { extractParams, assertValidPlaceholders, type ExtractParams } from '../../imports/i18n/extract-params';
 
 type Equal<X, Y> = (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2 ? true : false;
 type Expect<T extends true> = T;
@@ -43,5 +43,43 @@ describe('extractParams', () => {
   it('returns a Set (not an array) so callers can compare via deepEqual', () => {
     const result = extractParams('{{a}}');
     assert.ok(result instanceof Set);
+  });
+});
+
+describe('assertValidPlaceholders', () => {
+  it('does not throw for strings without any placeholders', () => {
+    assert.doesNotThrow(() => assertValidPlaceholders('plain text', 'test.key'));
+  });
+
+  it('does not throw for valid placeholder names', () => {
+    assert.doesNotThrow(() => assertValidPlaceholders('Hello {{name}} you have {{count}} items', 'test.key'));
+  });
+
+  it('throws on hyphen in placeholder name', () => {
+    assert.throws(
+      () => assertValidPlaceholders('Hello {{user-name}}', 'test.greeting'),
+      /Invalid placeholder "\{\{user-name\}\}" in translation key "test\.greeting"/,
+    );
+  });
+
+  it('throws on whitespace in placeholder interior', () => {
+    assert.throws(
+      () => assertValidPlaceholders('Hello {{ name }}', 'test.greeting'),
+      /Invalid placeholder "\{\{ name \}\}" in translation key "test\.greeting"/,
+    );
+  });
+
+  it('throws on empty placeholder interior', () => {
+    assert.throws(
+      () => assertValidPlaceholders('Hello {{}}', 'test.greeting'),
+      /Invalid placeholder "\{\{\}\}" in translation key "test\.greeting"/,
+    );
+  });
+
+  it('lists all invalid placeholders in a single throw, not just the first', () => {
+    assert.throws(
+      () => assertValidPlaceholders('{{a-b}} and {{ c }} and {{}}', 'test.key'),
+      /Invalid placeholders "\{\{a-b\}\}", "\{\{ c \}\}", "\{\{\}\}" in translation key "test\.key"/,
+    );
   });
 });
