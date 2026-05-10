@@ -29,6 +29,19 @@ The single source of per-collection metadata that both the CRUD factory and the 
 
 The registry holds plain TypeScript values throughout: no predicate functions, no string-key DSLs, no discriminated-union "kind" fields. The `Record<CrudCollectionName, _>` type forces every member of the canonical collection-name union to have an entry — adding a collection to the union without updating the registry is a compile error.
 
+### LocaleSet
+
+The single deep module (`imports/i18n/`) that owns the translation set as one typed object indexed by typed dotted-key. The runtime entry point is `t<K extends LocaleKey>(key: K, params: ExtractParams<typeof translations[K]['en']>): string`.
+
+Source of truth is `imports/i18n/translations.ts` — a flat `Record<DottedKey, Record<Locale, string>>` with `as const satisfies TranslationSet`. The 138 call sites pass dotted strings (`t('common.create')`) unchanged from before; depth comes from what is now structurally impossible:
+
+- **Missing key per locale** — the `{ en: string; de: string; fr: string }` row shape makes a missing translation a compile error at the source, not a runtime fallback to the literal key string.
+- **Typo on the call site** — `LocaleKey = keyof typeof translations` makes `t('comon.create')` a compile error.
+- **Missing/extra interpolation params** — template-literal-type extraction over `translations[K]['en']` derives the required params per call.
+- **Cross-locale drift in nesting structure** — there is no nesting; the structure is the type.
+
+The previous design (three hand-synchronized `locales/{en,de,fr}.json` files + a `getTranslation` walker that returned the key string on miss) had no way to express any of these invariants. The deepening removes the JSON files entirely; the locale set lives once, in TypeScript.
+
 ## Doctrines
 
 ### Rule of three
