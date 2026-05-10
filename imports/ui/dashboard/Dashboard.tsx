@@ -1,7 +1,6 @@
 import { App, Button, Card, Col, Collapse, Descriptions, Row, Statistic, Tag, Typography } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import type { LanguageContextValue } from '../../i18n/LanguageContext';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useTourRef } from '../tour/TourContext';
 

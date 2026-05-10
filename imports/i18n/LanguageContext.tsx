@@ -44,6 +44,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
   }, [language]);
 
+  // useMemo (not useCallback) preserves the generic <K extends LocaleKey> signature —
+  // useCallback's type inference erases function generics into their constraint.
   const t = useMemo<LanguageContextValue['t']>(
     () =>
       function t<K extends LocaleKey>(key: K, ...args: ParamArgs<K>): string {
