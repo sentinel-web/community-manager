@@ -130,10 +130,10 @@ function SettingTitle({ title }: SettingTitleProps) {
 interface CommunityNameBlackListSettingsProps {
   communityNameBlackList?: string[];
   handleChange?: HandleChangeFn;
-  t?: TFn;
+  t: TFn;
 }
 
-function CommunityNameBlackListSettings({ communityNameBlackList = [], handleChange = () => {}, t = k => k }: CommunityNameBlackListSettingsProps) {
+function CommunityNameBlackListSettings({ communityNameBlackList = [], handleChange = () => {}, t }: CommunityNameBlackListSettingsProps) {
   const [value, setValue] = useState('');
 
   const handleClick = useCallback(() => {
@@ -193,10 +193,10 @@ function CommunityNameBlackListSettings({ communityNameBlackList = [], handleCha
 interface CommunityIdBlackListSettingsProps {
   communityIdBlackList?: string[];
   handleChange?: HandleChangeFn;
-  t?: TFn;
+  t: TFn;
 }
 
-function CommunityIdBlackListSettings({ communityIdBlackList = [], handleChange = () => {}, t = k => k }: CommunityIdBlackListSettingsProps) {
+function CommunityIdBlackListSettings({ communityIdBlackList = [], handleChange = () => {}, t }: CommunityIdBlackListSettingsProps) {
   const [value, setValue] = useState('');
 
   const handleClick = useCallback(() => {
@@ -256,10 +256,10 @@ function CommunityIdBlackListSettings({ communityIdBlackList = [], handleChange 
 interface CommunityTitleSettingsProps {
   communityTitle?: string;
   handleChange?: HandleChangeFn;
-  t?: TFn;
+  t: TFn;
 }
 
-function CommunityTitleSettings({ communityTitle, handleChange = () => {}, t = k => k }: CommunityTitleSettingsProps) {
+function CommunityTitleSettings({ communityTitle, handleChange = () => {}, t }: CommunityTitleSettingsProps) {
   return (
     <Row gutter={[16, 16]}>
       <SettingTitle title={t('settings.communityTitle')} />
@@ -273,10 +273,10 @@ function CommunityTitleSettings({ communityTitle, handleChange = () => {}, t = k
 interface CommunityLogoSettingsProps {
   communityLogo?: string;
   handleChange?: HandleChangeFn;
-  t?: TFn;
+  t: TFn;
 }
 
-function CommunityLogoSettings({ communityLogo, handleChange = () => {}, t = k => k }: CommunityLogoSettingsProps) {
+function CommunityLogoSettings({ communityLogo, handleChange = () => {}, t }: CommunityLogoSettingsProps) {
   return (
     <Row gutter={[16, 16]}>
       <SettingTitle title={t('settings.communityLogo')} />
@@ -298,10 +298,10 @@ function CommunityLogoSettings({ communityLogo, handleChange = () => {}, t = k =
 interface CommunityColorSettingsProps {
   communityColor?: string;
   handleChange?: HandleChangeFn;
-  t?: TFn;
+  t: TFn;
 }
 
-function CommunityColorSettings({ communityColor, handleChange = () => {}, t = k => k }: CommunityColorSettingsProps) {
+function CommunityColorSettings({ communityColor, handleChange = () => {}, t }: CommunityColorSettingsProps) {
   return (
     <Row gutter={[16, 16]}>
       <SettingTitle title={t('settings.communityColor')} />
@@ -313,10 +313,10 @@ function CommunityColorSettings({ communityColor, handleChange = () => {}, t = k
 }
 
 interface DemoDataSettingsProps {
-  t?: TFn;
+  t: TFn;
 }
 
-function DemoDataSettings({ t = k => k }: DemoDataSettingsProps) {
+function DemoDataSettings({ t }: DemoDataSettingsProps) {
   const [loading, setLoading] = useState(false);
 
   const handleGenerate = useCallback(async () => {
@@ -353,10 +353,10 @@ function DemoDataSettings({ t = k => k }: DemoDataSettingsProps) {
 }
 
 interface TourSettingsProps {
-  t?: TFn;
+  t: TFn;
 }
 
-function TourSettings({ t = k => k }: TourSettingsProps) {
+function TourSettings({ t }: TourSettingsProps) {
   const { startTour } = useContext(TourContext);
   const { setNavigationValue } = useNavigation();
 

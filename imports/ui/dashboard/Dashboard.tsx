@@ -1,7 +1,6 @@
 import { App, Button, Card, Col, Collapse, Descriptions, Row, Statistic, Tag, Typography } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import type { LanguageContextValue } from '../../i18n/LanguageContext';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useTourRef } from '../tour/TourContext';
 
@@ -40,7 +39,7 @@ export default function Dashboard() {
   const { message } = App.useApp();
   const [stats, setStats] = useState<DashboardStats>({});
   const [loading, setLoading] = useState(false);
-  const { t } = useTranslation();
+  const { t, tDynamic } = useTranslation();
   const statsRef = useTourRef('dashboard-stats');
   const fetchStats = useCallback(function () {
     setLoading(true);
@@ -79,7 +78,7 @@ export default function Dashboard() {
           {
             key: '1',
             label: t('dashboard.yourProfile'),
-            children: <ProfileStats profileStats={stats.profile} t={t} />,
+            children: <ProfileStats profileStats={stats.profile} />,
           },
           {
             key: '2',
@@ -89,7 +88,7 @@ export default function Dashboard() {
                 {Object.entries(stats)
                   .filter(([key]) => key !== 'profile')
                   .map(([key, value]) => {
-                    const translateStatKey = (k: string) => t(`dashboard.stats.${k}`) || k;
+                    const translateStatKey = (k: string) => tDynamic(`dashboard.stats.${k}`);
                     return typeof value === 'object' ? (
                       Object.keys(value as Record<string, number>).map(childKey => (
                         <Col xs={24} md={12} lg={8} xxl={6} key={childKey}>
@@ -118,17 +117,14 @@ export default function Dashboard() {
 
 interface ProfileStatsProps {
   profileStats?: ProfileStatsData;
-  t: LanguageContextValue['t'];
 }
 
-export function ProfileStats({ profileStats, t }: ProfileStatsProps) {
+export function ProfileStats({ profileStats }: ProfileStatsProps) {
+  const { tDynamic } = useTranslation();
   const fullWidthKeys = useMemo(() => ['description', 'specializations', 'medals'], []);
   const oneThirdWidthKeys = useMemo(() => ['rank', 'id', 'name', 'entry date', 'squad', 'role', 'attendance points', 'inactivity points'], []);
 
-  const translateLabel = useCallback(
-    (key: string) => (t ? t(`dashboard.profileLabels.${key}`) : key),
-    [t]
-  );
+  const translateLabel = useCallback((key: string) => tDynamic(`dashboard.profileLabels.${key}`), [tDynamic]);
 
   return (
     <Row gutter={[16, 16]} justify="center" align="middle">

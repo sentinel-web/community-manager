@@ -6,7 +6,6 @@ import dayjs from 'dayjs';
 import JSZip from 'jszip';
 import { Meteor } from 'meteor/meteor';
 import React, { useCallback, useState } from 'react';
-import type { LanguageContextValue } from '../../i18n/LanguageContext';
 import { useTranslation } from '../../i18n/LanguageContext';
 import SectionCard from '../section/SectionCard';
 import { useTourRef } from '../tour/TourContext';
@@ -215,10 +214,10 @@ export default function Backup() {
       <SectionCard title={t('backup.title')} ready={true}>
         <Row gutter={[24, 24]}>
           <Col xs={24} lg={12}>
-            <BackupSection loading={loading} onBackup={handleBackup} t={t} />
+            <BackupSection loading={loading} onBackup={handleBackup} />
           </Col>
           <Col xs={24} lg={12}>
-            <RestoreSection onFileUpload={handleFileUpload} t={t} />
+            <RestoreSection onFileUpload={handleFileUpload} />
           </Col>
         </Row>
       </SectionCard>
@@ -231,14 +230,12 @@ export default function Backup() {
         onCreateSafetyBackupChange={setCreateSafetyBackup}
         onConfirm={handleRestore}
         onCancel={handleCancelRestore}
-        t={t}
       />
 
       <SafetyBackupModal
         open={!!safetyBackupData}
         onDownload={handleDownloadSafetyBackup}
         onClose={handleCloseSafetyBackupModal}
-        t={t}
       />
     </div>
   );
@@ -247,10 +244,10 @@ export default function Backup() {
 interface BackupSectionProps {
   loading: boolean;
   onBackup: () => void;
-  t: LanguageContextValue['t'];
 }
 
-function BackupSection({ loading, onBackup, t }: BackupSectionProps) {
+function BackupSection({ loading, onBackup }: BackupSectionProps) {
+  const { t } = useTranslation();
   return (
     <Row gutter={[16, 16]}>
       <Col span={24}>
@@ -272,10 +269,10 @@ function BackupSection({ loading, onBackup, t }: BackupSectionProps) {
 
 interface RestoreSectionProps {
   onFileUpload: (file: RcFile) => Promise<false | undefined>;
-  t: LanguageContextValue['t'];
 }
 
-function RestoreSection({ onFileUpload, t }: RestoreSectionProps) {
+function RestoreSection({ onFileUpload }: RestoreSectionProps) {
+  const { t } = useTranslation();
   return (
     <Row gutter={[16, 16]}>
       <Col span={24}>
@@ -316,10 +313,10 @@ interface RestoreConfirmModalProps {
   onCreateSafetyBackupChange: (checked: boolean) => void;
   onConfirm: () => void;
   onCancel: () => void;
-  t: LanguageContextValue['t'];
 }
 
-function RestoreConfirmModal({ open, validationResult, restoring, createSafetyBackup, onCreateSafetyBackupChange, onConfirm, onCancel, t }: RestoreConfirmModalProps) {
+function RestoreConfirmModal({ open, validationResult, restoring, createSafetyBackup, onCreateSafetyBackupChange, onConfirm, onCancel }: RestoreConfirmModalProps) {
+  const { t, tDynamic } = useTranslation();
   return (
     <Modal
       title={
@@ -367,7 +364,7 @@ function RestoreConfirmModal({ open, validationResult, restoring, createSafetyBa
             <Typography.Title level={5}>{t('backup.collectionCounts')}</Typography.Title>
             <Descriptions bordered size="small" column={2}>
               {Object.entries(validationResult.meta.collectionCounts).map(([name, count]) => (
-                <Descriptions.Item key={name} label={t(`collections.${name}`) || name}>
+                <Descriptions.Item key={name} label={tDynamic(`collections.${name}`)}>
                   {count}
                 </Descriptions.Item>
               ))}
@@ -389,10 +386,10 @@ interface SafetyBackupModalProps {
   open: boolean;
   onDownload: () => void;
   onClose: () => void;
-  t: LanguageContextValue['t'];
 }
 
-function SafetyBackupModal({ open, onDownload, onClose, t }: SafetyBackupModalProps) {
+function SafetyBackupModal({ open, onDownload, onClose }: SafetyBackupModalProps) {
+  const { t } = useTranslation();
   return (
     <Modal
       title={

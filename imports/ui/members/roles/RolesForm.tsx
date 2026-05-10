@@ -5,6 +5,7 @@ import React, { useCallback, useContext, useMemo } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import { getColorFromValues } from '/imports/helpers/colors/getColorFromValues';
 import type { TranslateFn } from '../../section/types';
+import type { LocaleKey } from '/imports/i18n';
 import type { CrudPermission, Role } from '../../../api/types/role';
 import { DrawerContext } from '../../app/App';
 import type { DrawerContextValue } from '../../app/types';
@@ -25,13 +26,10 @@ interface CrudPermissionInputProps {
   t: TranslateFn;
 }
 
-interface CrudModuleEntry {
-  name: string;
-  labelKey: string;
-}
-
-// Modules that use CRUD permissions - label keys reference navigation translations
-const CRUD_MODULES: CrudModuleEntry[] = [
+// Modules that use CRUD permissions - label keys reference navigation translations.
+// `as const satisfies` preserves the literal union of labelKey values so t(labelKey)
+// resolves to a paramless LocaleKey rather than the full LocaleKey union.
+const CRUD_MODULES = [
   { name: 'members', labelKey: 'navigation.members' },
   { name: 'events', labelKey: 'navigation.events' },
   { name: 'tasks', labelKey: 'navigation.tasks' },
@@ -46,7 +44,7 @@ const CRUD_MODULES: CrudModuleEntry[] = [
   { name: 'roles', labelKey: 'navigation.roles' },
   { name: 'questionnaires', labelKey: 'navigation.questionnaires' },
   { name: 'positions', labelKey: 'navigation.positions' },
-];
+] as const satisfies readonly { name: string; labelKey: LocaleKey }[];
 
 /**
  * Normalizes permission value for form initial values.

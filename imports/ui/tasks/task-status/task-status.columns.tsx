@@ -9,7 +9,7 @@ const getTaskStatusColumns = (
   handleEdit: (e: RowClickEvent, record: TaskStatus) => void,
   handleDelete: (e: RowClickEvent, record: TaskStatus) => void,
   permissions: SectionPermissions = { canCreate: true, canUpdate: true, canDelete: true },
-  t: TranslateFn = k => k
+  t: TranslateFn,
 ): ColumnsType<TaskStatus> => {
   const { canUpdate = true, canDelete = true } = permissions;
 

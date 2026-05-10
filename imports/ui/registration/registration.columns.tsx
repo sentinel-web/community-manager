@@ -13,7 +13,7 @@ export default function getRegistrationColumns(
   handleEdit: (e: React.MouseEvent<HTMLElement>, record: Registration) => void,
   handleDelete: (e: React.MouseEvent<HTMLElement>, record: Registration) => void,
   permissions: SectionPermissions = { canCreate: true, canUpdate: true, canDelete: true },
-  t: TFn = k => k,
+  t: TFn,
 ): ColumnsType<Registration> {
   const { canUpdate = true, canDelete = true } = permissions;
 

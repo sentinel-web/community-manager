@@ -2,6 +2,7 @@ import { Button, Col, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import React from 'react';
 import type { Questionnaire } from '../../api/types/questionnaire';
+import type { LocaleKey } from '/imports/i18n';
 import type { RowClickEvent, SectionPermissions, TranslateFn } from '../section/types';
 import TableActions from '../table/body/actions/TableActions';
 
@@ -10,6 +11,14 @@ const STATUS_COLORS: Record<string, string> = {
   active: 'success',
   closed: 'error',
 };
+
+// `as const satisfies` preserves the literal union so t(STATUS_LABEL_KEYS[status])
+// resolves to a paramless LocaleKey rather than the full LocaleKey union.
+const STATUS_LABEL_KEYS = {
+  draft: 'questionnaires.draft',
+  active: 'questionnaires.active',
+  closed: 'questionnaires.closed',
+} as const satisfies Record<string, LocaleKey>;
 
 interface ViewResponsesExtraProps {
   record: Questionnaire;
@@ -44,7 +53,11 @@ const getQuestionnaireColumns = (
       dataIndex: 'status',
       key: 'status',
       sorter: (a: Questionnaire, b: Questionnaire) => (a.status || '').localeCompare(b.status || ''),
-      render: (status: string) => <Tag color={STATUS_COLORS[status] || 'default'}>{status ? t(`questionnaires.${status}`) : t('questionnaires.draft')}</Tag>,
+      render: (status: string) => (
+        <Tag color={STATUS_COLORS[status] || 'default'}>
+          {t(STATUS_LABEL_KEYS[status as keyof typeof STATUS_LABEL_KEYS] ?? 'questionnaires.draft')}
+        </Tag>
+      ),
     },
     {
       title: t('questionnaires.questions'),

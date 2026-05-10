@@ -9,7 +9,7 @@ export default function getDiscoveryTypeColumns(
   handleEdit: (e: RowClickEvent, record: DiscoveryType) => void,
   handleDelete: (e: RowClickEvent, record: DiscoveryType) => void,
   permissions: SectionPermissions = { canCreate: true, canUpdate: true, canDelete: true },
-  t: TranslateFn = k => k
+  t: TranslateFn,
 ): ColumnsType<DiscoveryType> {
   const { canUpdate = true, canDelete = true } = permissions;
 

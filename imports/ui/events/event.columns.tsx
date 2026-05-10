@@ -8,7 +8,7 @@ const getEventColumns = (
   handleEdit: (e: RowClickEvent, record: EventDoc) => void,
   handleDelete: (e: RowClickEvent, record: EventDoc) => void,
   permissions: SectionPermissions = { canCreate: true, canUpdate: true, canDelete: true },
-  t: TranslateFn = k => k
+  t: TranslateFn,
 ): ColumnsType<EventDoc> => {
   const { canUpdate = true, canDelete = true } = permissions;
 

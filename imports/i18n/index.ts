@@ -1,46 +1,49 @@
-import en from './locales/en.json';
-import de from './locales/de.json';
-import fr from './locales/fr.json';
+import { translations, type Locale } from './translations';
+import type { ExtractParams } from './extract-params';
 
-export type Locale = 'en' | 'de' | 'fr';
+export type { Locale, TranslationSet } from './translations';
+export { translations };
 
-export interface TranslationTree {
-  [key: string]: string | TranslationTree;
-}
+export type LocaleKey = keyof typeof translations;
+
+export type ParamArgs<K extends LocaleKey> = keyof ExtractParams<(typeof translations)[K]['en']> extends never
+  ? []
+  : [params: ExtractParams<(typeof translations)[K]['en']>];
 
 export interface LocaleInfo {
   name: string;
   flag: string;
-  translations: TranslationTree;
 }
 
 export const locales: Record<Locale, LocaleInfo> = {
-  en: { name: 'English', flag: '🇬🇧', translations: en as TranslationTree },
-  de: { name: 'Deutsch', flag: '🇩🇪', translations: de as TranslationTree },
-  fr: { name: 'Français', flag: '🇫🇷', translations: fr as TranslationTree },
+  en: { name: 'English', flag: '🇬🇧' },
+  de: { name: 'Deutsch', flag: '🇩🇪' },
+  fr: { name: 'Français', flag: '🇫🇷' },
 };
 
 export const defaultLocale: Locale = 'en';
 
-export type TranslationParams = Record<string, string | number>;
+const PLACEHOLDER_PATTERN = /\{\{(\w+)\}\}/g;
 
-export function getTranslation(translations: TranslationTree, key: string, params: TranslationParams = {}): string {
-  const keys = key.split('.');
-  let value: string | TranslationTree | undefined = translations;
+function interpolate(template: string, params: Record<string, string | number>): string {
+  return template.replace(PLACEHOLDER_PATTERN, (_, name: string) =>
+    params[name] !== undefined ? String(params[name]) : `{{${name}}}`,
+  );
+}
 
-  for (const k of keys) {
-    if (value && typeof value === 'object' && k in value) {
-      value = (value as TranslationTree)[k];
-    } else {
-      return key;
-    }
-  }
+export function getTranslation<K extends LocaleKey>(key: K, locale: Locale, ...args: ParamArgs<K>): string {
+  const value = translations[key][locale];
+  const params = (args[0] ?? {}) as Record<string, string | number>;
+  return interpolate(value, params);
+}
 
-  if (typeof value !== 'string') {
-    return key;
-  }
-
-  return value.replace(/\{\{(\w+)\}\}/g, (_, param: string) => {
-    return params[param] !== undefined ? String(params[param]) : `{{${param}}}`;
-  });
+// Escape hatch for sites that compute the key dynamically (e.g. `collections.${name}`).
+// Returns the key string verbatim if it isn't in the unified source — preserves the
+// pre-cutover defensive behavior at sites that can't statically prove their key set.
+// Prefer `getTranslation` (or the typed `t` from useTranslation) wherever the key is
+// known statically.
+export function translateDynamic(key: string, locale: Locale, params: Record<string, string | number> = {}): string {
+  const entry = (translations as Record<string, Record<Locale, string> | undefined>)[key];
+  if (!entry) return key;
+  return interpolate(entry[locale], params);
 }

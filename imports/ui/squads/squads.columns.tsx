@@ -41,13 +41,12 @@ export const SquadTags = ({ squadIds }: SquadTagsProps) => {
 };
 
 const defaultPermissions: SectionPermissions = { canCreate: true, canUpdate: true, canDelete: true };
-const defaultT: TranslateFn = k => k;
 
 const getSquadsColumns: ColumnsFactory<Squad> = (
   handleEdit: (e: RowClickEvent, record: Squad) => void,
   handleDelete: (e: RowClickEvent, record: Squad) => void,
   permissions: SectionPermissions = defaultPermissions,
-  t: TranslateFn = defaultT,
+  t: TranslateFn,
 ) => {
   const { canUpdate = true, canDelete = true } = permissions;
 

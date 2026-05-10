@@ -18,7 +18,7 @@ type TFn = LanguageContextValue['t'];
 const getLogsColumns = (
   handleView: (e: React.MouseEvent<HTMLElement>, record: LogEntry) => void,
   handleDelete: (e: React.MouseEvent<HTMLElement>, record: LogEntry) => void,
-  t: TFn = k => k
+  t: TFn,
 ): ColumnsType<LogEntry> => {
   return [
     {

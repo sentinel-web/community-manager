@@ -19,7 +19,7 @@ export default function ProfileModal({ showProfile = false, toggleProfile = () =
 
   return (
     <Modal title={t('modals.profile')} open={showProfile} onCancel={toggleProfile} width={getModalWidth(window.innerWidth)} footer={null} centered>
-      {profileStats && <ProfileStats profileStats={profileStats} t={t} />}
+      {profileStats && <ProfileStats profileStats={profileStats} />}
     </Modal>
   );
 }
