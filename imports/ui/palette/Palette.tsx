@@ -4,11 +4,13 @@ import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import RolesCollection from '../../api/collections/roles.collection';
 import type { Role } from '../../api/types';
-import { useTranslation } from '../../i18n/LanguageContext';
+import { useLanguage } from '../../i18n/LanguageContext';
+import type { Locale } from '../../i18n';
 import { getNavigationValue } from '../navigation/Navigation';
 import useNavigation from '../navigation/navigation.hook';
+import useTheme from '../theme/theme.hook';
 import { PaletteContext } from './PaletteContext';
-import { getCreatePaletteItems, getEntityPaletteItems, getNavigatePaletteItems } from './palette.items';
+import { getCreatePaletteItems, getEntityPaletteItems, getGlobalPaletteItems, getNavigatePaletteItems } from './palette.items';
 import type { PaletteEntityResults } from './palette.items';
 import type { PaletteItem } from './palette.types';
 
@@ -25,7 +27,8 @@ const LISTBOX_ID = 'palette-listbox';
 
 export default function Palette() {
   const { open, setOpen } = useContext(PaletteContext);
-  const { t } = useTranslation();
+  const { t, language, setLanguage, locales } = useLanguage();
+  const { theme, setTheme } = useTheme();
   const { setNavigationValue } = useNavigation();
   const user = useTracker(() => Meteor.user(), []);
   useSubscribe('roles', { _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 });
@@ -58,18 +61,40 @@ export default function Palette() {
     [setNavigationValue, setOpen]
   );
 
+  const switchLanguage = useCallback(() => {
+    const order = Object.keys(locales) as Locale[];
+    const idx = order.indexOf(language);
+    const next = order[(idx + 1) % order.length];
+    setLanguage(next);
+    setOpen(false);
+  }, [locales, language, setLanguage, setOpen]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+    setOpen(false);
+  }, [theme, setTheme, setOpen]);
+
+  const logout = useCallback(() => {
+    Meteor.logout();
+    setOpen(false);
+  }, [setOpen]);
+
   const navigateItems = useMemo<PaletteItem[]>(() => getNavigatePaletteItems(role, t, navigate), [role, t, navigate]);
   const createItems = useMemo<PaletteItem[]>(() => getCreatePaletteItems(role, t, navigateWithAction), [role, t, navigateWithAction]);
+  const globalItems = useMemo<PaletteItem[]>(
+    () => getGlobalPaletteItems(t, { switchLanguage, toggleTheme, logout }),
+    [t, switchLanguage, toggleTheme, logout]
+  );
   const entityItems = useMemo<PaletteItem[]>(() => getEntityPaletteItems(entityResults, t, navigate), [entityResults, t, navigate]);
 
   const filteredItems = useMemo<PaletteItem[]>(() => {
     const trimmed = query.trim().toLowerCase();
     const matches = (item: PaletteItem) => item.label.toLowerCase().includes(trimmed);
     if (!trimmed) {
-      return [...createItems, ...navigateItems];
+      return [...createItems, ...globalItems, ...navigateItems];
     }
-    return [...entityItems, ...createItems.filter(matches), ...navigateItems.filter(matches)];
-  }, [navigateItems, createItems, entityItems, query]);
+    return [...entityItems, ...createItems.filter(matches), ...globalItems.filter(matches), ...navigateItems.filter(matches)];
+  }, [navigateItems, createItems, globalItems, entityItems, query]);
 
   const groupedItems = useMemo(() => {
     const groups: { label: string; items: PaletteItem[] }[] = [];

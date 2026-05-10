@@ -66,6 +66,39 @@ function hasCreateAccess(role: Role | undefined, module: keyof Role): boolean {
   return false;
 }
 
+export interface GlobalActionHandlers {
+  switchLanguage: () => void;
+  toggleTheme: () => void;
+  logout: () => void;
+}
+
+export function getGlobalPaletteItems(t: Translator, handlers: GlobalActionHandlers): PaletteItem[] {
+  const groupLabel = t('palette.actions');
+  return [
+    {
+      kind: 'action',
+      key: 'action:switch-language',
+      label: t('palette.switchLanguage'),
+      group: groupLabel,
+      onSelect: handlers.switchLanguage,
+    },
+    {
+      kind: 'action',
+      key: 'action:toggle-theme',
+      label: t('palette.toggleTheme'),
+      group: groupLabel,
+      onSelect: handlers.toggleTheme,
+    },
+    {
+      kind: 'action',
+      key: 'action:logout',
+      label: t('palette.logout'),
+      group: groupLabel,
+      onSelect: handlers.logout,
+    },
+  ];
+}
+
 export function getCreatePaletteItems(
   role: Role | undefined,
   t: Translator,
