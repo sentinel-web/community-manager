@@ -131,6 +131,37 @@ describe('members.findOne — returns undefined on miss (#122)', () => {
   });
 });
 
+describe('members.participantNames — legacy try/catch removed (#97)', () => {
+  let adminUserId: string;
+
+  before(async () => {
+    const adminRoleId = await createTestRole({ roles: true });
+    adminUserId = await createTestUser({ roleId: adminRoleId });
+  });
+
+  after(async () => {
+    await cleanupFixtures();
+  });
+
+  it('body error from MembersCollection.find propagates with original Meteor.Error code intact', async () => {
+    // Defends against the legacy `try { ... } catch (e) { throw new Meteor.Error(e.message) }`
+    // wrapper sneaking back in — it would clobber the original error code into the
+    // message position. Read methods stay outside the runMutation pipeline.
+    const originalFind = MembersCollection.find.bind(MembersCollection);
+    (MembersCollection as unknown as { find: unknown }).find = () => {
+      throw new Meteor.Error('test-participant-names-code', 'test-participant-names-message');
+    };
+    try {
+      await assertRejectsWithCode(
+        () => callAs(adminUserId, 'members.participantNames', {}, {}),
+        'test-participant-names-code',
+      );
+    } finally {
+      (MembersCollection as unknown as { find: typeof originalFind }).find = originalFind;
+    }
+  });
+});
+
 describe('members.remove — migrated to mutation-pipeline (#102)', () => {
   let adminUserId: string;
   let targetUserId: string;

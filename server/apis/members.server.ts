@@ -172,20 +172,16 @@ if (Meteor.isServer) {
       validateUserId(this.userId);
       validateObject(filter, false);
       validateObject(options, false);
-      try {
-        const members = await MembersCollection.find(filter, options).fetchAsync();
+      const members = await MembersCollection.find(filter, options).fetchAsync();
 
-        const rankIds = [...new Set(members.map(m => m.profile?.rankId).filter((x): x is string => Boolean(x)))];
-        const ranks = await RanksCollection.find({ _id: { $in: rankIds } }).fetchAsync();
-        const rankNameById = new Map(ranks.map(r => [r._id, r.name]));
+      const rankIds = [...new Set(members.map(m => m.profile?.rankId).filter((x): x is string => Boolean(x)))];
+      const ranks = await RanksCollection.find({ _id: { $in: rankIds } }).fetchAsync();
+      const rankNameById = new Map(ranks.map(r => [r._id, r.name]));
 
-        const names = members.map(member =>
-          getFullName(rankNameById.get(member.profile?.rankId as string), member.profile?.id, member.profile?.name)
-        );
-        return names.join(', ');
-      } catch (error) {
-        throw new Meteor.Error((error as Error).message);
-      }
+      const names = members.map(member =>
+        getFullName(rankNameById.get(member.profile?.rankId as string), member.profile?.id, member.profile?.name)
+      );
+      return names.join(', ');
     },
     'members.getUsedIds': async function () {
       if (!this.userId) {

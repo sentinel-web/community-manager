@@ -8,13 +8,8 @@ if (Meteor.isServer) {
     'specializations.names': async function (specializations: string[] = []): Promise<string> {
       validateUserId(this.userId);
       validateArrayOfStrings(specializations, false);
-      try {
-        const foundSpecializations = await SpecializationsCollection.find({ _id: { $in: specializations } }).fetchAsync();
-        const names = foundSpecializations.map(s => s.name);
-        return names.join(', ');
-      } catch (error) {
-        throw new Meteor.Error((error as Error).message);
-      }
+      const foundSpecializations = await SpecializationsCollection.find({ _id: { $in: specializations } }).fetchAsync();
+      return foundSpecializations.map(s => s.name).join(', ');
     },
     'specializations.request': async function (specializationId: string): Promise<boolean> {
       validateUserId(this.userId);
