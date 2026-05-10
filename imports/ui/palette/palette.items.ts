@@ -40,6 +40,48 @@ const NAV_ROUTES: NavConfig[] = [
   { key: 'backup', module: 'settings', labelKey: 'navigation.backup' },
 ];
 
+interface CreateActionConfig {
+  module: keyof Role;
+  route: string;
+  labelKey: string;
+}
+
+const CREATE_ACTIONS: CreateActionConfig[] = [
+  { module: 'members', route: 'members', labelKey: 'palette.createMember' },
+  { module: 'events', route: 'events', labelKey: 'palette.createEvent' },
+  { module: 'tasks', route: 'tasks', labelKey: 'palette.createTask' },
+  { module: 'squads', route: 'squads', labelKey: 'palette.createSquad' },
+  { module: 'registrations', route: 'registrations', labelKey: 'palette.createRegistration' },
+  { module: 'questionnaires', route: 'questionnaires', labelKey: 'palette.createQuestionnaire' },
+];
+
+function hasCreateAccess(role: Role | undefined, module: keyof Role): boolean {
+  if (!role) return false;
+  if (role.roles === true) return true;
+  const permission = role[module];
+  if (permission === true) return true;
+  if (typeof permission === 'object' && permission !== null) {
+    return (permission as { create?: boolean }).create === true;
+  }
+  return false;
+}
+
+export function getCreatePaletteItems(
+  role: Role | undefined,
+  t: Translator,
+  navigateWithAction: (route: string, action: string) => void
+): PaletteItem[] {
+  if (!role) return [];
+  const groupLabel = t('palette.actions');
+  return CREATE_ACTIONS.filter(action => hasCreateAccess(role, action.module)).map(action => ({
+    kind: 'action' as const,
+    key: `action:create:${action.route}`,
+    label: t(action.labelKey),
+    group: groupLabel,
+    onSelect: () => navigateWithAction(action.route, 'create'),
+  }));
+}
+
 export function getEntityPaletteItems(results: PaletteEntityResults, t: Translator, navigate: (route: string) => void): PaletteItem[] {
   const items: PaletteItem[] = [];
 
