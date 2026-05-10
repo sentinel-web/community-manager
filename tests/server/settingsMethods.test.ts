@@ -1,6 +1,7 @@
 import assert from 'node:assert';
+import { Meteor } from 'meteor/meteor';
 import SettingsCollection from '../../imports/api/collections/settings.collection';
-import { callAs, cleanupFixtures, createTestDoc, createTestRole, createTestUser } from './fixtures';
+import { assertRejectsWithCode, callAs, cleanupFixtures, createTestDoc, createTestRole, createTestUser } from './fixtures';
 
 describe('settings.findOne — returns undefined on miss (#131)', () => {
   let adminUserId: string;
@@ -28,5 +29,23 @@ describe('settings.findOne — returns undefined on miss (#131)', () => {
     await createTestDoc(SettingsCollection, { key: 'community-probe', value: stored });
     const result = await callAs(adminUserId, 'settings.findOne', 'community-probe');
     assert.deepStrictEqual(result, stored);
+  });
+
+  it('body error from SettingsCollection.findOneAsync propagates with original Meteor.Error code intact', async () => {
+    // Targets the legacy `try { ... } catch (e) { throw new Meteor.Error(e.message) }`
+    // wrapper that this PR removed — the antipattern collapsed the original error
+    // code into the message position. Mirrors the pattern in membersMethods.test.ts.
+    const originalFindOne = SettingsCollection.findOneAsync.bind(SettingsCollection);
+    (SettingsCollection as unknown as { findOneAsync: unknown }).findOneAsync = async () => {
+      throw new Meteor.Error('test-findone-code', 'test-findone-message');
+    };
+    try {
+      await assertRejectsWithCode(
+        () => callAs(adminUserId, 'settings.findOne', 'any-key'),
+        'test-findone-code',
+      );
+    } finally {
+      (SettingsCollection as unknown as { findOneAsync: typeof originalFindOne }).findOneAsync = originalFindOne;
+    }
   });
 });
