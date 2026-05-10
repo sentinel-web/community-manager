@@ -10,8 +10,17 @@ interface RankTagProps {
 export default function RankTag({ rankId }: RankTagProps) {
   const [match, setMatch] = useState<Rank | null>(null);
   useEffect(() => {
-    if (!rankId) setMatch(null);
-    else Meteor.callAsync('ranks.read', { _id: rankId }, { limit: 1 }).then(res => setMatch((res as Rank[])[0]));
+    if (!rankId) {
+      setMatch(null);
+      return;
+    }
+    let cancelled = false;
+    Meteor.callAsync('ranks.read', { _id: rankId }, { limit: 1 }).then(res => {
+      if (!cancelled) setMatch((res as Rank[])[0]);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [rankId]);
 
   if (!rankId) return <Tag>-</Tag>;

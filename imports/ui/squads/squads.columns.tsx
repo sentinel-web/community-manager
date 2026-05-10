@@ -21,12 +21,17 @@ export const SquadTags = ({ squadIds }: SquadTagsProps) => {
   const [squadNames, setSquadNames] = useState<SquadOption[]>([]);
 
   useEffect(() => {
+    let cancelled = false;
     Meteor.callAsync('squads.options')
       .then(options => {
+        if (cancelled) return;
         const filtered = (options as SquadOption[]).filter(option => squadIds.includes(option.value)).map(option => option);
         setSquadNames(filtered);
       })
       .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [squadIds]);
 
   return (

@@ -92,7 +92,7 @@ export default function Section<T extends { _id?: string }>({
   groupActions = [],
 }: SectionProps<T>) {
   const [nameInput, setNameInput] = useState('');
-  const [filter, setFilter] = useState<Mongo.Selector<T>>(filterFactory(''));
+  const [filter, setFilter] = useState<Mongo.Selector<T>>(() => filterFactory(''));
   const [options, setOptions] = useState<{ limit: number }>({ limit: 20 });
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
@@ -117,10 +117,6 @@ export default function Section<T extends { _id?: string }>({
   useEffect(() => {
     setSelectedRowKeys([]);
   }, [filter]);
-
-  useEffect(() => {
-    setFilter(filterFactory(nameInput));
-  }, [filterFactory]);
 
   const handleNameChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
