@@ -13,6 +13,7 @@ import { PaletteContext } from './PaletteContext';
 import { getCreatePaletteItems, getEntityPaletteItems, getGlobalPaletteItems, getNavigatePaletteItems } from './palette.items';
 import type { PaletteEntityResults } from './palette.items';
 import { addRecent, frecencyScore, readRecents, type RecentEntry } from './palette.recents';
+import { scoreItems } from './palette.scoring';
 import type { PaletteItem } from './palette.types';
 
 const EMPTY_ENTITY_RESULTS: PaletteEntityResults = {
@@ -126,18 +127,16 @@ export default function Palette() {
   }, [recents]);
 
   const filteredItems = useMemo<PaletteItem[]>(() => {
-    const trimmed = query.trim().toLowerCase();
-    const matches = (item: PaletteItem) => item.label.toLowerCase().includes(trimmed);
+    const trimmed = query.trim();
     const sortByRecency = (items: PaletteItem[]) =>
       [...items].sort((a, b) => (recencyBoost.get(`${b.kind}:${b.key}`) ?? 0) - (recencyBoost.get(`${a.kind}:${a.key}`) ?? 0));
     if (!trimmed) {
       return [...recentItems, ...sortByRecency(createItems), ...globalItems, ...sortByRecency(navigateItems)];
     }
-    const filteredCreate = sortByRecency(createItems.filter(matches));
-    const filteredGlobal = globalItems.filter(matches);
-    const filteredNav = sortByRecency(navigateItems.filter(matches));
-    const filteredEntity = sortByRecency(entityItems);
-    return [...filteredEntity, ...filteredCreate, ...filteredGlobal, ...filteredNav];
+    const union = [...entityItems, ...createItems, ...globalItems, ...navigateItems];
+    const scored = scoreItems(trimmed, union, { recencyBoost });
+    const ranked = scored.map(s => s.item);
+    return ranked;
   }, [recentItems, navigateItems, createItems, globalItems, entityItems, query, recencyBoost]);
 
   const groupedItems = useMemo(() => {
