@@ -17,7 +17,7 @@ function prefixedId(): string {
   return `${TEST_PREFIX}${Random.id()}`;
 }
 
-export async function createTestRole(permissions: Partial<Role> = {}): Promise<string> {
+export async function createTestRole(permissions: Partial<Role> & Record<string, unknown> = {}): Promise<string> {
   const _id = prefixedId();
   await RolesCollection.insertAsync({ _id, name: `Test Role ${_id}`, ...permissions });
   return _id;
