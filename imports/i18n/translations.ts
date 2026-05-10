@@ -396,6 +396,7 @@ export const translations = {
   "palette.questionnaires": { en: "Questionnaires", de: "Fragebögen", fr: "Questionnaires" },
   "palette.recent": { en: "Recent", de: "Zuletzt", fr: "Récent" },
   "palette.resultCount": { en: "{{count}} results", de: "{{count}} Ergebnisse", fr: "{{count}} résultats" },
+  "palette.shortcutHint": { en: "Press {{shortcut}} to search", de: "Drücke {{shortcut}} zum Suchen", fr: "Appuyez sur {{shortcut}} pour rechercher" },
   "palette.registrations": { en: "Registrations", de: "Bewerbungen", fr: "Inscriptions" },
   "palette.squads": { en: "Squads", de: "Trupps", fr: "Escouades" },
   "palette.switchLanguage": { en: "Switch language", de: "Sprache wechseln", fr: "Changer de langue" },

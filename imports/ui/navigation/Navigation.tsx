@@ -20,7 +20,7 @@ import {
   UsergroupAddOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Button, Dropdown, Grid } from 'antd';
+import { Button, Dropdown, Grid, Tooltip } from 'antd';
 import type { MenuProps } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
@@ -31,6 +31,12 @@ import useNavigation from './navigation.hook';
 import { useTranslation } from '../../i18n/LanguageContext';
 
 type PermissionModule = keyof Role;
+
+function getPaletteShortcutLabel(): string {
+  if (typeof navigator === 'undefined') return 'Ctrl K';
+  const isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent || '');
+  return isMac ? '⌘ K' : 'Ctrl K';
+}
 
 export function hasAccess(role: Role | undefined, module: PermissionModule): boolean {
   if (!role) return false;
@@ -327,6 +333,8 @@ export default function Navigation() {
     return newItems;
   }, [roles, navigationValue, t]);
 
+  const shortcutLabel = useMemo(() => getPaletteShortcutLabel(), []);
+
   return (
     <nav>
       {user && (
@@ -338,9 +346,11 @@ export default function Navigation() {
             onClick: handleNavigationClick,
           }}
         >
-          <Button size="large" icon={<MenuOutlined />}>
-            {breakpoints.sm && t('navigation.title')}
-          </Button>
+          <Tooltip title={t('palette.shortcutHint', { shortcut: shortcutLabel })} placement="bottomRight">
+            <Button size="large" icon={<MenuOutlined />}>
+              {breakpoints.sm && t('navigation.title')}
+            </Button>
+          </Tooltip>
         </Dropdown>
       )}
     </nav>
