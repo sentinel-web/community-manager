@@ -18,33 +18,26 @@ if (Meteor.isServer) {
   });
 
   Meteor.methods({
-    'settings.upsert': async function (key, value) {
+    'settings.upsert': async function (key: string = '', value: unknown) {
       validateUserId(this.userId);
       const hasPermission = await checkPermission(this.userId, 'settings');
       if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
       validateString(key, false);
-      if (!value) {
-        throw new Meteor.Error('invalid-value', 'Invalid value', value);
+      if (value === null || value === undefined) {
+        throw new Meteor.Error('invalid-value', 'Invalid value');
       }
-      try {
-        const result = await SettingsCollection.upsertAsync(key, { $set: { key, value } });
-        await createLog('settings.updated', { key });
-        return result;
-      } catch (error) {
-        throw new Meteor.Error((error as Error).message);
-      }
+      const result = await SettingsCollection.upsertAsync(key, { $set: { key, value } });
+      await createLog('settings.updated', { key });
+      return result;
     },
-    'settings.remove': async function (key = null) {
+    'settings.remove': async function (key: string = '') {
       validateUserId(this.userId);
       const hasPermission = await checkPermission(this.userId, 'settings');
       if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
-      try {
-        const result = await SettingsCollection.removeAsync(key);
-        await createLog('settings.deleted', { key });
-        return result;
-      } catch (error) {
-        throw new Meteor.Error((error as Error).message);
-      }
+      validateString(key, false);
+      const result = await SettingsCollection.removeAsync({ key });
+      await createLog('settings.deleted', { key });
+      return result;
     },
     'settings.findOne': async function (key: string = '') {
       validateUserId(this.userId);
