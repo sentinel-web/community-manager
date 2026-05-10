@@ -144,9 +144,9 @@ describe('members.participantNames — legacy try/catch removed (#97)', () => {
   });
 
   it('body error from MembersCollection.find propagates with original Meteor.Error code intact', async () => {
-    // Targets the legacy `try { ... } catch (e) { throw new Meteor.Error(e.message) }`
-    // wrapper that this PR removed. members.participantNames is a read method, so
-    // it doesn't migrate to runMutation — just dropping the wrapper is the fix.
+    // Defends against the legacy `try { ... } catch (e) { throw new Meteor.Error(e.message) }`
+    // wrapper sneaking back in — it would clobber the original error code into the
+    // message position. Read methods stay outside the runMutation pipeline.
     const originalFind = MembersCollection.find.bind(MembersCollection);
     (MembersCollection as unknown as { find: unknown }).find = () => {
       throw new Meteor.Error('test-participant-names-code', 'test-participant-names-message');

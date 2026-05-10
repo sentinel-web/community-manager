@@ -1,4 +1,3 @@
-import assert from 'node:assert';
 import { Meteor } from 'meteor/meteor';
 import SpecializationsCollection from '../../imports/api/collections/specializations.collection';
 import { assertRejectsWithCode, callAs, cleanupFixtures, createTestRole, createTestUser } from './fixtures';
@@ -12,14 +11,13 @@ describe('specializations.names — legacy try/catch removed (#97)', () => {
   });
 
   after(async () => {
-    await cleanupFixtures([SpecializationsCollection]);
+    await cleanupFixtures();
   });
 
   it('body error from SpecializationsCollection.find propagates with original Meteor.Error code intact', async () => {
-    // Targets the legacy `try { ... } catch (e) { throw new Meteor.Error(e.message) }`
-    // wrapper that this PR removed. specializations.names is a read method with
-    // no live caller — purely a hygiene cleanup so future callers receive
-    // meaningful Meteor.Error codes instead of message-as-code blobs.
+    // Defends against the legacy `try { ... } catch (e) { throw new Meteor.Error(e.message) }`
+    // wrapper sneaking back in — it would clobber the original error code into the
+    // message position. Body errors must reach the caller untouched.
     const originalFind = SpecializationsCollection.find.bind(SpecializationsCollection);
     (SpecializationsCollection as unknown as { find: unknown }).find = () => {
       throw new Meteor.Error('test-spec-names-code', 'test-spec-names-message');
