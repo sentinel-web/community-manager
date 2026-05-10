@@ -63,9 +63,10 @@ if (Meteor.isServer) {
       validateUserId(this.userId);
       validateObject(filter, false);
       validateObject(options, false);
-      const member = await MembersCollection.findOneAsync(filter, options);
-      if (!member) throw new Meteor.Error(404, 'Member not found');
-      return member;
+      // Returns undefined on miss (mirrors Mongo findOneAsync) — callers like
+      // RegistrationExtra use this as an existence check and would otherwise
+      // unhandled-reject on every miss, surfacing as the dev-server overlay.
+      return MembersCollection.findOneAsync(filter, options);
     },
     'members.insert': async function (payload: Record<string, unknown> = {}): Promise<string> {
       return runMutation(

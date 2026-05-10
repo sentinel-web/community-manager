@@ -104,6 +104,33 @@ describe('members.update — migrated to mutation-pipeline (#101)', () => {
   });
 });
 
+describe('members.findOne — returns undefined on miss (#122)', () => {
+  let adminUserId: string;
+
+  before(async () => {
+    const adminRoleId = await createTestRole({ roles: true });
+    adminUserId = await createTestUser({ roleId: adminRoleId });
+  });
+
+  after(async () => {
+    await cleanupFixtures();
+  });
+
+  it('returns undefined when no member matches the filter (no throw)', async () => {
+    // Regression: previously threw Meteor.Error(404, 'Member not found') on miss,
+    // which surfaced as an unhandled rejection in RegistrationExtra (one per row)
+    // and triggered the dev-server overlay, blocking e2e clicks on /registrations.
+    const result = await callAs(adminUserId, 'members.findOne', { 'profile.registrationId': 'nonexistent' });
+    assert.strictEqual(result, undefined);
+  });
+
+  it('returns the member when one matches the filter', async () => {
+    const result = await callAs(adminUserId, 'members.findOne', { _id: adminUserId });
+    assert.ok(result, 'Expected the admin user to be returned');
+    assert.strictEqual((result as { _id: string })._id, adminUserId);
+  });
+});
+
 describe('members.remove — migrated to mutation-pipeline (#102)', () => {
   let adminUserId: string;
   let targetUserId: string;
