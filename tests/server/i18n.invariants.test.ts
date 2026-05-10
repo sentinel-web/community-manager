@@ -1,11 +1,12 @@
 import assert from 'node:assert';
-import { extractParams } from '../../imports/i18n/extract-params';
+import { extractParams, assertValidPlaceholders } from '../../imports/i18n/extract-params';
 import { translations, locales, defaultLocale, type Locale, type LocaleKey } from '../../imports/i18n';
 
 // Derived from the runtime `locales` object so adding a fourth language to
-// imports/i18n/index.ts automatically grows this test rather than silently
+// imports/i18n/index.ts automatically grows these tests rather than silently
 // leaving the new locale unchecked.
-const NON_CANONICAL_LOCALES: readonly Locale[] = (Object.keys(locales) as Locale[]).filter(l => l !== defaultLocale);
+const ALL_LOCALES: readonly Locale[] = Object.keys(locales) as Locale[];
+const NON_CANONICAL_LOCALES: readonly Locale[] = ALL_LOCALES.filter(l => l !== defaultLocale);
 
 function setsEqual(a: Set<string>, b: Set<string>): boolean {
   if (a.size !== b.size) return false;
@@ -32,6 +33,22 @@ describe('LocaleSet cross-locale param invariants', () => {
     it(`every key has the same {{params}} in ${target} as in ${defaultLocale}`, () => {
       const drift = collectDriftMessages(target);
       assert.strictEqual(drift.length, 0, `${drift.length} key(s) have placeholder drift between ${defaultLocale} and ${target}:\n${drift.join('\n')}`);
+    });
+  }
+});
+
+describe('LocaleSet placeholder-syntax invariants', () => {
+  for (const locale of ALL_LOCALES) {
+    it(`every value in ${locale} uses only valid placeholder names (\\w+)`, () => {
+      const failures: string[] = [];
+      for (const key of Object.keys(translations) as LocaleKey[]) {
+        try {
+          assertValidPlaceholders(translations[key][locale], key);
+        } catch (e) {
+          failures.push(`  ${(e as Error).message}`);
+        }
+      }
+      assert.strictEqual(failures.length, 0, `${failures.length} key(s) in ${locale} have invalid placeholder syntax:\n${failures.join('\n')}`);
     });
   }
 });
