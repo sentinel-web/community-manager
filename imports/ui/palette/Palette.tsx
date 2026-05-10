@@ -228,6 +228,20 @@ export default function Palette() {
     return () => window.removeEventListener('popstate', setNavOnPopstate);
   }, [setNavOnPopstate]);
 
+  const [announcement, setAnnouncement] = useState('');
+
+  useEffect(() => {
+    if (!open) {
+      setAnnouncement('');
+      return;
+    }
+    const total = filteredItems.length;
+    const handle = setTimeout(() => {
+      setAnnouncement(total === 0 ? t('palette.noResults') : t('palette.resultCount', { count: total }));
+    }, 250);
+    return () => clearTimeout(handle);
+  }, [filteredItems.length, open, t]);
+
   let runningIndex = -1;
 
   return (
@@ -238,14 +252,25 @@ export default function Palette() {
       closable={false}
       destroyOnHidden
       maskClosable
+      keyboard
+      focusTriggerAfterClose
       width={640}
       style={{ top: 96 }}
       styles={{ body: { padding: 0 } }}
+      aria-label={t('palette.placeholder')}
       afterOpenChange={isOpen => {
         if (isOpen) inputRef.current?.focus();
       }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', maxHeight: '60vh' }}>
+        <div
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', border: 0 }}
+        >
+          {announcement}
+        </div>
         <Input
           ref={inputRef}
           placeholder={t('palette.placeholder')}
