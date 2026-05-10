@@ -97,10 +97,7 @@ export default function Section<T extends { _id?: string }>({
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
   useSubscribe(collectionName, filter, options);
-  const datasource = useFind(
-    () => Collection?.find?.(filter, options) || ([] as unknown as Mongo.Cursor<T>),
-    [Collection, filter, options]
-  );
+  const datasource = useFind(() => Collection?.find?.(filter, options) || ([] as unknown as Mongo.Cursor<T>), [Collection, filter, options]);
   const drawer = useContext(DrawerContext) as DrawerContextValue;
   const { notification, message, modal } = App.useApp();
   const { t } = useTranslation();
@@ -141,6 +138,17 @@ export default function Section<T extends { _id?: string }>({
     drawer.setDrawerOpen(true);
     drawer.setDrawerExtra(extra);
   }, [drawer, t, FormComponent, extra]);
+
+  useEffect(() => {
+    if (!permissions.canCreate || !FormComponent) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('action') !== 'create') return;
+    handleCreate();
+    params.delete('action');
+    const search = params.toString();
+    const newUrl = `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`;
+    window.history.replaceState(null, '', newUrl);
+  }, [permissions.canCreate, FormComponent, handleCreate]);
 
   const handleEdit = useCallback(
     (e: RowClickEvent, record: T) => {
@@ -235,10 +243,7 @@ export default function Section<T extends { _id?: string }>({
     [showSelection, selectedRowKeys]
   );
 
-  const columns = useMemo(
-    () => columnsFactory(handleEdit, handleDelete, permissions, t),
-    [handleEdit, handleDelete, columnsFactory, permissions, t]
-  );
+  const columns = useMemo(() => columnsFactory(handleEdit, handleDelete, permissions, t), [handleEdit, handleDelete, columnsFactory, permissions, t]);
 
   const handleLoadMore = useCallback(() => {
     setOptions(prevOptions => ({ limit: prevOptions.limit + 20 }));
@@ -297,14 +302,7 @@ interface TableSectionProps<T extends { _id?: string }> {
   rowSelection?: { selectedRowKeys: React.Key[]; onChange: (keys: React.Key[]) => void };
 }
 
-function TableSection<T extends { _id?: string }>({
-  columns,
-  datasource,
-  handleLoadMore,
-  disabled,
-  expandable,
-  rowSelection,
-}: TableSectionProps<T>) {
+function TableSection<T extends { _id?: string }>({ columns, datasource, handleLoadMore, disabled, expandable, rowSelection }: TableSectionProps<T>) {
   return (
     <>
       <TableContainer>

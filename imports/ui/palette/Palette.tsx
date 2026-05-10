@@ -8,7 +8,7 @@ import { useTranslation } from '../../i18n/LanguageContext';
 import { getNavigationValue } from '../navigation/Navigation';
 import useNavigation from '../navigation/navigation.hook';
 import { PaletteContext } from './PaletteContext';
-import { getEntityPaletteItems, getNavigatePaletteItems } from './palette.items';
+import { getCreatePaletteItems, getEntityPaletteItems, getNavigatePaletteItems } from './palette.items';
 import type { PaletteEntityResults } from './palette.items';
 import type { PaletteItem } from './palette.types';
 
@@ -49,15 +49,27 @@ export default function Palette() {
     [setNavigationValue, setOpen]
   );
 
+  const navigateWithAction = useCallback(
+    (route: string, action: string) => {
+      setNavigationValue(route);
+      window.history.pushState(null, '', `${window.location.origin}/${route}?action=${encodeURIComponent(action)}`);
+      setOpen(false);
+    },
+    [setNavigationValue, setOpen]
+  );
+
   const navigateItems = useMemo<PaletteItem[]>(() => getNavigatePaletteItems(role, t, navigate), [role, t, navigate]);
+  const createItems = useMemo<PaletteItem[]>(() => getCreatePaletteItems(role, t, navigateWithAction), [role, t, navigateWithAction]);
   const entityItems = useMemo<PaletteItem[]>(() => getEntityPaletteItems(entityResults, t, navigate), [entityResults, t, navigate]);
 
   const filteredItems = useMemo<PaletteItem[]>(() => {
     const trimmed = query.trim().toLowerCase();
-    const filteredNav = trimmed ? navigateItems.filter(item => item.label.toLowerCase().includes(trimmed)) : navigateItems;
-    if (!trimmed) return filteredNav;
-    return [...entityItems, ...filteredNav];
-  }, [navigateItems, entityItems, query]);
+    const matches = (item: PaletteItem) => item.label.toLowerCase().includes(trimmed);
+    if (!trimmed) {
+      return [...createItems, ...navigateItems];
+    }
+    return [...entityItems, ...createItems.filter(matches), ...navigateItems.filter(matches)];
+  }, [navigateItems, createItems, entityItems, query]);
 
   const groupedItems = useMemo(() => {
     const groups: { label: string; items: PaletteItem[] }[] = [];
