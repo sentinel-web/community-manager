@@ -15,6 +15,7 @@ import './apis/events.server';
 import './apis/logs.server';
 import './apis/members.server';
 import './apis/orbat.server';
+import './apis/palette.server';
 import './apis/questionnaireResponses.server';
 import './apis/questionnaires.server';
 import './apis/registrations.server';

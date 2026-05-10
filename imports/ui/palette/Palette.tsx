@@ -8,8 +8,18 @@ import { useTranslation } from '../../i18n/LanguageContext';
 import { getNavigationValue } from '../navigation/Navigation';
 import useNavigation from '../navigation/navigation.hook';
 import { PaletteContext } from './PaletteContext';
-import { getNavigatePaletteItems } from './palette.items';
+import { getEntityPaletteItems, getNavigatePaletteItems } from './palette.items';
+import type { PaletteEntityResults } from './palette.items';
 import type { PaletteItem } from './palette.types';
+
+const EMPTY_ENTITY_RESULTS: PaletteEntityResults = {
+  members: [],
+  events: [],
+  tasks: [],
+  squads: [],
+  registrations: [],
+  questionnaires: [],
+};
 
 const LISTBOX_ID = 'palette-listbox';
 
@@ -27,6 +37,7 @@ export default function Palette() {
 
   const [query, setQuery] = useState('');
   const [highlighted, setHighlighted] = useState(0);
+  const [entityResults, setEntityResults] = useState<PaletteEntityResults>(EMPTY_ENTITY_RESULTS);
   const inputRef = useRef<React.ComponentRef<typeof Input>>(null);
 
   const navigate = useCallback(
@@ -38,13 +49,15 @@ export default function Palette() {
     [setNavigationValue, setOpen]
   );
 
-  const allItems = useMemo<PaletteItem[]>(() => getNavigatePaletteItems(role, t, navigate), [role, t, navigate]);
+  const navigateItems = useMemo<PaletteItem[]>(() => getNavigatePaletteItems(role, t, navigate), [role, t, navigate]);
+  const entityItems = useMemo<PaletteItem[]>(() => getEntityPaletteItems(entityResults, t, navigate), [entityResults, t, navigate]);
 
   const filteredItems = useMemo<PaletteItem[]>(() => {
     const trimmed = query.trim().toLowerCase();
-    if (!trimmed) return allItems;
-    return allItems.filter(item => item.label.toLowerCase().includes(trimmed));
-  }, [allItems, query]);
+    const filteredNav = trimmed ? navigateItems.filter(item => item.label.toLowerCase().includes(trimmed)) : navigateItems;
+    if (!trimmed) return filteredNav;
+    return [...entityItems, ...filteredNav];
+  }, [navigateItems, entityItems, query]);
 
   const groupedItems = useMemo(() => {
     const groups: { label: string; items: PaletteItem[] }[] = [];
@@ -65,12 +78,34 @@ export default function Palette() {
     if (open) {
       setQuery('');
       setHighlighted(0);
+      setEntityResults(EMPTY_ENTITY_RESULTS);
     }
   }, [open]);
 
   useEffect(() => {
     setHighlighted(0);
   }, [query]);
+
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (!trimmed || !open) {
+      setEntityResults(EMPTY_ENTITY_RESULTS);
+      return;
+    }
+    let cancelled = false;
+    const handle = setTimeout(async () => {
+      try {
+        const result = (await Meteor.callAsync('palette.search', trimmed)) as PaletteEntityResults;
+        if (!cancelled) setEntityResults(result);
+      } catch {
+        if (!cancelled) setEntityResults(EMPTY_ENTITY_RESULTS);
+      }
+    }, 150);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [query, open]);
 
   const onKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>) => {
