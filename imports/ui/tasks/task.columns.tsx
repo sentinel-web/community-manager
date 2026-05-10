@@ -37,7 +37,7 @@ export function getTaskColumns(
   handleTaskEdit: (e: React.MouseEvent<HTMLElement>, record: Task) => void,
   handleTaskDelete: (e: React.MouseEvent<HTMLElement>, record: Task) => void,
   permissions: SectionPermissions = { canCreate: true, canUpdate: true, canDelete: true },
-  t: TFn = k => k,
+  t: TFn,
 ): ColumnsType<Task> {
   const { canUpdate = true, canDelete = true } = permissions;
 

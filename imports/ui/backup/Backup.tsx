@@ -52,7 +52,7 @@ export default function Backup() {
   const [restoring, setRestoring] = useState(false);
   const [createSafetyBackup, setCreateSafetyBackup] = useState(true);
   const [safetyBackupData, setSafetyBackupData] = useState<BackupData | null>(null);
-  const { t } = useTranslation();
+  const { t, tDynamic } = useTranslation();
 
   const handleBackup = useCallback(async () => {
     setLoading(true);
@@ -232,6 +232,7 @@ export default function Backup() {
         onConfirm={handleRestore}
         onCancel={handleCancelRestore}
         t={t}
+        tDynamic={tDynamic}
       />
 
       <SafetyBackupModal
@@ -317,9 +318,10 @@ interface RestoreConfirmModalProps {
   onConfirm: () => void;
   onCancel: () => void;
   t: LanguageContextValue['t'];
+  tDynamic: LanguageContextValue['tDynamic'];
 }
 
-function RestoreConfirmModal({ open, validationResult, restoring, createSafetyBackup, onCreateSafetyBackupChange, onConfirm, onCancel, t }: RestoreConfirmModalProps) {
+function RestoreConfirmModal({ open, validationResult, restoring, createSafetyBackup, onCreateSafetyBackupChange, onConfirm, onCancel, t, tDynamic }: RestoreConfirmModalProps) {
   return (
     <Modal
       title={
@@ -367,7 +369,7 @@ function RestoreConfirmModal({ open, validationResult, restoring, createSafetyBa
             <Typography.Title level={5}>{t('backup.collectionCounts')}</Typography.Title>
             <Descriptions bordered size="small" column={2}>
               {Object.entries(validationResult.meta.collectionCounts).map(([name, count]) => (
-                <Descriptions.Item key={name} label={t(`collections.${name}`) || name}>
+                <Descriptions.Item key={name} label={tDynamic(`collections.${name}`)}>
                   {count}
                 </Descriptions.Item>
               ))}

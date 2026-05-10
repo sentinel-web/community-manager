@@ -53,7 +53,7 @@ const getSpecializationColumns = (
   handleEdit: (e: RowClickEvent, record: Specialization) => void,
   handleDelete: (e: RowClickEvent, record: Specialization) => void,
   permissions: SectionPermissions = { canCreate: true, canUpdate: true, canDelete: true },
-  t: TFn = k => k
+  t: TFn,
 ): ColumnsType<Specialization> => {
   const { canUpdate = true, canDelete = true } = permissions;
 

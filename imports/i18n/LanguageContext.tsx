@@ -1,12 +1,13 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
-import { locales, defaultLocale, getTranslation, type Locale, type LocaleInfo, type TranslationParams } from './index';
+import { locales, defaultLocale, getTranslation, translateDynamic, type Locale, type LocaleInfo, type LocaleKey, type ParamArgs } from './index';
 
 const STORAGE_KEY = 'community-manager-language';
 
 export interface LanguageContextValue {
   language: Locale;
   setLanguage: (lang: Locale) => void;
-  t: (key: string, params?: TranslationParams) => string;
+  t: <K extends LocaleKey>(key: K, ...args: ParamArgs<K>) => string;
+  tDynamic: (key: string, params?: Record<string, string | number>) => string;
   locales: Record<Locale, LocaleInfo>;
 }
 
@@ -43,13 +44,17 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
   }, [language]);
 
-  const translations = useMemo(() => locales[language]?.translations || locales[defaultLocale].translations, [language]);
+  const t = useMemo<LanguageContextValue['t']>(
+    () =>
+      function t<K extends LocaleKey>(key: K, ...args: ParamArgs<K>): string {
+        return getTranslation(key, language, ...args);
+      },
+    [language],
+  );
 
-  const t = useCallback(
-    (key: string, params: TranslationParams = {}) => {
-      return getTranslation(translations, key, params);
-    },
-    [translations],
+  const tDynamic = useCallback<LanguageContextValue['tDynamic']>(
+    (key, params) => translateDynamic(key, language, params),
+    [language],
   );
 
   const value: LanguageContextValue = useMemo(
@@ -57,9 +62,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       language,
       setLanguage,
       t,
+      tDynamic,
       locales,
     }),
-    [language, setLanguage, t],
+    [language, setLanguage, t, tDynamic],
   );
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
@@ -73,9 +79,9 @@ export function useLanguage(): LanguageContextValue {
   return context;
 }
 
-export function useTranslation(): { t: LanguageContextValue['t'] } {
-  const { t } = useLanguage();
-  return { t };
+export function useTranslation(): { t: LanguageContextValue['t']; tDynamic: LanguageContextValue['tDynamic'] } {
+  const { t, tDynamic } = useLanguage();
+  return { t, tDynamic };
 }
 
 export default LanguageContext;
