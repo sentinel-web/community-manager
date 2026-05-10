@@ -86,10 +86,21 @@ export default function RegistrationExtra({ record }: RegistrationExtraProps) {
   const [createdAlready, setCreatedAlready] = useState(true);
 
   useEffect(() => {
-    Meteor.callAsync('members.findOne', { 'profile.registrationId': record._id }, { fields: { service: 0 } }).then((res: Member | undefined) => {
-      if (res) setCreatedAlready(true);
-      else setCreatedAlready(false);
-    });
+    let cancelled = false;
+    Meteor.callAsync('members.findOne', { 'profile.registrationId': record._id }, { fields: { services: 0 } })
+      .then((res: Member | undefined) => {
+        if (cancelled) return;
+        setCreatedAlready(Boolean(res));
+      })
+      .catch(() => {
+        // Swallow transient call failures (unmount during nav, connection blip).
+        // Without this, a rejected promise becomes an unhandled rejection that
+        // surfaces via the dev-server overlay and intercepts pointer events —
+        // see #122 / PR #129 for the original instance and #130 for this one.
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [record]);
 
   return (

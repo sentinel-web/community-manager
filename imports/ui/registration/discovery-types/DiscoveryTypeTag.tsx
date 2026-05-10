@@ -11,11 +11,23 @@ export default function DiscoveryTypeTag({ discoveryTypeId }: DiscoveryTypeTagPr
   const [match, setMatch] = useState<DiscoveryType | null>(null);
 
   useEffect(() => {
-    if (!discoveryTypeId) setMatch(null);
-    else
-      Meteor.callAsync('discoveryTypes.read', { _id: discoveryTypeId }, { limit: 1 }).then((res: DiscoveryType[]) =>
-        setMatch(res[0])
-      );
+    if (!discoveryTypeId) {
+      setMatch(null);
+      return;
+    }
+    let cancelled = false;
+    Meteor.callAsync('discoveryTypes.read', { _id: discoveryTypeId }, { limit: 1 })
+      .then((res: DiscoveryType[]) => {
+        if (cancelled) return;
+        setMatch(res[0]);
+      })
+      .catch(() => {
+        // Avoid unhandled rejection on unmount-during-call or transient blips —
+        // see #130 for context. The Tag falls back to the "Not found" state.
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [discoveryTypeId]);
 
   if (!discoveryTypeId) return <Tag>-</Tag>;
