@@ -7,8 +7,35 @@ import JSZip from 'jszip';
 import { Meteor } from 'meteor/meteor';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
+import type { LocaleKey } from '../../i18n';
 import SectionCard from '../section/SectionCard';
 import { useTourRef } from '../tour/TourContext';
+
+// Closed map from MongoDB collection names (server-supplied in
+// validationResult.meta.collectionCounts) to LocaleKeys. `as const satisfies`
+// preserves the literal LocaleKey union per entry. Falls back to the raw
+// collection name string at the call site if a server-supplied name isn't in
+// the map — preserves pre-cutover defensive behavior.
+const COLLECTION_LABEL_KEYS = {
+  attendances: 'collections.attendances',
+  discoveryTypes: 'collections.discoveryTypes',
+  events: 'collections.events',
+  eventTypes: 'collections.eventTypes',
+  logs: 'collections.logs',
+  medals: 'collections.medals',
+  members: 'collections.members',
+  positions: 'collections.positions',
+  profilePictures: 'collections.profilePictures',
+  ranks: 'collections.ranks',
+  registrations: 'collections.registrations',
+  roles: 'collections.roles',
+  settings: 'collections.settings',
+  specializations: 'collections.specializations',
+  squads: 'collections.squads',
+  tasks: 'collections.tasks',
+  taskStatus: 'collections.taskStatus',
+  users: 'collections.users',
+} as const satisfies Record<string, LocaleKey>;
 
 // Maximum backup file size: 50MB
 const MAX_BACKUP_SIZE = 50 * 1024 * 1024;
@@ -316,7 +343,7 @@ interface RestoreConfirmModalProps {
 }
 
 function RestoreConfirmModal({ open, validationResult, restoring, createSafetyBackup, onCreateSafetyBackupChange, onConfirm, onCancel }: RestoreConfirmModalProps) {
-  const { t, tDynamic } = useTranslation();
+  const { t } = useTranslation();
   return (
     <Modal
       title={
@@ -363,11 +390,14 @@ function RestoreConfirmModal({ open, validationResult, restoring, createSafetyBa
           <Col span={24}>
             <Typography.Title level={5}>{t('backup.collectionCounts')}</Typography.Title>
             <Descriptions bordered size="small" column={2}>
-              {Object.entries(validationResult.meta.collectionCounts).map(([name, count]) => (
-                <Descriptions.Item key={name} label={tDynamic(`collections.${name}`)}>
-                  {count}
-                </Descriptions.Item>
-              ))}
+              {Object.entries(validationResult.meta.collectionCounts).map(([name, count]) => {
+                const labelKey = COLLECTION_LABEL_KEYS[name as keyof typeof COLLECTION_LABEL_KEYS];
+                return (
+                  <Descriptions.Item key={name} label={labelKey ? t(labelKey) : name}>
+                    {count}
+                  </Descriptions.Item>
+                );
+              })}
             </Descriptions>
           </Col>
         )}
