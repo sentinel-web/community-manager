@@ -1,0 +1,8 @@
+[     221ms] [LOG] HMR: connected @ http://localhost:3000/packages/hot-module-replacement.js?hash=21f4cf053bb5378cc08018628078d42c48c5d59e:349
+[     498ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:3000/packages/modules.js?hash=b2f1e35eda8989619e63491b6e4c95ea12dd593d:34473
+[    1304ms] errorClass
+[    1322ms] errorClass
+[    1322ms] errorClass
+[  140966ms] [LOG] HMR: Unable to do HMR. Falling back to hot code push. @ http://localhost:3000/packages/hot-module-replacement.js?hash=21f4cf053bb5378cc08018628078d42c48c5d59e:265
+[  141067ms] [LOG] HMR: connected @ http://localhost:3000/packages/hot-module-replacement.js?hash=21f4cf053bb5378cc08018628078d42c48c5d59e:349
+[  141203ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:3000/packages/modules.js?hash=b2f1e35eda8989619e63491b6e4c95ea12dd593d:34473
