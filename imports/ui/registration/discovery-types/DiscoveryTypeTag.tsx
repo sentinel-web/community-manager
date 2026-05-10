@@ -21,9 +21,11 @@ export default function DiscoveryTypeTag({ discoveryTypeId }: DiscoveryTypeTagPr
         if (cancelled) return;
         setMatch(res[0]);
       })
-      .catch(() => {
-        // Avoid unhandled rejection on unmount-during-call or transient blips —
-        // see #130 for context. The Tag falls back to the "Not found" state.
+      .catch(error => {
+        // Swallow rather than let the rejection bubble — unhandled rejections
+        // surface via the dev-server overlay. The Tag falls back to the
+        // "Not found" state, which is benign for a row-level decoration.
+        if (Meteor.isDevelopment) console.warn('DiscoveryTypeTag discoveryTypes.read failed', error);
       });
     return () => {
       cancelled = true;

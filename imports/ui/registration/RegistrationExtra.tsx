@@ -92,11 +92,11 @@ export default function RegistrationExtra({ record }: RegistrationExtraProps) {
         if (cancelled) return;
         setCreatedAlready(Boolean(res));
       })
-      .catch(() => {
-        // Swallow transient call failures (unmount during nav, connection blip).
-        // Without this, a rejected promise becomes an unhandled rejection that
-        // surfaces via the dev-server overlay and intercepts pointer events —
-        // see #122 / PR #129 for the original instance and #130 for this one.
+      .catch(error => {
+        // Swallow rather than let the rejection bubble — the dev-server overlay
+        // turns unhandled rejections into a full-page "Unexpected error" that
+        // intercepts pointer events on every row in the table.
+        if (Meteor.isDevelopment) console.warn('RegistrationExtra members.findOne failed', error);
       });
     return () => {
       cancelled = true;
