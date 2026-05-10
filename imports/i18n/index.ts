@@ -36,14 +36,3 @@ export function getTranslation<K extends LocaleKey>(key: K, locale: Locale, ...a
   const params = (args[0] ?? {}) as Record<string, string | number>;
   return interpolate(value, params);
 }
-
-// Escape hatch for sites that compute the key dynamically (e.g. `collections.${name}`).
-// Returns the key string verbatim if it isn't in the unified source — preserves the
-// pre-cutover defensive behavior at sites that can't statically prove their key set.
-// Prefer `getTranslation` (or the typed `t` from useTranslation) wherever the key is
-// known statically.
-export function translateDynamic(key: string, locale: Locale, params: Record<string, string | number> = {}): string {
-  const entry = (translations as Record<string, Record<Locale, string> | undefined>)[key];
-  if (!entry) return key;
-  return interpolate(entry[locale], params);
-}
