@@ -7,6 +7,7 @@
     "test-app": "TEST_WATCH=1 meteor test --full-app --driver-package meteortesting:mocha",
     "visualize": "meteor --production --extra-packages bundle-visualizer",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "i18n:merge": "tsx scripts/i18n-merge.ts",
     "update": "meteor update --all-packages && meteor npm update && meteor npm audit fix && meteor npm install",
     "e2e": "playwright test --config=e2e/playwright.config.ts",
     "e2e:ui": "playwright test --config=e2e/playwright.config.ts --ui",
@@ -55,6 +56,7 @@
     "eslint-plugin-react": "^7.37.5",
     "globals": "^16.2.0",
     "react-refresh": "^0.17.0",
+    "tsx": "^4.21.0",
     "typescript": "5.9.3"
   }
 }
