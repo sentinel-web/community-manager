@@ -584,4 +584,8 @@ export const translations = {
   "validation.maxLength": { en: "Maximum {{max}} characters", de: "Maximal {{max}} Zeichen", fr: "Maximum {{max}} caractères" },
   "validation.minLength": { en: "Minimum {{min}} characters", de: "Mindestens {{min}} Zeichen", fr: "Minimum {{min}} caractères" },
   "validation.required": { en: "This field is required", de: "Dieses Feld ist erforderlich", fr: "Ce champ est obligatoire" },
+  'settings.discord.botToken': {en: 'Discord Bot Token', de: 'Discord Bot-Token',fr: 'Jeton de bot Discord'},
+  'settings.discord.enabled': {en: 'Enable Discord Integration', de: 'Discord-Integration aktivieren', fr: 'Activer l\'intégration Discord'},
+  'settings.discord.serverId': { en: 'Discord Server ID', de: 'Discord Server-ID', fr: 'ID du serveur Discord'},
+  'settings.discordIntegration': { en: 'Discord Integration', de: 'Discord Integration', fr: 'Intégration Discord'},
 } as const satisfies TranslationSet;
