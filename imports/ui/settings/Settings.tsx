@@ -1,5 +1,5 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, Col, ColorPicker, Input, List, Popconfirm, Row, Typography } from 'antd';
+import { Button, Checkbox, Col, ColorPicker, Input, List, Popconfirm, Row, Typography } from 'antd';
 import Dragger from 'antd/es/upload/Dragger';
 import { Meteor } from 'meteor/meteor';
 import React, { useCallback, useContext, useState } from 'react';
@@ -16,12 +16,18 @@ type HandleChangeFn = (e: unknown, key: string) => void | Promise<void>;
 const emptyStringList: string[] = [];
 const noopHandleChange: HandleChangeFn = () => {};
 
-async function getEventValue(key: string, e: unknown): Promise<string | string[] | undefined> {
+async function getEventValue(key: string, e: unknown): Promise<string | string[] | boolean | undefined> {
   switch (key) {
     case 'community-title':
       return (e as React.ChangeEvent<HTMLInputElement>).target.value;
+      case 'discord-bot-token': // Neu
+      case 'discord-server-id': // Neu
+        return (e as React.ChangeEvent<HTMLInputElement>).target.value;
+      case 'discord-enabled': // Neu
+        return (e as { target: { checked: boolean } }).target.checked;
     case 'community-logo':
       return await transformFileToBase64(e as File);
+    
     case 'community-color': {
       const colorObj = e as { toHexString?: () => string };
       return colorObj.toHexString ? colorObj.toHexString() : undefined;
@@ -65,7 +71,7 @@ async function turnImageFileIntoWebp(file: File): Promise<Blob> {
 
 export default function Settings() {
   const settingsRef = useTourRef('settings-section');
-  const { ready, communityTitle, communityLogo, communityColor, communityNameBlackList, communityIdBlackList } = useSettings();
+  const { ready, communityTitle, communityLogo, communityColor, communityNameBlackList, communityIdBlackList, discordEnabled, discordBotToken, discordServerId } = useSettings();
   const { t } = useTranslation();
 
   const handleChange: HandleChangeFn = useCallback(async (e: unknown, key: string) => {
@@ -97,6 +103,15 @@ export default function Settings() {
                   </Col>
                   <Col xs={24} lg={12}>
                     <CommunityIdBlackListSettings communityIdBlackList={communityIdBlackList} handleChange={handleChange} t={t} />
+                  </Col>
+                  <Col span={24}>
+                    <DiscordSettings 
+                      discordEnabled={discordEnabled}
+                      discordBotToken={discordBotToken}
+                      discordServerId={discordServerId}
+                      handleChange={handleChange}
+                      t={t}
+                    />
                   </Col>
                   {Meteor.isDevelopment && (
                     <Col span={24}>
@@ -351,6 +366,50 @@ function DemoDataSettings({ t }: DemoDataSettingsProps) {
           </Button>
         </Popconfirm>
       </Col>
+    </Row>
+  );
+}
+
+interface DiscordSettingsProps {
+  discordEnabled: boolean;
+  discordBotToken?: string;
+  discordServerId?: string;
+  handleChange: HandleChangeFn;
+  t: TFn;
+}
+
+function DiscordSettings({ discordEnabled, discordBotToken, discordServerId, handleChange, t }: DiscordSettingsProps) {
+  return (
+    <Row gutter={[16, 16]}>
+      <SettingTitle title={t('settings.discordIntegration')} />
+      <Col span={24}>
+        <Checkbox 
+          checked={discordEnabled} 
+          onChange={e => handleChange(e, 'discord-enabled')}
+        >
+          {t('settings.discord.enabled')}
+        </Checkbox>
+      </Col>
+      {discordEnabled && (
+        <>
+          <Col xs={24} lg={12}>
+            <Typography.Text strong>{t('settings.discord.botToken')}</Typography.Text>
+            <Input.Password 
+              style={{ marginTop: 8 }}
+              value={discordBotToken} 
+              onChange={e => handleChange(e, 'discord-bot-token')} 
+            />
+          </Col>
+          <Col xs={24} lg={12}>
+            <Typography.Text strong>{t('settings.discord.serverId')}</Typography.Text>
+            <Input 
+              style={{ marginTop: 8 }}
+              value={discordServerId} 
+              onChange={e => handleChange(e, 'discord-server-id')} 
+            />
+          </Col>
+        </>
+      )}
     </Row>
   );
 }
