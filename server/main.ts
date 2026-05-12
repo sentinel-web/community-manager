@@ -26,6 +26,7 @@ import './apis/tasks.server';
 import { COLLECTION_REGISTRY } from './collection-registry';
 import { createCollectionMethods, createCollectionPublish } from './crud.lib';
 import { CACHE, SQUAD_SCOPED_PERMISSIONS } from './config';
+import { initializeDiscordBot } from './discord/bot';
 
 // === Permission System ===
 
@@ -211,6 +212,7 @@ async function createDatabaseIndexes(): Promise<void> {
 
 if (Meteor.isServer) {
   Meteor.startup(async () => {
+    await initializeDiscordBot();
     if (process.env.NODE_ENV !== 'production') {
       await createTestData();
     }

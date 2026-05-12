@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package*.json ./
 COPY .meteor .meteor
 
-RUN meteor npm ci
+RUN meteor update --npm && meteor npm ci
 
 COPY . .
 
