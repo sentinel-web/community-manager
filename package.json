@@ -28,6 +28,8 @@
     "@tiptap/react": "^3.26.0",
     "@tiptap/starter-kit": "^3.26.0",
     "antd": "^5.20.2",
+    "bufferutil": "^4.1.0",
+    "discord.js": "^14.26.4",
     "dompurify": "^3.4.8",
     "fuse.js": "^7.4.2",
     "jszip": "^3.10.1",
@@ -39,7 +41,9 @@
     "react-organizational-chart": "^2.2.1",
     "recharts": "^3.7.0",
     "rrule": "^2.8.1",
-    "sanitize-html": "^2.17.4"
+    "sanitize-html": "^2.17.4",
+    "utf-8-validate": "^5.0.10",
+    "zlib-sync": "^0.1.10"
   },
   "meteor": {
     "mainModule": {
