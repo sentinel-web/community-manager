@@ -1,4 +1,4 @@
-import { App, Button, Col, Row } from 'antd';
+import { Button, Col, Row } from 'antd';
 import React, { ComponentType, MouseEvent, useCallback } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 
@@ -21,27 +21,19 @@ export default function TableActions<T>({
   canUpdate = true,
   canDelete = true,
 }: TableActionsProps<T>) {
-  const { modal } = App.useApp();
   const { t } = useTranslation();
   const styles = {
     button: {
       width: '100%',
     },
   };
+  // Section.handleDelete owns the confirmation modal (it pre-fetches the
+  // integrity preview before showing it). This handler just forwards.
   const handleRemove = useCallback(
     (e: ClickEvent) => {
-      modal.confirm({
-        title: t('modals.deleteEntry'),
-        content: t('modals.deleteEntryConfirm'),
-        okText: t('common.yes'),
-        cancelText: t('common.cancel'),
-        okType: 'danger',
-        onOk: () => handleDelete(e, record),
-        closable: true,
-        maskClosable: true,
-      });
+      handleDelete(e, record);
     },
-    [modal, handleDelete, record, t]
+    [handleDelete, record]
   );
 
   if (!canUpdate && !canDelete && !extra) {
