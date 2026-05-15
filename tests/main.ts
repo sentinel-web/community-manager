@@ -7,6 +7,7 @@ import './server/getCollection.test';
 import './server/i18n.extractParams.test';
 import './server/i18n.invariants.test';
 import './server/integrity.test';
+import './server/integrityCoverage.test';
 import './server/membersMethods.test';
 import './server/mutationPipeline.test';
 import './server/paletteRecents.test';
