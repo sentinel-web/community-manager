@@ -9,6 +9,7 @@ import {
 import { createLog } from './apis/logs.server';
 import { runMutation } from './mutation-pipeline';
 import { COLLECTION_REGISTRY } from './collection-registry';
+import { enforceIntegrityOnDelete, buildRemoveAuditPayload, validateForeignKeys } from './integrity';
 import type { CrudCollectionMap, CrudCollectionName } from '/imports/api/types';
 
 import AttendancesCollection from '../imports/api/collections/attendances.collection';
@@ -144,6 +145,7 @@ function createCollectionMethods(collection: CrudCollectionName): void {
               if (collection === 'tasks') {
                 p.createdAt = new Date();
               }
+              await validateForeignKeys(collection, p);
               return Collection.insertAsync(p as unknown as CrudCollectionMap[typeof collection]);
             },
           );
@@ -165,6 +167,10 @@ function createCollectionMethods(collection: CrudCollectionName): void {
             },
             [id, data] as const,
             async ([targetId, changes]) => {
+              // The generic CRUD .update wraps changes in $set, so validation
+              // runs against the same modifier Mongo will see — touched-fields
+              // semantics fall out naturally.
+              await validateForeignKeys(collection, { $set: changes });
               const result = await Collection.updateAsync({ _id: targetId } as never, { $set: changes } as never);
               if (collection === 'roles') {
                 clearRoleCache(targetId);
@@ -174,13 +180,17 @@ function createCollectionMethods(collection: CrudCollectionName): void {
           );
         },
         [`${collection}.remove`]: async function (id: string = '') {
+          const callerUserId = this.userId;
           return runMutation(
-            { userId: this.userId },
+            { userId: callerUserId },
             {
               collection,
               operation: 'delete',
               action: auditAllowed ? `${collection}.deleted` : undefined,
-              auditShape: 'remove',
+              audit: (args, result) => {
+                const r = result as { id: string; effects: Awaited<ReturnType<typeof enforceIntegrityOnDelete>> };
+                return buildRemoveAuditPayload(r.id, r.effects);
+              },
               permissionModule,
               validate: ([targetId]) => validateString(targetId, false),
             },
@@ -188,17 +198,19 @@ function createCollectionMethods(collection: CrudCollectionName): void {
             async ([targetId]) => {
               const doc = await Collection.findOneAsync(targetId);
               if (!doc) throw new Meteor.Error(404, 'Document not found');
-              const result = await Collection.removeAsync({ _id: targetId } as never);
+              const effects = await enforceIntegrityOnDelete(collection, targetId, { userId: callerUserId });
+              await Collection.removeAsync({ _id: targetId } as never);
               if (collection === 'roles') {
                 clearRoleCache(targetId);
               }
-              return result;
+              return { id: targetId, effects };
             },
           );
         },
         [`${collection}.bulkRemove`]: async function (ids: string[] = []) {
+          const callerUserId = this.userId;
           return runMutation(
-            { userId: this.userId },
+            { userId: callerUserId },
             {
               collection,
               operation: 'delete',
@@ -221,9 +233,10 @@ function createCollectionMethods(collection: CrudCollectionName): void {
                     errors.push(`Document ${id} not found`);
                     continue;
                   }
+                  const effects = await enforceIntegrityOnDelete(collection, id, { userId: callerUserId });
                   await Collection.removeAsync({ _id: id } as never);
                   if (auditAllowed) {
-                    await createLog(`${collection}.deleted`, { id });
+                    await createLog(`${collection}.deleted`, buildRemoveAuditPayload(id, effects));
                   }
                   if (collection === 'roles') {
                     clearRoleCache(id);

@@ -15,6 +15,7 @@ import { validateObject, validatePublish, validateString, validateUserId, checkP
 import { createLog } from './logs.server';
 import { runMutation } from '../mutation-pipeline';
 import { COLLECTION_REGISTRY } from '../collection-registry';
+import { enforceIntegrityOnDelete, buildRemoveAuditPayload, validateForeignKeys } from '../integrity';
 import type { Role } from '/imports/api/types';
 
 async function getMemberById(memberId: string): Promise<Meteor.User> {
@@ -81,7 +82,14 @@ if (Meteor.isServer) {
           validate: ([p]) => validateObject(p, false),
         },
         [payload] as const,
-        async ([p]) => Accounts.createUserAsync(p as Parameters<typeof Accounts.createUserAsync>[0]),
+        async ([p]) => {
+          // members.insert is a custom path (Accounts.createUserAsync, not
+          // generic CRUD), so it must opt explicitly into write validation.
+          // Validates every FK present on the bare-doc payload — same
+          // semantics generic CRUD applies on .insert.
+          await validateForeignKeys('members', p);
+          return Accounts.createUserAsync(p as Parameters<typeof Accounts.createUserAsync>[0]);
+        },
       );
     },
     'members.update': async function (memberId: string = '', data: Record<string, unknown> = {}) {
@@ -120,27 +128,62 @@ if (Meteor.isServer) {
               throw new Meteor.Error(403, 'Cannot update members outside your squad');
             }
           }
+          // Touched-fields validation — same modifier shape generic CRUD
+          // produces so pre-existing orphans on members.profile don't block
+          // unrelated edits.
+          await validateForeignKeys('members', { $set: changes });
           return MembersCollection.updateAsync({ _id: targetId } as never, { $set: changes } as never);
         },
       );
     },
     'members.remove': async function (memberId: string = '') {
+      const callerUserId = this.userId;
       return runMutation(
-        { userId: this.userId },
+        { userId: callerUserId },
         {
           collection: 'members',
           operation: 'delete',
           action: 'members.deleted',
-          auditShape: 'remove',
+          audit: (args, result) => {
+            const r = result as { id: string; effects: Awaited<ReturnType<typeof enforceIntegrityOnDelete>> };
+            return buildRemoveAuditPayload(r.id, r.effects);
+          },
           permissionModule: 'members',
           validate: ([id]) => validateString(id, false),
         },
         [memberId] as const,
         async ([targetId]) => {
+          // Self-delete prevention: an admin deleting their own account
+          // would lock themselves out instantly. The integrity layer can't
+          // help here — even a clean delete is undesirable. This guard is
+          // 1-site, so it stays in the body per the rule of three.
+          if (targetId === callerUserId) {
+            throw new Meteor.Error(400, 'Cannot delete your own account');
+          }
+
           // Existence check stays as code in the body (1-site variation;
           // not promoted to a registry field per the rule of three).
-          await getMemberById(targetId);
-          return MembersCollection.removeAsync({ _id: targetId } as never);
+          const member = await getMemberById(targetId);
+
+          // Run the registry-driven integrity layer (pulls from events,
+          // tasks, specializations; sets respondentId null on responses).
+          // Generic CRUD .remove does this automatically — members.remove
+          // is a custom path so it calls explicitly.
+          const effects = await enforceIntegrityOnDelete('members', targetId, { userId: callerUserId });
+
+          // Owned-target cascade: the ProfilePicture is private to one
+          // Member, so deleting the Member also deletes their picture.
+          // The only owned-target relationship in the registry; per the
+          // rule of three (one instance), kept here as code rather than
+          // promoted to a registry primitive. See server/integrity.ts.
+          const profilePictureId = member.profile?.profilePictureId;
+          if (profilePictureId) {
+            await ProfilePicturesCollection.removeAsync({ _id: profilePictureId } as never);
+            effects.cascaded.profilePictures = (effects.cascaded.profilePictures ?? 0) + 1;
+          }
+
+          await MembersCollection.removeAsync({ _id: targetId } as never);
+          return { id: targetId, effects };
         },
       );
     },

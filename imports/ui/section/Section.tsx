@@ -14,6 +14,7 @@ import TableFooter from '../table/footer/TableFooter';
 import GroupActionsBar from '../table/header/GroupActionsBar';
 import TableHeader from '../table/header/TableHeader';
 import Table from '../table/Table';
+import DeleteImpactPreview, { type DeleteImpactPreviewData } from './DeleteImpactPreview';
 import SectionCard from './SectionCard';
 import type { BoundGroupAction, ColumnsFactory, GroupAction, RowClickEvent, SectionPermissions } from './types';
 
@@ -161,23 +162,76 @@ export default function Section<T extends { _id?: string }>({
   const handleDelete = useCallback(
     async (e: RowClickEvent, record: T) => {
       e.preventDefault();
+      const recordId = record._id;
+      if (!recordId) return;
+
+      let preview: DeleteImpactPreviewData | null = null;
       try {
-        await Meteor.callAsync(`${collectionName}.remove`, record._id);
-        message.success(t('messages.deleteSuccess'));
+        preview = (await Meteor.callAsync('integrity.preview', collectionName, recordId)) as DeleteImpactPreviewData;
       } catch (error) {
         const err = error as Meteor.Error;
         notification.error({ message: err.error as string, description: err.message });
+        return;
       }
+
+      const isBlocked = preview != null && preview.blockedBy.length > 0;
+
+      modal.confirm({
+        title: t('modals.deleteEntry'),
+        content: (
+          <>
+            <DeleteImpactPreview preview={preview} />
+            {!isBlocked && <p>{t('modals.deleteEntryConfirm')}</p>}
+          </>
+        ),
+        okButtonProps: { danger: true, disabled: isBlocked },
+        okText: t('common.delete'),
+        cancelText: t('common.cancel'),
+        onOk: async () => {
+          try {
+            await Meteor.callAsync(`${collectionName}.remove`, recordId);
+            message.success(t('messages.deleteSuccess'));
+          } catch (error) {
+            const err = error as Meteor.Error;
+            notification.error({ message: err.error as string, description: err.message });
+          }
+        },
+      });
     },
-    [notification, message, collectionName, t]
+    [notification, message, modal, collectionName, t]
   );
 
-  const handleBulkDelete = useCallback(() => {
+  const handleBulkDelete = useCallback(async () => {
     const count = selectedRowKeys.length;
+    const ids = selectedRowKeys.map(String);
+
+    // Pre-fetch the aggregate preview. If any id is blocked, we render the
+    // structured block panel and disable confirm — matches the single-delete
+    // pre-flight pattern. Side-effect counts (pull/setNull/cascade) ride
+    // along so admins see "this will affect 23 events" before committing.
+    let preview: { aggregate: DeleteImpactPreviewData; blockedIds: string[] } | null = null;
+    try {
+      preview = (await Meteor.callAsync('integrity.previewBulk', collectionName, ids)) as {
+        aggregate: DeleteImpactPreviewData;
+        blockedIds: string[];
+      };
+    } catch (error) {
+      const err = error as Meteor.Error;
+      notification.error({ message: err.error as string, description: err.message });
+      return;
+    }
+
+    const isBlocked = preview != null && preview.blockedIds.length > 0;
+
     modal.confirm({
       title: t('common.delete'),
-      content: t('modals.bulkDeleteConfirm', { count }),
-      okButtonProps: { danger: true },
+      content: (
+        <>
+          <DeleteImpactPreview preview={preview ? preview.aggregate : null} />
+          {!isBlocked && <p>{t('modals.bulkDeleteConfirm', { count })}</p>}
+        </>
+      ),
+      okButtonProps: { danger: true, disabled: isBlocked },
       onOk: async () => {
         setBulkActionLoading(true);
         try {

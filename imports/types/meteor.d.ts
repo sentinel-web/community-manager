@@ -8,6 +8,17 @@ declare module 'meteor/mongo' {
 
 declare module 'meteor/meteor' {
   namespace Meteor {
+    // Broaden Meteor.Error.details from `string` (per @types/meteor) to
+    // `unknown` so structured-details errors (e.g. `foreign_key_blocked`'s
+    // { blockedBy: [...] } payload) typecheck. EJSON serializes the details
+    // verbatim across DDP, matching Meteor's actual runtime contract.
+    interface ErrorStatic {
+      new (error: string | number, reason?: string, details?: unknown): Error;
+    }
+    interface Error {
+      details?: unknown;
+    }
+
     interface UserProfile {
       name?: string;
       id?: number;

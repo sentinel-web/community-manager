@@ -1,5 +1,6 @@
 import assert from 'node:assert';
 import MedalsCollection from '../../imports/api/collections/medals.collection';
+import MembersCollection from '../../imports/api/collections/members.collection';
 import EventsCollection from '../../imports/api/collections/events.collection';
 import {
   assertRejectsWithCode,
@@ -119,14 +120,26 @@ describe('crud.lib — medals happy path + permission enforcement', () => {
   });
 
   it('admin can delete and audit log captures the deletion', async () => {
-    const result = await callAs(adminUserId, 'medals.remove', insertedMedalId);
-    assert.strictEqual(result, 1);
+    // .remove now returns { id, effects } so the audit pipeline can attach
+    // cascadeEffects when integrity primitives fire (#162). For collections
+    // without foreign-key edges (medals has none today), `effects` is empty.
+    const result = (await callAs(adminUserId, 'medals.remove', insertedMedalId)) as {
+      id: string;
+      effects: { pulled: Record<string, number>; setNull: Record<string, number>; cascaded: Record<string, number> };
+    };
+    assert.strictEqual(result.id, insertedMedalId);
+    assert.deepStrictEqual(result.effects.pulled, {});
+    assert.deepStrictEqual(result.effects.setNull, {});
+    assert.deepStrictEqual(result.effects.cascaded, {});
 
     const gone = await MedalsCollection.findOneAsync(insertedMedalId);
     assert.strictEqual(gone, undefined);
 
     const log = await findLatestAuditLog('medals.deleted', insertedMedalId);
     assert.ok(log, 'Expected a medals.deleted log entry');
+    assert.strictEqual(log.payload.id, insertedMedalId);
+    // No edge produced an effect, so cascadeEffects must not appear in the audit payload.
+    assert.strictEqual((log.payload as Record<string, unknown>).cascadeEffects, undefined);
   });
 
   it('delete of non-existent id throws 404', async () => {
@@ -246,6 +259,12 @@ describe('crud.lib — role cache invalidates on roles.update / roles.remove', (
   });
 
   it('roles.remove clears cache — user without role has no permission', async () => {
+    // The members.profile.roleId → roles edge is `block` (PRD policy), so
+    // deleting a role that's still held throws foreign_key_blocked. Detach
+    // the user first via direct Mongo update (bypasses Members write
+    // validation so the test stays focused on the cache-invalidation
+    // invariant rather than the role-reassignment UX).
+    await MembersCollection.updateAsync(demotableUserId, { $unset: { 'profile.roleId': '' } });
     await callAs(adminUserId, 'roles.remove', demotableRoleId);
 
     await assertRejectsWithCode(() => callAs(demotableUserId, 'medals.read', {}), 403);
