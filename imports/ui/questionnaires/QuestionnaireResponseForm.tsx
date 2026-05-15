@@ -48,29 +48,36 @@ const QuestionnaireResponseForm = ({ setOpen, onSuccess }: QuestionnaireResponse
   const renderQuestionField = (question: Question, index: number) => {
     const fieldName = `question_${index}`;
     const rules = question.required ? [{ required: true, message: t('questionnaires.questionRequired') }] : [];
+    // Question type doesn't carry an _id, so we build a stable composite key
+    // from type + text. Far less collision-prone than the bare array index
+    // and stable across re-renders even if AntD reorders Form.Items
+    // internally. (The form-state binding still uses the index via
+    // `fieldName` — that contract is set by the response submit shape on
+    // the server, not by the React reconciliation key.)
+    const key = `${question.type}:${question.text}`;
 
     switch (question.type) {
       case 'text':
         return (
-          <Form.Item key={index} label={question.text} name={fieldName} rules={rules}>
+          <Form.Item key={key} label={question.text} name={fieldName} rules={rules}>
             <Input placeholder={t('questionnaires.enterAnswer')} />
           </Form.Item>
         );
       case 'textarea':
         return (
-          <Form.Item key={index} label={question.text} name={fieldName} rules={rules}>
+          <Form.Item key={key} label={question.text} name={fieldName} rules={rules}>
             <Input.TextArea placeholder={t('questionnaires.enterAnswer')} autoSize={{ minRows: 3 }} />
           </Form.Item>
         );
       case 'number':
         return (
-          <Form.Item key={index} label={question.text} name={fieldName} rules={rules}>
+          <Form.Item key={key} label={question.text} name={fieldName} rules={rules}>
             <InputNumber placeholder={t('questionnaires.enterNumber')} style={{ width: '100%' }} />
           </Form.Item>
         );
       case 'select':
         return (
-          <Form.Item key={index} label={question.text} name={fieldName} rules={rules}>
+          <Form.Item key={key} label={question.text} name={fieldName} rules={rules}>
             <Select
               placeholder={t('questionnaires.selectOption')}
               options={(question.options || []).map(opt => ({ value: opt, label: opt }))}
@@ -79,7 +86,7 @@ const QuestionnaireResponseForm = ({ setOpen, onSuccess }: QuestionnaireResponse
         );
       case 'multiselect':
         return (
-          <Form.Item key={index} label={question.text} name={fieldName} rules={rules}>
+          <Form.Item key={key} label={question.text} name={fieldName} rules={rules}>
             <Select
               mode="multiple"
               placeholder={t('questionnaires.selectOptions')}
@@ -89,13 +96,13 @@ const QuestionnaireResponseForm = ({ setOpen, onSuccess }: QuestionnaireResponse
         );
       case 'rating':
         return (
-          <Form.Item key={index} label={question.text} name={fieldName} rules={rules}>
+          <Form.Item key={key} label={question.text} name={fieldName} rules={rules}>
             <Rate />
           </Form.Item>
         );
       default:
         return (
-          <Form.Item key={index} label={question.text} name={fieldName} rules={rules}>
+          <Form.Item key={key} label={question.text} name={fieldName} rules={rules}>
             <Input placeholder={t('questionnaires.enterAnswer')} />
           </Form.Item>
         );
