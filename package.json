@@ -8,6 +8,8 @@
     "visualize": "meteor --production --extra-packages bundle-visualizer",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "integrity-scan": "echo 'await (await import(\"/scripts/integrity-scan\")).runScan(); process.exit(0)' | meteor shell",
+    "doctor": "react-doctor --no-dead-code --offline -y .",
+    "doctor:full": "react-doctor --offline -y .",
     "update": "meteor update --all-packages && meteor npm update && meteor npm audit fix && meteor npm install",
     "e2e": "playwright test --config=e2e/playwright.config.ts",
     "e2e:ui": "playwright test --config=e2e/playwright.config.ts --ui",
@@ -56,6 +58,7 @@
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-react": "^7.37.5",
     "globals": "^16.2.0",
+    "react-doctor": "^0.1.6",
     "react-refresh": "^0.17.0",
     "typescript": "5.9.3"
   }
