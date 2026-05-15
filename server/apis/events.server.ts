@@ -17,7 +17,7 @@ interface ResolvedMember {
 async function resolveNames(userIds: string[] | undefined): Promise<ResolvedMember[]> {
   if (!userIds?.length) return [];
   const members = await MembersCollection.find({ _id: { $in: userIds } }, { fields: { 'profile.rankId': 1, 'profile.id': 1, 'profile.name': 1 } }).fetchAsync();
-  const rankIds = [...new Set(members.map(m => m.profile?.rankId).filter((x): x is string => Boolean(x)))];
+  const rankIds = [...new Set(members.flatMap(m => m.profile?.rankId ? [m.profile.rankId] : []))];
   const ranks = await RanksCollection.find({ _id: { $in: rankIds } }).fetchAsync();
   const rankMap = new Map(ranks.map(r => [r._id, r.name]));
   return members.map(m => ({

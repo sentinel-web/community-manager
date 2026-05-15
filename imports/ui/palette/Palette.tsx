@@ -95,26 +95,23 @@ export default function Palette() {
     const groupLabel = t('palette.recent');
     const staticItems: PaletteItem[] = [...createItems, ...globalItems, ...navigateItems];
     const itemByKey = new Map(staticItems.map(item => [`${item.kind}:${item.key}`, item] as const));
-    return recents
-      .slice(0, 5)
-      .map(entry => {
-        const id = `${entry.kind}:${entry.key}`;
-        const original = itemByKey.get(id);
-        if (original) {
-          return { ...original, key: `recent:${id}`, group: groupLabel };
-        }
-        if (entry.kind !== 'entity') return null;
-        const collection = entry.key.split(':')[1];
-        if (!collection) return null;
-        return {
-          kind: 'entity',
-          key: `recent:${id}`,
-          label: entry.label,
-          group: groupLabel,
-          onSelect: () => navigate(collection),
-        } as PaletteItem;
-      })
-      .filter((item): item is PaletteItem => item !== null);
+    return recents.slice(0, 5).flatMap<PaletteItem>(entry => {
+      const id = `${entry.kind}:${entry.key}`;
+      const original = itemByKey.get(id);
+      if (original) {
+        return [{ ...original, key: `recent:${id}`, group: groupLabel }];
+      }
+      if (entry.kind !== 'entity') return [];
+      const collection = entry.key.split(':')[1];
+      if (!collection) return [];
+      return [{
+        kind: 'entity',
+        key: `recent:${id}`,
+        label: entry.label,
+        group: groupLabel,
+        onSelect: () => navigate(collection),
+      } as PaletteItem];
+    });
   }, [recents, createItems, globalItems, navigateItems, t, navigate]);
 
   const recencyBoost = useMemo(() => {
