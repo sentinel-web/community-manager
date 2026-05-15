@@ -13,6 +13,7 @@ import RegistrationsCollection from '../../imports/api/collections/registrations
 import SpecializationsCollection from '../../imports/api/collections/specializations.collection';
 import SquadsCollection from '../../imports/api/collections/squads.collection';
 import TasksCollection from '../../imports/api/collections/tasks.collection';
+import ProfilePicturesCollection from '../../imports/api/collections/profilePictures.collection';
 import QuestionnairesCollection from '../../imports/api/collections/questionnaires.collection';
 import { COLLECTION_REGISTRY, type ForeignKeyEdge } from '../../server/collection-registry';
 import { enforceIntegrityOnDelete, extractWrittenFKs, resetIncomingEdgesCache } from '../../server/integrity';
@@ -930,5 +931,108 @@ describe('integrity layer — write-time foreign-key validation (#166)', () => {
         'foreign_key_invalid',
       );
     });
+  });
+});
+
+describe('integrity layer — members.remove custom path + ProfilePicture owned-target (#168)', () => {
+  let adminUserId: string;
+
+  before(async () => {
+    const adminRoleId = await createTestRole({ roles: true });
+    adminUserId = await createTestUser({ roleId: adminRoleId });
+  });
+
+  after(async () => {
+    await cleanupFixtures([
+      EventsCollection,
+      ProfilePicturesCollection,
+      QuestionnaireResponsesCollection,
+      SpecializationsCollection,
+      TasksCollection,
+    ]);
+  });
+
+  it('deleting a member via members.remove pulls them from events/tasks/specializations + nulls response respondentId', async () => {
+    const victimId = await createTestUser({ profile: { name: 'Victim' } });
+    await createTestDoc(EventsCollection, {
+      name: '__test_mr_event',
+      start: new Date(),
+      end: new Date(),
+      hosts: [victimId],
+      attendees: [victimId],
+    });
+    await createTestDoc(TasksCollection, {
+      name: '__test_mr_task',
+      participants: [victimId],
+      completedBy: [victimId],
+    });
+    await createTestDoc(SpecializationsCollection, {
+      name: '__test_mr_spec',
+      instructors: [victimId],
+    });
+    const responseId = await createTestDoc(QuestionnaireResponsesCollection, {
+      questionnaireId: 'some-q',
+      respondentId: victimId,
+      answers: [],
+      submittedAt: new Date(),
+    });
+
+    const result = (await callAs(adminUserId, 'members.remove', victimId)) as {
+      id: string;
+      effects: { pulled: Record<string, number>; setNull: Record<string, number> };
+    };
+
+    assert.strictEqual(result.id, victimId);
+    assert.strictEqual(result.effects.pulled.events, 2, 'events.hosts + events.attendees');
+    assert.strictEqual(result.effects.pulled.tasks, 2, 'tasks.participants + tasks.completedBy');
+    assert.strictEqual(result.effects.pulled.specializations, 1, 'specializations.instructors');
+    assert.strictEqual(result.effects.setNull.questionnaireResponses, 1, 'respondentId nulled');
+
+    const member = await MembersCollection.findOneAsync(victimId);
+    assert.strictEqual(member, undefined, 'member should be removed');
+    const response = await QuestionnaireResponsesCollection.findOneAsync(responseId);
+    assert.strictEqual(response?.respondentId, null);
+  });
+
+  it('member with a ProfilePicture: the picture is deleted as owned-target cascade', async () => {
+    const pictureId = await createTestDoc(ProfilePicturesCollection, { value: 'data:image/png;base64,xxx' });
+    const memberId = await createTestUser({ profile: { name: 'WithPicture', profilePictureId: pictureId } });
+
+    const result = (await callAs(adminUserId, 'members.remove', memberId)) as {
+      effects: { cascaded: Record<string, number> };
+    };
+    assert.strictEqual(result.effects.cascaded.profilePictures, 1);
+
+    const picture = await ProfilePicturesCollection.findOneAsync(pictureId);
+    assert.strictEqual(picture, undefined, 'owned profile picture should be deleted');
+  });
+
+  it('member without a ProfilePicture: delete still succeeds, cascaded.profilePictures unset', async () => {
+    const memberId = await createTestUser({ profile: { name: 'NoPicture' } });
+
+    const result = (await callAs(adminUserId, 'members.remove', memberId)) as {
+      effects: { cascaded: Record<string, number> };
+    };
+    assert.strictEqual(result.effects.cascaded.profilePictures ?? 0, 0);
+  });
+
+  it('audit log records cascadeEffects when members.remove fires integrity primitives', async () => {
+    const memberId = await createTestUser({ profile: { name: 'AuditedMember' } });
+    await createTestDoc(EventsCollection, {
+      name: '__test_audit_event',
+      start: new Date(),
+      end: new Date(),
+      hosts: [memberId],
+    });
+
+    await callAs(adminUserId, 'members.remove', memberId);
+
+    const log = await findLatestAuditLog('members.deleted', memberId);
+    assert.ok(log, 'expected audit log for member delete');
+    const cascadeEffects = (log.payload as Record<string, unknown>).cascadeEffects as
+      | { pulled: Record<string, number> }
+      | undefined;
+    assert.ok(cascadeEffects, 'expected cascadeEffects in audit payload');
+    assert.strictEqual(cascadeEffects.pulled.events, 1);
   });
 });

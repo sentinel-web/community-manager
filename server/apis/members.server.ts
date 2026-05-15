@@ -15,6 +15,7 @@ import { validateObject, validatePublish, validateString, validateUserId, checkP
 import { createLog } from './logs.server';
 import { runMutation } from '../mutation-pipeline';
 import { COLLECTION_REGISTRY } from '../collection-registry';
+import { enforceIntegrityOnDelete, buildRemoveAuditPayload } from '../integrity';
 import type { Role } from '/imports/api/types';
 
 async function getMemberById(memberId: string): Promise<Meteor.User> {
@@ -125,13 +126,17 @@ if (Meteor.isServer) {
       );
     },
     'members.remove': async function (memberId: string = '') {
+      const callerUserId = this.userId;
       return runMutation(
-        { userId: this.userId },
+        { userId: callerUserId },
         {
           collection: 'members',
           operation: 'delete',
           action: 'members.deleted',
-          auditShape: 'remove',
+          audit: (args, result) => {
+            const r = result as { id: string; effects: Awaited<ReturnType<typeof enforceIntegrityOnDelete>> };
+            return buildRemoveAuditPayload(r.id, r.effects);
+          },
           permissionModule: 'members',
           validate: ([id]) => validateString(id, false),
         },
@@ -139,8 +144,27 @@ if (Meteor.isServer) {
         async ([targetId]) => {
           // Existence check stays as code in the body (1-site variation;
           // not promoted to a registry field per the rule of three).
-          await getMemberById(targetId);
-          return MembersCollection.removeAsync({ _id: targetId } as never);
+          const member = await getMemberById(targetId);
+
+          // Run the registry-driven integrity layer (pulls from events,
+          // tasks, specializations; sets respondentId null on responses).
+          // Generic CRUD .remove does this automatically — members.remove
+          // is a custom path so it calls explicitly.
+          const effects = await enforceIntegrityOnDelete('members', targetId, { userId: callerUserId });
+
+          // Owned-target cascade: the ProfilePicture is private to one
+          // Member, so deleting the Member also deletes their picture.
+          // The only owned-target relationship in the registry; per the
+          // rule of three (one instance), kept here as code rather than
+          // promoted to a registry primitive. See server/integrity.ts.
+          const profilePictureId = member.profile?.profilePictureId;
+          if (profilePictureId) {
+            await ProfilePicturesCollection.removeAsync({ _id: profilePictureId } as never);
+            effects.cascaded.profilePictures = (effects.cascaded.profilePictures ?? 0) + 1;
+          }
+
+          await MembersCollection.removeAsync({ _id: targetId } as never);
+          return { id: targetId, effects };
         },
       );
     },
