@@ -35,25 +35,24 @@ We follow the test pyramid approach, with more unit tests at the base and fewer 
 
 ```
         /\
-       /  \      E2E Tests (future)
-      /----\     - Full user flows
-     /      \    - Browser automation
+       /  \      E2E Tests (Playwright, chromium)
+      /----\     - Full user flows via `e2e/tests/*.spec.ts`
+     /      \    - Page objects in `e2e/pages/`, fixtures in `e2e/fixtures/`
     /--------\   Integration Tests
-   /          \  - Meteor methods with DB
-  /------------\ - Publications
- /              \- Permission system
+   /          \  - Meteor methods with DB (`tests/server/*.test.ts`)
+  /------------\ - Mutation pipeline, permissions, CRUD factory
+ /              \- i18n invariants, integrity scans
 /----------------\ Unit Tests
-                   - Helper functions
+                   - Helper functions (`tests/helpers/`)
                    - Pure business logic
                    - Validation functions
 ```
 
-**Current Focus:** Unit tests for helper functions and validation logic
+**Active layers:** unit (helpers, validation), server integration (methods, pipeline, permissions, i18n, integrity), and E2E (Playwright over the section pages and core flows).
 
-**Future Expansion:**
-- Integration tests for Meteor methods and publications
-- Component tests for React components
-- E2E tests for critical user flows
+**Still expanding:**
+- Coverage breadth on existing helpers and server methods
+- Component tests for React components (none yet)
 
 ---
 
@@ -62,11 +61,17 @@ We follow the test pyramid approach, with more unit tests at the base and fewer 
 ### Commands
 
 ```bash
-# Run all tests once (CI mode)
+# Mocha (unit + server integration) — run once (CI mode)
 npm test
 
-# Run tests in watch mode with full app context
+# Mocha in watch mode with full app context
 npm run test-app
+
+# Playwright E2E suite (chromium)
+npm run e2e            # headless run
+npm run e2e:ui         # Playwright UI mode for debugging specs
+npm run e2e:headed     # visible browser
+npm run e2e:debug      # step-through debugger
 ```
 
 ### Test Output
@@ -86,9 +91,10 @@ getLegibleTextColor
 
 ### Environment
 
-- **Framework:** Mocha (via `meteortesting:mocha`)
+- **Mocha framework:** `meteortesting:mocha`
 - **Assertions:** Node.js native `assert` module
-- **Entry Point:** `tests/main.js`
+- **Mocha entry point:** `tests/main.ts` (alphabetical, extensions dropped — Meteor's compiler resolves `.ts`)
+- **E2E framework:** Playwright (`@playwright/test`), config at `e2e/playwright.config.ts`
 
 ---
 
@@ -98,37 +104,42 @@ getLegibleTextColor
 
 ```
 tests/
-├── main.js                    # Test entry point (imports all tests)
-├── helpers/                   # Unit tests for helper functions
-│   └── colors/
-│       ├── hexToRgb.test.js
-│       ├── getLuminance.test.js
-│       ├── getLegibleTextColor.test.js
-│       └── parseColor.test.js
-├── server/                    # Server-side tests (future)
-│   ├── methods/               # Meteor method tests
-│   ├── publications/          # Publication tests
-│   └── validation/            # Validation function tests
-└── client/                    # Client-side tests (future)
-    ├── hooks/                 # React hook tests
-    └── components/            # Component tests
+├── main.ts                    # Mocha entry point (imports all server + helper tests, alphabetical)
+├── helpers/                   # Unit tests for pure helpers
+│   └── colors/                # hexToRgb, getLuminance, getLegibleTextColor, parseColor
+├── server/                    # Server integration tests
+│   ├── crudMethods.test.ts          # CRUD factory contract
+│   ├── mutationPipeline.test.ts     # runMutation lifecycle (auth → permission → validation → audit)
+│   ├── permissions.test.ts          # checkPermission / role cache
+│   ├── validation.test.ts           # validateString / validateObject / etc.
+│   ├── i18n.*.test.ts               # i18n invariants and param extraction
+│   ├── integrity*.test.ts           # orphan-reference scanner
+│   └── paletteSearch.test.ts …      # command-palette ranking
+└── client/                    # Client-side tests (none yet)
+
+e2e/
+├── playwright.config.ts
+├── tests/                     # *.spec.ts — one per feature surface (events, members, …)
+├── pages/                     # Page objects (base.page.ts, section.page.ts, …)
+├── fixtures/                  # auth.fixture.ts and other shared fixtures
+└── types/                     # E2E-only type augmentations
 ```
 
 ### File Naming
 
-- Test files: `{module}.test.js`
-- Test files mirror source structure: `imports/helpers/colors/hexToRgb.js` → `tests/helpers/colors/hexToRgb.test.js`
+- Test files: `{module}.test.ts`
+- Test files mirror source structure: `imports/helpers/colors/hexToRgb.ts` → `tests/helpers/colors/hexToRgb.test.ts`
 
 ### Importing Tests
 
-All test files must be imported in `tests/main.js`:
+All test files must be imported in `tests/main.ts` (alphabetical, extensions dropped — Meteor's compiler-plugin chain resolves `.ts`):
 
-```javascript
-// tests/main.js
-import './helpers/colors/hexToRgb.test.js';
-import './helpers/colors/parseColor.test.js';
-import './helpers/colors/getLuminance.test.js';
-import './helpers/colors/getLegibleTextColor.test.js';
+```typescript
+// tests/main.ts
+import './helpers/colors/getLegibleTextColor.test';
+import './helpers/colors/getLuminance.test';
+import './helpers/colors/hexToRgb.test';
+import './helpers/colors/parseColor.test';
 ```
 
 ---
@@ -433,11 +444,11 @@ describe('useTranslation', () => {
 
 ### 1. Missing Test Imports
 
-Tests won't run unless imported in `tests/main.js`:
+Tests won't run unless imported in `tests/main.ts`:
 
-```javascript
-// tests/main.js - Don't forget to add new test files!
-import './helpers/colors/newHelper.test.js';
+```typescript
+// tests/main.ts - Don't forget to add new test files (alphabetical, no extension)!
+import './helpers/colors/newHelper.test';
 ```
 
 ### 2. Using Jest Syntax
@@ -542,11 +553,13 @@ it('returns formatted output', () => {
 |----------|----------|--------|
 | Color helpers | 100% | Complete |
 | Other helpers | 0% | Planned |
-| Validation functions | 0% | Planned |
-| Meteor methods | 0% | Planned |
+| Validation functions | covered | In place (`validation.test.ts`) |
+| Meteor methods | partial | Members, settings, specializations, palette covered; broader sweep planned |
+| Mutation pipeline | covered | `mutationPipeline.test.ts` exercises auth/permission/validation/audit branches |
+| Permissions | covered | `permissions.test.ts` |
 | Publications | 0% | Planned |
 | React components | 0% | Future |
-| E2E flows | 0% | Future |
+| E2E flows | broad | 22 spec files in `e2e/tests/` — one per feature surface; gated in CI |
 
 ### Target Coverage
 
@@ -584,7 +597,7 @@ it('returns formatted output', () => {
 ### Checklist
 
 1. Create test file mirroring source structure
-2. Import test file in `tests/main.js`
+2. Import test file in `tests/main.ts` (alphabetical, extension dropped)
 3. Write descriptive test names
 4. Test both success and error cases
 5. Test edge cases and boundary conditions
