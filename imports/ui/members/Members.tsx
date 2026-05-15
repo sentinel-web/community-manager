@@ -33,7 +33,7 @@ export default function Members() {
     []
   );
 
-  const customView = useMemo(() => (viewType === 'squad' ? MembersSquadView : false), [viewType]);
+  const customView = viewType === 'squad' ? MembersSquadView : false;
 
   const expandable = useMemo(
     () => ({

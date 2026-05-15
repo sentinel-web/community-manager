@@ -51,6 +51,8 @@ function defaultFilterFactory(input: string): Mongo.Selector<Record<string, unkn
   return { name: { $regex: input, $options: 'i' } };
 }
 
+const emptyGroupActions: GroupAction[] = [];
+
 function defaultColumnsFactory(): ReturnType<ColumnsFactory<Record<string, unknown>>> {
   return [];
 }
@@ -90,7 +92,7 @@ export default function Section<T extends { _id?: string }>({
   customView = false,
   permissionModule = null,
   expandable,
-  groupActions = [],
+  groupActions = emptyGroupActions,
 }: SectionProps<T>) {
   const [nameInput, setNameInput] = useState('');
   const [filter, setFilter] = useState<Mongo.Selector<T>>(() => filterFactory(''));
