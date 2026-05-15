@@ -67,7 +67,12 @@ if (Meteor.isServer) {
         },
       };
 
-      for (const collectionName of BACKUP_COLLECTIONS) {
+      // Every collection fetch is independent — race them through
+      // Promise.all instead of waterfalling. Mutations to the shared
+      // `backup` object are safe under interleaved awaits because JS is
+      // single-threaded between yield points, and each iteration writes
+      // disjoint keys (totalDocuments uses `+=`, atomic in JS).
+      await Promise.all(BACKUP_COLLECTIONS.map(async collectionName => {
         try {
           const Collection = getCollection(collectionName);
           const documents = await Collection.find({}).fetchAsync();
@@ -79,7 +84,7 @@ if (Meteor.isServer) {
           backup.collections[collectionName] = [];
           backup.meta.collectionCounts[collectionName] = 0;
         }
-      }
+      }));
 
       try {
         const settings = await SettingsCollection.find({}).fetchAsync();
@@ -132,7 +137,8 @@ if (Meteor.isServer) {
         },
       };
 
-      for (const collectionName of BACKUP_COLLECTIONS) {
+      // See parallelization rationale on backup.create above — same pattern.
+      await Promise.all(BACKUP_COLLECTIONS.map(async collectionName => {
         try {
           const Collection = getCollection(collectionName);
           const documents = await Collection.find({}).fetchAsync();
@@ -144,7 +150,7 @@ if (Meteor.isServer) {
           backup.collections[collectionName] = [];
           backup.meta.collectionCounts[collectionName] = 0;
         }
-      }
+      }));
 
       try {
         const settings = await SettingsCollection.find({}).fetchAsync();
@@ -209,15 +215,17 @@ if (Meteor.isServer) {
         safetyBackup,
       };
 
+      // Outer loop stays sequential — inserting collections in declared order
+      // preserves any implicit FK ordering. Inner inserts are parallelized
+      // because every doc within a collection is independent (fixed _ids,
+      // no intra-collection ordering dependency).
       for (const collectionName of BACKUP_COLLECTIONS) {
         if (backupData.collections[collectionName]) {
           try {
             const Collection = getCollection(collectionName);
             await Collection.removeAsync({});
             const documents = backupData.collections[collectionName];
-            for (const doc of documents) {
-              await Collection.insertAsync(doc as never);
-            }
+            await Promise.all(documents.map(doc => Collection.insertAsync(doc as never)));
             results.restored[collectionName] = documents.length;
           } catch (error) {
             await createLog('backup.restore.error', { collection: collectionName, error: (error as Error).message });
@@ -229,9 +237,7 @@ if (Meteor.isServer) {
       if (backupData.collections.settings) {
         try {
           await SettingsCollection.removeAsync({});
-          for (const doc of backupData.collections.settings) {
-            await SettingsCollection.insertAsync(doc as never);
-          }
+          await Promise.all(backupData.collections.settings.map(doc => SettingsCollection.insertAsync(doc as never)));
           results.restored.settings = backupData.collections.settings.length;
         } catch (error) {
           await createLog('backup.restore.error', { collection: 'settings', error: (error as Error).message });
@@ -243,16 +249,22 @@ if (Meteor.isServer) {
         try {
           const currentUserId = this.userId;
           await MembersCollection.removeAsync({ _id: { $ne: currentUserId } } as never);
-          for (const doc of backupData.collections.users as Array<{ _id: string }>) {
-            if (doc._id === currentUserId) continue;
-            try {
-              await MembersCollection.insertAsync(doc as never);
-            } catch (insertError) {
-              if (!(insertError as Error).message.includes('duplicate key')) {
-                throw insertError;
+          // Per-doc try/catch swallows duplicate-key errors (the current user
+          // is left in place pre-wipe, so a backup containing their id would
+          // otherwise reject). Promise.all preserves that behavior because
+          // each map callback owns its own try/catch.
+          await Promise.all(
+            (backupData.collections.users as Array<{ _id: string }>).map(async doc => {
+              if (doc._id === currentUserId) return;
+              try {
+                await MembersCollection.insertAsync(doc as never);
+              } catch (insertError) {
+                if (!(insertError as Error).message.includes('duplicate key')) {
+                  throw insertError;
+                }
               }
-            }
-          }
+            }),
+          );
           results.restored.users = backupData.collections.users.length;
         } catch (error) {
           await createLog('backup.restore.error', { collection: 'users', error: (error as Error).message });

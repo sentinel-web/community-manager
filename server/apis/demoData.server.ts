@@ -23,25 +23,29 @@ import { validateUserId, checkPermission } from '../main';
 import { createLog } from './logs.server';
 
 async function wipeAllCollections(): Promise<void> {
-  await AttendancesCollection.removeAsync({});
-  await DiscoveryTypesCollection.removeAsync({});
-  await EventsCollection.removeAsync({});
-  await EventTypesCollection.removeAsync({});
-  await LogsCollection.removeAsync({});
-  await MedalsCollection.removeAsync({});
-  await MembersCollection.removeAsync({});
-  await PositionsCollection.removeAsync({});
-  await ProfilePicturesCollection.removeAsync({});
-  await QuestionnairesCollection.removeAsync({});
-  await QuestionnaireResponsesCollection.removeAsync({});
-  await RanksCollection.removeAsync({});
-  await RegistrationsCollection.removeAsync({});
-  await RolesCollection.removeAsync({});
-  await SettingsCollection.removeAsync({});
-  await SpecializationsCollection.removeAsync({});
-  await SquadsCollection.removeAsync({});
-  await TasksCollection.removeAsync({});
-  await TaskStatusCollection.removeAsync({});
+  // Every collection-wipe is independent — racing them through Promise.all
+  // turns a 19-step waterfall into a single round-trip.
+  await Promise.all([
+    AttendancesCollection.removeAsync({}),
+    DiscoveryTypesCollection.removeAsync({}),
+    EventsCollection.removeAsync({}),
+    EventTypesCollection.removeAsync({}),
+    LogsCollection.removeAsync({}),
+    MedalsCollection.removeAsync({}),
+    MembersCollection.removeAsync({}),
+    PositionsCollection.removeAsync({}),
+    ProfilePicturesCollection.removeAsync({}),
+    QuestionnairesCollection.removeAsync({}),
+    QuestionnaireResponsesCollection.removeAsync({}),
+    RanksCollection.removeAsync({}),
+    RegistrationsCollection.removeAsync({}),
+    RolesCollection.removeAsync({}),
+    SettingsCollection.removeAsync({}),
+    SpecializationsCollection.removeAsync({}),
+    SquadsCollection.removeAsync({}),
+    TasksCollection.removeAsync({}),
+    TaskStatusCollection.removeAsync({}),
+  ]);
 }
 
 // Seed data definitions: typed loosely since they mix schema fields with seed-only _id values.
@@ -276,42 +280,55 @@ function createAvatarDataUri(initial: string, color: string): string {
 }
 
 async function insertDemoData(): Promise<void> {
-  for (const role of ROLES) await RolesCollection.insertAsync(role as never);
-  for (const squad of SQUADS) await SquadsCollection.insertAsync(squad as never);
-  for (const rank of RANKS) await RanksCollection.insertAsync(rank as never);
-  for (const spec of SPECIALIZATIONS) await SpecializationsCollection.insertAsync(spec as never);
-  for (const medal of MEDALS) await MedalsCollection.insertAsync(medal as never);
-  for (const position of POSITIONS) await PositionsCollection.insertAsync(position as never);
-  for (const dt of DISCOVERY_TYPES) await DiscoveryTypesCollection.insertAsync(dt as never);
-  for (const et of EVENT_TYPES) await EventTypesCollection.insertAsync(et as never);
-  for (const ts of TASK_STATUSES) await TaskStatusCollection.insertAsync(ts as never);
+  // Reference data: every seed item within a collection inserts independently
+  // (fixed explicit _ids, no intra-collection ordering dependency). Run each
+  // collection's seed in parallel via Promise.all. Keeping the collections
+  // themselves sequential preserves the implicit FK ordering for any future
+  // referential-integrity layer that may validate inserts (ranks before
+  // specializations that require a rank, etc.).
+  await Promise.all(ROLES.map(role => RolesCollection.insertAsync(role as never)));
+  await Promise.all(SQUADS.map(squad => SquadsCollection.insertAsync(squad as never)));
+  await Promise.all(RANKS.map(rank => RanksCollection.insertAsync(rank as never)));
+  await Promise.all(SPECIALIZATIONS.map(spec => SpecializationsCollection.insertAsync(spec as never)));
+  await Promise.all(MEDALS.map(medal => MedalsCollection.insertAsync(medal as never)));
+  await Promise.all(POSITIONS.map(position => PositionsCollection.insertAsync(position as never)));
+  await Promise.all(DISCOVERY_TYPES.map(dt => DiscoveryTypesCollection.insertAsync(dt as never)));
+  await Promise.all(EVENT_TYPES.map(et => EventTypesCollection.insertAsync(et as never)));
+  await Promise.all(TASK_STATUSES.map(ts => TaskStatusCollection.insertAsync(ts as never)));
 
-  const memberIds: string[] = [];
-  for (let i = 0; i < MEMBERS.length; i++) {
-    const member = MEMBERS[i];
-    const userId = await Accounts.createUserAsync({ username: member.username, password: member.password });
-    const avatarDataUri = createAvatarDataUri(member.profile.name[0], AVATAR_COLORS[i % AVATAR_COLORS.length]);
-    const picId = await ProfilePicturesCollection.insertAsync({ value: avatarDataUri });
-    await MembersCollection.updateAsync(userId, { $set: { profile: { ...member.profile, profilePictureId: picId } } } as never);
-    memberIds.push(userId);
-  }
+  // Members: each member's three-step chain (account create → avatar insert →
+  // profile attach) stays sequential because each step depends on the previous
+  // step's id. Across members the chains are independent — Promise.all
+  // preserves array order in the result, so memberIds[i] stays aligned with
+  // MEMBERS[i], which createAttendances and createTasks rely on for index-
+  // based lookups.
+  const memberIds: string[] = await Promise.all(
+    MEMBERS.map(async (member, i) => {
+      const userId = await Accounts.createUserAsync({ username: member.username, password: member.password });
+      const avatarDataUri = createAvatarDataUri(member.profile.name[0], AVATAR_COLORS[i % AVATAR_COLORS.length]);
+      const picId = await ProfilePicturesCollection.insertAsync({ value: avatarDataUri });
+      await MembersCollection.updateAsync(userId, { $set: { profile: { ...member.profile, profilePictureId: picId } } } as never);
+      return userId;
+    }),
+  );
 
   const events = createEvents();
-  for (const event of events) await EventsCollection.insertAsync(event as never);
+  await Promise.all(events.map(event => EventsCollection.insertAsync(event as never)));
 
   const attendances = createAttendances(memberIds);
-  for (const att of attendances) await AttendancesCollection.insertAsync(att as never);
+  await Promise.all(attendances.map(att => AttendancesCollection.insertAsync(att as never)));
 
   const tasks = createTasks(memberIds);
-  for (const task of tasks) await TasksCollection.insertAsync(task as never);
+  await Promise.all(tasks.map(task => TasksCollection.insertAsync(task as never)));
 
+  // Questionnaire must exist before its responses (FK questionnaireId: 'q-1').
   await QuestionnairesCollection.insertAsync(createQuestionnaire() as never);
   const responses = createQuestionnaireResponses(memberIds);
-  for (const resp of responses) await QuestionnaireResponsesCollection.insertAsync(resp as never);
+  await Promise.all(responses.map(resp => QuestionnaireResponsesCollection.insertAsync(resp as never)));
 
-  for (const reg of REGISTRATIONS) await RegistrationsCollection.insertAsync(reg as never);
+  await Promise.all(REGISTRATIONS.map(reg => RegistrationsCollection.insertAsync(reg as never)));
 
-  for (const setting of SETTINGS) await SettingsCollection.insertAsync(setting as never);
+  await Promise.all(SETTINGS.map(setting => SettingsCollection.insertAsync(setting as never)));
 }
 
 if (Meteor.isServer) {

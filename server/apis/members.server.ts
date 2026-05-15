@@ -119,9 +119,13 @@ if (Meteor.isServer) {
         [memberId, data] as const,
         async ([targetId, changes]) => {
           // Existence check + squad-scope reject stay as code in the body — both
-          // are 1-site variations and out of scope for the registry.
-          const targetMember = await getMemberById(targetId);
-          const role = await getUserRole(callerUserId);
+          // are 1-site variations and out of scope for the registry. The target-
+          // member lookup and the caller-role lookup hit different collections
+          // with no dependency between them — race them via Promise.all.
+          const [targetMember, role] = await Promise.all([
+            getMemberById(targetId),
+            getUserRole(callerUserId),
+          ]);
           if (!isOfficerOrAdmin(role)) {
             const viewer = await MembersCollection.findOneAsync(callerUserId!);
             if (viewer?.profile?.squadId && targetMember?.profile?.squadId !== viewer.profile.squadId) {
@@ -258,8 +262,12 @@ if (Meteor.isServer) {
 
       const rankIds = [...new Set(members.flatMap(m => m.profile?.rankId ? [m.profile.rankId] : []))];
       const squadIds = [...new Set(members.flatMap(m => m.profile?.squadId ? [m.profile.squadId] : []))];
-      const ranks = await RanksCollection.find({ _id: { $in: rankIds } }).fetchAsync();
-      const squads = await SquadsCollection.find({ _id: { $in: squadIds } }).fetchAsync();
+      // Ranks and squads are independent lookups — race them via Promise.all
+      // instead of waterfalling.
+      const [ranks, squads] = await Promise.all([
+        RanksCollection.find({ _id: { $in: rankIds } }).fetchAsync(),
+        SquadsCollection.find({ _id: { $in: squadIds } }).fetchAsync(),
+      ]);
       const rankNameById = new Map(ranks.map(r => [r._id, r.name]));
       const squadNameById = new Map(squads.map(s => [s._id, s.name]));
 
