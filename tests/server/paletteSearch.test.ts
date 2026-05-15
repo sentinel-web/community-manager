@@ -27,13 +27,13 @@ describe('palette.search', () => {
     const adminRoleId = await createTestRole({ roles: true });
     adminUserId = await createTestUser({ roleId: adminRoleId });
 
-    const memberOnlyRoleId = await createTestRole({ members: { read: true, insert: false, update: false, delete: false } });
+    const memberOnlyRoleId = await createTestRole({ members: { read: true, create: false, update: false, delete: false } });
     memberOnlyUserId = await createTestUser({ roleId: memberOnlyRoleId });
 
     squadAId = await createTestDoc(SquadsCollection, { name: `${TEST_PREFIX}AlphaSquad` });
     squadBId = await createTestDoc(SquadsCollection, { name: `${TEST_PREFIX}BravoSquad` });
 
-    const scopedRoleId = await createTestRole({ members: { read: true, insert: false, update: false, delete: false } });
+    const scopedRoleId = await createTestRole({ members: { read: true, create: false, update: false, delete: false } });
     squadAUserId = await createTestUser({ roleId: scopedRoleId, profile: { squadId: squadAId } });
     squadBUserId = await createTestUser({ roleId: scopedRoleId, profile: { squadId: squadBId } });
 

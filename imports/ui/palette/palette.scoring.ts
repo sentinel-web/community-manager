@@ -1,7 +1,7 @@
-import Fuse from 'fuse.js';
+import Fuse, { type IFuseOptions } from 'fuse.js';
 import type { PaletteItem } from './palette.types';
 
-const FUSE_OPTIONS: Fuse.IFuseOptions<PaletteItem> = {
+const FUSE_OPTIONS: IFuseOptions<PaletteItem> = {
   keys: [{ name: 'label', weight: 1 }],
   threshold: 0.4,
   ignoreLocation: true,
