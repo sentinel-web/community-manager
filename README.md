@@ -1,5 +1,7 @@
 # Community Manager
 
+[![CI](https://github.com/sentinel-web/community-manager/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sentinel-web/community-manager/actions/workflows/ci.yml)
+
 A web application for managing ArmA III communities. Built with Meteor.js, React, and MongoDB.
 
 **Key Features:**
@@ -53,12 +55,29 @@ Access the application at [localhost:3000](http://localhost:3000)
 ## Development Commands
 
 ```bash
-npm start              # Start dev server (http://localhost:3000)
-npm test               # Run tests once
-npm run test-app       # Run tests in watch mode
-npm run update         # Update all packages
-npm run visualize      # Analyze bundle size
+# Dev server
+npm start              # Start Meteor dev server at http://localhost:3000
+
+# Tests
+npm test               # Mocha unit tests, run once
+npm run test-app       # Mocha tests in watch mode (full-app driver)
+npm run e2e            # Playwright end-to-end suite (chromium)
+npm run e2e:ui         # Playwright UI mode for debugging specs
+npm run e2e:headed     # Playwright with a visible browser window
+npm run e2e:debug      # Playwright in step-through debugger
+
+# Quality checks
+npm run typecheck      # TypeScript --noEmit across the project
+npm run doctor         # react-doctor static analysis (no-dead-code)
+npm run doctor:full    # react-doctor full report
+
+# Maintenance
+npm run update         # Update Meteor + npm packages and audit fix
+npm run visualize      # Production bundle size analysis
+npm run integrity-scan # Scan MongoDB for orphaned references
 ```
+
+`npm test` and `npm run e2e` are the two checks gated by CI on every PR and every push to `main`.
 
 ## Docker Deployment
 
