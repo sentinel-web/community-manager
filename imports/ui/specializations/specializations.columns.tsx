@@ -27,7 +27,7 @@ const SpecializationTags = ({ specializations }: SpecializationTagsProps) => {
     if (!specializations?.length) setValues([]);
     Meteor.callAsync('specializations.options')
       .then((res: OptionShape[]) => {
-        const data = res.filter(option => specializations!.includes(option.value)).map(option => option);
+        const data = res.filter(option => specializations!.includes(option.value));
         setValues(data);
       })
       .catch(() => {});

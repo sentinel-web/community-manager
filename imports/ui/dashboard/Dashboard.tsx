@@ -120,29 +120,29 @@ export default function Dashboard() {
             label: t('dashboard.collectionStats'),
             children: (
               <Row gutter={[16, 16]}>
-                {Object.entries(stats)
-                  .filter(([key]) => key !== 'profile')
-                  .map(([key, value]) => {
-                    const translateStatKey = (k: string): string => {
-                      const labelKey = STATS_LABEL_KEYS[k as keyof typeof STATS_LABEL_KEYS];
-                      return labelKey ? t(labelKey) : k;
-                    };
-                    return typeof value === 'object' ? (
-                      Object.keys(value as Record<string, number>).map(childKey => (
-                        <Col xs={24} md={12} lg={8} xxl={6} key={childKey}>
-                          <Card variant="outlined">
-                            <Statistic title={`${translateStatKey(key)}: ${childKey}`} value={(value as Record<string, number>)[childKey]} />
-                          </Card>
-                        </Col>
-                      ))
-                    ) : (
-                      <Col xs={24} md={12} lg={8} xxl={6} key={key}>
+                {Object.entries(stats).flatMap(([key, value]) => {
+                  if (key === 'profile') return [];
+                  const translateStatKey = (k: string): string => {
+                    const labelKey = STATS_LABEL_KEYS[k as keyof typeof STATS_LABEL_KEYS];
+                    return labelKey ? t(labelKey) : k;
+                  };
+                  if (typeof value === 'object') {
+                    return Object.keys(value as Record<string, number>).map(childKey => (
+                      <Col xs={24} md={12} lg={8} xxl={6} key={childKey}>
                         <Card variant="outlined">
-                          <Statistic title={translateStatKey(key)} value={value as number} />
+                          <Statistic title={`${translateStatKey(key)}: ${childKey}`} value={(value as Record<string, number>)[childKey]} />
                         </Card>
                       </Col>
-                    );
-                  })}
+                    ));
+                  }
+                  return [
+                    <Col xs={24} md={12} lg={8} xxl={6} key={key}>
+                      <Card variant="outlined">
+                        <Statistic title={translateStatKey(key)} value={value as number} />
+                      </Card>
+                    </Col>,
+                  ];
+                })}
               </Row>
             ),
           },
@@ -193,12 +193,11 @@ export function ProfileStats({ profileStats }: ProfileStatsProps) {
             sm: 1,
             lg: 3,
           }}
-          items={Object.entries(profileStats ?? {})
-            .filter(([key]) => oneThirdWidthKeys.includes(key))
-            .map(([key, value]) => ({
-              label: translateLabel(key),
-              children: value as React.ReactNode,
-            }))}
+          items={Object.entries(profileStats ?? {}).flatMap(([key, value]) =>
+            oneThirdWidthKeys.includes(key)
+              ? [{ label: translateLabel(key), children: value as React.ReactNode }]
+              : []
+          )}
           bordered
         />
       </Col>
@@ -210,25 +209,24 @@ export function ProfileStats({ profileStats }: ProfileStatsProps) {
           styles={{
             content: { whiteSpace: 'pre-wrap' },
           }}
-          items={Object.entries(profileStats ?? {})
-            .filter(([key]) => fullWidthKeys.includes(key))
-            .map(([key, value]) => ({
-              label: translateLabel(key),
-              children:
-                key === 'specializations' && Array.isArray(value) && value.length > 0
-                  ? (value as Specialization[]).map(spec =>
-                      spec.linkToFile ? (
-                        <a key={spec.name} href={spec.linkToFile} target="_blank" rel="noopener noreferrer">
-                          <Tag color="blue" style={{ cursor: 'pointer' }}>{spec.name}</Tag>
-                        </a>
-                      ) : (
-                        <Tag key={spec.name}>{spec.name}</Tag>
-                      )
+          items={Object.entries(profileStats ?? {}).flatMap(([key, value]) => {
+            if (!fullWidthKeys.includes(key)) return [];
+            const children =
+              key === 'specializations' && Array.isArray(value) && value.length > 0
+                ? (value as Specialization[]).map(spec =>
+                    spec.linkToFile ? (
+                      <a key={spec.name} href={spec.linkToFile} target="_blank" rel="noopener noreferrer">
+                        <Tag color="blue" style={{ cursor: 'pointer' }}>{spec.name}</Tag>
+                      </a>
+                    ) : (
+                      <Tag key={spec.name}>{spec.name}</Tag>
                     )
-                  : key === 'specializations'
-                    ? '-'
-                    : value as React.ReactNode,
-            }))}
+                  )
+                : key === 'specializations'
+                  ? '-'
+                  : (value as React.ReactNode);
+            return [{ label: translateLabel(key), children }];
+          })}
           bordered
         />
       </Col>

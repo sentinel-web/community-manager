@@ -17,9 +17,9 @@ async function orbatPopoverItems(squadId: string = ''): Promise<OrbatPopoverItem
   validateObject(squad, false);
   const members = await MembersCollection.find({ 'profile.squadId': squadId }).fetchAsync();
   const items: OrbatPopoverItem[] = [];
-  const rankIds = members.map(m => m.profile?.rankId).filter((x): x is string => Boolean(x));
+  const rankIds = members.flatMap(m => m.profile?.rankId ? [m.profile.rankId] : []);
   const ranks = await RanksCollection.find({ _id: { $in: rankIds } }).mapAsync(r => ({ value: r._id, label: r.name }));
-  const positionIds = members.map(m => m.profile?.positionId).filter((x): x is string => Boolean(x));
+  const positionIds = members.flatMap(m => m.profile?.positionId ? [m.profile.positionId] : []);
   const positions = positionIds.length > 0
     ? await PositionsCollection.find({ _id: { $in: positionIds } }).mapAsync(p => ({ value: p._id, label: p.name }))
     : [];

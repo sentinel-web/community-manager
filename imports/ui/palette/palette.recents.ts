@@ -46,7 +46,7 @@ export function readRecents(now: number = Date.now()): RecentEntry[] {
   try {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    const fresh = parsed.filter(isRecentEntry).filter(e => now - e.ts < STALE_AFTER_MS);
+    const fresh = parsed.filter(e => isRecentEntry(e) && now - e.ts < STALE_AFTER_MS);
     return fresh.sort((a, b) => frecencyScore(b, now) - frecencyScore(a, now)).slice(0, MAX_ENTRIES);
   } catch {
     return [];

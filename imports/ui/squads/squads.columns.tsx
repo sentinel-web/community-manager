@@ -25,7 +25,7 @@ export const SquadTags = ({ squadIds }: SquadTagsProps) => {
     Meteor.callAsync('squads.options')
       .then(options => {
         if (cancelled) return;
-        const filtered = (options as SquadOption[]).filter(option => squadIds.includes(option.value)).map(option => option);
+        const filtered = (options as SquadOption[]).filter(option => squadIds.includes(option.value));
         setSquadNames(filtered);
       })
       .catch(() => {});

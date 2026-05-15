@@ -200,7 +200,7 @@ if (Meteor.isServer) {
 
       const members = await MembersCollection.find({}, { fields: { 'profile.rankId': 1, 'profile.id': 1, 'profile.name': 1 } }).fetchAsync();
 
-      const rankIds = [...new Set(members.map(m => m.profile?.rankId).filter((x): x is string => Boolean(x)))];
+      const rankIds = [...new Set(members.flatMap(m => m.profile?.rankId ? [m.profile.rankId] : []))];
       const ranks = await RanksCollection.find({ _id: { $in: rankIds } }).fetchAsync();
       const rankNameById = new Map(ranks.map(r => [r._id, r.name]));
 
@@ -217,7 +217,7 @@ if (Meteor.isServer) {
       validateObject(options, false);
       const members = await MembersCollection.find(filter, options).fetchAsync();
 
-      const rankIds = [...new Set(members.map(m => m.profile?.rankId).filter((x): x is string => Boolean(x)))];
+      const rankIds = [...new Set(members.flatMap(m => m.profile?.rankId ? [m.profile.rankId] : []))];
       const ranks = await RanksCollection.find({ _id: { $in: rankIds } }).fetchAsync();
       const rankNameById = new Map(ranks.map(r => [r._id, r.name]));
 
@@ -256,8 +256,8 @@ if (Meteor.isServer) {
 
       const members = await MembersCollection.find({}, { fields: { 'profile.rankId': 1, 'profile.id': 1, 'profile.name': 1, 'profile.squadId': 1 } }).fetchAsync();
 
-      const rankIds = [...new Set(members.map(m => m.profile?.rankId).filter((x): x is string => Boolean(x)))];
-      const squadIds = [...new Set(members.map(m => m.profile?.squadId).filter((x): x is string => Boolean(x)))];
+      const rankIds = [...new Set(members.flatMap(m => m.profile?.rankId ? [m.profile.rankId] : []))];
+      const squadIds = [...new Set(members.flatMap(m => m.profile?.squadId ? [m.profile.squadId] : []))];
       const ranks = await RanksCollection.find({ _id: { $in: rankIds } }).fetchAsync();
       const squads = await SquadsCollection.find({ _id: { $in: squadIds } }).fetchAsync();
       const rankNameById = new Map(ranks.map(r => [r._id, r.name]));

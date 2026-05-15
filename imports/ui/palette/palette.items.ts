@@ -106,13 +106,17 @@ export function getCreatePaletteItems(
 ): PaletteItem[] {
   if (!role) return [];
   const groupLabel = t('palette.actions');
-  return CREATE_ACTIONS.filter(action => hasCreateAccess(role, action.module)).map(action => ({
-    kind: 'action' as const,
-    key: `action:create:${action.route}`,
-    label: t(action.labelKey),
-    group: groupLabel,
-    onSelect: () => navigateWithAction(action.route, 'create'),
-  }));
+  return CREATE_ACTIONS.flatMap(action =>
+    hasCreateAccess(role, action.module)
+      ? [{
+          kind: 'action' as const,
+          key: `action:create:${action.route}`,
+          label: t(action.labelKey),
+          group: groupLabel,
+          onSelect: () => navigateWithAction(action.route, 'create'),
+        }]
+      : []
+  );
 }
 
 export function getEntityPaletteItems(results: PaletteEntityResults, t: Translator, navigate: (route: string) => void): PaletteItem[] {
@@ -180,11 +184,15 @@ export function getEntityPaletteItems(results: PaletteEntityResults, t: Translat
 export function getNavigatePaletteItems(role: Role | undefined, t: Translator, navigate: (route: string) => void): PaletteItem[] {
   if (!role) return [];
   const groupLabel = t('palette.navigate');
-  return NAV_ROUTES.filter(route => hasAccess(role, route.module)).map(route => ({
-    kind: 'navigate' as const,
-    key: `nav:${route.key}`,
-    label: t(route.labelKey),
-    group: groupLabel,
-    onSelect: () => navigate(route.key),
-  }));
+  return NAV_ROUTES.flatMap(route =>
+    hasAccess(role, route.module)
+      ? [{
+          kind: 'navigate' as const,
+          key: `nav:${route.key}`,
+          label: t(route.labelKey),
+          group: groupLabel,
+          onSelect: () => navigate(route.key),
+        }]
+      : []
+  );
 }

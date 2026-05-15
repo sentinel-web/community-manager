@@ -101,8 +101,7 @@ if (Meteor.isServer) {
       }
 
       const requiredQuestions = (questionnaire.questions || [])
-        .map((q, index) => ({ ...q, index }))
-        .filter(q => q.required);
+        .flatMap((q, index) => (q.required ? [{ ...q, index }] : []));
 
       for (const question of requiredQuestions) {
         const answer = answers.find(a => a.questionIndex === question.index);

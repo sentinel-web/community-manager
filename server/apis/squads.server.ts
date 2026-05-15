@@ -19,8 +19,8 @@ async function squadMembers(this: Meteor.MethodThisType, squadId: string = ''): 
   validateString(squadId, false);
   const members = await MembersCollection.find({ 'profile.squadId': squadId }).fetchAsync();
   if (members.length === 0) return [];
-  const rankIds = members.map(m => m.profile?.rankId).filter((x): x is string => Boolean(x));
-  const positionIds = members.map(m => m.profile?.positionId).filter((x): x is string => Boolean(x));
+  const rankIds = members.flatMap(m => m.profile?.rankId ? [m.profile.rankId] : []);
+  const positionIds = members.flatMap(m => m.profile?.positionId ? [m.profile.positionId] : []);
   const ranks = rankIds.length > 0
     ? await RanksCollection.find({ _id: { $in: rankIds } }).fetchAsync()
     : [];
