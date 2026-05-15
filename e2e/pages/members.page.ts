@@ -90,7 +90,7 @@ export class MembersPage extends BasePage {
     await deleteBtn.click();
     const modal = this.page.locator('.ant-modal-confirm');
     await modal.waitFor({ state: 'visible' });
-    await modal.locator('button:has-text("Yes")').click();
+    await modal.locator('.ant-btn-primary').click();
     await modal.waitFor({ state: 'hidden', timeout: 10000 });
   }
 
