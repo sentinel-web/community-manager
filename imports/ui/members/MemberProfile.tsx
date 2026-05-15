@@ -1,51 +1,19 @@
 import { App, Button, Card, Col, Descriptions, Modal, Row, Select, Spin, Statistic, Tag, Typography } from 'antd';
 import type { DefaultOptionType } from 'antd/es/select';
 import { Meteor } from 'meteor/meteor';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useTourRef } from '../tour/TourContext';
 
-const ATTENDANCE_COLORS = { present: '#52c41a', zeus: '#1890ff', excused: '#faad14', absent: '#ff4d4f' };
+// recharts ships ~100 KB into the initial bundle even though pie charts only
+// appear inside a member's expanded profile row. Load it lazily on demand.
+const AttendancePieChart = lazy(() => import('./AttendancePieChart'));
 
 interface AttendanceBreakdownData {
   present: number;
   zeus: number;
   excused: number;
   absent: number;
-}
-
-interface AttendancePieChartProps {
-  data: AttendanceBreakdownData;
-  title: string;
-}
-
-function AttendancePieChart({ data, title }: AttendancePieChartProps) {
-  const chartData = [
-    { name: 'Present', value: data.present, color: ATTENDANCE_COLORS.present },
-    { name: 'Zeus', value: data.zeus, color: ATTENDANCE_COLORS.zeus },
-    { name: 'Excused', value: data.excused, color: ATTENDANCE_COLORS.excused },
-    { name: 'Absent', value: data.absent, color: ATTENDANCE_COLORS.absent },
-  ].filter(d => d.value > 0);
-
-  if (!chartData.length) return <Typography.Text type="secondary">{title}: -</Typography.Text>;
-
-  return (
-    <div>
-      <Typography.Text type="secondary">{title}</Typography.Text>
-      <ResponsiveContainer width="100%" height={200}>
-        <PieChart>
-          <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label>
-            {chartData.map(entry => (
-              <Cell key={entry.name} fill={entry.color} />
-            ))}
-          </Pie>
-          <Tooltip />
-          <Legend />
-        </PieChart>
-      </ResponsiveContainer>
-    </div>
-  );
 }
 
 interface ProfileStats {
@@ -228,10 +196,14 @@ export default function MemberProfile({ memberId }: MemberProfileProps) {
                   <Statistic title={t('members.missionCount')} value={breakdown.missionCount} />
                 </Col>
                 <Col xs={24} md={12}>
-                  <AttendancePieChart data={breakdown.total} title={t('members.attendanceOverall')} />
+                  <Suspense fallback={<Spin size="small" />}>
+                    <AttendancePieChart data={breakdown.total} title={t('members.attendanceOverall')} />
+                  </Suspense>
                 </Col>
                 <Col xs={24} md={12}>
-                  <AttendancePieChart data={breakdown.quarterly} title={t('members.attendanceQuarterly')} />
+                  <Suspense fallback={<Spin size="small" />}>
+                    <AttendancePieChart data={breakdown.quarterly} title={t('members.attendanceQuarterly')} />
+                  </Suspense>
                 </Col>
               </>
             )}

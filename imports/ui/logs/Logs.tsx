@@ -4,7 +4,7 @@ import dayjs from 'dayjs';
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
 import { useFind, useSubscribe } from 'meteor/react-meteor-data';
-import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useContext, useMemo, useState } from 'react';
 import type { LogEntry } from '../../api/types/misc';
 import LogsCollection from '../../api/collections/logs.collection';
 import { useTranslation } from '../../i18n/LanguageContext';
@@ -49,7 +49,7 @@ export default function Logs() {
   const defaultDateRange = useMemo<DateRange>(() => [dayjs().subtract(7, 'day'), dayjs()], []);
   const [actionInput, setActionInput] = useState('');
   const [dateRange, setDateRange] = useState<DateRange>(defaultDateRange);
-  const [filter, setFilter] = useState<Mongo.Selector<LogEntry>>(() => buildFilter('', defaultDateRange));
+  const filter = useMemo<Mongo.Selector<LogEntry>>(() => buildFilter(actionInput, dateRange), [actionInput, dateRange]);
   const [options, setOptions] = useState<{ limit: number; sort: { timestamp: number } }>({ limit: 20, sort: { timestamp: -1 } });
   const { t } = useTranslation();
 
@@ -58,10 +58,6 @@ export default function Logs() {
 
   const drawer = useContext(DrawerContext);
   const { notification, message } = App.useApp();
-
-  useEffect(() => {
-    setFilter(buildFilter(actionInput, dateRange));
-  }, [actionInput, dateRange]);
 
   const handleActionChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setActionInput(event.target.value);
