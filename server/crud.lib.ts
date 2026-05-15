@@ -9,7 +9,7 @@ import {
 import { createLog } from './apis/logs.server';
 import { runMutation } from './mutation-pipeline';
 import { COLLECTION_REGISTRY } from './collection-registry';
-import { enforceIntegrityOnDelete, buildRemoveAuditPayload } from './integrity';
+import { enforceIntegrityOnDelete, buildRemoveAuditPayload, validateForeignKeys } from './integrity';
 import type { CrudCollectionMap, CrudCollectionName } from '/imports/api/types';
 
 import AttendancesCollection from '../imports/api/collections/attendances.collection';
@@ -145,6 +145,7 @@ function createCollectionMethods(collection: CrudCollectionName): void {
               if (collection === 'tasks') {
                 p.createdAt = new Date();
               }
+              await validateForeignKeys(collection, p);
               return Collection.insertAsync(p as unknown as CrudCollectionMap[typeof collection]);
             },
           );
@@ -166,6 +167,10 @@ function createCollectionMethods(collection: CrudCollectionName): void {
             },
             [id, data] as const,
             async ([targetId, changes]) => {
+              // The generic CRUD .update wraps changes in $set, so validation
+              // runs against the same modifier Mongo will see — touched-fields
+              // semantics fall out naturally.
+              await validateForeignKeys(collection, { $set: changes });
               const result = await Collection.updateAsync({ _id: targetId } as never, { $set: changes } as never);
               if (collection === 'roles') {
                 clearRoleCache(targetId);

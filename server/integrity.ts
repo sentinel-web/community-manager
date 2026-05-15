@@ -345,3 +345,129 @@ export function buildRemoveAuditPayload(
   }
   return payload;
 }
+
+// ────────────────────────────────────────────────────────────
+// Write-time foreign-key validation (#166)
+//
+// `validateForeignKeys` fires from the generic CRUD .insert and .update
+// paths before the Mongo write. For inserts, every FK field present on the
+// payload is validated (the doc is brand-new — no orphan tolerance needed).
+// For updates, only FK fields actually being written are validated — a
+// `$set: { name: 'x' }` on a doc whose stored rankId is stale must succeed,
+// because the touched-fields rule is the rollout safety valve for existing
+// orphans (per PRD Q12).
+//
+// `extractWrittenFKs` does the modifier-shape introspection in one place
+// so the call sites stay declarative.
+// ────────────────────────────────────────────────────────────
+
+// One write to validate: an FK edge × the value being written. For
+// `$push`/`$addToSet` on array FKs we get a single value (the appended
+// element); for `$set` on a scalar FK we get the new scalar; for a
+// bare-doc insert we yield each FK present on the doc.
+interface WrittenFK {
+  readonly edge: ForeignKeyEdge;
+  readonly value: string;
+}
+
+function readDottedPath_(doc: unknown, path: string): unknown {
+  return readDottedPath(doc, path);
+}
+
+// Yields every (edge, value) pair the modifier is actually writing.
+// Operators that clear or remove (`$unset`, `$pull`) never produce orphans
+// and are skipped. The catch-all bare-doc shape treats every FK on the
+// doc as a written value (used by insert and rare whole-doc updates).
+export function extractWrittenFKs(
+  source: CrudCollectionName,
+  modifier: unknown,
+): WrittenFK[] {
+  const edges = COLLECTION_REGISTRY[source].foreignKeys;
+  if (!edges || edges.length === 0) return [];
+
+  const isOperatorModifier =
+    modifier !== null &&
+    typeof modifier === 'object' &&
+    !Array.isArray(modifier) &&
+    Object.keys(modifier as Record<string, unknown>).some(k => k.startsWith('$'));
+
+  const written: WrittenFK[] = [];
+
+  if (!isOperatorModifier) {
+    // Bare doc — treat every present FK as written.
+    for (const edge of edges) {
+      const raw = readDottedPath_(modifier, edge.field);
+      if (raw == null) continue;
+      if (edge.kind === 'array') {
+        for (const v of raw as unknown[]) {
+          if (typeof v === 'string' && v.length > 0) written.push({ edge, value: v });
+        }
+      } else if (typeof raw === 'string' && raw.length > 0) {
+        written.push({ edge, value: raw });
+      }
+    }
+    return written;
+  }
+
+  const mod = modifier as Record<string, unknown>;
+  const set = (mod.$set ?? {}) as Record<string, unknown>;
+  const push = (mod.$push ?? {}) as Record<string, unknown>;
+  const addToSet = (mod.$addToSet ?? {}) as Record<string, unknown>;
+  // $unset clears; $pull removes; $inc / $rename / $pop / $pullAll aren't FK-relevant.
+
+  for (const edge of edges) {
+    if (Object.prototype.hasOwnProperty.call(set, edge.field)) {
+      const value = set[edge.field];
+      if (value == null) continue; // setting to null/undefined is a clear, always valid
+      if (edge.kind === 'array' && Array.isArray(value)) {
+        for (const v of value) {
+          if (typeof v === 'string' && v.length > 0) written.push({ edge, value: v });
+        }
+      } else if (typeof value === 'string' && value.length > 0) {
+        written.push({ edge, value });
+      }
+    }
+
+    if (edge.kind === 'array') {
+      for (const op of [push, addToSet]) {
+        if (!Object.prototype.hasOwnProperty.call(op, edge.field)) continue;
+        const raw = op[edge.field];
+        const value = (raw as { $each?: unknown })?.$each !== undefined
+          ? (raw as { $each: unknown[] }).$each
+          : raw;
+        if (Array.isArray(value)) {
+          for (const v of value) {
+            if (typeof v === 'string' && v.length > 0) written.push({ edge, value: v });
+          }
+        } else if (typeof value === 'string' && value.length > 0) {
+          written.push({ edge, value });
+        }
+      }
+    }
+  }
+
+  return written;
+}
+
+// Validates every (edge, value) the modifier writes against the target
+// collection's existence. Throws `foreign_key_invalid` on the first miss
+// — a single bad FK is enough to reject the write.
+export async function validateForeignKeys(
+  source: CrudCollectionName,
+  modifier: unknown,
+): Promise<void> {
+  const written = extractWrittenFKs(source, modifier);
+  if (written.length === 0) return;
+
+  for (const { edge, value } of written) {
+    const TargetCollection = getCollection(edge.target);
+    const exists = await TargetCollection.findOneAsync({ _id: value } as never);
+    if (!exists) {
+      throw new Meteor.Error(
+        'foreign_key_invalid',
+        `${edge.field} references non-existent ${edge.target} ${value}`,
+        { field: edge.field, target: edge.target, value },
+      );
+    }
+  }
+}

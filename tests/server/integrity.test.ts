@@ -15,7 +15,7 @@ import SquadsCollection from '../../imports/api/collections/squads.collection';
 import TasksCollection from '../../imports/api/collections/tasks.collection';
 import QuestionnairesCollection from '../../imports/api/collections/questionnaires.collection';
 import { COLLECTION_REGISTRY, type ForeignKeyEdge } from '../../server/collection-registry';
-import { enforceIntegrityOnDelete, resetIncomingEdgesCache } from '../../server/integrity';
+import { enforceIntegrityOnDelete, extractWrittenFKs, resetIncomingEdgesCache } from '../../server/integrity';
 import {
   assertRejectsWithCode,
   callAs,
@@ -769,5 +769,166 @@ describe('integrity layer — cascade primitive + recursive cycle detection (#16
       effects: { cascaded: Record<string, number> };
     };
     assert.strictEqual(preview.cascaded.questionnaireResponses, executed.effects.cascaded.questionnaireResponses);
+  });
+});
+
+describe('integrity layer — write-time foreign-key validation (#166)', () => {
+  let adminUserId: string;
+  let validRankId: string;
+  let validSpecId: string;
+
+  before(async () => {
+    const adminRoleId = await createTestRole({ roles: true });
+    adminUserId = await createTestUser({ roleId: adminRoleId });
+    validRankId = await createTestDoc(RanksCollection, { name: '__test_wv_rank', color: '#fff' });
+    validSpecId = await createTestDoc(SpecializationsCollection, { name: '__test_wv_spec_a', color: '#fff' });
+  });
+
+  after(async () => {
+    await cleanupFixtures([RanksCollection, SpecializationsCollection, TasksCollection]);
+  });
+
+  describe('extractWrittenFKs — modifier-shape inspection (unit-style)', () => {
+    it('returns no entries for a collection without foreign keys', () => {
+      const result = extractWrittenFKs('medals', { $set: { name: 'x' } });
+      assert.deepStrictEqual(result, []);
+    });
+
+    it('returns only the FKs actually mentioned in $set (touched-fields only)', () => {
+      const result = extractWrittenFKs('specializations', { $set: { name: 'x' } });
+      assert.deepStrictEqual(result, [], 'unrelated field should not surface any FKs');
+    });
+
+    it('extracts a scalar FK from $set', () => {
+      const result = extractWrittenFKs('specializations', { $set: { requiredRankId: 'rank-x' } });
+      assert.strictEqual(result.length, 1);
+      assert.strictEqual(result[0].edge.field, 'requiredRankId');
+      assert.strictEqual(result[0].value, 'rank-x');
+    });
+
+    it('extracts every array element from $set on an array FK', () => {
+      const result = extractWrittenFKs('specializations', {
+        $set: { requiredSpecializations: ['a', 'b', 'c'] },
+      });
+      assert.strictEqual(result.length, 3);
+      assert.deepStrictEqual(
+        result.map(r => r.value),
+        ['a', 'b', 'c'],
+      );
+    });
+
+    it('extracts a single $push value', () => {
+      const result = extractWrittenFKs('specializations', {
+        $push: { requiredSpecializations: 'new-spec' },
+      });
+      assert.strictEqual(result.length, 1);
+      assert.strictEqual(result[0].value, 'new-spec');
+    });
+
+    it('extracts $push with $each variant', () => {
+      const result = extractWrittenFKs('specializations', {
+        $push: { requiredSpecializations: { $each: ['a', 'b'] } },
+      });
+      assert.deepStrictEqual(
+        result.map(r => r.value),
+        ['a', 'b'],
+      );
+    });
+
+    it('skips $unset and $pull (clearing/removing is always valid)', () => {
+      const unsetResult = extractWrittenFKs('specializations', { $unset: { requiredRankId: '' } });
+      assert.deepStrictEqual(unsetResult, []);
+      const pullResult = extractWrittenFKs('specializations', { $pull: { requiredSpecializations: 'x' } });
+      assert.deepStrictEqual(pullResult, []);
+    });
+
+    it('skips a $set: null on a scalar FK (clearing is valid)', () => {
+      const result = extractWrittenFKs('specializations', { $set: { requiredRankId: null } });
+      assert.deepStrictEqual(result, []);
+    });
+
+    it('bare-doc insert yields every present FK', () => {
+      const result = extractWrittenFKs('specializations', {
+        name: 'x',
+        requiredRankId: 'rank-x',
+        instructors: ['m1', 'm2'],
+      });
+      assert.strictEqual(result.length, 3);
+    });
+  });
+
+  describe('CRUD .insert validation', () => {
+    it('insert with valid FK references succeeds', async () => {
+      const id = (await callAs(adminUserId, 'specializations.insert', {
+        name: '__test_wv_insert_ok',
+        requiredRankId: validRankId,
+      })) as string;
+      assert.ok(id);
+    });
+
+    it('insert with a non-existent scalar FK throws foreign_key_invalid', async () => {
+      await assertRejectsWithCode(
+        () =>
+          callAs(adminUserId, 'specializations.insert', {
+            name: '__test_wv_insert_bad_rank',
+            requiredRankId: 'definitely-not-a-real-rank',
+          }),
+        'foreign_key_invalid',
+      );
+    });
+
+    it('insert with a non-existent array FK element throws foreign_key_invalid', async () => {
+      await assertRejectsWithCode(
+        () =>
+          callAs(adminUserId, 'specializations.insert', {
+            name: '__test_wv_insert_bad_spec',
+            requiredSpecializations: [validSpecId, 'fake-spec'],
+          }),
+        'foreign_key_invalid',
+      );
+    });
+  });
+
+  describe('CRUD .update validation — touched-fields only', () => {
+    it('update of an unrelated field on a doc with a pre-existing orphan succeeds', async () => {
+      // Manually create a Specialization with a stale requiredRankId (bypass
+      // insert validation by writing directly to the collection). Then
+      // update an unrelated field via the method — should NOT fail.
+      const specId = await createTestDoc(SpecializationsCollection, {
+        name: '__test_wv_orphan_holder',
+        requiredRankId: 'stale-rank-that-never-existed',
+      });
+      await callAs(adminUserId, 'specializations.update', specId, { name: '__test_wv_orphan_renamed' });
+
+      const doc = await SpecializationsCollection.findOneAsync(specId);
+      assert.strictEqual(doc?.name, '__test_wv_orphan_renamed');
+      assert.strictEqual(doc?.requiredRankId, 'stale-rank-that-never-existed', 'orphan field preserved');
+    });
+
+    it('update that rewrites a scalar FK to a stale value throws foreign_key_invalid', async () => {
+      const specId = await createTestDoc(SpecializationsCollection, { name: '__test_wv_update_bad' });
+      await assertRejectsWithCode(
+        () => callAs(adminUserId, 'specializations.update', specId, { requiredRankId: 'fake-rank' }),
+        'foreign_key_invalid',
+      );
+    });
+
+    it('update that rewrites a scalar FK to a valid value succeeds', async () => {
+      const specId = await createTestDoc(SpecializationsCollection, { name: '__test_wv_update_good' });
+      await callAs(adminUserId, 'specializations.update', specId, { requiredRankId: validRankId });
+      const doc = await SpecializationsCollection.findOneAsync(specId);
+      assert.strictEqual(doc?.requiredRankId, validRankId);
+    });
+
+    it('update that adds a stale array element throws foreign_key_invalid', async () => {
+      const specId = await createTestDoc(SpecializationsCollection, { name: '__test_wv_update_array' });
+      await assertRejectsWithCode(
+        () =>
+          callAs(adminUserId, 'specializations.update', specId, {
+            requiredSpecializations: [validSpecId, 'fake-spec-x'],
+          }),
+        'foreign_key_invalid',
+      );
+    });
   });
 });
