@@ -63,6 +63,7 @@ export const COLLECTION_REGISTRY: Record<CrudCollectionName, CollectionRegistryE
     module: 'questionnaires',
     foreignKeys: [
       { field: 'respondentId', target: 'members', kind: 'scalar', onDelete: 'setNull' },
+      { field: 'questionnaireId', target: 'questionnaires', kind: 'scalar', onDelete: 'cascade' },
     ],
   },
   questionnaires: { module: 'questionnaires' },

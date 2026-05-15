@@ -13,7 +13,9 @@ import RegistrationsCollection from '../../imports/api/collections/registrations
 import SpecializationsCollection from '../../imports/api/collections/specializations.collection';
 import SquadsCollection from '../../imports/api/collections/squads.collection';
 import TasksCollection from '../../imports/api/collections/tasks.collection';
-import { enforceIntegrityOnDelete } from '../../server/integrity';
+import QuestionnairesCollection from '../../imports/api/collections/questionnaires.collection';
+import { COLLECTION_REGISTRY, type ForeignKeyEdge } from '../../server/collection-registry';
+import { enforceIntegrityOnDelete, resetIncomingEdgesCache } from '../../server/integrity';
 import {
   assertRejectsWithCode,
   callAs,
@@ -583,5 +585,189 @@ describe('integrity layer — setNull primitive on scalar foreign keys (#164)', 
 
     const second = await enforceIntegrityOnDelete('positions', positionId, { userId: adminUserId });
     assert.strictEqual(second.setNull.members ?? 0, 0);
+  });
+});
+
+describe('integrity layer — cascade primitive + recursive cycle detection (#165)', () => {
+  let adminUserId: string;
+
+  before(async () => {
+    const adminRoleId = await createTestRole({ roles: true });
+    adminUserId = await createTestUser({ roleId: adminRoleId });
+  });
+
+  after(async () => {
+    await cleanupFixtures([
+      MedalsCollection,
+      QuestionnairesCollection,
+      QuestionnaireResponsesCollection,
+    ]);
+  });
+
+  it('deleting a Questionnaire cascades to delete all its Responses', async () => {
+    const questionnaireId = await createTestDoc(QuestionnairesCollection, {
+      name: '__test_q_cascade',
+      questions: [],
+      status: 'closed',
+      allowAnonymous: true,
+      interval: 'once',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    const responseIds = await Promise.all([
+      createTestDoc(QuestionnaireResponsesCollection, {
+        questionnaireId,
+        respondentId: null,
+        answers: [],
+        submittedAt: new Date(),
+      }),
+      createTestDoc(QuestionnaireResponsesCollection, {
+        questionnaireId,
+        respondentId: null,
+        answers: [],
+        submittedAt: new Date(),
+      }),
+      createTestDoc(QuestionnaireResponsesCollection, {
+        questionnaireId,
+        respondentId: null,
+        answers: [],
+        submittedAt: new Date(),
+      }),
+    ]);
+    // Unrelated response on a different questionnaire should survive.
+    const unrelatedId = await createTestDoc(QuestionnaireResponsesCollection, {
+      questionnaireId: 'other-questionnaire',
+      respondentId: null,
+      answers: [],
+      submittedAt: new Date(),
+    });
+
+    const result = (await callAs(adminUserId, 'questionnaires.remove', questionnaireId)) as {
+      effects: { cascaded: Record<string, number> };
+    };
+    assert.strictEqual(result.effects.cascaded.questionnaireResponses, 3);
+
+    for (const id of responseIds) {
+      const gone = await QuestionnaireResponsesCollection.findOneAsync(id);
+      assert.strictEqual(gone, undefined, `response ${id} should be cascade-deleted`);
+    }
+    const unrelatedStill = await QuestionnaireResponsesCollection.findOneAsync(unrelatedId);
+    assert.ok(unrelatedStill, 'unrelated response must survive');
+  });
+
+  it('audit log records cascadeEffects.cascaded with the affected count', async () => {
+    const questionnaireId = await createTestDoc(QuestionnairesCollection, {
+      name: '__test_q_audit',
+      questions: [],
+      status: 'closed',
+      allowAnonymous: true,
+      interval: 'once',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    await createTestDoc(QuestionnaireResponsesCollection, {
+      questionnaireId,
+      respondentId: null,
+      answers: [],
+      submittedAt: new Date(),
+    });
+
+    await callAs(adminUserId, 'questionnaires.remove', questionnaireId);
+
+    const log = await findLatestAuditLog('questionnaires.deleted', questionnaireId);
+    assert.ok(log, 'expected audit log for questionnaire delete');
+    const cascadeEffects = (log.payload as Record<string, unknown>).cascadeEffects as
+      | { cascaded: Record<string, number> }
+      | undefined;
+    assert.ok(cascadeEffects, 'expected cascadeEffects to appear');
+    assert.strictEqual(cascadeEffects.cascaded.questionnaireResponses, 1);
+  });
+
+  it('preview reports cascade count without deleting anything', async () => {
+    const questionnaireId = await createTestDoc(QuestionnairesCollection, {
+      name: '__test_q_preview',
+      questions: [],
+      status: 'closed',
+      allowAnonymous: true,
+      interval: 'once',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    const responseId = await createTestDoc(QuestionnaireResponsesCollection, {
+      questionnaireId,
+      respondentId: null,
+      answers: [],
+      submittedAt: new Date(),
+    });
+
+    const preview = (await callAs(adminUserId, 'integrity.preview', 'questionnaires', questionnaireId)) as {
+      cascaded: Record<string, number>;
+    };
+    assert.strictEqual(preview.cascaded.questionnaireResponses, 1);
+
+    const responseStill = await QuestionnaireResponsesCollection.findOneAsync(responseId);
+    assert.ok(responseStill, 'preview must not delete the cascaded children');
+  });
+
+  it('cycle detection: a self-pointing cascade edge terminates rather than infinite-loops', async () => {
+    // Inject a synthetic self-referential cascade edge into the registry,
+    // then reset the inverted-edges cache so the engine picks it up. Use
+    // medals because it has no real foreign keys today — least invasive.
+    // The edge { _id → medals (cascade) } makes "the doc whose _id matches
+    // the target id" a cascade child, which is the target itself. The
+    // visited-set should prevent infinite recursion.
+    const medalsEntry = COLLECTION_REGISTRY.medals as { foreignKeys?: readonly ForeignKeyEdge[] };
+    const original = medalsEntry.foreignKeys;
+    medalsEntry.foreignKeys = [
+      { field: '_id', target: 'medals', kind: 'scalar', onDelete: 'cascade' },
+    ];
+    resetIncomingEdgesCache();
+
+    try {
+      const medalId = await createTestDoc(MedalsCollection, { name: '__test_cycle_probe', color: '#fff' });
+      const start = Date.now();
+      const effects = await enforceIntegrityOnDelete('medals', medalId, { userId: adminUserId });
+      const elapsed = Date.now() - start;
+      assert.ok(elapsed < 2000, `cycle detection must terminate quickly (was ${elapsed}ms)`);
+      // The visited-set short-circuits the inner recursion before any
+      // cascaded count is recorded, but the outer level still records the
+      // direct child it found (which is the doc itself).
+      assert.strictEqual(effects.cascaded.medals, 1);
+    } finally {
+      medalsEntry.foreignKeys = original;
+      resetIncomingEdgesCache();
+    }
+  });
+
+  it('preview/execute equivalence for cascade', async () => {
+    const questionnaireId = await createTestDoc(QuestionnairesCollection, {
+      name: '__test_q_equiv',
+      questions: [],
+      status: 'closed',
+      allowAnonymous: true,
+      interval: 'once',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    await createTestDoc(QuestionnaireResponsesCollection, {
+      questionnaireId,
+      respondentId: null,
+      answers: [],
+      submittedAt: new Date(),
+    });
+    await createTestDoc(QuestionnaireResponsesCollection, {
+      questionnaireId,
+      respondentId: null,
+      answers: [],
+      submittedAt: new Date(),
+    });
+
+    const preview = (await callAs(adminUserId, 'integrity.preview', 'questionnaires', questionnaireId)) as {
+      cascaded: Record<string, number>;
+    };
+    const executed = (await callAs(adminUserId, 'questionnaires.remove', questionnaireId)) as {
+      effects: { cascaded: Record<string, number> };
+    };
+    assert.strictEqual(preview.cascaded.questionnaireResponses, executed.effects.cascaded.questionnaireResponses);
   });
 });

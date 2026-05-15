@@ -169,7 +169,18 @@ async function traverseIntegrityEdges(
   targetId: string,
   ctx: IntegrityContext,
   mode: TraversalMode,
+  visited: Set<string> = new Set(),
 ): Promise<TraversalResult> {
+  // Cycle break: if we've already walked this (collection, id) higher in the
+  // recursion stack, return empty so we don't infinite-loop. Real registries
+  // shouldn't have cycles (cascade is reserved for owned relationships) but
+  // a hypothetical mistake here would otherwise hang the server.
+  const visitKey = `${target}:${targetId}`;
+  if (visited.has(visitKey)) {
+    return { blockedBy: [], effects: { pulled: {}, setNull: {}, cascaded: {} } };
+  }
+  visited.add(visitKey);
+
   const edges = getIncomingEdges(target);
   const blockedBy: BlockedByEntry[] = [];
   const effects: IntegrityEffects = { pulled: {}, setNull: {}, cascaded: {} };
@@ -231,7 +242,45 @@ async function traverseIntegrityEdges(
       continue;
     }
 
-    // Slice #165 (cascade) extends here.
+    if (edge.onDelete === 'cascade') {
+      const SourceCollection = getCollection(edge.source);
+      const selector = buildEdgeSelector(edge, targetId);
+      const referencingDocs = await SourceCollection.find(selector).fetchAsync();
+      if (referencingDocs.length === 0) continue;
+
+      for (const doc of referencingDocs) {
+        const docId = (doc as { _id?: string })._id;
+        if (!docId) continue;
+        // Recurse so the cascaded doc's own integrity rules fire before
+        // it's removed. Owned grandchildren get cleaned up first.
+        const childResult = await traverseIntegrityEdges(edge.source, docId, ctx, mode, visited);
+
+        // Propagate child blockers upward — block has primacy, and the
+        // top-level enforce decides whether to throw. (In execute mode the
+        // preview pass has already cleared all blockers, so this branch
+        // accumulates empty arrays.)
+        for (const entry of childResult.blockedBy) blockedBy.push(entry);
+
+        // Merge child effect counts into ours by source key.
+        for (const [src, n] of Object.entries(childResult.effects.pulled)) {
+          effects.pulled[src as CrudCollectionName] = (effects.pulled[src as CrudCollectionName] ?? 0) + n;
+        }
+        for (const [src, n] of Object.entries(childResult.effects.setNull)) {
+          effects.setNull[src as CrudCollectionName] = (effects.setNull[src as CrudCollectionName] ?? 0) + n;
+        }
+        for (const [src, n] of Object.entries(childResult.effects.cascaded)) {
+          effects.cascaded[src as CrudCollectionName] = (effects.cascaded[src as CrudCollectionName] ?? 0) + n;
+        }
+
+        if (mode === 'execute') {
+          // removeAsync on a missing doc is a no-op, preserving idempotence.
+          await SourceCollection.removeAsync({ _id: docId } as never);
+        }
+      }
+
+      effects.cascaded[edge.source] = (effects.cascaded[edge.source] ?? 0) + referencingDocs.length;
+      continue;
+    }
   }
 
   return { blockedBy, effects };
