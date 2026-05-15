@@ -14,10 +14,10 @@ A web application for managing ArmA III communities. Built with Meteor.js, React
 
 ## Requirements
 
-- [Node.js and npm](https://nodejs.org/en)
-- [Meteor.js](https://docs.meteor.com/about/install.html)
-- [MongoDB Compass](https://www.mongodb.com/try/download/compass) (optional, for database inspection)
-- Text editor ([VS Code](https://code.visualstudio.com/download) recommended)
+- [Node.js 20.x](https://nodejs.org/en) (matches the version CI runs)
+- [Meteor.js 3.4+](https://docs.meteor.com/about/install.html)
+- A text editor — we use [VS Code](https://code.visualstudio.com/download) with ESLint and Prettier so contributions match project style
+- MongoDB itself is **not** required for development — Meteor bundles it. Install [MongoDB Compass](https://www.mongodb.com/try/download/compass) only if you want to inspect the database.
 
 ## Quick Start
 
@@ -44,7 +44,7 @@ The setup script will install Node.js, Meteor.js, and project dependencies autom
 ```bash
 git clone https://github.com/sentinel-web/community-manager.git
 cd community-manager
-meteor npm install
+meteor npm install   # first run downloads Meteor itself (~200 MB, 2-3 min)
 npm start
 ```
 
@@ -77,7 +77,7 @@ npm run visualize      # Production bundle size analysis
 npm run integrity-scan # Scan MongoDB for orphaned references
 ```
 
-`npm test` and `npm run e2e` are the two checks gated by CI on every PR and every push to `main`.
+`npm test`, `npm run typecheck`, and `npm run e2e` are gated by CI on every PR and every push to `main`.
 
 ## Docker Deployment
 
@@ -94,27 +94,21 @@ Requires external Traefik network for reverse proxy. See `docker-compose.yml` fo
 
 ## Tech Stack
 
-- **Backend:** Meteor.js 3.4+, MongoDB
+- **Language:** TypeScript (strict)
+- **Backend:** Meteor.js 3.4+, MongoDB, Mocha
 - **Frontend:** React 18, Ant Design
+- **E2E tests:** Playwright (chromium)
 - **Calendar:** react-big-calendar with rrule
 - **Kanban:** react-beautiful-dnd
 - **ORBAT:** react-organizational-chart
 
-## Optional VS Code Extensions
+## Project Map
 
-<details>
-<summary>Recommended extensions</summary>
-
-- Auto Rename Tag
-- ES7+ React/Redux/React-Native snippets
-- ESLint
-- GitLens
-- Path Intellisense
-- Prettier - Code Formatter
-- vscode-icons
-
-</details>
+- **Architecture, patterns, and coding guidelines:** [`CLAUDE.md`](CLAUDE.md)
+- **Testing strategy:** [`TESTING.md`](TESTING.md)
+- **Domain model and decisions:** [`CONTEXT.md`](CONTEXT.md)
+- **Issue triage labels:** [`docs/agents/triage-labels.md`](docs/agents/triage-labels.md)
 
 ## Contributing
 
-See `CLAUDE.md` for coding guidelines and project patterns.
+See [`CLAUDE.md`](CLAUDE.md) for coding guidelines and project patterns. PRs require the `mocha + e2e` and `typecheck` checks to pass; `main` is protected with linear history.
