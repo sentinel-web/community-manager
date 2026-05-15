@@ -3,6 +3,7 @@ import { Meteor } from 'meteor/meteor';
 import { Random } from 'meteor/random';
 import DiscoveryTypesCollection from '../../imports/api/collections/discoveryTypes.collection';
 import EventsCollection from '../../imports/api/collections/events.collection';
+import EventTypesCollection from '../../imports/api/collections/eventTypes.collection';
 import LogsCollection from '../../imports/api/collections/logs.collection';
 import MedalsCollection from '../../imports/api/collections/medals.collection';
 import MembersCollection from '../../imports/api/collections/members.collection';
@@ -10,9 +11,11 @@ import PositionsCollection from '../../imports/api/collections/positions.collect
 import QuestionnaireResponsesCollection from '../../imports/api/collections/questionnaireResponses.collection';
 import RanksCollection from '../../imports/api/collections/ranks.collection';
 import RegistrationsCollection from '../../imports/api/collections/registrations.collection';
+import RolesCollection from '../../imports/api/collections/roles.collection';
 import SpecializationsCollection from '../../imports/api/collections/specializations.collection';
 import SquadsCollection from '../../imports/api/collections/squads.collection';
 import TasksCollection from '../../imports/api/collections/tasks.collection';
+import TaskStatusCollection from '../../imports/api/collections/taskStatus.collection';
 import ProfilePicturesCollection from '../../imports/api/collections/profilePictures.collection';
 import QuestionnairesCollection from '../../imports/api/collections/questionnaires.collection';
 import { COLLECTION_REGISTRY, type ForeignKeyEdge } from '../../server/collection-registry';
@@ -1125,5 +1128,98 @@ describe('integrity layer — orphan scanner (#167)', () => {
     const nonAdminUserId = await createTestUser({ roleId: nonAdminRoleId });
 
     await assertRejectsWithCode(() => callAs(nonAdminUserId, 'integrity.scan'), 403);
+  });
+});
+
+describe('integrity layer — backfilled block edges (events.eventType, tasks.status, members.profile.roleId)', () => {
+  let adminUserId: string;
+
+  before(async () => {
+    const adminRoleId = await createTestRole({ roles: true });
+    adminUserId = await createTestUser({ roleId: adminRoleId });
+  });
+
+  after(async () => {
+    await cleanupFixtures([
+      EventsCollection,
+      EventTypesCollection,
+      RolesCollection,
+      TasksCollection,
+      TaskStatusCollection,
+    ]);
+  });
+
+  it('deleting an EventType in use is blocked with structured details', async () => {
+    const typeId = await createTestDoc(EventTypesCollection, { name: '__test_et_blocked' });
+    await createTestDoc(EventsCollection, {
+      name: '__test_event_with_type',
+      start: new Date(),
+      end: new Date(),
+      eventType: typeId,
+    });
+
+    let captured: Meteor.Error | null = null;
+    try {
+      await callAs(adminUserId, 'eventTypes.remove', typeId);
+    } catch (e) {
+      captured = e as Meteor.Error;
+    }
+
+    assert.ok(captured, 'expected eventTypes.remove to throw');
+    assert.strictEqual(captured.error, 'foreign_key_blocked');
+    const details = captured.details as { blockedBy: Array<{ source: string; count: number; sample: string[] }> };
+    assert.strictEqual(details.blockedBy.length, 1);
+    assert.strictEqual(details.blockedBy[0].source, 'events');
+    assert.ok(details.blockedBy[0].count >= 1);
+    assert.ok(details.blockedBy[0].sample.includes('__test_event_with_type'));
+
+    const stillThere = await EventTypesCollection.findOneAsync(typeId);
+    assert.ok(stillThere, 'event type must survive a blocked delete');
+  });
+
+  it('deleting a TaskStatus in use is blocked with structured details', async () => {
+    const statusId = await createTestDoc(TaskStatusCollection, { name: '__test_ts_blocked' });
+    await createTestDoc(TasksCollection, { name: '__test_task_with_status', status: statusId });
+
+    let captured: Meteor.Error | null = null;
+    try {
+      await callAs(adminUserId, 'taskStatus.remove', statusId);
+    } catch (e) {
+      captured = e as Meteor.Error;
+    }
+
+    assert.ok(captured, 'expected taskStatus.remove to throw');
+    assert.strictEqual(captured.error, 'foreign_key_blocked');
+    const details = captured.details as { blockedBy: Array<{ source: string; count: number; sample: string[] }> };
+    assert.strictEqual(details.blockedBy[0].source, 'tasks');
+    assert.ok(details.blockedBy[0].sample.includes('__test_task_with_status'));
+  });
+
+  it('deleting a Role held by members is blocked with sample member names', async () => {
+    const heldRoleId = await createTestRole({ members: { read: true, create: false, update: false, delete: false } });
+    await createTestUser({ roleId: heldRoleId, profile: { name: 'RoleHolderA' } });
+    await createTestUser({ roleId: heldRoleId, profile: { name: 'RoleHolderB' } });
+
+    let captured: Meteor.Error | null = null;
+    try {
+      await callAs(adminUserId, 'roles.remove', heldRoleId);
+    } catch (e) {
+      captured = e as Meteor.Error;
+    }
+
+    assert.ok(captured, 'expected roles.remove to throw');
+    assert.strictEqual(captured.error, 'foreign_key_blocked');
+    const details = captured.details as { blockedBy: Array<{ source: string; count: number; sample: string[] }> };
+    assert.strictEqual(details.blockedBy[0].source, 'members');
+    assert.strictEqual(details.blockedBy[0].count, 2);
+    assert.ok(details.blockedBy[0].sample.some(name => name === 'RoleHolderA' || name === 'RoleHolderB'));
+  });
+
+  it('unused reference data still deletes cleanly (no false-positive block)', async () => {
+    const unusedTypeId = await createTestDoc(EventTypesCollection, { name: '__test_et_unused' });
+    const result = (await callAs(adminUserId, 'eventTypes.remove', unusedTypeId)) as { id: string };
+    assert.strictEqual(result.id, unusedTypeId);
+    const gone = await EventTypesCollection.findOneAsync(unusedTypeId);
+    assert.strictEqual(gone, undefined);
   });
 });

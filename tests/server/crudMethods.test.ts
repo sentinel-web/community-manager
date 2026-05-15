@@ -1,5 +1,6 @@
 import assert from 'node:assert';
 import MedalsCollection from '../../imports/api/collections/medals.collection';
+import MembersCollection from '../../imports/api/collections/members.collection';
 import EventsCollection from '../../imports/api/collections/events.collection';
 import {
   assertRejectsWithCode,
@@ -258,6 +259,12 @@ describe('crud.lib — role cache invalidates on roles.update / roles.remove', (
   });
 
   it('roles.remove clears cache — user without role has no permission', async () => {
+    // The members.profile.roleId → roles edge is `block` (PRD policy), so
+    // deleting a role that's still held throws foreign_key_blocked. Detach
+    // the user first via direct Mongo update (bypasses Members write
+    // validation so the test stays focused on the cache-invalidation
+    // invariant rather than the role-reassignment UX).
+    await MembersCollection.updateAsync(demotableUserId, { $unset: { 'profile.roleId': '' } });
     await callAs(adminUserId, 'roles.remove', demotableRoleId);
 
     await assertRejectsWithCode(() => callAs(demotableUserId, 'medals.read', {}), 403);

@@ -37,6 +37,7 @@ export const COLLECTION_REGISTRY: Record<CrudCollectionName, CollectionRegistryE
     fallback: { create: 'canCreateEvents' },
     displayField: 'name',
     foreignKeys: [
+      { field: 'eventType', target: 'eventTypes', kind: 'scalar', onDelete: 'block' },
       { field: 'hosts', target: 'members', kind: 'array', onDelete: 'pull' },
       { field: 'attendees', target: 'members', kind: 'array', onDelete: 'pull' },
     ],
@@ -49,6 +50,7 @@ export const COLLECTION_REGISTRY: Record<CrudCollectionName, CollectionRegistryE
     redact: { insert: ['password'] },
     displayField: 'profile.name',
     foreignKeys: [
+      { field: 'profile.roleId', target: 'roles', kind: 'scalar', onDelete: 'block' },
       { field: 'profile.rankId', target: 'ranks', kind: 'scalar', onDelete: 'block' },
       { field: 'profile.navyRankId', target: 'ranks', kind: 'scalar', onDelete: 'setNull' },
       { field: 'profile.positionId', target: 'positions', kind: 'scalar', onDelete: 'setNull' },
@@ -105,6 +107,7 @@ export const COLLECTION_REGISTRY: Record<CrudCollectionName, CollectionRegistryE
     fallback: { create: 'canManageTasks', update: 'canManageTasks' },
     displayField: 'name',
     foreignKeys: [
+      { field: 'status', target: 'taskStatus', kind: 'scalar', onDelete: 'block' },
       { field: 'participants', target: 'members', kind: 'array', onDelete: 'pull' },
       { field: 'completedBy', target: 'members', kind: 'array', onDelete: 'pull' },
       { field: 'parent', target: 'tasks', kind: 'scalar', onDelete: 'setNull' },
