@@ -12,6 +12,7 @@ import './apis/backup.server';
 import './apis/dashboard.server';
 import './apis/demoData.server';
 import './apis/events.server';
+import './apis/integrity.server';
 import './apis/logs.server';
 import './apis/members.server';
 import './apis/orbat.server';

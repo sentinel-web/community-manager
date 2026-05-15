@@ -1,10 +1,27 @@
 import type { CrudCollectionName } from '/imports/api/types';
 
+export type ForeignKeyOnDelete = 'block' | 'setNull' | 'pull' | 'cascade';
+export type ForeignKeyKind = 'scalar' | 'array';
+
+export interface ForeignKeyEdge {
+  // Dotted path on the source doc (e.g. 'profile.rankId').
+  readonly field: string;
+  readonly target: CrudCollectionName;
+  readonly kind: ForeignKeyKind;
+  readonly onDelete: ForeignKeyOnDelete;
+}
+
 export interface CollectionRegistryEntry {
   readonly module: string;
   readonly fallback?: { readonly create?: string; readonly update?: string };
   readonly allowsAnonymous?: { readonly insert?: boolean };
   readonly redact?: { readonly insert?: readonly string[]; readonly update?: readonly string[] };
+  // Outgoing foreign-key edges (this collection's references to other collections).
+  // Inverted to incoming-edges at boot inside server/integrity.ts.
+  readonly foreignKeys?: readonly ForeignKeyEdge[];
+  // Dotted path on the source doc whose value is used as a human-readable
+  // sample when this collection appears in a `block` error's `details.blockedBy`.
+  readonly displayField?: string;
 }
 
 // Per-collection metadata. The Record<CrudCollectionName, _> type forces
@@ -19,16 +36,23 @@ export const COLLECTION_REGISTRY: Record<CrudCollectionName, CollectionRegistryE
   eventTypes: { module: 'eventTypes' },
   logs: { module: 'logs' },
   medals: { module: 'medals' },
-  members: { module: 'members', redact: { insert: ['password'] } },
+  members: {
+    module: 'members',
+    redact: { insert: ['password'] },
+    displayField: 'profile.name',
+    foreignKeys: [
+      { field: 'profile.rankId', target: 'ranks', kind: 'scalar', onDelete: 'block' },
+    ],
+  },
   positions: { module: 'positions' },
   profilePictures: { module: 'members' },
   questionnaireResponses: { module: 'questionnaires' },
   questionnaires: { module: 'questionnaires' },
-  ranks: { module: 'ranks' },
+  ranks: { module: 'ranks', displayField: 'name' },
   registrations: { module: 'registrations', allowsAnonymous: { insert: true } },
-  roles: { module: 'roles' },
-  specializations: { module: 'specializations' },
-  squads: { module: 'squads' },
-  taskStatus: { module: 'taskStatus' },
-  tasks: { module: 'tasks', fallback: { create: 'canManageTasks', update: 'canManageTasks' } },
+  roles: { module: 'roles', displayField: 'name' },
+  specializations: { module: 'specializations', displayField: 'name' },
+  squads: { module: 'squads', displayField: 'name' },
+  taskStatus: { module: 'taskStatus', displayField: 'name' },
+  tasks: { module: 'tasks', fallback: { create: 'canManageTasks', update: 'canManageTasks' }, displayField: 'name' },
 };
