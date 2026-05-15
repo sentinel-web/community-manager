@@ -6,6 +6,11 @@ on:
   push:
     branches: [main]
 
+# Read-only token: this workflow only checks out code and uploads artifacts. It
+# never pushes, comments, or releases, so we drop write scope as defence in depth.
+permissions:
+  contents: read
+
 # Cancel in-flight runs for the same PR / branch when new commits arrive — the
 # old run's results would be stale anyway.
 concurrency:
