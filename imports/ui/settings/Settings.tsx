@@ -13,6 +13,9 @@ import useSettings from './settings.hook';
 type TFn = LanguageContextValue['t'];
 type HandleChangeFn = (e: unknown, key: string) => void | Promise<void>;
 
+const emptyStringList: string[] = [];
+const noopHandleChange: HandleChangeFn = () => {};
+
 async function getEventValue(key: string, e: unknown): Promise<string | string[] | undefined> {
   switch (key) {
     case 'community-title':
@@ -133,7 +136,7 @@ interface CommunityNameBlackListSettingsProps {
   t: TFn;
 }
 
-function CommunityNameBlackListSettings({ communityNameBlackList = [], handleChange = () => {}, t }: CommunityNameBlackListSettingsProps) {
+function CommunityNameBlackListSettings({ communityNameBlackList = emptyStringList, handleChange = noopHandleChange, t }: CommunityNameBlackListSettingsProps) {
   const [value, setValue] = useState('');
 
   const handleClick = useCallback(() => {
@@ -196,7 +199,7 @@ interface CommunityIdBlackListSettingsProps {
   t: TFn;
 }
 
-function CommunityIdBlackListSettings({ communityIdBlackList = [], handleChange = () => {}, t }: CommunityIdBlackListSettingsProps) {
+function CommunityIdBlackListSettings({ communityIdBlackList = emptyStringList, handleChange = noopHandleChange, t }: CommunityIdBlackListSettingsProps) {
   const [value, setValue] = useState('');
 
   const handleClick = useCallback(() => {

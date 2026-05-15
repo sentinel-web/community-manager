@@ -11,6 +11,7 @@ import type { DrawerContextValue } from '../app/types';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 
 const empty = <></>;
+const emptyQuery: Mongo.Selector<CollectionDoc> = {};
 
 export type CollectionDoc = {
   _id?: string;
@@ -55,7 +56,7 @@ const CollectionSelect = ({
   FormComponent,
   subscription,
   extra = empty,
-  query = {},
+  query = emptyQuery,
 }: CollectionSelectProps) => {
   const { modal } = App.useApp();
   const drawer = useContext(DrawerContext) as DrawerContextValue;
@@ -77,8 +78,8 @@ const CollectionSelect = ({
     [searchValue]
   );
 
-  const valueLength = useMemo(() => (Array.isArray(value) ? value.length : 1), [value]);
-  const otherLimit = useMemo(() => (valueLength > limit ? valueLength : limit - valueLength), [limit, valueLength]);
+  const valueLength = Array.isArray(value) ? value.length : 1;
+  const otherLimit = valueLength > limit ? valueLength : limit - valueLength;
   const valueSubFilter = useMemo(() => ({ ...valueFilter, ...stableQuery }), [valueFilter, stableQuery]);
   const searchSubFilter = useMemo(() => ({ ...searchFilter, ...stableQuery }), [searchFilter, stableQuery]);
   useSubscribe(subscription, valueSubFilter, { limit: valueLength });

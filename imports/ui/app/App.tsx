@@ -30,8 +30,8 @@ interface AppSettings {
 export default function App() {
   const { message, notification } = AntdApp.useApp();
   const { communityColor } = useSettings() as unknown as AppSettings;
-  const [theme, setTheme] = useState<ThemeMode>(getPreferedTheme());
-  const [navigationValue, setNavigationValue] = useState<string>(getNavigationValue());
+  const [theme, setTheme] = useState<ThemeMode>(getPreferedTheme);
+  const [navigationValue, setNavigationValue] = useState<string>(getNavigationValue);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerComponent, setDrawerComponent] = useState<ReactNode>(empty);
   const [drawerExtra, setDrawerExtra] = useState<ReactNode>(empty);

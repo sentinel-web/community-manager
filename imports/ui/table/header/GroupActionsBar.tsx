@@ -12,10 +12,12 @@ interface GroupActionsBarProps {
   loading?: boolean;
 }
 
+const emptyActions: BoundGroupAction[] = [];
+
 export default function GroupActionsBar({
   selectedCount = 0,
   onDelete,
-  groupActions = [],
+  groupActions = emptyActions,
   onClearSelection,
   loading = false,
 }: GroupActionsBarProps) {
