@@ -108,10 +108,12 @@ export class SectionPage extends BasePage {
     const deleteBtn = row.locator('button.ant-btn-dangerous').first();
     await deleteBtn.scrollIntoViewIfNeeded();
     await deleteBtn.click();
-    // Confirm the modal dialog
+    // Confirm the modal dialog. The OK button text varies (it's "Delete" for
+    // the single-row Section modal post-integrity-work) but it's always the
+    // primary button — target by class to stay label/locale-agnostic.
     const modal = this.page.locator('.ant-modal-confirm');
     await modal.waitFor({ state: 'visible' });
-    await modal.locator('button:has-text("Yes")').click();
+    await modal.locator('.ant-btn-primary').click();
     await modal.waitFor({ state: 'hidden', timeout: 10000 });
   }
 
