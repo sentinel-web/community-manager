@@ -1,8 +1,8 @@
 import { Meteor } from 'meteor/meteor';
 import { runMutation } from '../mutation-pipeline';
 import { COLLECTION_REGISTRY } from '../collection-registry';
-import { previewIntegrity, previewIntegrityBulk, scanForOrphans } from '../integrity';
-import { checkPermission, validateArrayOfStrings, validateString } from '../main';
+import { previewIntegrity, previewIntegrityBulk, scanForOrphans, type OrphanRecord } from '../integrity';
+import { validateArrayOfStrings, validateString } from '../main';
 import type { CrudCollectionName } from '/imports/api/types';
 
 if (Meteor.isServer) {
@@ -64,17 +64,33 @@ if (Meteor.isServer) {
     },
 
     // Read-only walk of the entire foreign-key graph. Returns every
-    // reference whose target doc no longer exists. Admin-only because the
-    // result reveals every collection's id space at once — too broad to
-    // gate per-target.
+    // reference whose target doc no longer exists. Strict admin-only
+    // because the result reveals every collection's id space at once —
+    // too broad to gate per-module.
     'integrity.scan': async function () {
-      if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
-      const isAdmin = await checkPermission(this.userId, 'logs');
-      // 'logs' is a boolean-module gate that admins have by default; using
-      // it (rather than e.g. a new permission) keeps the surface narrow
-      // without inventing a new role flag for a single CLI tool.
-      if (!isAdmin) throw new Meteor.Error(403, 'Admin only');
-      return scanForOrphans();
+      return runMutation(
+        { userId: this.userId },
+        {
+          collection: 'logs',
+          operation: 'read',
+          action: 'integrity.scan',
+          // Strict admin-only gate. `__admin_only__` is a deliberately
+          // unknown module name. checkPermission in main.ts short-circuits
+          // to true for admins (`role.roles === true`) before reading the
+          // module, so admins pass. Every non-admin role falls through to
+          // the module-not-recognised branch and is denied — no role in
+          // the system declares this synthetic module. runMutation emits
+          // a standard `integrity.scan.denied` audit entry on failure and
+          // the custom `audit` callback below records success with the
+          // orphan count.
+          permissionModule: '__admin_only__',
+          audit: (_args, result) => ({
+            orphanCount: (result as OrphanRecord[]).length,
+          }),
+        },
+        [] as const,
+        async () => scanForOrphans(),
+      );
     },
   });
 }

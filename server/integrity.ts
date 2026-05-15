@@ -314,8 +314,14 @@ export async function previewIntegrityBulk(
   targetIds: readonly string[],
   ctx: IntegrityContext,
 ): Promise<BulkIntegrityPreview> {
+  // Build mutable accumulators locally, then assemble the readonly result at
+  // the end. Avoids the previous (aggregate.blockedBy as BlockedByEntry[])
+  // cast that silently violated the readonly contract on IntegrityPreview.
   const perId: Record<string, IntegrityPreview> = {};
-  const aggregate: IntegrityPreview = { blockedBy: [], pulled: {}, setNull: {}, cascaded: {} };
+  const blockedBy: BlockedByEntry[] = [];
+  const pulled: EffectsByCollection = {};
+  const setNull: EffectsByCollection = {};
+  const cascaded: EffectsByCollection = {};
   const blockedIds: string[] = [];
 
   for (const id of targetIds) {
@@ -323,19 +329,19 @@ export async function previewIntegrityBulk(
     perId[id] = preview;
     if (preview.blockedBy.length > 0) blockedIds.push(id);
 
-    for (const entry of preview.blockedBy) (aggregate.blockedBy as BlockedByEntry[]).push(entry);
+    for (const entry of preview.blockedBy) blockedBy.push(entry);
     for (const [src, n] of Object.entries(preview.pulled)) {
-      aggregate.pulled[src as CrudCollectionName] = (aggregate.pulled[src as CrudCollectionName] ?? 0) + n;
+      pulled[src as CrudCollectionName] = (pulled[src as CrudCollectionName] ?? 0) + n;
     }
     for (const [src, n] of Object.entries(preview.setNull)) {
-      aggregate.setNull[src as CrudCollectionName] = (aggregate.setNull[src as CrudCollectionName] ?? 0) + n;
+      setNull[src as CrudCollectionName] = (setNull[src as CrudCollectionName] ?? 0) + n;
     }
     for (const [src, n] of Object.entries(preview.cascaded)) {
-      aggregate.cascaded[src as CrudCollectionName] = (aggregate.cascaded[src as CrudCollectionName] ?? 0) + n;
+      cascaded[src as CrudCollectionName] = (cascaded[src as CrudCollectionName] ?? 0) + n;
     }
   }
 
-  return { perId, aggregate, blockedIds };
+  return { perId, aggregate: { blockedBy, pulled, setNull, cascaded }, blockedIds };
 }
 
 export async function enforceIntegrityOnDelete(
@@ -348,6 +354,13 @@ export async function enforceIntegrityOnDelete(
   // half-cleaned state when the operation was going to fail anyway. A
   // preview-mode pass collects all blockers cheaply (count + sample);
   // if any fire, we throw before the execute pass touches anything.
+  //
+  // TOCTOU note: the preview pass and execute pass are not atomic. A
+  // concurrent insert between the two could introduce a new reference
+  // that the execute pass misses, leaving a freshly-orphaned id behind.
+  // Accepted trade-off for the admin tool's low-concurrency profile (see
+  // PRD Q7: best-effort sequential, no transactions). If concurrent
+  // admin writes become realistic, swap in a Mongo session here.
   const blockCheck = await traverseIntegrityEdges(target, targetId, ctx, 'preview');
   if (blockCheck.blockedBy.length > 0) {
     const summary = blockCheck.blockedBy
@@ -409,10 +422,6 @@ interface WrittenFK {
   readonly value: string;
 }
 
-function readDottedPath_(doc: unknown, path: string): unknown {
-  return readDottedPath(doc, path);
-}
-
 // Yields every (edge, value) pair the modifier is actually writing.
 // Operators that clear or remove (`$unset`, `$pull`) never produce orphans
 // and are skipped. The catch-all bare-doc shape treats every FK on the
@@ -435,7 +444,7 @@ export function extractWrittenFKs(
   if (!isOperatorModifier) {
     // Bare doc — treat every present FK as written.
     for (const edge of edges) {
-      const raw = readDottedPath_(modifier, edge.field);
+      const raw = readDottedPath(modifier, edge.field);
       if (raw == null) continue;
       if (edge.kind === 'array') {
         for (const v of raw as unknown[]) {

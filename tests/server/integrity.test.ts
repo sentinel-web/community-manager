@@ -1019,6 +1019,14 @@ describe('integrity layer — members.remove custom path + ProfilePicture owned-
     assert.strictEqual(result.effects.cascaded.profilePictures ?? 0, 0);
   });
 
+  it('self-delete is rejected — an admin cannot delete their own account', async () => {
+    await assertRejectsWithCode(() => callAs(adminUserId, 'members.remove', adminUserId), 400);
+
+    // Verify the admin still exists and is functional.
+    const stillThere = await MembersCollection.findOneAsync(adminUserId);
+    assert.ok(stillThere, 'admin must still exist after self-delete is refused');
+  });
+
   it('audit log records cascadeEffects when members.remove fires integrity primitives', async () => {
     const memberId = await createTestUser({ profile: { name: 'AuditedMember' } });
     await createTestDoc(EventsCollection, {
@@ -1128,6 +1136,18 @@ describe('integrity layer — orphan scanner (#167)', () => {
     const nonAdminUserId = await createTestUser({ roleId: nonAdminRoleId });
 
     await assertRejectsWithCode(() => callAs(nonAdminUserId, 'integrity.scan'), 403);
+  });
+
+  it('integrity.scan rejects non-admin callers even when they have logs permission', async () => {
+    // Regression: an earlier iteration of the gate used checkPermission(userId,
+    // 'logs') which admits any role with logs: true. The current __admin_only__
+    // synthetic permissionModule pattern ensures only role.roles === true
+    // passes — this test pins that behavior so the gate doesn't quietly
+    // regress.
+    const logsOnlyRoleId = await createTestRole({ logs: true });
+    const logsOnlyUserId = await createTestUser({ roleId: logsOnlyRoleId });
+
+    await assertRejectsWithCode(() => callAs(logsOnlyUserId, 'integrity.scan'), 403);
   });
 });
 

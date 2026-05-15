@@ -153,6 +153,14 @@ if (Meteor.isServer) {
         },
         [memberId] as const,
         async ([targetId]) => {
+          // Self-delete prevention: an admin deleting their own account
+          // would lock themselves out instantly. The integrity layer can't
+          // help here — even a clean delete is undesirable. This guard is
+          // 1-site, so it stays in the body per the rule of three.
+          if (targetId === callerUserId) {
+            throw new Meteor.Error(400, 'Cannot delete your own account');
+          }
+
           // Existence check stays as code in the body (1-site variation;
           // not promoted to a registry field per the rule of three).
           const member = await getMemberById(targetId);
