@@ -50,16 +50,37 @@ export const COLLECTION_REGISTRY: Record<CrudCollectionName, CollectionRegistryE
     displayField: 'profile.name',
     foreignKeys: [
       { field: 'profile.rankId', target: 'ranks', kind: 'scalar', onDelete: 'block' },
+      { field: 'profile.navyRankId', target: 'ranks', kind: 'scalar', onDelete: 'setNull' },
+      { field: 'profile.positionId', target: 'positions', kind: 'scalar', onDelete: 'setNull' },
+      { field: 'profile.squadId', target: 'squads', kind: 'scalar', onDelete: 'setNull' },
       { field: 'profile.specializationIds', target: 'specializations', kind: 'array', onDelete: 'pull' },
       { field: 'profile.medalIds', target: 'medals', kind: 'array', onDelete: 'pull' },
     ],
   },
   positions: { module: 'positions' },
   profilePictures: { module: 'members' },
-  questionnaireResponses: { module: 'questionnaires' },
+  questionnaireResponses: {
+    module: 'questionnaires',
+    foreignKeys: [
+      { field: 'respondentId', target: 'members', kind: 'scalar', onDelete: 'setNull' },
+    ],
+  },
   questionnaires: { module: 'questionnaires' },
-  ranks: { module: 'ranks', displayField: 'name' },
-  registrations: { module: 'registrations', allowsAnonymous: { insert: true } },
+  ranks: {
+    module: 'ranks',
+    displayField: 'name',
+    foreignKeys: [
+      { field: 'previousRankId', target: 'ranks', kind: 'scalar', onDelete: 'setNull' },
+      { field: 'nextRankId', target: 'ranks', kind: 'scalar', onDelete: 'setNull' },
+    ],
+  },
+  registrations: {
+    module: 'registrations',
+    allowsAnonymous: { insert: true },
+    foreignKeys: [
+      { field: 'discoveryType', target: 'discoveryTypes', kind: 'scalar', onDelete: 'setNull' },
+    ],
+  },
   roles: { module: 'roles', displayField: 'name' },
   specializations: {
     module: 'specializations',
@@ -67,9 +88,16 @@ export const COLLECTION_REGISTRY: Record<CrudCollectionName, CollectionRegistryE
     foreignKeys: [
       { field: 'instructors', target: 'members', kind: 'array', onDelete: 'pull' },
       { field: 'requiredSpecializations', target: 'specializations', kind: 'array', onDelete: 'pull' },
+      { field: 'requiredRankId', target: 'ranks', kind: 'scalar', onDelete: 'setNull' },
     ],
   },
-  squads: { module: 'squads', displayField: 'name' },
+  squads: {
+    module: 'squads',
+    displayField: 'name',
+    foreignKeys: [
+      { field: 'parentSquadId', target: 'squads', kind: 'scalar', onDelete: 'setNull' },
+    ],
+  },
   taskStatus: { module: 'taskStatus', displayField: 'name' },
   tasks: {
     module: 'tasks',
@@ -78,6 +106,7 @@ export const COLLECTION_REGISTRY: Record<CrudCollectionName, CollectionRegistryE
     foreignKeys: [
       { field: 'participants', target: 'members', kind: 'array', onDelete: 'pull' },
       { field: 'completedBy', target: 'members', kind: 'array', onDelete: 'pull' },
+      { field: 'parent', target: 'tasks', kind: 'scalar', onDelete: 'setNull' },
     ],
   },
 };

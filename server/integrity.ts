@@ -208,7 +208,30 @@ async function traverseIntegrityEdges(
       continue;
     }
 
-    // Slices #164 (setNull), #165 (cascade) extend here.
+    if (edge.onDelete === 'setNull') {
+      const SourceCollection = getCollection(edge.source);
+      const selector = buildEdgeSelector(edge, targetId);
+      const count = await SourceCollection.find(selector).countAsync();
+      if (count === 0) continue;
+
+      if (mode === 'execute') {
+        // $set: null on an already-null field is a no-op (Mongo writes
+        // unconditionally but the result matches the prior state), so
+        // retries after partial failure don't double-mutate. Self-referential
+        // edges (e.g. tasks.parent → tasks) work without special-casing:
+        // the same updateMany re-points children to null whether or not
+        // source and target are the same collection.
+        await SourceCollection.updateAsync(
+          selector as never,
+          { $set: { [edge.field]: null } } as never,
+          { multi: true } as never,
+        );
+      }
+      effects.setNull[edge.source] = (effects.setNull[edge.source] ?? 0) + count;
+      continue;
+    }
+
+    // Slice #165 (cascade) extends here.
   }
 
   return { blockedBy, effects };

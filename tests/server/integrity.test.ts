@@ -1,12 +1,17 @@
 import assert from 'node:assert';
 import { Meteor } from 'meteor/meteor';
 import { Random } from 'meteor/random';
+import DiscoveryTypesCollection from '../../imports/api/collections/discoveryTypes.collection';
 import EventsCollection from '../../imports/api/collections/events.collection';
 import LogsCollection from '../../imports/api/collections/logs.collection';
 import MedalsCollection from '../../imports/api/collections/medals.collection';
 import MembersCollection from '../../imports/api/collections/members.collection';
+import PositionsCollection from '../../imports/api/collections/positions.collection';
+import QuestionnaireResponsesCollection from '../../imports/api/collections/questionnaireResponses.collection';
 import RanksCollection from '../../imports/api/collections/ranks.collection';
+import RegistrationsCollection from '../../imports/api/collections/registrations.collection';
 import SpecializationsCollection from '../../imports/api/collections/specializations.collection';
+import SquadsCollection from '../../imports/api/collections/squads.collection';
 import TasksCollection from '../../imports/api/collections/tasks.collection';
 import { enforceIntegrityOnDelete } from '../../server/integrity';
 import {
@@ -397,5 +402,186 @@ describe('integrity layer — pull primitive on array foreign keys (#163)', () =
     const bothEvent = await EventsCollection.findOneAsync({ name: '__test_event_both' });
     assert.deepStrictEqual(bothEvent?.hosts, []);
     assert.deepStrictEqual(bothEvent?.attendees, []);
+  });
+});
+
+describe('integrity layer — setNull primitive on scalar foreign keys (#164)', () => {
+  let adminUserId: string;
+
+  before(async () => {
+    const adminRoleId = await createTestRole({ roles: true });
+    adminUserId = await createTestUser({ roleId: adminRoleId });
+  });
+
+  after(async () => {
+    await cleanupFixtures([
+      DiscoveryTypesCollection,
+      PositionsCollection,
+      QuestionnaireResponsesCollection,
+      RanksCollection,
+      RegistrationsCollection,
+      SpecializationsCollection,
+      SquadsCollection,
+      TasksCollection,
+    ]);
+  });
+
+  it('deleting a Position clears members.profile.positionId on every holder', async () => {
+    const positionId = await createTestDoc(PositionsCollection, { name: '__test_position_pull' });
+    const holderIds = await Promise.all([
+      createTestUser({ profile: { name: 'PosA', positionId } }),
+      createTestUser({ profile: { name: 'PosB', positionId } }),
+    ]);
+    await createTestUser({ profile: { name: 'PosUnaffected' } });
+
+    const result = (await callAs(adminUserId, 'positions.remove', positionId)) as {
+      effects: { setNull: Record<string, number> };
+    };
+    assert.strictEqual(result.effects.setNull.members, 2);
+
+    for (const id of holderIds) {
+      const member = await MembersCollection.findOneAsync(id);
+      assert.strictEqual(member?.profile?.positionId, null);
+    }
+  });
+
+  it('deleting a DiscoveryType nulls Registrations.discoveryType', async () => {
+    const dtId = await createTestDoc(DiscoveryTypesCollection, { name: '__test_dt_setnull' });
+    const regId = await createTestDoc(RegistrationsCollection, {
+      name: 'Reg Person',
+      id: 1234,
+      age: 18,
+      discoveryType: dtId,
+      rulesReadAndAccepted: true,
+    });
+
+    const result = (await callAs(adminUserId, 'discoveryTypes.remove', dtId)) as {
+      effects: { setNull: Record<string, number> };
+    };
+    assert.strictEqual(result.effects.setNull.registrations, 1);
+
+    const reg = await RegistrationsCollection.findOneAsync(regId);
+    assert.strictEqual(reg?.discoveryType, null);
+  });
+
+  it('self-ref: deleting a parent Task nulls children.parent (children become roots)', async () => {
+    const parentTaskId = await createTestDoc(TasksCollection, { name: '__test_parent_task' });
+    const childAId = await createTestDoc(TasksCollection, { name: '__test_child_a', parent: parentTaskId });
+    const childBId = await createTestDoc(TasksCollection, { name: '__test_child_b', parent: parentTaskId });
+    await createTestDoc(TasksCollection, { name: '__test_unrelated', parent: 'some-other-task' });
+
+    const result = (await callAs(adminUserId, 'tasks.remove', parentTaskId)) as {
+      effects: { setNull: Record<string, number> };
+    };
+    assert.strictEqual(result.effects.setNull.tasks, 2);
+
+    const childA = await TasksCollection.findOneAsync(childAId);
+    const childB = await TasksCollection.findOneAsync(childBId);
+    assert.strictEqual(childA?.parent, null);
+    assert.strictEqual(childB?.parent, null);
+  });
+
+  it('self-ref: deleting a parent Squad nulls children.parentSquadId', async () => {
+    const parentSquadId = await createTestDoc(SquadsCollection, { name: '__test_parent_squad' });
+    const childSquadId = await createTestDoc(SquadsCollection, {
+      name: '__test_child_squad',
+      parentSquadId,
+    });
+
+    const result = (await callAs(adminUserId, 'squads.remove', parentSquadId)) as {
+      effects: { setNull: Record<string, number> };
+    };
+    assert.strictEqual(result.effects.setNull.squads, 1);
+
+    const childSquad = await SquadsCollection.findOneAsync(childSquadId);
+    assert.strictEqual(childSquad?.parentSquadId, null);
+  });
+
+  it('rank deletion: nulls adjacent previousRankId / nextRankId in the chain', async () => {
+    const targetRankId = await createTestDoc(RanksCollection, { name: '__test_rank_chain_mid', color: '#fff' });
+    const previousRankId = await createTestDoc(RanksCollection, {
+      name: '__test_rank_chain_prev',
+      color: '#fff',
+      nextRankId: targetRankId,
+    });
+    const nextRankId = await createTestDoc(RanksCollection, {
+      name: '__test_rank_chain_next',
+      color: '#fff',
+      previousRankId: targetRankId,
+    });
+
+    const result = (await callAs(adminUserId, 'ranks.remove', targetRankId)) as {
+      effects: { setNull: Record<string, number> };
+    };
+    assert.strictEqual(result.effects.setNull.ranks, 2, 'expected both adjacent ranks to be nulled');
+
+    const prev = await RanksCollection.findOneAsync(previousRankId);
+    const next = await RanksCollection.findOneAsync(nextRankId);
+    assert.strictEqual(prev?.nextRankId, null);
+    assert.strictEqual(next?.previousRankId, null);
+  });
+
+  it('multi-primitive: deleting a Rank with members holding it as navy + an adjacent rank fires setNull on both edges', async () => {
+    const targetRankId = await createTestDoc(RanksCollection, { name: '__test_rank_multi', color: '#fff' });
+    await createTestUser({ profile: { name: 'NavyHolderA', navyRankId: targetRankId } });
+    await createTestUser({ profile: { name: 'NavyHolderB', navyRankId: targetRankId } });
+    await createTestDoc(RanksCollection, {
+      name: '__test_rank_multi_prev',
+      color: '#fff',
+      nextRankId: targetRankId,
+    });
+    await createTestDoc(SpecializationsCollection, {
+      name: '__test_spec_req',
+      color: '#fff',
+      requiredRankId: targetRankId,
+    });
+
+    const result = (await callAs(adminUserId, 'ranks.remove', targetRankId)) as {
+      effects: { setNull: Record<string, number> };
+    };
+    assert.strictEqual(result.effects.setNull.members, 2);
+    assert.strictEqual(result.effects.setNull.ranks, 1);
+    assert.strictEqual(result.effects.setNull.specializations, 1);
+  });
+
+  it('audit log records cascadeEffects.setNull when a delete triggers nulls', async () => {
+    const positionId = await createTestDoc(PositionsCollection, { name: '__test_pos_audit' });
+    await createTestUser({ profile: { name: 'AuditPos', positionId } });
+
+    await callAs(adminUserId, 'positions.remove', positionId);
+
+    const log = await findLatestAuditLog('positions.deleted', positionId);
+    assert.ok(log, 'expected audit log for position delete');
+    const cascadeEffects = (log.payload as Record<string, unknown>).cascadeEffects as
+      | { setNull: Record<string, number> }
+      | undefined;
+    assert.ok(cascadeEffects, 'expected cascadeEffects in audit payload');
+    assert.strictEqual(cascadeEffects.setNull.members, 1);
+  });
+
+  it('preview reports setNull counts without mutating', async () => {
+    const positionId = await createTestDoc(PositionsCollection, { name: '__test_pos_preview' });
+    const memberId = await createTestUser({ profile: { name: 'PrevPreview', positionId } });
+
+    const preview = (await callAs(adminUserId, 'integrity.preview', 'positions', positionId)) as {
+      blockedBy: unknown[];
+      setNull: Record<string, number>;
+    };
+    assert.deepStrictEqual(preview.blockedBy, []);
+    assert.strictEqual(preview.setNull.members, 1);
+
+    const memberStill = await MembersCollection.findOneAsync(memberId);
+    assert.strictEqual(memberStill?.profile?.positionId, positionId, 'preview must not mutate');
+  });
+
+  it('idempotent execute — second enforce produces zero setNull count', async () => {
+    const positionId = await createTestDoc(PositionsCollection, { name: '__test_pos_idem' });
+    await createTestUser({ profile: { name: 'IdemSetNull', positionId } });
+
+    const first = await enforceIntegrityOnDelete('positions', positionId, { userId: adminUserId });
+    assert.strictEqual(first.setNull.members, 1);
+
+    const second = await enforceIntegrityOnDelete('positions', positionId, { userId: adminUserId });
+    assert.strictEqual(second.setNull.members ?? 0, 0);
   });
 });
