@@ -16,7 +16,7 @@ import TasksCollection from '../../imports/api/collections/tasks.collection';
 import ProfilePicturesCollection from '../../imports/api/collections/profilePictures.collection';
 import QuestionnairesCollection from '../../imports/api/collections/questionnaires.collection';
 import { COLLECTION_REGISTRY, type ForeignKeyEdge } from '../../server/collection-registry';
-import { enforceIntegrityOnDelete, extractWrittenFKs, resetIncomingEdgesCache } from '../../server/integrity';
+import { enforceIntegrityOnDelete, extractWrittenFKs, resetIncomingEdgesCache, scanForOrphans } from '../../server/integrity';
 import {
   assertRejectsWithCode,
   callAs,
@@ -1034,5 +1034,96 @@ describe('integrity layer — members.remove custom path + ProfilePicture owned-
       | undefined;
     assert.ok(cascadeEffects, 'expected cascadeEffects in audit payload');
     assert.strictEqual(cascadeEffects.pulled.events, 1);
+  });
+});
+
+describe('integrity layer — orphan scanner (#167)', () => {
+  let adminUserId: string;
+
+  before(async () => {
+    const adminRoleId = await createTestRole({ roles: true, logs: true });
+    adminUserId = await createTestUser({ roleId: adminRoleId });
+  });
+
+  after(async () => {
+    await cleanupFixtures([
+      EventsCollection,
+      MedalsCollection,
+      RanksCollection,
+      SpecializationsCollection,
+    ]);
+  });
+
+  it('returns one record per orphaned reference, citing source/field/sourceId/orphanedTargetId', async () => {
+    // Insert a member with a fabricated rankId that doesn't exist. We
+    // bypass write validation by going directly to the collection, which
+    // simulates the pre-existing-orphan condition the scanner exists to
+    // detect.
+    const orphanRankId = `${TEST_PREFIX}__rank_that_was_deleted`;
+    const memberId = `${TEST_PREFIX}${Random.id()}`;
+    await MembersCollection.insertAsync({
+      _id: memberId,
+      username: memberId,
+      profile: { name: 'OrphanHolder', rankId: orphanRankId },
+    });
+
+    const orphans = await scanForOrphans();
+
+    // Filter to our test member to keep the assertion focused — there
+    // may be pre-existing orphans in other tests' fixture remnants.
+    const ours = orphans.filter(o => o.sourceId === memberId);
+    assert.strictEqual(ours.length, 1, 'expected exactly one orphan record for our test member');
+    assert.deepStrictEqual(ours[0], {
+      source: 'members',
+      field: 'profile.rankId',
+      sourceId: memberId,
+      orphanedTargetId: orphanRankId,
+    });
+  });
+
+  it('reports each occurrence in an array FK as a separate record', async () => {
+    const orphanSpecA = `${TEST_PREFIX}__spec_phantom_a`;
+    const orphanSpecB = `${TEST_PREFIX}__spec_phantom_b`;
+    const memberId = `${TEST_PREFIX}${Random.id()}`;
+    await MembersCollection.insertAsync({
+      _id: memberId,
+      username: memberId,
+      profile: { name: 'ArrayOrphanHolder', specializationIds: [orphanSpecA, orphanSpecB] },
+    });
+
+    const orphans = (await scanForOrphans()).filter(o => o.sourceId === memberId);
+    assert.strictEqual(orphans.length, 2);
+    const targetIds = orphans.map(o => o.orphanedTargetId).sort();
+    assert.deepStrictEqual(targetIds, [orphanSpecA, orphanSpecB].sort());
+    assert.ok(orphans.every(o => o.field === 'profile.specializationIds'));
+  });
+
+  it('emits no records for refs whose target actually exists', async () => {
+    const realRankId = await createTestDoc(RanksCollection, { name: '__test_scan_real_rank', color: '#fff' });
+    const memberId = await createTestUser({ profile: { name: 'CleanHolder', rankId: realRankId } });
+
+    const orphans = (await scanForOrphans()).filter(o => o.sourceId === memberId);
+    assert.deepStrictEqual(orphans, [], 'no orphans expected when the target exists');
+  });
+
+  it('integrity.scan Meteor method requires admin and returns the same shape', async () => {
+    const orphans = (await callAs(adminUserId, 'integrity.scan')) as Array<{
+      source: string;
+      field: string;
+      sourceId: string;
+      orphanedTargetId: string;
+    }>;
+    assert.ok(Array.isArray(orphans), 'expected orphan array from integrity.scan');
+  });
+
+  it('integrity.scan rejects unauthenticated calls', async () => {
+    await assertRejectsWithCode(() => callAs(null, 'integrity.scan'), 401);
+  });
+
+  it('integrity.scan rejects non-admin callers', async () => {
+    const nonAdminRoleId = await createTestRole({ members: { read: true, create: false, update: false, delete: false } });
+    const nonAdminUserId = await createTestUser({ roleId: nonAdminRoleId });
+
+    await assertRejectsWithCode(() => callAs(nonAdminUserId, 'integrity.scan'), 403);
   });
 });

@@ -471,3 +471,80 @@ export async function validateForeignKeys(
     }
   }
 }
+
+// ────────────────────────────────────────────────────────────
+// Orphan scanner (#167)
+//
+// Walks every foreign-key edge against the live database and reports
+// any reference whose target doc no longer exists. Read-only; safe to
+// run on production. Intended for the on-demand `npm run integrity-scan`
+// CLI and any future admin UI surface.
+// ────────────────────────────────────────────────────────────
+
+export interface OrphanRecord {
+  readonly source: CrudCollectionName;
+  readonly field: string;
+  readonly sourceId: string;
+  readonly orphanedTargetId: string;
+}
+
+async function getDistinctReferencedIds(
+  source: CrudCollectionName,
+  edge: ForeignKeyEdge,
+): Promise<Map<string, string[]>> {
+  // Map of target-id → list of source-doc ids that reference it. Used to
+  // batch the existence query so we hit the target collection once per
+  // unique referenced id, regardless of how many source docs cite it.
+  const SourceCollection = getCollection(source);
+  const referencedToSourceDocs = new Map<string, string[]>();
+
+  await SourceCollection.find({ [edge.field]: { $exists: true, $ne: null } } as never).forEachAsync(doc => {
+    const sourceDocId = (doc as { _id?: string })._id;
+    if (!sourceDocId) return;
+    const raw = readDottedPath(doc, edge.field);
+    if (raw == null) return;
+    const values: string[] = edge.kind === 'array'
+      ? (Array.isArray(raw) ? raw.filter((v): v is string => typeof v === 'string') : [])
+      : (typeof raw === 'string' ? [raw] : []);
+    for (const value of values) {
+      const list = referencedToSourceDocs.get(value) ?? [];
+      list.push(sourceDocId);
+      referencedToSourceDocs.set(value, list);
+    }
+  });
+
+  return referencedToSourceDocs;
+}
+
+export async function scanForOrphans(): Promise<OrphanRecord[]> {
+  const orphans: OrphanRecord[] = [];
+
+  for (const [source, entry] of Object.entries(COLLECTION_REGISTRY) as Array<[CrudCollectionName, typeof COLLECTION_REGISTRY[CrudCollectionName]]>) {
+    if (!entry.foreignKeys) continue;
+    for (const edge of entry.foreignKeys) {
+      const referencedIds = await getDistinctReferencedIds(source, edge);
+      if (referencedIds.size === 0) continue;
+
+      const TargetCollection = getCollection(edge.target);
+      const existingDocs = await TargetCollection.find(
+        { _id: { $in: Array.from(referencedIds.keys()) } } as never,
+        { fields: { _id: 1 } as never } as never,
+      ).fetchAsync();
+      const existingIds = new Set(existingDocs.map(d => (d as { _id: string })._id));
+
+      for (const [referencedId, sourceIds] of referencedIds) {
+        if (existingIds.has(referencedId)) continue;
+        for (const sourceId of sourceIds) {
+          orphans.push({
+            source,
+            field: edge.field,
+            sourceId,
+            orphanedTargetId: referencedId,
+          });
+        }
+      }
+    }
+  }
+
+  return orphans;
+}

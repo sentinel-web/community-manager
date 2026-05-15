@@ -1,8 +1,8 @@
 import { Meteor } from 'meteor/meteor';
 import { runMutation } from '../mutation-pipeline';
 import { COLLECTION_REGISTRY } from '../collection-registry';
-import { previewIntegrity } from '../integrity';
-import { validateString } from '../main';
+import { previewIntegrity, scanForOrphans } from '../integrity';
+import { checkPermission, validateString } from '../main';
 import type { CrudCollectionName } from '/imports/api/types';
 
 if (Meteor.isServer) {
@@ -32,6 +32,20 @@ if (Meteor.isServer) {
         [collection, id] as const,
         async ([, targetId]) => previewIntegrity(target, targetId, { userId: callerUserId }),
       );
+    },
+
+    // Read-only walk of the entire foreign-key graph. Returns every
+    // reference whose target doc no longer exists. Admin-only because the
+    // result reveals every collection's id space at once — too broad to
+    // gate per-target.
+    'integrity.scan': async function () {
+      if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
+      const isAdmin = await checkPermission(this.userId, 'logs');
+      // 'logs' is a boolean-module gate that admins have by default; using
+      // it (rather than e.g. a new permission) keeps the surface narrow
+      // without inventing a new role flag for a single CLI tool.
+      if (!isAdmin) throw new Meteor.Error(403, 'Admin only');
+      return scanForOrphans();
     },
   });
 }
