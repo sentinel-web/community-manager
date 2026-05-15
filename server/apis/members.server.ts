@@ -15,7 +15,7 @@ import { validateObject, validatePublish, validateString, validateUserId, checkP
 import { createLog } from './logs.server';
 import { runMutation } from '../mutation-pipeline';
 import { COLLECTION_REGISTRY } from '../collection-registry';
-import { enforceIntegrityOnDelete, buildRemoveAuditPayload } from '../integrity';
+import { enforceIntegrityOnDelete, buildRemoveAuditPayload, validateForeignKeys } from '../integrity';
 import type { Role } from '/imports/api/types';
 
 async function getMemberById(memberId: string): Promise<Meteor.User> {
@@ -82,7 +82,14 @@ if (Meteor.isServer) {
           validate: ([p]) => validateObject(p, false),
         },
         [payload] as const,
-        async ([p]) => Accounts.createUserAsync(p as Parameters<typeof Accounts.createUserAsync>[0]),
+        async ([p]) => {
+          // members.insert is a custom path (Accounts.createUserAsync, not
+          // generic CRUD), so it must opt explicitly into write validation.
+          // Validates every FK present on the bare-doc payload — same
+          // semantics generic CRUD applies on .insert.
+          await validateForeignKeys('members', p);
+          return Accounts.createUserAsync(p as Parameters<typeof Accounts.createUserAsync>[0]);
+        },
       );
     },
     'members.update': async function (memberId: string = '', data: Record<string, unknown> = {}) {
@@ -121,6 +128,10 @@ if (Meteor.isServer) {
               throw new Meteor.Error(403, 'Cannot update members outside your squad');
             }
           }
+          // Touched-fields validation — same modifier shape generic CRUD
+          // produces so pre-existing orphans on members.profile don't block
+          // unrelated edits.
+          await validateForeignKeys('members', { $set: changes });
           return MembersCollection.updateAsync({ _id: targetId } as never, { $set: changes } as never);
         },
       );

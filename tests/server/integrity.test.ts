@@ -1223,3 +1223,86 @@ describe('integrity layer — backfilled block edges (events.eventType, tasks.st
     assert.strictEqual(gone, undefined);
   });
 });
+
+describe('integrity layer — write validation on members custom paths', () => {
+  let adminUserId: string;
+  let validRankId: string;
+  let validRoleId: string;
+
+  before(async () => {
+    const adminRoleId = await createTestRole({ roles: true });
+    adminUserId = await createTestUser({ roleId: adminRoleId });
+    validRankId = await createTestDoc(RanksCollection, { name: '__test_mwv_rank', color: '#fff' });
+    validRoleId = await createTestRole({ members: { read: true, create: false, update: false, delete: false } });
+  });
+
+  after(async () => {
+    await cleanupFixtures([RanksCollection]);
+  });
+
+  it('members.insert with valid FK references succeeds', async () => {
+    const username = `${TEST_PREFIX}mwv_ok_${Math.random().toString(36).slice(2, 8)}`;
+    const id = (await callAs(adminUserId, 'members.insert', {
+      username,
+      password: 'pw',
+      profile: { name: 'MwvOk', rankId: validRankId, roleId: validRoleId },
+    })) as string;
+    assert.ok(id);
+  });
+
+  it('members.insert with a non-existent rankId throws foreign_key_invalid', async () => {
+    await assertRejectsWithCode(
+      () =>
+        callAs(adminUserId, 'members.insert', {
+          username: `${TEST_PREFIX}mwv_bad_rank`,
+          password: 'pw',
+          profile: { name: 'MwvBadRank', rankId: 'definitely-not-a-rank' },
+        }),
+      'foreign_key_invalid',
+    );
+  });
+
+  it('members.insert with a non-existent roleId throws foreign_key_invalid', async () => {
+    await assertRejectsWithCode(
+      () =>
+        callAs(adminUserId, 'members.insert', {
+          username: `${TEST_PREFIX}mwv_bad_role`,
+          password: 'pw',
+          profile: { name: 'MwvBadRole', roleId: 'fake-role-id' },
+        }),
+      'foreign_key_invalid',
+    );
+  });
+
+  it('members.update with valid FK rewrite succeeds', async () => {
+    const memberId = await createTestUser({ profile: { name: 'MwvUpdateOk' } });
+    await callAs(adminUserId, 'members.update', memberId, { 'profile.rankId': validRankId });
+    const m = await MembersCollection.findOneAsync(memberId);
+    assert.strictEqual(m?.profile?.rankId, validRankId);
+  });
+
+  it('members.update with a stale FK rewrite throws foreign_key_invalid', async () => {
+    const memberId = await createTestUser({ profile: { name: 'MwvUpdateBad' } });
+    await assertRejectsWithCode(
+      () => callAs(adminUserId, 'members.update', memberId, { 'profile.rankId': 'fake-rank-id' }),
+      'foreign_key_invalid',
+    );
+  });
+
+  it('members.update of an unrelated field on a member with a stale rankId succeeds', async () => {
+    // Direct-write a stale rankId via the collection (bypassing validation)
+    // to simulate the pre-existing-orphan condition.
+    const memberId = `${TEST_PREFIX}${Random.id()}`;
+    await MembersCollection.insertAsync({
+      _id: memberId,
+      username: memberId,
+      profile: { name: 'StaleRankHolder', rankId: 'orphan-rank-from-past' },
+    });
+
+    await callAs(adminUserId, 'members.update', memberId, { 'profile.description': 'updated description' });
+
+    const m = await MembersCollection.findOneAsync(memberId);
+    assert.strictEqual(m?.profile?.description, 'updated description');
+    assert.strictEqual(m?.profile?.rankId, 'orphan-rank-from-past', 'stale rankId preserved');
+  });
+});
