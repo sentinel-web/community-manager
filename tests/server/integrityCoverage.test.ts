@@ -11,7 +11,6 @@ import SquadsCollection from '../../imports/api/collections/squads.collection';
 import TasksCollection from '../../imports/api/collections/tasks.collection';
 import QuestionnaireResponsesCollection from '../../imports/api/collections/questionnaireResponses.collection';
 import RegistrationsCollection from '../../imports/api/collections/registrations.collection';
-import type { Mongo } from 'meteor/mongo';
 
 // Structural-invariant tests for the integrity layer (slice #169).
 //
@@ -238,4 +237,3 @@ void SquadsCollection;
 void TasksCollection;
 void QuestionnaireResponsesCollection;
 void RegistrationsCollection;
-void (null as unknown as Mongo.Collection<unknown>);
