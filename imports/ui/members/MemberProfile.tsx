@@ -36,8 +36,8 @@ function AttendancePieChart({ data, title }: AttendancePieChartProps) {
       <ResponsiveContainer width="100%" height={200}>
         <PieChart>
           <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label>
-            {chartData.map((entry, index) => (
-              <Cell key={index} fill={entry.color} />
+            {chartData.map(entry => (
+              <Cell key={entry.name} fill={entry.color} />
             ))}
           </Pie>
           <Tooltip />
@@ -256,13 +256,13 @@ export default function MemberProfile({ memberId }: MemberProfileProps) {
               {
                 label: t('members.specializations'),
                 children: Array.isArray(profileStats.specializations) && profileStats.specializations.length > 0
-                  ? profileStats.specializations.map((spec, i) =>
+                  ? profileStats.specializations.map(spec =>
                       spec.linkToFile ? (
-                        <a key={i} href={spec.linkToFile} target="_blank" rel="noopener noreferrer">
+                        <a key={spec.name} href={spec.linkToFile} target="_blank" rel="noopener noreferrer">
                           <Tag color="blue" style={{ cursor: 'pointer' }}>{spec.name}</Tag>
                         </a>
                       ) : (
-                        <Tag key={i}>{spec.name}</Tag>
+                        <Tag key={spec.name}>{spec.name}</Tag>
                       )
                     )
                   : '-',

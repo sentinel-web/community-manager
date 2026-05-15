@@ -240,8 +240,8 @@ const ORBAT_AdvancedLabel = ({ option, items }: ORBAT_AdvancedLabelProps) => {
         )}
         <Typography.Text type="secondary">{option.descritpion}</Typography.Text>
         {items?.length > 0 ? (
-          items.map((item, index) => (
-            <div key={index}>
+          items.map(item => (
+            <div key={item.label}>
               <Typography.Text strong>{item.label}</Typography.Text>{' '}
               <Typography.Text>{item.children}</Typography.Text>
             </div>

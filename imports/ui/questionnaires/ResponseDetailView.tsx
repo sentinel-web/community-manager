@@ -46,7 +46,9 @@ const ResponseDetailView = () => {
         <Space direction="vertical" style={{ width: '100%' }} size="middle">
           {(questionnaire.questions || []).map((question, index) => {
             const answer = answers?.find(a => a.questionIndex === index);
-            return <AnswerDisplay key={index} question={question} answer={answer} t={t} />;
+            // Same stable-key rationale as QuestionnaireResponseForm: Question
+            // type carries no _id, so we use type:text as a stable composite.
+            return <AnswerDisplay key={`${question.type}:${question.text}`} question={question} answer={answer} t={t} />;
           })}
         </Space>
       </div>
@@ -71,8 +73,8 @@ const AnswerDisplay = ({ question, answer, t }: AnswerDisplayProps) => {
       case 'multiselect':
         return (
           <Space wrap>
-            {(value as string[]).map((v, i) => (
-              <Tag key={i}>{v}</Tag>
+            {(value as string[]).map(v => (
+              <Tag key={v}>{v}</Tag>
             ))}
           </Space>
         );

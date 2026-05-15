@@ -216,13 +216,13 @@ export function ProfileStats({ profileStats }: ProfileStatsProps) {
               label: translateLabel(key),
               children:
                 key === 'specializations' && Array.isArray(value) && value.length > 0
-                  ? (value as Specialization[]).map((spec, i) =>
+                  ? (value as Specialization[]).map(spec =>
                       spec.linkToFile ? (
-                        <a key={i} href={spec.linkToFile} target="_blank" rel="noopener noreferrer">
+                        <a key={spec.name} href={spec.linkToFile} target="_blank" rel="noopener noreferrer">
                           <Tag color="blue" style={{ cursor: 'pointer' }}>{spec.name}</Tag>
                         </a>
                       ) : (
-                        <Tag key={i}>{spec.name}</Tag>
+                        <Tag key={spec.name}>{spec.name}</Tag>
                       )
                     )
                   : key === 'specializations'
