@@ -64,10 +64,16 @@ export default function Orbat() {
     const roots: Squad[] = [];
     const parents: Squad[] = [];
     const children: Squad[] = [];
+    // Build a single Set of squad IDs that appear as someone's parent — turns
+    // the inner "does anything reference me?" lookup from O(n²) into O(n).
+    const referencedParentIds = new Set(squads.flatMap(s => s.parentSquadId ? [s.parentSquadId] : []));
+    const seen = new Set<string>();
     for (const squad of squads) {
-      if (!squad.parentSquadId && !roots.find(s => s._id === squad._id)) {
+      if (seen.has(squad._id!)) continue;
+      seen.add(squad._id!);
+      if (!squad.parentSquadId) {
         roots.push(squad);
-      } else if (!parents.find(s => s._id === squad._id) && squads.find(s => s.parentSquadId === squad._id)) {
+      } else if (referencedParentIds.has(squad._id!)) {
         parents.push(squad);
       } else {
         children.push(squad);

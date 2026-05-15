@@ -141,9 +141,10 @@ export async function runMutation<TArgs extends readonly unknown[], TResult>(
     } else if (descriptor.auditShape) {
       let payload = buildStandardPayload(descriptor.auditShape, args, result);
       if (descriptor.redact?.length) {
+        const redactSet = new Set(descriptor.redact);
         const redacted: Record<string, unknown> = {};
         for (const [key, value] of Object.entries(payload)) {
-          if (!descriptor.redact.includes(key)) redacted[key] = value;
+          if (!redactSet.has(key)) redacted[key] = value;
         }
         payload = redacted;
       }
