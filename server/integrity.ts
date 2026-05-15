@@ -145,15 +145,19 @@ async function buildSampleSelector(
 // ────────────────────────────────────────────────────────────
 // Shared traversal: powers both `enforce` and `preview`.
 //
-// `mode === 'execute'` throws on the first `block` hit (after collecting
-// all blockers — admin gets the full breakdown in a single error).
-// `mode === 'preview'` returns the same shape with `blockedBy` populated
-// instead of throwing.
+// Block reporting is identical in both modes — count + sample names
+// populate `blockedBy`; the caller decides whether to throw or return.
+// Mutating primitives (pull / setNull / cascade) compute their effects
+// in both modes but only apply mutations when `mode === 'execute'`. This
+// keeps preview/execute equivalence cheap to verify: the same edge
+// inspection produces the same counts; only the apply step differs.
 //
-// Slice #162: only `block` is wired. Other primitives are stubbed —
-// they fall through to the empty-effect branch and will be implemented
-// in slices #163–165.
+// Slice #162: only `block` is wired. Slice #163 adds `pull`. Other
+// primitives are stubbed — they fall through to the empty-effect branch
+// and will be implemented in slices #164–165.
 // ────────────────────────────────────────────────────────────
+
+type TraversalMode = 'preview' | 'execute';
 
 interface TraversalResult {
   readonly blockedBy: BlockedByEntry[];
@@ -164,6 +168,7 @@ async function traverseIntegrityEdges(
   target: CrudCollectionName,
   targetId: string,
   ctx: IntegrityContext,
+  mode: TraversalMode,
 ): Promise<TraversalResult> {
   const edges = getIncomingEdges(target);
   const blockedBy: BlockedByEntry[] = [];
@@ -183,9 +188,27 @@ async function traverseIntegrityEdges(
       continue;
     }
 
-    // Slices #163 (pull), #164 (setNull), #165 (cascade) extend here.
-    // For #162 these primitives are not declared on any registry edge,
-    // so the loop falls through silently.
+    if (edge.onDelete === 'pull') {
+      const SourceCollection = getCollection(edge.source);
+      const selector = buildEdgeSelector(edge, targetId);
+      const count = await SourceCollection.find(selector).countAsync();
+      if (count === 0) continue;
+
+      if (mode === 'execute') {
+        // $pull on an already-pulled array is a no-op, so this remains
+        // idempotent under retry — the load-bearing property documented
+        // in this file's header.
+        await SourceCollection.updateAsync(
+          selector as never,
+          { $pull: { [edge.field]: targetId } } as never,
+          { multi: true } as never,
+        );
+      }
+      effects.pulled[edge.source] = (effects.pulled[edge.source] ?? 0) + count;
+      continue;
+    }
+
+    // Slices #164 (setNull), #165 (cascade) extend here.
   }
 
   return { blockedBy, effects };
@@ -200,7 +223,7 @@ export async function previewIntegrity(
   targetId: string,
   ctx: IntegrityContext,
 ): Promise<IntegrityPreview> {
-  const { blockedBy, effects } = await traverseIntegrityEdges(target, targetId, ctx);
+  const { blockedBy, effects } = await traverseIntegrityEdges(target, targetId, ctx, 'preview');
   return { blockedBy, ...effects };
 }
 
@@ -209,17 +232,23 @@ export async function enforceIntegrityOnDelete(
   targetId: string,
   ctx: IntegrityContext,
 ): Promise<IntegrityEffects> {
-  const { blockedBy, effects } = await traverseIntegrityEdges(target, targetId, ctx);
-  if (blockedBy.length > 0) {
-    const summary = blockedBy
+  // Surface blockers before doing any mutating work — block has primacy
+  // over pull/setNull/cascade, and we don't want to leave the DB in a
+  // half-cleaned state when the operation was going to fail anyway. A
+  // preview-mode pass collects all blockers cheaply (count + sample);
+  // if any fire, we throw before the execute pass touches anything.
+  const blockCheck = await traverseIntegrityEdges(target, targetId, ctx, 'preview');
+  if (blockCheck.blockedBy.length > 0) {
+    const summary = blockCheck.blockedBy
       .map(b => `${b.count} ${b.source}`)
       .join(', ');
     throw new Meteor.Error(
       'foreign_key_blocked',
       `Cannot delete: in use by ${summary}`,
-      { blockedBy },
+      { blockedBy: blockCheck.blockedBy },
     );
   }
+  const { effects } = await traverseIntegrityEdges(target, targetId, ctx, 'execute');
   return effects;
 }
 

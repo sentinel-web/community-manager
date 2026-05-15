@@ -1,9 +1,14 @@
 import assert from 'node:assert';
 import { Meteor } from 'meteor/meteor';
 import { Random } from 'meteor/random';
+import EventsCollection from '../../imports/api/collections/events.collection';
 import LogsCollection from '../../imports/api/collections/logs.collection';
+import MedalsCollection from '../../imports/api/collections/medals.collection';
 import MembersCollection from '../../imports/api/collections/members.collection';
 import RanksCollection from '../../imports/api/collections/ranks.collection';
+import SpecializationsCollection from '../../imports/api/collections/specializations.collection';
+import TasksCollection from '../../imports/api/collections/tasks.collection';
+import { enforceIntegrityOnDelete } from '../../server/integrity';
 import {
   assertRejectsWithCode,
   callAs,
@@ -219,4 +224,178 @@ describe('integrity layer — block primitive on members.profile.rankId → rank
   void officerSquadMemberIds;
   void otherSquadMemberIds;
   void LogsCollection;
+});
+
+describe('integrity layer — pull primitive on array foreign keys (#163)', () => {
+  let adminUserId: string;
+
+  before(async () => {
+    const adminRoleId = await createTestRole({ roles: true });
+    adminUserId = await createTestUser({ roleId: adminRoleId });
+  });
+
+  after(async () => {
+    await cleanupFixtures([
+      EventsCollection,
+      MedalsCollection,
+      SpecializationsCollection,
+      TasksCollection,
+    ]);
+  });
+
+  it('deleting a Medal pulls it from every member.profile.medalIds array', async () => {
+    const medalId = await createTestDoc(MedalsCollection, { name: '__test_medal_pull', color: '#fff' });
+    const memberIds = await Promise.all([
+      createTestUser({ profile: { name: 'PullA', medalIds: [medalId] } }),
+      createTestUser({ profile: { name: 'PullB', medalIds: [medalId, 'other-medal-id'] } }),
+      createTestUser({ profile: { name: 'PullC', medalIds: ['other-medal-id'] } }),
+    ]);
+
+    const result = (await callAs(adminUserId, 'medals.remove', medalId)) as {
+      id: string;
+      effects: { pulled: Record<string, number> };
+    };
+
+    assert.strictEqual(result.id, medalId);
+    assert.strictEqual(result.effects.pulled.members, 2, 'expected 2 members to have had the medal pulled');
+
+    const remainingA = await MembersCollection.findOneAsync(memberIds[0]);
+    const remainingB = await MembersCollection.findOneAsync(memberIds[1]);
+    const remainingC = await MembersCollection.findOneAsync(memberIds[2]);
+    assert.deepStrictEqual(remainingA?.profile?.medalIds, []);
+    assert.deepStrictEqual(remainingB?.profile?.medalIds, ['other-medal-id']);
+    assert.deepStrictEqual(remainingC?.profile?.medalIds, ['other-medal-id']);
+  });
+
+  it('audit log records cascadeEffects.pulled when a delete triggers pulls', async () => {
+    const medalId = await createTestDoc(MedalsCollection, { name: '__test_medal_audit', color: '#fff' });
+    await createTestUser({ profile: { name: 'AuditA', medalIds: [medalId] } });
+    await createTestUser({ profile: { name: 'AuditB', medalIds: [medalId] } });
+
+    await callAs(adminUserId, 'medals.remove', medalId);
+
+    const log = await findLatestAuditLog('medals.deleted', medalId);
+    assert.ok(log, 'expected audit log for medal delete');
+    const cascadeEffects = (log.payload as Record<string, unknown>).cascadeEffects as
+      | { pulled: Record<string, number> }
+      | undefined;
+    assert.ok(cascadeEffects, 'expected cascadeEffects to appear in audit payload');
+    assert.strictEqual(cascadeEffects.pulled.members, 2);
+  });
+
+  it('preview reports same pulled counts that execute would produce', async () => {
+    const medalId = await createTestDoc(MedalsCollection, { name: '__test_medal_equiv', color: '#fff' });
+    await createTestUser({ profile: { name: 'EquivA', medalIds: [medalId] } });
+    await createTestUser({ profile: { name: 'EquivB', medalIds: [medalId] } });
+    await createTestUser({ profile: { name: 'EquivC', medalIds: [medalId] } });
+
+    const preview = (await callAs(adminUserId, 'integrity.preview', 'medals', medalId)) as {
+      blockedBy: unknown[];
+      pulled: Record<string, number>;
+    };
+    assert.deepStrictEqual(preview.blockedBy, []);
+    assert.strictEqual(preview.pulled.members, 3);
+
+    const executed = (await callAs(adminUserId, 'medals.remove', medalId)) as {
+      effects: { pulled: Record<string, number> };
+    };
+    assert.strictEqual(executed.effects.pulled.members, 3, 'execute count must match preview count');
+  });
+
+  it('preview does not mutate — counts can be queried repeatedly without side effects', async () => {
+    const medalId = await createTestDoc(MedalsCollection, { name: '__test_medal_no_mutate', color: '#fff' });
+    const memberId = await createTestUser({ profile: { name: 'NoMutate', medalIds: [medalId] } });
+
+    await callAs(adminUserId, 'integrity.preview', 'medals', medalId);
+    await callAs(adminUserId, 'integrity.preview', 'medals', medalId);
+
+    const member = await MembersCollection.findOneAsync(memberId);
+    assert.deepStrictEqual(member?.profile?.medalIds, [medalId], 'preview must not mutate state');
+  });
+
+  it('idempotent execute — calling enforce twice produces no double-pull errors', async () => {
+    const medalId = await createTestDoc(MedalsCollection, { name: '__test_medal_idempotent', color: '#fff' });
+    await createTestUser({ profile: { name: 'IdemA', medalIds: [medalId] } });
+
+    await enforceIntegrityOnDelete('medals', medalId, { userId: adminUserId });
+    // Second call: the array no longer contains the id, so the count is 0
+    // and the $pull is skipped. Must not throw.
+    const second = await enforceIntegrityOnDelete('medals', medalId, { userId: adminUserId });
+    assert.strictEqual(second.pulled.members ?? 0, 0);
+  });
+
+  it('deleting a Specialization pulls from both member arrays and self-referencing specialization arrays', async () => {
+    const targetSpecId = await createTestDoc(SpecializationsCollection, { name: '__test_spec_target', color: '#fff' });
+    const otherSpecId = await createTestDoc(SpecializationsCollection, {
+      name: '__test_spec_consumer',
+      color: '#fff',
+      requiredSpecializations: [targetSpecId, 'unrelated'],
+    });
+    await createTestUser({ profile: { name: 'SpecA', specializationIds: [targetSpecId] } });
+    await createTestUser({ profile: { name: 'SpecB', specializationIds: [targetSpecId, 'other'] } });
+
+    const result = (await callAs(adminUserId, 'specializations.remove', targetSpecId)) as {
+      effects: { pulled: Record<string, number> };
+    };
+    assert.strictEqual(result.effects.pulled.members, 2);
+    assert.strictEqual(result.effects.pulled.specializations, 1);
+
+    const survivingOtherSpec = await SpecializationsCollection.findOneAsync(otherSpecId);
+    assert.deepStrictEqual(
+      survivingOtherSpec?.requiredSpecializations,
+      ['unrelated'],
+      'self-referencing array should have target id pulled',
+    );
+  });
+
+  it('multiple edges from same source accumulate into a single pulled-effect count', async () => {
+    // Test the engine directly: deleting a Member fires pulls on
+    // events.hosts, events.attendees, tasks.participants, tasks.completedBy,
+    // specializations.instructors — accumulating into the per-source totals.
+    // Goes via enforceIntegrityOnDelete because slice #168 (members custom
+    // delete wiring) hasn't landed yet.
+    const memberId = `${TEST_PREFIX}${Random.id()}`;
+    await MembersCollection.insertAsync({
+      _id: memberId,
+      username: memberId,
+      profile: { name: 'MultiEdgeMember' },
+    });
+
+    await createTestDoc(EventsCollection, {
+      name: '__test_event_hosts',
+      start: new Date(),
+      end: new Date(),
+      hosts: [memberId],
+    });
+    await createTestDoc(EventsCollection, {
+      name: '__test_event_attendees',
+      start: new Date(),
+      end: new Date(),
+      attendees: [memberId, 'other-member'],
+    });
+    await createTestDoc(EventsCollection, {
+      name: '__test_event_both',
+      start: new Date(),
+      end: new Date(),
+      hosts: [memberId],
+      attendees: [memberId],
+    });
+    await createTestDoc(TasksCollection, { name: '__test_task_part', participants: [memberId] });
+    await createTestDoc(TasksCollection, { name: '__test_task_compl', completedBy: [memberId] });
+
+    const effects = await enforceIntegrityOnDelete('members', memberId, { userId: adminUserId });
+
+    // 2 events have member in hosts (event_hosts + event_both)
+    // 2 events have member in attendees (event_attendees + event_both)
+    // → effects.pulled.events == 4 (operations, not distinct docs)
+    assert.strictEqual(effects.pulled.events, 4, 'expected 4 event-pull operations across hosts + attendees');
+    assert.strictEqual(effects.pulled.tasks, 2, 'expected 2 task-pull operations across participants + completedBy');
+
+    // Verify actual DB state
+    const remainingAttendees = await EventsCollection.findOneAsync({ name: '__test_event_attendees' });
+    assert.deepStrictEqual(remainingAttendees?.attendees, ['other-member']);
+    const bothEvent = await EventsCollection.findOneAsync({ name: '__test_event_both' });
+    assert.deepStrictEqual(bothEvent?.hosts, []);
+    assert.deepStrictEqual(bothEvent?.attendees, []);
+  });
 });

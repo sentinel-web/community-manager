@@ -32,7 +32,15 @@ export interface CollectionRegistryEntry {
 export const COLLECTION_REGISTRY: Record<CrudCollectionName, CollectionRegistryEntry> = {
   attendances: { module: 'events' },
   discoveryTypes: { module: 'discoveryTypes' },
-  events: { module: 'events', fallback: { create: 'canCreateEvents' } },
+  events: {
+    module: 'events',
+    fallback: { create: 'canCreateEvents' },
+    displayField: 'name',
+    foreignKeys: [
+      { field: 'hosts', target: 'members', kind: 'array', onDelete: 'pull' },
+      { field: 'attendees', target: 'members', kind: 'array', onDelete: 'pull' },
+    ],
+  },
   eventTypes: { module: 'eventTypes' },
   logs: { module: 'logs' },
   medals: { module: 'medals' },
@@ -42,6 +50,8 @@ export const COLLECTION_REGISTRY: Record<CrudCollectionName, CollectionRegistryE
     displayField: 'profile.name',
     foreignKeys: [
       { field: 'profile.rankId', target: 'ranks', kind: 'scalar', onDelete: 'block' },
+      { field: 'profile.specializationIds', target: 'specializations', kind: 'array', onDelete: 'pull' },
+      { field: 'profile.medalIds', target: 'medals', kind: 'array', onDelete: 'pull' },
     ],
   },
   positions: { module: 'positions' },
@@ -51,8 +61,23 @@ export const COLLECTION_REGISTRY: Record<CrudCollectionName, CollectionRegistryE
   ranks: { module: 'ranks', displayField: 'name' },
   registrations: { module: 'registrations', allowsAnonymous: { insert: true } },
   roles: { module: 'roles', displayField: 'name' },
-  specializations: { module: 'specializations', displayField: 'name' },
+  specializations: {
+    module: 'specializations',
+    displayField: 'name',
+    foreignKeys: [
+      { field: 'instructors', target: 'members', kind: 'array', onDelete: 'pull' },
+      { field: 'requiredSpecializations', target: 'specializations', kind: 'array', onDelete: 'pull' },
+    ],
+  },
   squads: { module: 'squads', displayField: 'name' },
   taskStatus: { module: 'taskStatus', displayField: 'name' },
-  tasks: { module: 'tasks', fallback: { create: 'canManageTasks', update: 'canManageTasks' }, displayField: 'name' },
+  tasks: {
+    module: 'tasks',
+    fallback: { create: 'canManageTasks', update: 'canManageTasks' },
+    displayField: 'name',
+    foreignKeys: [
+      { field: 'participants', target: 'members', kind: 'array', onDelete: 'pull' },
+      { field: 'completedBy', target: 'members', kind: 'array', onDelete: 'pull' },
+    ],
+  },
 };
