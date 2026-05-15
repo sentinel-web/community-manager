@@ -10,6 +10,16 @@ export type ParamArgs<K extends LocaleKey> = keyof ExtractParams<(typeof transla
   ? []
   : [params: ExtractParams<(typeof translations)[K]['en']>];
 
+export type Translator = <K extends LocaleKey>(key: K, ...args: ParamArgs<K>) => string;
+
+// Subset of LocaleKey for translations that take no interpolation params.
+// Use this as the type of label-key fields stored in static config so callers
+// can do `t(config.labelKey)` without TS demanding a params argument for the
+// (potentially param-taking) keys also living in the LocaleKey union.
+export type ParameterlessLocaleKey = {
+  [K in LocaleKey]: ParamArgs<K> extends [] ? K : never;
+}[LocaleKey];
+
 export interface LocaleInfo {
   name: string;
   flag: string;

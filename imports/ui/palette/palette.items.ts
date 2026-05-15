@@ -1,8 +1,7 @@
 import type { Role } from '../../api/types';
+import type { ParameterlessLocaleKey, Translator } from '../../i18n';
 import { hasAccess } from '../navigation/Navigation';
 import type { PaletteItem } from './palette.types';
-
-type Translator = (key: string) => string;
 
 export interface PaletteEntityResults {
   members: Array<{ _id: string; username?: string; profile?: { name?: string; id?: number } }>;
@@ -16,7 +15,7 @@ export interface PaletteEntityResults {
 interface NavConfig {
   key: string;
   module: keyof Role;
-  labelKey: string;
+  labelKey: ParameterlessLocaleKey;
 }
 
 const NAV_ROUTES: NavConfig[] = [
@@ -43,7 +42,7 @@ const NAV_ROUTES: NavConfig[] = [
 interface CreateActionConfig {
   module: keyof Role;
   route: string;
-  labelKey: string;
+  labelKey: ParameterlessLocaleKey;
 }
 
 const CREATE_ACTIONS: CreateActionConfig[] = [

@@ -54,6 +54,11 @@ jobs:
       - name: Install npm dependencies
         run: meteor npm ci
 
+      # Runs before mocha because tsc is sub-second after the cache hit and
+      # any type error invalidates the rest of the run anyway — fail fast.
+      - name: Type check
+        run: meteor npm run typecheck
+
       - name: Mocha unit tests
         run: meteor npm test
 

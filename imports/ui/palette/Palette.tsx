@@ -94,7 +94,7 @@ export default function Palette() {
     if (recents.length === 0) return [];
     const groupLabel = t('palette.recent');
     const staticItems: PaletteItem[] = [...createItems, ...globalItems, ...navigateItems];
-    const itemByKey = new Map(staticItems.map(item => [`${item.kind}:${item.key}`, item] as const));
+    const itemByKey = new Map<string, PaletteItem>(staticItems.map(item => [`${item.kind}:${item.key}`, item]));
     return recents.slice(0, 5).flatMap<PaletteItem>(entry => {
       const id = `${entry.kind}:${entry.key}`;
       const original = itemByKey.get(id);
