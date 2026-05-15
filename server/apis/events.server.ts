@@ -80,9 +80,13 @@ if (Meteor.isServer) {
       const event = await EventsCollection.findOneAsync(eventId);
       if (!event) throw new Meteor.Error(404, 'Event not found');
 
-      const eventType = event.eventType ? await EventTypesCollection.findOneAsync(event.eventType) : null;
-      const hosts = await resolveNames(event.hosts);
-      const attendees = await resolveNames(event.attendees);
+      // Event-type lookup, host names, and attendee names are independent —
+      // race them via Promise.all instead of waterfalling.
+      const [eventType, hosts, attendees] = await Promise.all([
+        event.eventType ? EventTypesCollection.findOneAsync(event.eventType) : Promise.resolve(null),
+        resolveNames(event.hosts),
+        resolveNames(event.attendees),
+      ]);
 
       return {
         ...event,

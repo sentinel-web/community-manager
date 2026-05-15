@@ -74,8 +74,18 @@ export default function Orbat() {
       }
     }
 
-    const prepareData = async (squad: Squad) => {
-      const src = squad.image ? (await turnBase64ToImage(squad.image)).src : null;
+    // Two-phase build: race the per-squad image decoding in parallel, then
+    // assemble the tree sequentially so parents are placed before children
+    // look them up via findParentRecursive. The ordered traversal (roots →
+    // parents → children) preserves the prior tree-attachment semantics.
+    const orderedSquads = [...roots, ...parents, ...children];
+    const decoded = await Promise.all(
+      orderedSquads.map(async squad => ({
+        squad,
+        src: squad.image ? (await turnBase64ToImage(squad.image)).src : null,
+      })),
+    );
+    for (const { squad, src } of decoded) {
       const data: OrbatNode = {
         id: squad._id ?? '',
         name: squad.name,
@@ -92,10 +102,6 @@ export default function Orbat() {
       } else {
         parent.children.push(data);
       }
-    };
-
-    for (const squad of [...roots, ...parents, ...children]) {
-      await prepareData(squad);
     }
     return preparedOrbatOptions;
   }, [squads, findParentRecursive]);

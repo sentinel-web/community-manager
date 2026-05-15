@@ -195,19 +195,18 @@ async function createTestData(): Promise<void> {
 }
 
 async function createDatabaseIndexes(): Promise<void> {
-  await MembersCollection.rawCollection().createIndex({ 'profile.squadId': 1 });
-  await MembersCollection.rawCollection().createIndex({ 'profile.rankId': 1 });
-
-  await AttendancesCollection.rawCollection().createIndex({ eventId: 1 });
-
-  await LogsCollection.rawCollection().createIndex({ createdAt: -1 });
-  await LogsCollection.rawCollection().createIndex({ action: 1 });
-
-  await EventsCollection.rawCollection().createIndex({ eventType: 1 });
-
-  await TasksCollection.rawCollection().createIndex({ status: 1 });
-
-  await RegistrationsCollection.rawCollection().createIndex({ discoveryType: 1 });
+  // Every createIndex call is independent — race them on startup instead of
+  // running 8 sequential round-trips. Mongo will dedupe if any already exist.
+  await Promise.all([
+    MembersCollection.rawCollection().createIndex({ 'profile.squadId': 1 }),
+    MembersCollection.rawCollection().createIndex({ 'profile.rankId': 1 }),
+    AttendancesCollection.rawCollection().createIndex({ eventId: 1 }),
+    LogsCollection.rawCollection().createIndex({ createdAt: -1 }),
+    LogsCollection.rawCollection().createIndex({ action: 1 }),
+    EventsCollection.rawCollection().createIndex({ eventType: 1 }),
+    TasksCollection.rawCollection().createIndex({ status: 1 }),
+    RegistrationsCollection.rawCollection().createIndex({ discoveryType: 1 }),
+  ]);
 }
 
 if (Meteor.isServer) {
