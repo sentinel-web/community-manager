@@ -103,8 +103,9 @@ if (Meteor.isServer) {
       const requiredQuestions = (questionnaire.questions || [])
         .flatMap((q, index) => (q.required ? [{ ...q, index }] : []));
 
+      const answerByIndex = new Map(answers.map(a => [a.questionIndex, a]));
       for (const question of requiredQuestions) {
-        const answer = answers.find(a => a.questionIndex === question.index);
+        const answer = answerByIndex.get(question.index);
         if (!answer || answer.value === undefined || answer.value === null || answer.value === '') {
           throw new Meteor.Error(400, `Question "${question.text}" is required`);
         }

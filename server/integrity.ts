@@ -324,8 +324,14 @@ export async function previewIntegrityBulk(
   const cascaded: EffectsByCollection = {};
   const blockedIds: string[] = [];
 
-  for (const id of targetIds) {
-    const preview = await previewIntegrity(target, id, ctx);
+  // Each previewIntegrity creates its own `visited` Set internally, so the
+  // per-id previews are independent and safe to race. The accumulator merge
+  // happens after all settle — Promise.all preserves order so perId keys stay
+  // stable.
+  const previews = await Promise.all(targetIds.map(id => previewIntegrity(target, id, ctx)));
+  for (let i = 0; i < targetIds.length; i++) {
+    const id = targetIds[i];
+    const preview = previews[i];
     perId[id] = preview;
     if (preview.blockedBy.length > 0) blockedIds.push(id);
 
@@ -507,17 +513,22 @@ export async function validateForeignKeys(
   const written = extractWrittenFKs(source, modifier);
   if (written.length === 0) return;
 
-  for (const { edge, value } of written) {
-    const TargetCollection = getCollection(edge.target);
-    const exists = await TargetCollection.findOneAsync({ _id: value } as never);
-    if (!exists) {
-      throw new Meteor.Error(
-        'foreign_key_invalid',
-        `${edge.field} references non-existent ${edge.target} ${value}`,
-        { field: edge.field, target: edge.target, value },
-      );
-    }
-  }
+  // Race the existence checks — each hits a different target collection and
+  // value, no dependency between them. If any FK is invalid we still throw,
+  // just on whichever query resolves first rather than strict iteration order.
+  await Promise.all(
+    written.map(async ({ edge, value }) => {
+      const TargetCollection = getCollection(edge.target);
+      const exists = await TargetCollection.findOneAsync({ _id: value } as never);
+      if (!exists) {
+        throw new Meteor.Error(
+          'foreign_key_invalid',
+          `${edge.field} references non-existent ${edge.target} ${value}`,
+          { field: edge.field, target: edge.target, value },
+        );
+      }
+    }),
+  );
 }
 
 // ────────────────────────────────────────────────────────────
@@ -569,16 +580,23 @@ export async function scanForOrphans(): Promise<OrphanRecord[]> {
 
   for (const [source, entry] of Object.entries(COLLECTION_REGISTRY) as Array<[CrudCollectionName, typeof COLLECTION_REGISTRY[CrudCollectionName]]>) {
     if (!entry.foreignKeys) continue;
-    for (const edge of entry.foreignKeys) {
-      const referencedIds = await getDistinctReferencedIds(source, edge);
+    // Race the per-edge scans within one collection — each edge targets a
+    // different collection and has no dependency on its siblings.
+    const edgeScans = await Promise.all(
+      entry.foreignKeys.map(async edge => {
+        const referencedIds = await getDistinctReferencedIds(source, edge);
+        if (referencedIds.size === 0) return { edge, referencedIds, existingIds: new Set<string>() };
+        const TargetCollection = getCollection(edge.target);
+        const existingDocs = await TargetCollection.find(
+          { _id: { $in: Array.from(referencedIds.keys()) } } as never,
+          { fields: { _id: 1 } as never } as never,
+        ).fetchAsync();
+        const existingIds = new Set(existingDocs.map(d => (d as { _id: string })._id));
+        return { edge, referencedIds, existingIds };
+      }),
+    );
+    for (const { edge, referencedIds, existingIds } of edgeScans) {
       if (referencedIds.size === 0) continue;
-
-      const TargetCollection = getCollection(edge.target);
-      const existingDocs = await TargetCollection.find(
-        { _id: { $in: Array.from(referencedIds.keys()) } } as never,
-        { fields: { _id: 1 } as never } as never,
-      ).fetchAsync();
-      const existingIds = new Set(existingDocs.map(d => (d as { _id: string })._id));
 
       for (const [referencedId, sourceIds] of referencedIds) {
         if (existingIds.has(referencedId)) continue;
