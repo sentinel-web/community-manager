@@ -1289,6 +1289,42 @@ describe('integrity layer — write validation on members custom paths', () => {
     );
   });
 
+  it('integrity.previewBulk aggregates blockedBy + effects across multiple ids', async () => {
+    const rankA = await createTestDoc(RanksCollection, { name: '__test_bulk_rank_a', color: '#fff' });
+    const rankB = await createTestDoc(RanksCollection, { name: '__test_bulk_rank_b', color: '#fff' });
+    const unusedRank = await createTestDoc(RanksCollection, { name: '__test_bulk_rank_unused', color: '#fff' });
+    await createTestUser({ profile: { name: 'BulkBlockedA', rankId: rankA } });
+    await createTestUser({ profile: { name: 'BulkBlockedB1', rankId: rankB } });
+    await createTestUser({ profile: { name: 'BulkBlockedB2', rankId: rankB } });
+
+    const result = (await callAs(adminUserId, 'integrity.previewBulk', 'ranks', [rankA, rankB, unusedRank])) as {
+      perId: Record<string, { blockedBy: Array<{ source: string; count: number }> }>;
+      aggregate: { blockedBy: Array<{ source: string; count: number }>; pulled: Record<string, number> };
+      blockedIds: string[];
+    };
+
+    assert.strictEqual(result.blockedIds.length, 2, 'only the two referenced ranks block');
+    assert.ok(result.blockedIds.includes(rankA));
+    assert.ok(result.blockedIds.includes(rankB));
+    assert.ok(!result.blockedIds.includes(unusedRank));
+
+    // Aggregate combines all blockers — one entry per blocker per id
+    assert.strictEqual(result.aggregate.blockedBy.length, 2);
+    const totalBlockedMembers = result.aggregate.blockedBy.reduce((s, e) => s + e.count, 0);
+    assert.strictEqual(totalBlockedMembers, 3, 'expected 1 + 2 = 3 blocking members across the two blocked ranks');
+
+    // Per-id breakdown is also available
+    assert.strictEqual(result.perId[rankA].blockedBy[0].count, 1);
+    assert.strictEqual(result.perId[rankB].blockedBy[0].count, 2);
+    assert.deepStrictEqual(result.perId[unusedRank].blockedBy, []);
+  });
+
+  it('integrity.previewBulk rejects empty array and oversized batches', async () => {
+    await assertRejectsWithCode(() => callAs(adminUserId, 'integrity.previewBulk', 'ranks', []), 400);
+    const oversized = Array.from({ length: 101 }, () => 'fake');
+    await assertRejectsWithCode(() => callAs(adminUserId, 'integrity.previewBulk', 'ranks', oversized), 400);
+  });
+
   it('members.update of an unrelated field on a member with a stale rankId succeeds', async () => {
     // Direct-write a stale rankId via the collection (bypassing validation)
     // to simulate the pre-existing-orphan condition.

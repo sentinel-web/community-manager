@@ -299,6 +299,45 @@ export async function previewIntegrity(
   return { blockedBy, ...effects };
 }
 
+// Batched preview used by the bulk-delete UX. Returns per-id previews so
+// the client can aggregate or render per-row, plus an aggregate view that
+// sums effect counts and concatenates blockers across all ids. Single
+// round-trip instead of N parallel previewIntegrity calls.
+export interface BulkIntegrityPreview {
+  readonly perId: Record<string, IntegrityPreview>;
+  readonly aggregate: IntegrityPreview;
+  readonly blockedIds: string[];
+}
+
+export async function previewIntegrityBulk(
+  target: CrudCollectionName,
+  targetIds: readonly string[],
+  ctx: IntegrityContext,
+): Promise<BulkIntegrityPreview> {
+  const perId: Record<string, IntegrityPreview> = {};
+  const aggregate: IntegrityPreview = { blockedBy: [], pulled: {}, setNull: {}, cascaded: {} };
+  const blockedIds: string[] = [];
+
+  for (const id of targetIds) {
+    const preview = await previewIntegrity(target, id, ctx);
+    perId[id] = preview;
+    if (preview.blockedBy.length > 0) blockedIds.push(id);
+
+    for (const entry of preview.blockedBy) (aggregate.blockedBy as BlockedByEntry[]).push(entry);
+    for (const [src, n] of Object.entries(preview.pulled)) {
+      aggregate.pulled[src as CrudCollectionName] = (aggregate.pulled[src as CrudCollectionName] ?? 0) + n;
+    }
+    for (const [src, n] of Object.entries(preview.setNull)) {
+      aggregate.setNull[src as CrudCollectionName] = (aggregate.setNull[src as CrudCollectionName] ?? 0) + n;
+    }
+    for (const [src, n] of Object.entries(preview.cascaded)) {
+      aggregate.cascaded[src as CrudCollectionName] = (aggregate.cascaded[src as CrudCollectionName] ?? 0) + n;
+    }
+  }
+
+  return { perId, aggregate, blockedIds };
+}
+
 export async function enforceIntegrityOnDelete(
   target: CrudCollectionName,
   targetId: string,

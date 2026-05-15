@@ -201,12 +201,37 @@ export default function Section<T extends { _id?: string }>({
     [notification, message, modal, collectionName, t]
   );
 
-  const handleBulkDelete = useCallback(() => {
+  const handleBulkDelete = useCallback(async () => {
     const count = selectedRowKeys.length;
+    const ids = selectedRowKeys.map(String);
+
+    // Pre-fetch the aggregate preview. If any id is blocked, we render the
+    // structured block panel and disable confirm — matches the single-delete
+    // pre-flight pattern. Side-effect counts (pull/setNull/cascade) ride
+    // along so admins see "this will affect 23 events" before committing.
+    let preview: { aggregate: DeleteImpactPreviewData; blockedIds: string[] } | null = null;
+    try {
+      preview = (await Meteor.callAsync('integrity.previewBulk', collectionName, ids)) as {
+        aggregate: DeleteImpactPreviewData;
+        blockedIds: string[];
+      };
+    } catch (error) {
+      const err = error as Meteor.Error;
+      notification.error({ message: err.error as string, description: err.message });
+      return;
+    }
+
+    const isBlocked = preview != null && preview.blockedIds.length > 0;
+
     modal.confirm({
       title: t('common.delete'),
-      content: t('modals.bulkDeleteConfirm', { count }),
-      okButtonProps: { danger: true },
+      content: (
+        <>
+          <DeleteImpactPreview preview={preview ? preview.aggregate : null} />
+          {!isBlocked && <p>{t('modals.bulkDeleteConfirm', { count })}</p>}
+        </>
+      ),
+      okButtonProps: { danger: true, disabled: isBlocked },
       onOk: async () => {
         setBulkActionLoading(true);
         try {
