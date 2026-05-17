@@ -59,7 +59,14 @@ if (Meteor.isServer) {
         { $set: { key, value: processedValue } }
       );
       if (key.startsWith('discord-bot')) {
-        reloadDiscordBot().catch(console.error);
+        try {
+          reloadDiscordBot().catch(console.error);
+          await SettingsCollection.upsertAsync({ key: 'discord-error-message' }, { $set: { key: 'discord-error-message', value: null } });
+        } catch (error) {
+          const errMsg = (error as Error).message;
+          await SettingsCollection.upsertAsync({ key: 'discord-error-message' }, { $set: { key: 'discord-error-message', value: errMsg } });
+        }
+        
       }
       await createLog('settings.updated', { key });
       return result;

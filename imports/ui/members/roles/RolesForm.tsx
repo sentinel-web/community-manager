@@ -55,6 +55,13 @@ const RolesForm = () => {
       <Form.Item name="color" label={t('common.color')}>
         <ColorPicker format="hex" disabledAlpha />
       </Form.Item>
+      <Form.Item 
+        name="discordRoleId" 
+        label={t('members.discordRoleId')} 
+        rules={[{ required: false, type: 'string', pattern: /^\d+$/, message: 'Muss eine gültige ID sein!' }]}
+      >
+        <Input placeholder={t('forms.placeholders.enterDiscordRoleId')} allowClear />
+      </Form.Item>
 
       <Form.Item name={ADMIN_FIELD} label={t('members.administrator')} extra={t('members.administratorHint')} valuePropName="checked">
         <Switch checkedChildren={<CheckOutlined />} unCheckedChildren={<CloseOutlined />} />
