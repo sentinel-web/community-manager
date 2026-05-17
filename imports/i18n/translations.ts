@@ -619,4 +619,19 @@ export const translations = {
   'settings.discord.enabled': {en: 'Enable Discord Integration', de: 'Discord-Integration aktivieren', fr: 'Activer l\'intégration Discord'},
   'settings.discord.serverId': { en: 'Discord Server ID', de: 'Discord Server-ID', fr: 'ID du serveur Discord'},
   'settings.discordIntegration': { en: 'Discord Integration', de: 'Discord Integration', fr: 'Intégration Discord'},
+  'forms.placeholders.enterDiscordRoleId': {
+    en: 'Enter Discord Role ID (optional)',
+    de: 'Discord-Rollen-ID eingeben (optional)',
+    fr: 'Entrez l\'ID du rôle Discord (optionnel)',
+  },
+  'members.discordRole': {
+    en: 'Discord Role',
+    de: 'Discord-Rolle',
+    fr: 'Rôle Discord',
+  },
+  'members.discordRoleId': {
+    en: 'Discord Role ID',
+    de: 'Discord-Rollen-ID',
+    fr: 'ID du rôle Discord',
+  },
 } as const satisfies TranslationSet;

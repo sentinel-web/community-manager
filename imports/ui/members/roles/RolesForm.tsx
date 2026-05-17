@@ -97,6 +97,13 @@ const RolesForm = () => {
       <Form.Item name="color" label={t('common.color')}>
         <ColorPicker format="hex" />
       </Form.Item>
+      <Form.Item 
+        name="discordRoleId" 
+        label={t('members.discordRoleId')} 
+        rules={[{ required: false, type: 'string', pattern: /^\d+$/, message: 'Muss eine gültige ID sein!' }]}
+      >
+        <Input placeholder={t('forms.placeholders.enterDiscordRoleId')} allowClear />
+      </Form.Item>
 
       <Typography.Title level={5} style={{ marginTop: 16 }}>
         {t('members.basicPermissions')}

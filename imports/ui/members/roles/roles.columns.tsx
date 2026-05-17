@@ -30,6 +30,13 @@ const getRolesColumns: ColumnsFactory<Role> = (handleEdit, handleDelete, permiss
       sorter: (a: Role, b: Role) => (a.color || '').localeCompare(b.color || ''),
       render: (color: string) => <Tag color={color || 'transparent'}>{color}</Tag>,
     },
+    {
+      title: t('members.discordRole'),
+      dataIndex: 'discordRoleId',
+      key: 'discordRoleId',
+      ellipsis: true,
+      render: (discordRoleId: string) => discordRoleId ? <Tag color="blue">ID: {discordRoleId}</Tag> : <i>-</i>,
+    },
   ];
 
   if (canUpdate || canDelete) {
