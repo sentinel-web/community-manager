@@ -1,18 +1,12 @@
 import { App, ColorPicker, Form, Input, Select } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import { getColorFromValues } from '/imports/helpers/colors/getColorFromValues';
 import type { Rank } from '../../../api/types/rank';
-import { DrawerContext, SubdrawerContext } from '../../app/App';
-import type { DrawerContextValue } from '../../app/types';
+import { useDrawerFrame } from '../../drawer-stack';
 import FormFooter from '../../components/FormFooter';
 import RanksSelect from './RanksSelect';
-
-interface RanksFormProps {
-  setOpen: (open: boolean) => void;
-  useSubdrawer?: boolean;
-}
 
 interface RankFormValues {
   name: string;
@@ -23,19 +17,15 @@ interface RankFormValues {
   nextRankId?: string;
 }
 
-export default function RanksForm({ setOpen, useSubdrawer }: RanksFormProps) {
+export default function RanksForm() {
   const { t } = useTranslation();
   const [form] = Form.useForm<RankFormValues>();
   const { message, notification } = App.useApp();
   const [loading, setLoading] = useState(false);
-
-  const drawer = useContext(useSubdrawer ? SubdrawerContext : DrawerContext) as DrawerContextValue;
-  const model = useMemo(() => {
-    return drawer.drawerModel as unknown as Rank & { _id?: string };
-  }, [drawer]);
+  const { model, resolve, cancel } = useDrawerFrame<string, Partial<Rank> & { _id?: string }>();
 
   useEffect(() => {
-    if (Object.keys(model).length > 0) {
+    if (model && Object.keys(model).length > 0) {
       form.setFieldsValue(model as unknown as RankFormValues);
     } else {
       form.setFieldsValue({
@@ -49,25 +39,31 @@ export default function RanksForm({ setOpen, useSubdrawer }: RanksFormProps) {
   }, [model, form.setFieldsValue]);
 
   const handleSubmit = useCallback(
-    (values: RankFormValues) => {
+    async (values: RankFormValues) => {
       setLoading(true);
       const { name, description, previousRankId, nextRankId, type } = values;
-      const args = [...(model?._id ? [model._id] : []), { name, color: getColorFromValues(values as unknown as Record<string, unknown>), description, previousRankId, nextRankId, type }];
-      Meteor.callAsync(Meteor.user() && model?._id ? 'ranks.update' : 'ranks.insert', ...args)
-        .then(() => {
-          setOpen(false);
-          form.resetFields();
-          message.success(model?._id ? t('messages.rankUpdated') : t('messages.rankCreated'));
-        })
-        .catch(error => {
-          notification.error({
-            message: (error as Meteor.Error).error as string,
-            description: (error as Meteor.Error).message,
-          });
-        })
-        .finally(() => setLoading(false));
+      const args = [
+        ...(model?._id ? [model._id] : []),
+        { name, color: getColorFromValues(values as unknown as Record<string, unknown>), description, previousRankId, nextRankId, type },
+      ];
+      try {
+        const result = (await Meteor.callAsync(
+          Meteor.user() && model?._id ? 'ranks.update' : 'ranks.insert',
+          ...args
+        )) as string | undefined;
+        message.success(model?._id ? t('messages.rankUpdated') : t('messages.rankCreated'));
+        resolve(model?._id ?? result);
+      } catch (error) {
+        const err = error as Meteor.Error;
+        notification.error({
+          message: err.error as string,
+          description: err.message,
+        });
+      } finally {
+        setLoading(false);
+      }
     },
-    [setOpen, form, model, message, notification, t]
+    [model, resolve, message, notification, t]
   );
 
   return (
@@ -102,7 +98,7 @@ export default function RanksForm({ setOpen, useSubdrawer }: RanksFormProps) {
         rules={[{ required: false, type: 'string' }]}
         defaultValue={model?.nextRankId as string | undefined}
       />
-      <FormFooter setOpen={setOpen} />
+      <FormFooter onCancel={cancel} />
     </Form>
   );
 }

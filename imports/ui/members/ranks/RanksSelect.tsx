@@ -29,6 +29,7 @@ const RanksSelect = ({ multiple, name, label, rules, defaultValue }: RanksSelect
       subscription="ranks"
       placeholder={t('common.selectRank')}
       extra={<></>}
+      useDrawerStack
     />
   );
 };
