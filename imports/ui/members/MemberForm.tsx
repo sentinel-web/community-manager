@@ -4,13 +4,12 @@ import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
-import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import RanksCollection from '../../api/collections/ranks.collection';
 import RolesCollection from '../../api/collections/roles.collection';
 import type { Member } from '../../api/types/member';
 import { useTranslation } from '../../i18n/LanguageContext';
-import { DrawerContext } from '../app/App';
-import type { DrawerContextValue } from '../app/types';
+import { useDrawerFrame } from '../drawer-stack';
 import CollectionSelect, { type CollectionDoc } from '../components/CollectionSelect';
 import { getDateFromValues } from '../events/EventForm';
 import ProfilePictureInput from '../profile-picture-input/ProfilePictureInput';
@@ -62,11 +61,7 @@ export const transformDateToDays = (values: Record<string, unknown>, key = 'date
   return values[key] as undefined;
 };
 
-interface MemberFormProps {
-  setOpen: (open: boolean) => void;
-}
-
-export default function MemberForm({ setOpen }: MemberFormProps) {
+export default function MemberForm() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [form] = Form.useForm<any>();
   const { message, notification } = App.useApp();
@@ -76,10 +71,8 @@ export default function MemberForm({ setOpen }: MemberFormProps) {
   const [nameError, setNameError] = useState<ValidationStatus>(undefined);
   const [idError, setIdError] = useState<ValidationStatus>(undefined);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const drawer = useContext(DrawerContext) as DrawerContextValue;
-  const model = useMemo(() => {
-    return (drawer.drawerModel as unknown as Member) || ({} as Member);
-  }, [drawer]);
+  const { model: rawModel, resolve, cancel } = useDrawerFrame<string, Partial<Member>>();
+  const model = useMemo(() => (rawModel || {}) as Member, [rawModel]);
   useEffect(() => {
     if (Object.keys(model).length > 0) {
       const data = { ...model } as Record<string, unknown>;
@@ -143,7 +136,7 @@ export default function MemberForm({ setOpen }: MemberFormProps) {
   }, [form, model?._id]);
 
   const handleSubmit = useCallback(
-    (values: MemberFormValues) => {
+    async (values: MemberFormValues) => {
       setLoading(true);
       const payload = {
         ...values,
@@ -154,22 +147,24 @@ export default function MemberForm({ setOpen }: MemberFormProps) {
         },
       };
       const args = model?._id ? [model._id, payload] : [payload];
-      Meteor.callAsync(Meteor.user() && model?._id ? 'members.update' : 'members.insert', ...args)
-        .then(() => {
-          setOpen(false);
-          form.resetFields();
-          message.success(t('messages.saveSuccessful'));
-        })
-        .catch(error => {
-          const err = error as Meteor.Error;
-          notification.error({
-            message: err.error as string,
-            description: err.message,
-          });
-        })
-        .finally(() => setLoading(false));
+      try {
+        const result = (await Meteor.callAsync(
+          Meteor.user() && model?._id ? 'members.update' : 'members.insert',
+          ...args
+        )) as string | undefined;
+        message.success(t('messages.saveSuccessful'));
+        resolve(model?._id ?? result);
+      } catch (error) {
+        const err = error as Meteor.Error;
+        notification.error({
+          message: err.error as string,
+          description: err.message,
+        });
+      } finally {
+        setLoading(false);
+      }
     },
-    [form, model?._id, setOpen, message, notification, t]
+    [model?._id, resolve, message, notification, t]
   );
 
   const handleValuesChange = useCallback(
@@ -188,10 +183,8 @@ export default function MemberForm({ setOpen }: MemberFormProps) {
   );
 
   const handleCancel = useCallback(() => {
-    setOpen(false);
-    form.resetFields();
-    drawer.setDrawerModel({});
-  }, [setOpen, form, drawer]);
+    cancel();
+  }, [cancel]);
 
   useEffect(() => {
     handleValuesChange({} as MemberFormValues, {} as MemberFormValues);
@@ -296,6 +289,7 @@ export default function MemberForm({ setOpen }: MemberFormProps) {
         FormComponent={RolesForm}
         defaultValue={model?.profile?.roleId}
         collection={RolesCollection as unknown as Mongo.Collection<CollectionDoc>}
+        useDrawerStack
       />
       <Form.Item name={['profile', 'discordTag']} label={t('members.discordTag')} rules={[{ type: 'string' }]}>
         <Input placeholder={t('forms.placeholders.enterDiscordTag')} />

@@ -1,19 +1,14 @@
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { App, Card, Checkbox, ColorPicker, Form, Input, Space, Switch, Typography } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import React, { useCallback, useContext, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import { getColorFromValues } from '/imports/helpers/colors/getColorFromValues';
 import type { TranslateFn } from '../../section/types';
 import type { LocaleKey } from '/imports/i18n';
 import type { CrudPermission, Role } from '../../../api/types/role';
-import { DrawerContext } from '../../app/App';
-import type { DrawerContextValue } from '../../app/types';
+import { useDrawerFrame } from '../../drawer-stack';
 import FormFooter from '../../components/FormFooter';
-
-interface RolesFormProps {
-  setOpen: (open: boolean) => void;
-}
 
 interface RuleInputProps {
   name: string;
@@ -73,10 +68,10 @@ function prepareModelForForm(model: Role | null | undefined): Record<string, unk
   return prepared;
 }
 
-const RolesForm = ({ setOpen }: RolesFormProps) => {
+const RolesForm = () => {
   const { t } = useTranslation();
-  const { drawerModel } = useContext(DrawerContext) as DrawerContextValue;
-  const model = drawerModel as unknown as Role & { _id?: string };
+  const { model: rawModel, resolve, cancel } = useDrawerFrame<string, Partial<Role> & { _id?: string }>();
+  const model = (rawModel || {}) as Role & { _id?: string };
   const { message, notification } = App.useApp();
   const { isUpdate, endpoint } = useMemo(
     () => (model?._id ? { isUpdate: true, endpoint: 'roles.update' } : { isUpdate: false, endpoint: 'roles.insert' }),
@@ -87,9 +82,9 @@ const RolesForm = ({ setOpen }: RolesFormProps) => {
     async (values: Record<string, unknown>) => {
       try {
         const args = [...(model?._id ? [model._id] : []), { ...values, color: getColorFromValues(values) }];
-        await Meteor.callAsync(endpoint, ...args);
-        setOpen(false);
+        const result = (await Meteor.callAsync(endpoint, ...args)) as string | undefined;
         message.success(isUpdate ? t('messages.roleUpdated') : t('messages.roleCreated'));
+        resolve(model?._id ?? result);
       } catch (error) {
         notification.error({
           message: (error as Meteor.Error).error as string,
@@ -97,7 +92,7 @@ const RolesForm = ({ setOpen }: RolesFormProps) => {
         });
       }
     },
-    [setOpen, endpoint, model?._id, isUpdate, message, notification, t]
+    [endpoint, model?._id, resolve, isUpdate, message, notification, t]
   );
 
   const [form] = Form.useForm<Record<string, unknown>>();
@@ -138,7 +133,7 @@ const RolesForm = ({ setOpen }: RolesFormProps) => {
       <RuleInput name="canCreateEvents" label={t('members.canCreateEvents')} />
       <RuleInput name="canManageTasks" label={t('members.canManageTasks')} />
 
-      <FormFooter setOpen={setOpen} />
+      <FormFooter onCancel={cancel} />
     </Form>
   );
 };

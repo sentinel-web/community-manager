@@ -28,6 +28,7 @@ export default function PositionsSelect({ multiple, name, label, rules, defaultV
       FormComponent={PositionsForm}
       subscription="positions"
       placeholder={t('common.selectPosition')}
+      useDrawerStack
     />
   );
 }

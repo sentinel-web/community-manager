@@ -1,17 +1,11 @@
 import { App, ColorPicker, Form, Input, InputNumber } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import { getColorFromValues } from '/imports/helpers/colors/getColorFromValues';
-import { DrawerContext, SubdrawerContext } from '../../app/App';
-import type { DrawerContextValue } from '../../app/types';
+import { useDrawerFrame } from '../../drawer-stack';
 import FormFooter from '../../components/FormFooter';
 import type { Position } from '../../../api/types/misc';
-
-interface PositionsFormProps {
-  setOpen: (open: boolean) => void;
-  useSubdrawer?: boolean;
-}
 
 interface PositionFormValues {
   name: string;
@@ -20,19 +14,15 @@ interface PositionFormValues {
   order?: number;
 }
 
-export default function PositionsForm({ setOpen, useSubdrawer }: PositionsFormProps) {
+export default function PositionsForm() {
   const { t } = useTranslation();
   const [form] = Form.useForm<PositionFormValues>();
   const { message, notification } = App.useApp();
   const [loading, setLoading] = useState(false);
-
-  const drawer = useContext(useSubdrawer ? SubdrawerContext : DrawerContext) as DrawerContextValue;
-  const model = useMemo(() => {
-    return drawer.drawerModel as unknown as Position & { _id?: string };
-  }, [drawer]);
+  const { model, resolve, cancel } = useDrawerFrame<string, Partial<Position> & { _id?: string }>();
 
   useEffect(() => {
-    if (Object.keys(model).length > 0) {
+    if (model && Object.keys(model).length > 0) {
       form.setFieldsValue(model as unknown as PositionFormValues);
     } else {
       form.setFieldsValue({
@@ -45,25 +35,31 @@ export default function PositionsForm({ setOpen, useSubdrawer }: PositionsFormPr
   }, [model, form.setFieldsValue]);
 
   const handleSubmit = useCallback(
-    (values: PositionFormValues) => {
+    async (values: PositionFormValues) => {
       setLoading(true);
       const { name, description, order } = values;
-      const args = [...(model?._id ? [model._id] : []), { name, color: getColorFromValues(values as unknown as Record<string, unknown>), description, order }];
-      Meteor.callAsync(Meteor.user() && model?._id ? 'positions.update' : 'positions.insert', ...args)
-        .then(() => {
-          setOpen(false);
-          form.resetFields();
-          message.success(model?._id ? t('messages.positionUpdated') : t('messages.positionCreated'));
-        })
-        .catch(error => {
-          notification.error({
-            message: (error as Meteor.Error).error as string,
-            description: (error as Meteor.Error).message,
-          });
-        })
-        .finally(() => setLoading(false));
+      const args = [
+        ...(model?._id ? [model._id] : []),
+        { name, color: getColorFromValues(values as unknown as Record<string, unknown>), description, order },
+      ];
+      try {
+        const result = (await Meteor.callAsync(
+          Meteor.user() && model?._id ? 'positions.update' : 'positions.insert',
+          ...args
+        )) as string | undefined;
+        message.success(model?._id ? t('messages.positionUpdated') : t('messages.positionCreated'));
+        resolve(model?._id ?? result);
+      } catch (error) {
+        const err = error as Meteor.Error;
+        notification.error({
+          message: err.error as string,
+          description: err.message,
+        });
+      } finally {
+        setLoading(false);
+      }
     },
-    [setOpen, form, model, message, notification, t]
+    [model, resolve, message, notification, t]
   );
 
   return (
@@ -80,7 +76,7 @@ export default function PositionsForm({ setOpen, useSubdrawer }: PositionsFormPr
       <Form.Item name="color" label={t('common.color')}>
         <ColorPicker format="hex" />
       </Form.Item>
-      <FormFooter setOpen={setOpen} />
+      <FormFooter onCancel={cancel} />
     </Form>
   );
 }

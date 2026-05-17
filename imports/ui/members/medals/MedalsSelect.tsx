@@ -28,6 +28,7 @@ export default function MedalsSelect({ multiple, name, label, rules, defaultValu
       FormComponent={MedalsForm}
       subscription="medals"
       placeholder={t('common.selectMedals')}
+      useDrawerStack
     />
   );
 }
