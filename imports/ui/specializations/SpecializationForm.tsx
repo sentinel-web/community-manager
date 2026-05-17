@@ -1,10 +1,9 @@
 import { App, Col, ColorPicker, Form, Input, Row } from 'antd';
 import type { Rule } from 'antd/es/form';
 import { Meteor } from 'meteor/meteor';
-import React, { ComponentType, useCallback, useContext, useMemo } from 'react';
+import React, { ComponentType, useCallback, useMemo } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
-import type { DrawerContextValue } from '../app/types';
-import { DrawerContext, SubdrawerContext } from '../app/App';
+import { useDrawerFrame } from '../drawer-stack';
 import FormFooter from '../components/FormFooter';
 import MembersSelect from '../members/MembersSelect';
 import RanksSelect from '../members/ranks/RanksSelect';
@@ -15,7 +14,6 @@ import { getColorFromValues } from '/imports/helpers/colors/getColorFromValues';
 
 export { getColorFromValues };
 
-/** Shared props that MembersSelect and RanksSelect accept (still .jsx, typed via cast) */
 interface SelectFieldProps {
   multiple?: boolean;
   name?: string;
@@ -38,40 +36,34 @@ interface SpecializationFormValues {
   description?: string;
 }
 
-interface SpecializationFormProps {
-  setOpen: (open: boolean) => void;
-  useSubdrawer?: boolean;
-}
-
-const SpecializationForm = ({ setOpen, useSubdrawer }: SpecializationFormProps) => {
+const SpecializationForm = () => {
   const { t } = useTranslation();
-  const drawer = useContext(DrawerContext) as DrawerContextValue;
-  const subdrawer = useContext(SubdrawerContext) as DrawerContextValue;
+  const { model: rawModel, resolve, cancel } = useDrawerFrame<string, Partial<Specialization> & { _id?: string }>();
   const { message, notification } = App.useApp();
 
   const { model, endpoint } = useMemo(() => {
-    const newModel = ((useSubdrawer ? subdrawer.drawerModel : drawer.drawerModel) || {}) as unknown as Specialization;
+    const newModel = (rawModel || {}) as unknown as Specialization;
     return { model: newModel, endpoint: newModel?._id ? 'specializations.update' : 'specializations.insert' };
-  }, [drawer, subdrawer, useSubdrawer]);
+  }, [rawModel]);
 
   const handleFinish = useCallback(
     async (values: SpecializationFormValues) => {
       const color = getColorFromValues(values);
       values.color = color;
       const args = [...(model?._id ? [model._id] : []), values];
-      Meteor.callAsync(endpoint, ...args)
-        .then(() => {
-          message.success(model?._id ? t('messages.specializationUpdated') : t('messages.specializationCreated'));
-          setOpen(false);
-        })
-        .catch((error: Meteor.Error) => {
-          notification.error({
-            message: error.error as string,
-            description: error.message,
-          });
+      try {
+        const result = (await Meteor.callAsync(endpoint, ...args)) as string | undefined;
+        message.success(model?._id ? t('messages.specializationUpdated') : t('messages.specializationCreated'));
+        resolve(model?._id ?? result);
+      } catch (error) {
+        const err = error as Meteor.Error;
+        notification.error({
+          message: err.error as string,
+          description: err.message,
         });
+      }
     },
-    [setOpen, notification, message, model?._id, endpoint, t]
+    [resolve, notification, message, model?._id, endpoint, t]
   );
 
   const [form] = Form.useForm<SpecializationFormValues>();
@@ -105,7 +97,7 @@ const SpecializationForm = ({ setOpen, useSubdrawer }: SpecializationFormProps) 
       <Form.Item name="description" label={t('common.description')} rules={[{ required: false, type: 'string' }]}>
         <Input.TextArea autoSize placeholder={t('forms.placeholders.enterDescription')} />
       </Form.Item>
-      <FormFooter setOpen={setOpen} />
+      <FormFooter onCancel={cancel} />
     </Form>
   );
 };

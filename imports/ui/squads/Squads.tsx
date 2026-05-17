@@ -28,6 +28,7 @@ export default function Squads() {
         FormComponent={SquadsForm}
         columnsFactory={getSquadsColumns}
         expandable={expandable}
+        useDrawerStack
       />
     </div>
   );
