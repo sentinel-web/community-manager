@@ -14,6 +14,7 @@ import Palette from '../palette/Palette';
 import { PaletteProvider } from '../palette/PaletteContext';
 import DemoTour from '../tour/DemoTour';
 import { TourProvider } from '../tour/TourContext';
+import { DrawerStackProvider } from '../drawer-stack';
 import type { DrawerContextValue } from './types';
 
 export const NavigationContext = createContext<NavigationContextValue>({} as NavigationContextValue);
@@ -109,39 +110,41 @@ export default function App() {
                   }}
                 >
                   <AntdApp className="app" message={{ ...message, maxCount: 1 }} notification={{ ...notification, maxCount: 3 }}>
-                    <Layout>
-                      <Layout.Header>
-                        <Header />
-                      </Layout.Header>
-                      <Layout.Content style={{ flex: 1, overflow: 'auto' }}>
-                        <Main />
-                      </Layout.Content>
-                      <Layout.Footer>
-                        <Footer />
-                      </Layout.Footer>
-                    </Layout>
-                    {Meteor.isDevelopment && <DemoTour />}
-                    <Palette />
-                    <Drawer
-                      width={getDrawerWidth(window.innerWidth)}
-                      open={drawerOpen}
-                      onClose={() => setDrawerOpen(false)}
-                      title={drawerTitle}
-                      extra={drawerExtra}
-                      destroyOnHidden
-                    >
-                      {drawerComponent}
+                    <DrawerStackProvider>
+                      <Layout>
+                        <Layout.Header>
+                          <Header />
+                        </Layout.Header>
+                        <Layout.Content style={{ flex: 1, overflow: 'auto' }}>
+                          <Main />
+                        </Layout.Content>
+                        <Layout.Footer>
+                          <Footer />
+                        </Layout.Footer>
+                      </Layout>
+                      {Meteor.isDevelopment && <DemoTour />}
+                      <Palette />
                       <Drawer
                         width={getDrawerWidth(window.innerWidth)}
-                        open={subdrawerOpen}
-                        onClose={() => setSubdrawerOpen(false)}
-                        title={subdrawerTitle}
-                        extra={subdrawerExtra}
+                        open={drawerOpen}
+                        onClose={() => setDrawerOpen(false)}
+                        title={drawerTitle}
+                        extra={drawerExtra}
                         destroyOnHidden
                       >
-                        {subdrawerComponent}
+                        {drawerComponent}
+                        <Drawer
+                          width={getDrawerWidth(window.innerWidth)}
+                          open={subdrawerOpen}
+                          onClose={() => setSubdrawerOpen(false)}
+                          title={subdrawerTitle}
+                          extra={subdrawerExtra}
+                          destroyOnHidden
+                        >
+                          {subdrawerComponent}
+                        </Drawer>
                       </Drawer>
-                    </Drawer>
+                    </DrawerStackProvider>
                   </AntdApp>
                 </ConfigProvider>
               </PaletteProvider>

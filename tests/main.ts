@@ -1,3 +1,5 @@
+import './client/hooks/drawerStackHooks.test';
+import './client/hooks/drawerStackStore.test';
 import './helpers/colors/getLegibleTextColor.test';
 import './helpers/colors/getLuminance.test';
 import './helpers/colors/hexToRgb.test';

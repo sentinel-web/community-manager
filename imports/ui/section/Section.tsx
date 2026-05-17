@@ -9,6 +9,7 @@ import type { Role, CrudPermission } from '../../api/types';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerContext } from '../app/App';
 import type { DrawerContextValue } from '../app/types';
+import { useDrawerStack } from '../drawer-stack';
 import TableContainer from '../table/body/TableContainer';
 import TableFooter from '../table/footer/TableFooter';
 import GroupActionsBar from '../table/header/GroupActionsBar';
@@ -78,6 +79,7 @@ interface SectionProps<T extends { _id?: string }> {
   permissionModule?: string | null;
   expandable?: ExpandableConfig<T>;
   groupActions?: GroupAction[];
+  useDrawerStack?: boolean;
 }
 
 export default function Section<T extends { _id?: string }>({
@@ -93,6 +95,7 @@ export default function Section<T extends { _id?: string }>({
   permissionModule = null,
   expandable,
   groupActions = emptyGroupActions,
+  useDrawerStack: useDrawerStackPath = false,
 }: SectionProps<T>) {
   const [nameInput, setNameInput] = useState('');
   const [filter, setFilter] = useState<Mongo.Selector<T>>(() => filterFactory(''));
@@ -102,6 +105,7 @@ export default function Section<T extends { _id?: string }>({
   useSubscribe(collectionName, filter, options);
   const datasource = useFind(() => Collection?.find?.(filter, options) || ([] as unknown as Mongo.Cursor<T>), [Collection, filter, options]);
   const drawer = useContext(DrawerContext) as DrawerContextValue;
+  const drawerStack = useDrawerStack();
   const { notification, message, modal } = App.useApp();
   const { t } = useTranslation();
 
@@ -131,12 +135,21 @@ export default function Section<T extends { _id?: string }>({
   );
 
   const handleCreate = useCallback(() => {
+    if (useDrawerStackPath) {
+      void drawerStack.push({
+        title: t('common.createEntry'),
+        Component: FormComponent as unknown as ComponentType<unknown>,
+        model: {},
+        extra,
+      });
+      return;
+    }
     drawer.setDrawerTitle(t('common.createEntry'));
     drawer.setDrawerModel({});
     drawer.setDrawerComponent(React.createElement(FormComponent!, { setOpen: drawer.setDrawerOpen }));
     drawer.setDrawerOpen(true);
     drawer.setDrawerExtra(extra);
-  }, [drawer, t, FormComponent, extra]);
+  }, [useDrawerStackPath, drawerStack, drawer, t, FormComponent, extra]);
 
   useEffect(() => {
     if (!permissions.canCreate || !FormComponent) return;
@@ -152,13 +165,22 @@ export default function Section<T extends { _id?: string }>({
   const handleEdit = useCallback(
     (e: RowClickEvent, record: T) => {
       e.preventDefault();
+      if (useDrawerStackPath) {
+        void drawerStack.push({
+          title: t('common.editEntry'),
+          Component: FormComponent as unknown as ComponentType<unknown>,
+          model: record as Record<string, unknown>,
+          extra,
+        });
+        return;
+      }
       drawer.setDrawerModel(record as Record<string, unknown>);
       drawer.setDrawerTitle(t('common.editEntry'));
       drawer.setDrawerComponent(React.createElement(FormComponent!, { setOpen: drawer.setDrawerOpen }));
       drawer.setDrawerOpen(true);
       drawer.setDrawerExtra(extra);
     },
-    [drawer, FormComponent, extra, t]
+    [useDrawerStackPath, drawerStack, drawer, FormComponent, extra, t]
   );
 
   const handleDelete = useCallback(
