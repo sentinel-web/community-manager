@@ -82,6 +82,7 @@ export default function Events() {
         columnsFactory={getEventColumns}
         filterFactory={filterFactory}
         extra={<></>}
+        useDrawerStack
         headerExtra={
           <>
             <Col>
@@ -93,6 +94,7 @@ export default function Events() {
                 placeholder={t('events.filterByType')}
                 mode="multiple"
                 subscription="eventTypes"
+                useDrawerStack
               />
             </Col>
             {(['table', 'attendance'] as ViewType[]).includes(viewType) && (
