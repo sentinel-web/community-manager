@@ -8,6 +8,7 @@ import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
 import React, { ComponentType, MouseEvent, ReactNode, useCallback, useContext, useMemo, useState } from 'react';
 import { DrawerContext, SubdrawerContext } from '../app/App';
 import type { DrawerContextValue } from '../app/types';
+import { useDrawerStack } from '../drawer-stack';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 
 const empty = <></>;
@@ -36,6 +37,7 @@ interface CollectionSelectProps {
   subscription?: string;
   extra?: ReactNode;
   query?: Mongo.Selector<CollectionDoc>;
+  useDrawerStack?: boolean;
 }
 
 interface OptionShape {
@@ -57,10 +59,13 @@ const CollectionSelect = ({
   subscription,
   extra = empty,
   query = emptyQuery,
+  useDrawerStack: useDrawerStackPath = false,
 }: CollectionSelectProps) => {
   const { modal } = App.useApp();
   const drawer = useContext(DrawerContext) as DrawerContextValue;
   const subdrawer = useContext(SubdrawerContext) as DrawerContextValue;
+  const drawerStack = useDrawerStack();
+  const parentForm = Form.useFormInstance() as unknown as { setFieldValue: (path: NamePath, value: unknown) => void } | undefined;
   const { t } = useTranslation();
   const [limit, setLimit] = useState(20);
   const [searchValue, setSearchValue] = useState('');
@@ -96,19 +101,62 @@ const CollectionSelect = ({
   const isFormItem = useMemo(() => Boolean(name && label && rules), [name, label, rules]);
   const user = useTracker(() => Meteor.user(), []);
 
-  const handleCreate = useCallback(() => {
+  const writeBack = useCallback(
+    (insertedId: string) => {
+      // For multi-select, append; for single-select, replace. Mirror the
+      // change into Form state (when wrapped in Form.Item) and our local
+      // mirror so the new entity is auto-selected without further user
+      // action — the PRD's core UX payoff.
+      const nextValue: CollectionSelectValue = (() => {
+        if (mode === 'multiple' || mode === 'tags') {
+          const current = Array.isArray(value) ? value : value ? [value] : [];
+          if (current.includes(insertedId)) return current;
+          return [...current, insertedId];
+        }
+        return insertedId;
+      })();
+      if (parentForm && name) {
+        parentForm.setFieldValue(name, nextValue);
+      }
+      setValue(nextValue);
+      if (onChange) onChange(nextValue);
+    },
+    [mode, value, parentForm, name, onChange]
+  );
+
+  const handleCreate = useCallback(async () => {
+    if (useDrawerStackPath) {
+      const inserted = await drawerStack.push<string, Record<string, unknown>>({
+        title: `${t('common.create')} ${label ?? ''}`,
+        Component: FormComponent as unknown as ComponentType<unknown>,
+        model: {},
+        extra,
+      });
+      if (inserted) writeBack(inserted);
+      return;
+    }
     const usedDrawer = !drawer.drawerOpen ? drawer : subdrawer;
     usedDrawer.setDrawerTitle(`${t('common.create')} ${label ?? ''}`);
     usedDrawer.setDrawerModel({});
     usedDrawer.setDrawerComponent(React.createElement(FormComponent!, { setOpen: usedDrawer.setDrawerOpen, useSubdrawer: drawer.drawerOpen }));
     usedDrawer.setDrawerExtra(extra);
     usedDrawer.setDrawerOpen(true);
-  }, [drawer, subdrawer, FormComponent, label, t, extra]);
+  }, [useDrawerStackPath, drawerStack, writeBack, drawer, subdrawer, FormComponent, label, t, extra]);
 
   const handleEdit = useCallback(
-    (e: MouseEvent<HTMLElement>, raw: CollectionDoc) => {
+    async (e: MouseEvent<HTMLElement>, raw: CollectionDoc) => {
       e.preventDefault();
       e.stopPropagation();
+      if (useDrawerStackPath) {
+        await drawerStack.push<string, Record<string, unknown>>({
+          title: `${t('common.edit')} ${label ?? ''}`,
+          Component: FormComponent as unknown as ComponentType<unknown>,
+          model: raw as Record<string, unknown>,
+          extra,
+        });
+        // Edit returns the same id; no auto-select work needed.
+        return;
+      }
       const usedDrawer = !drawer.drawerOpen ? drawer : subdrawer;
       usedDrawer.setDrawerTitle(`${t('common.edit')} ${label ?? ''}`);
       usedDrawer.setDrawerModel(raw as Record<string, unknown>);
@@ -116,7 +164,7 @@ const CollectionSelect = ({
       usedDrawer.setDrawerExtra(extra);
       usedDrawer.setDrawerOpen(true);
     },
-    [drawer, subdrawer, label, FormComponent, t, extra]
+    [useDrawerStackPath, drawerStack, drawer, subdrawer, label, FormComponent, t, extra]
   );
 
   const handleDelete = useCallback(

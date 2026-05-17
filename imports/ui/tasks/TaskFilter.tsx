@@ -58,6 +58,7 @@ export default function TaskFilter() {
         collection={TaskStatusCollection as unknown as Mongo.Collection<CollectionDoc>}
         mode="multiple"
         subscription="taskStatus"
+        useDrawerStack
       />
       <MembersSelect
         name="participants"

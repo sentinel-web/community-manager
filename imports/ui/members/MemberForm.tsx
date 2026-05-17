@@ -253,6 +253,7 @@ export default function MemberForm({ setOpen }: MemberFormProps) {
         collection={RanksCollection as unknown as Mongo.Collection<CollectionDoc>}
         subscription="ranks"
         query={{ type: 'player' }}
+        useDrawerStack
       />
       <CollectionSelect
         defaultValue={model?.profile?.navyRankId}
@@ -264,6 +265,7 @@ export default function MemberForm({ setOpen }: MemberFormProps) {
         collection={RanksCollection as unknown as Mongo.Collection<CollectionDoc>}
         subscription="ranks"
         query={{ type: 'zeus' }}
+        useDrawerStack
       />
       <PositionsSelect
         name={['profile', 'positionId']}

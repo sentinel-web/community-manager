@@ -19,6 +19,7 @@ const Ranks = () => {
         FormComponent={RanksForm}
         columnsFactory={getRankColumns}
         Collection={RanksCollection}
+        useDrawerStack
       />
     </div>
   );
