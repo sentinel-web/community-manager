@@ -17,7 +17,6 @@ const TaskStatuses = () => {
       FormComponent={TaskStatusForm}
       columnsFactory={getTaskStatusColumns}
       filterFactory={string => ({ name: { $regex: string, $options: 'i' } })}
-      useDrawerStack
     />
   );
 };

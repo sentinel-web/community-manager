@@ -246,7 +246,6 @@ export default function MemberForm() {
         collection={RanksCollection as unknown as Mongo.Collection<CollectionDoc>}
         subscription="ranks"
         query={{ type: 'player' }}
-        useDrawerStack
       />
       <CollectionSelect
         defaultValue={model?.profile?.navyRankId}
@@ -258,7 +257,6 @@ export default function MemberForm() {
         collection={RanksCollection as unknown as Mongo.Collection<CollectionDoc>}
         subscription="ranks"
         query={{ type: 'zeus' }}
-        useDrawerStack
       />
       <PositionsSelect
         name={['profile', 'positionId']}
@@ -289,7 +287,6 @@ export default function MemberForm() {
         FormComponent={RolesForm}
         defaultValue={model?.profile?.roleId}
         collection={RolesCollection as unknown as Mongo.Collection<CollectionDoc>}
-        useDrawerStack
       />
       <Form.Item name={['profile', 'discordTag']} label={t('members.discordTag')} rules={[{ type: 'string' }]}>
         <Input placeholder={t('forms.placeholders.enterDiscordTag')} />

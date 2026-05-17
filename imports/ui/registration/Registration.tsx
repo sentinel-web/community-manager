@@ -21,7 +21,6 @@ export default function Registration() {
         FormComponent={RegistrationForm}
         columnsFactory={getRegistrationColumns}
         filterFactory={filterFactory}
-        useDrawerStack
       />
     </div>
   );

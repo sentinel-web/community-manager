@@ -61,7 +61,6 @@ export default function Members() {
         filterFactory={filterFactory}
         customView={customView}
         expandable={expandable}
-        useDrawerStack
         headerExtra={
           <Col>
             <Select style={{ minWidth: 125 }} value={viewType} onChange={setViewType} options={viewOptions} />

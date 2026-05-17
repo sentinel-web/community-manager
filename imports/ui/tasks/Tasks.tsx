@@ -56,7 +56,6 @@ export default function Tasks() {
         customView={filter?.type === 'kanban' ? KanbanBoard : false}
         headerExtra={<Button onClick={openFilterDrawer}>{t('tasks.filter')}</Button>}
         filterFactory={filterFactory}
-        useDrawerStack
       />
     </div>
   );

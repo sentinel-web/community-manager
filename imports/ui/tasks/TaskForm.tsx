@@ -100,7 +100,6 @@ export default function TaskForm() {
         collection={TaskStatusCollection as unknown as Mongo.Collection<CollectionDoc>}
         subscription="taskStatus"
         FormComponent={TaskStatusForm}
-        useDrawerStack
       />
       <Form.Item label={t('tasks.participants')} name="participants" rules={[{ required: false, type: 'array' }]}>
         <Select mode="multiple" placeholder={t('forms.placeholders.selectParticipants')} allowClear options={participantOptions} optionFilterProp="label" />
@@ -132,7 +131,6 @@ export default function TaskForm() {
         collection={TasksCollection as unknown as Mongo.Collection<CollectionDoc>}
         subscription="tasks"
         FormComponent={TaskForm}
-        useDrawerStack
       />
       <FormFooter onCancel={cancel} />
 
