@@ -1,24 +1,18 @@
 import { App, Form, Input, InputNumber, Rate, Select, Typography } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import React, { useCallback, useContext } from 'react';
+import React, { useCallback } from 'react';
 import type { Question, Questionnaire } from '../../api/types/questionnaire';
 import { useTranslation } from '../../i18n/LanguageContext';
-import type { DrawerContextValue } from '../app/types';
-import { DrawerContext } from '../app/App';
+import { useDrawerFrame } from '../drawer-stack';
 import FormFooter from '../components/FormFooter';
 
 const { Text } = Typography;
 
-interface QuestionnaireResponseFormProps {
-  setOpen: (open: boolean) => void;
-  onSuccess?: () => void;
-}
-
 type ResponseFormValues = Record<string, string | number | string[] | undefined>;
 
-const QuestionnaireResponseForm = ({ setOpen, onSuccess }: QuestionnaireResponseFormProps) => {
-  const { drawerModel } = useContext(DrawerContext) as DrawerContextValue;
-  const questionnaire = drawerModel as unknown as Questionnaire;
+const QuestionnaireResponseForm = () => {
+  const { model, resolve, cancel } = useDrawerFrame<true, Questionnaire>();
+  const questionnaire = (model || {}) as unknown as Questionnaire;
   const { message, notification } = App.useApp();
   const { t } = useTranslation();
   const [form] = Form.useForm<ResponseFormValues>();
@@ -32,9 +26,10 @@ const QuestionnaireResponseForm = ({ setOpen, onSuccess }: QuestionnaireResponse
         }));
 
         await Meteor.callAsync('questionnaireResponses.submit', questionnaire._id, answers);
-        setOpen(false);
         message.success(t('questionnaires.submitSuccess'));
-        if (onSuccess) onSuccess();
+        // Resolve with a truthy sentinel so the opener can detect "submitted"
+        // and refresh its list — undefined would mean "cancelled".
+        resolve(true);
       } catch (error) {
         notification.error({
           message: (error as Meteor.Error).error,
@@ -42,18 +37,12 @@ const QuestionnaireResponseForm = ({ setOpen, onSuccess }: QuestionnaireResponse
         });
       }
     },
-    [setOpen, questionnaire, message, notification, onSuccess, t]
+    [resolve, questionnaire, message, notification, t]
   );
 
   const renderQuestionField = (question: Question, index: number) => {
     const fieldName = `question_${index}`;
     const rules = question.required ? [{ required: true, message: t('questionnaires.questionRequired') }] : [];
-    // Question type doesn't carry an _id, so we build a stable composite key
-    // from type + text. Far less collision-prone than the bare array index
-    // and stable across re-renders even if AntD reorders Form.Items
-    // internally. (The form-state binding still uses the index via
-    // `fieldName` — that contract is set by the response submit shape on
-    // the server, not by the React reconciliation key.)
     const key = `${question.type}:${question.text}`;
 
     switch (question.type) {
@@ -121,7 +110,7 @@ const QuestionnaireResponseForm = ({ setOpen, onSuccess }: QuestionnaireResponse
         </Text>
       )}
       {questionnaire.questions.map((question, index) => renderQuestionField(question, index))}
-      <FormFooter setOpen={setOpen} submitText={t('questionnaires.submitResponse')} />
+      <FormFooter onCancel={cancel} submitText={t('questionnaires.submitResponse')} />
     </Form>
   );
 };

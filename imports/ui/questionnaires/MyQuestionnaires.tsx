@@ -1,11 +1,10 @@
 import { CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined, FormOutlined } from '@ant-design/icons';
 import { App, Button, Card, Col, Empty, Popconfirm, Row, Space, Spin, Tag, Tooltip, Typography } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import React, { useCallback, useContext, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import type { QuestionnaireInterval } from '../../api/types/questionnaire';
 import { useTranslation } from '../../i18n/LanguageContext';
-import type { DrawerContextValue } from '../app/types';
-import { DrawerContext } from '../app/App';
+import { useDrawerStack } from '../drawer-stack';
 import type { TranslateFn } from '../section/types';
 import SectionCard from '../section/SectionCard';
 import QuestionnaireResponseForm from './QuestionnaireResponseForm';
@@ -38,7 +37,7 @@ export default function MyQuestionnaires() {
   const [questionnaires, setQuestionnaires] = useState<ActiveQuestionnaire[]>([]);
   const [loading, setLoading] = useState(true);
   const { notification } = App.useApp();
-  const drawer = useContext(DrawerContext) as DrawerContextValue;
+  const drawerStack = useDrawerStack();
   const { t } = useTranslation();
 
   const loadQuestionnaires = useCallback(async () => {
@@ -61,18 +60,18 @@ export default function MyQuestionnaires() {
   }, [loadQuestionnaires]);
 
   const handleFillOut = useCallback(
-    (questionnaire: ActiveQuestionnaire) => {
-      drawer.setDrawerTitle(questionnaire.name);
-      drawer.setDrawerModel(questionnaire as unknown as Record<string, unknown>);
-      drawer.setDrawerComponent(
-        React.createElement(QuestionnaireResponseForm, {
-          setOpen: drawer.setDrawerOpen,
-          onSuccess: loadQuestionnaires,
-        })
-      );
-      drawer.setDrawerOpen(true);
+    async (questionnaire: ActiveQuestionnaire) => {
+      const submitted = await drawerStack.push<true, ActiveQuestionnaire>({
+        title: questionnaire.name,
+        Component: QuestionnaireResponseForm,
+        model: questionnaire,
+      });
+      // Only refresh the list when the response was actually submitted;
+      // cancelling out of the form returns `undefined` and leaves the list
+      // unchanged.
+      if (submitted) loadQuestionnaires();
     },
-    [drawer, loadQuestionnaires]
+    [drawerStack, loadQuestionnaires]
   );
 
   const handleRevoke = useCallback(

@@ -16,6 +16,7 @@ const DiscoveryTypes = () => {
       FormComponent={DiscoveryTypeForm}
       columnsFactory={getDiscoveryTypeColumns}
       Collection={DiscoveryTypesCollection}
+      useDrawerStack
     />
   );
 };

@@ -1,17 +1,12 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { App, Button, Card, Form, Input, Select, Space, Switch } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import React, { useCallback, useContext, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import type { Questionnaire, QuestionnaireInterval, QuestionnaireStatus, QuestionType } from '../../api/types/questionnaire';
 import { useTranslation } from '../../i18n/LanguageContext';
 import type { TranslateFn } from '../section/types';
-import type { DrawerContextValue } from '../app/types';
-import { DrawerContext } from '../app/App';
+import { useDrawerFrame } from '../drawer-stack';
 import FormFooter from '../components/FormFooter';
-
-interface QuestionnaireFormProps {
-  setOpen: (open: boolean) => void;
-}
 
 interface QuestionTypeOption {
   value: QuestionType;
@@ -45,11 +40,11 @@ interface QuestionItemProps {
   questionTypes: QuestionTypeOption[];
 }
 
-const QuestionnaireForm = ({ setOpen }: QuestionnaireFormProps) => {
-  const { drawerModel: model } = useContext(DrawerContext) as DrawerContextValue;
+const QuestionnaireForm = () => {
+  const { model, resolve, cancel } = useDrawerFrame<string, Partial<Questionnaire>>();
   const { message, notification } = App.useApp();
   const { t } = useTranslation();
-  const questionnaire = model as unknown as Questionnaire;
+  const questionnaire = (model || {}) as unknown as Questionnaire;
   const { isUpdate, endpoint } = useMemo(
     () => (questionnaire?._id ? { isUpdate: true, endpoint: 'questionnaires.update' } : { isUpdate: false, endpoint: 'questionnaires.insert' }),
     [questionnaire?._id]
@@ -87,9 +82,9 @@ const QuestionnaireForm = ({ setOpen }: QuestionnaireFormProps) => {
           updatedAt: new Date(),
         };
         const args = isUpdate ? [questionnaire._id, payload] : [payload];
-        await Meteor.callAsync(endpoint, ...args);
-        setOpen(false);
+        const result = (await Meteor.callAsync(endpoint, ...args)) as string | undefined;
         message.success(isUpdate ? t('questionnaires.updated') : t('questionnaires.created'));
+        resolve(questionnaire?._id ?? result);
       } catch (error) {
         notification.error({
           message: (error as Meteor.Error).error,
@@ -97,13 +92,13 @@ const QuestionnaireForm = ({ setOpen }: QuestionnaireFormProps) => {
         });
       }
     },
-    [setOpen, endpoint, questionnaire?._id, questionnaire?.createdAt, isUpdate, message, notification, t]
+    [resolve, endpoint, questionnaire?._id, questionnaire?.createdAt, isUpdate, message, notification, t]
   );
 
   const [form] = Form.useForm<QuestionnaireFormValues>();
 
   return (
-    <Form layout="vertical" form={form} onFinish={handleFinish} initialValues={model}>
+    <Form layout="vertical" form={form} onFinish={handleFinish} initialValues={questionnaire}>
       <Form.Item label={t('common.name')} name="name" rules={[{ required: true, type: 'string', message: t('questionnaires.pleaseEnterName') }]} required>
         <Input placeholder={t('questionnaires.enterQuestionnaireName')} />
       </Form.Item>
@@ -152,7 +147,7 @@ const QuestionnaireForm = ({ setOpen }: QuestionnaireFormProps) => {
         </Form.List>
       </Card>
 
-      <FormFooter setOpen={setOpen} />
+      <FormFooter onCancel={cancel} />
     </Form>
   );
 };
