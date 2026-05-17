@@ -3,13 +3,12 @@ import { App, Button, Divider, Form, Input, List, Select, Typography } from 'ant
 import dayjs from 'dayjs';
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
-import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import TasksCollection from '../../api/collections/tasks.collection';
 import TaskStatusCollection from '../../api/collections/taskStatus.collection';
 import type { Task, TaskComment } from '../../api/types/task';
 import { useTranslation } from '../../i18n/LanguageContext';
-import { DrawerContext } from '../app/App';
-import type { DrawerContextValue } from '../app/types';
+import { useDrawerFrame } from '../drawer-stack';
 import CollectionSelect, { type CollectionDoc } from '../components/CollectionSelect';
 import FormFooter from '../components/FormFooter';
 import MembersSelectJs from '../members/MembersSelect';
@@ -23,13 +22,8 @@ interface MemberOption {
   label: string;
 }
 
-interface TaskFormProps {
-  setOpen: (open: boolean) => void;
-}
-
-export default function TaskForm({ setOpen }: TaskFormProps) {
-  const { drawerModel } = useContext(DrawerContext) as DrawerContextValue;
-  const model = drawerModel as unknown as Task;
+export default function TaskForm() {
+  const { model, resolve, cancel } = useDrawerFrame<string, Partial<Task>>();
   const { message, notification } = App.useApp();
   const { t } = useTranslation();
   const { isUpdate, endpoint } = useMemo(
@@ -40,10 +34,10 @@ export default function TaskForm({ setOpen }: TaskFormProps) {
   const handleFinish = useCallback(
     async (values: Partial<Task>) => {
       try {
-        const args = isUpdate ? [model._id, values] : [values];
-        await Meteor.callAsync(endpoint, ...args);
-        setOpen(false);
+        const args = isUpdate ? [model._id as string, values] : [values];
+        const result = (await Meteor.callAsync(endpoint, ...args)) as string | undefined;
         message.success(isUpdate ? t('messages.taskUpdated') : t('messages.taskCreated'));
+        resolve(model?._id ?? result);
       } catch (error) {
         const err = error as Meteor.Error;
         notification.error({
@@ -52,7 +46,7 @@ export default function TaskForm({ setOpen }: TaskFormProps) {
         });
       }
     },
-    [setOpen, endpoint, model?._id, isUpdate, message, notification, t]
+    [resolve, endpoint, model?._id, isUpdate, message, notification, t]
   );
 
   const [participantOptions, setParticipantOptions] = useState<MemberOption[]>([]);
@@ -138,7 +132,7 @@ export default function TaskForm({ setOpen }: TaskFormProps) {
         subscription="tasks"
         FormComponent={TaskForm}
       />
-      <FormFooter setOpen={setOpen} />
+      <FormFooter onCancel={cancel} />
 
       {/* Comments Section */}
       {isUpdate && (

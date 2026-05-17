@@ -1,45 +1,38 @@
 import { App, Form, Select } from 'antd';
 import { Mongo } from 'meteor/mongo';
 import { Meteor } from 'meteor/meteor';
-import React, { useCallback, useContext, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import TaskStatusCollection from '../../api/collections/taskStatus.collection';
 import { useTranslation } from '../../i18n/LanguageContext';
-import { DrawerContext } from '../app/App';
-import type { DrawerContextValue } from '../app/types';
+import { useDrawerFrame } from '../drawer-stack';
 import CollectionSelect, { type CollectionDoc } from '../components/CollectionSelect';
 import FormFooter from '../components/FormFooter';
 import MembersSelectJs from '../members/MembersSelect';
 import TaskStatusForm from './task-status/TaskStatusForm';
 import type { TaskFilterModel } from './types';
 
-// MembersSelect is a JS component — cast to allow flexible prop passing from TSX
 const MembersSelect = MembersSelectJs as unknown as React.ComponentType<Record<string, unknown>>;
 
-interface TaskFilterProps {
-  setOpen: (open: boolean) => void;
-}
-
-export default function TaskFilter({ setOpen }: TaskFilterProps) {
+export default function TaskFilter() {
   const { t } = useTranslation();
-  const { drawerModel } = useContext(DrawerContext) as DrawerContextValue;
-  const model = drawerModel as unknown as TaskFilterModel;
+  const { model, resolve, cancel } = useDrawerFrame<void, TaskFilterModel | undefined>();
   const { notification } = App.useApp();
   const [form] = Form.useForm();
 
   const handleFinish = useCallback(
     async (values: TaskFilterModel) => {
-      Meteor.callAsync('members.saveTaskFilter', values)
-        .then(() => {
-          setOpen(false);
-        })
-        .catch(error => {
-          notification.error({
-            message: error.error,
-            description: error.message,
-          });
+      try {
+        await Meteor.callAsync('members.saveTaskFilter', values);
+        resolve(undefined);
+      } catch (error) {
+        const err = error as Meteor.Error;
+        notification.error({
+          message: err.error as string,
+          description: err.message,
         });
+      }
     },
-    [setOpen, notification]
+    [resolve, notification]
   );
 
   const typeOptions = useMemo(
@@ -73,7 +66,7 @@ export default function TaskFilter({ setOpen }: TaskFilterProps) {
         defaultValue={model?.participants}
         multiple
       />
-      <FormFooter setOpen={setOpen} />
+      <FormFooter onCancel={cancel} />
     </Form>
   );
 }
