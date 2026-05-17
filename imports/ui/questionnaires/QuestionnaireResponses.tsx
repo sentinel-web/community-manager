@@ -1,13 +1,12 @@
 import { App, Empty, Row, Spin, Typography } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
-import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import RolesCollection from '../../api/collections/roles.collection';
 import type { Questionnaire } from '../../api/types/questionnaire';
 import type { Role } from '../../api/types/role';
 import { useTranslation } from '../../i18n/LanguageContext';
-import type { DrawerContextValue } from '../app/types';
-import { DrawerContext, SubdrawerContext } from '../app/App';
+import { useDrawerFrame, useDrawerStack } from '../drawer-stack';
 import type { RowClickEvent } from '../section/types';
 import TableContainer from '../table/body/TableContainer';
 import TableFooter from '../table/footer/TableFooter';
@@ -29,9 +28,9 @@ function getUpdatePermission(role: Role | undefined): boolean {
 }
 
 export default function QuestionnaireResponses() {
-  const drawer = useContext(DrawerContext) as DrawerContextValue;
-  const subdrawer = useContext(SubdrawerContext) as DrawerContextValue;
-  const questionnaire = drawer.drawerModel as unknown as Questionnaire;
+  const { model } = useDrawerFrame<void, Questionnaire>();
+  const drawerStack = useDrawerStack();
+  const questionnaire = (model || {}) as unknown as Questionnaire;
   const { notification, message } = App.useApp();
   const { t } = useTranslation();
 
@@ -39,7 +38,6 @@ export default function QuestionnaireResponses() {
   const [loading, setLoading] = useState(true);
   const [limit, setLimit] = useState(20);
 
-  // Get user's role for permission check
   const user = useTracker(() => Meteor.user(), []);
   useSubscribe('roles', { _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 });
   const roles = useFind(() => RolesCollection.find({ _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 }), [user?.profile?.roleId]);
@@ -68,12 +66,13 @@ export default function QuestionnaireResponses() {
   const handleViewDetails = useCallback(
     (e: RowClickEvent, response: QuestionnaireResponseRow) => {
       e.preventDefault();
-      subdrawer.setDrawerTitle(t('questionnaires.responseDetails'));
-      subdrawer.setDrawerModel({ response, questionnaire } as unknown as Record<string, unknown>);
-      subdrawer.setDrawerComponent(React.createElement(ResponseDetailView, { setOpen: subdrawer.setDrawerOpen }));
-      subdrawer.setDrawerOpen(true);
+      void drawerStack.push<void, { response: QuestionnaireResponseRow; questionnaire: Questionnaire }>({
+        title: t('questionnaires.responseDetails'),
+        Component: ResponseDetailView,
+        model: { response, questionnaire },
+      });
     },
-    [subdrawer, questionnaire, t]
+    [drawerStack, questionnaire, t]
   );
 
   const handleToggleIgnored = useCallback(

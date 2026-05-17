@@ -1,10 +1,9 @@
 import { Rate, Space, Tag, Typography } from 'antd';
-import React, { useContext } from 'react';
+import React from 'react';
 import type { Answer, Question, Questionnaire } from '../../api/types/questionnaire';
 import { useTranslation } from '../../i18n/LanguageContext';
 import type { TranslateFn } from '../section/types';
-import type { DrawerContextValue } from '../app/types';
-import { SubdrawerContext } from '../app/App';
+import { useDrawerFrame } from '../drawer-stack';
 import type { QuestionnaireResponseRow } from './types';
 
 const { Text, Title } = Typography;
@@ -21,8 +20,8 @@ interface AnswerDisplayProps {
 }
 
 const ResponseDetailView = () => {
-  const { drawerModel } = useContext(SubdrawerContext) as DrawerContextValue;
-  const { response, questionnaire } = (drawerModel as unknown as ResponseDetailModel) || {};
+  const { model } = useDrawerFrame<void, ResponseDetailModel>();
+  const { response, questionnaire } = (model || {}) as ResponseDetailModel;
   const { t } = useTranslation();
 
   if (!response || !questionnaire) {

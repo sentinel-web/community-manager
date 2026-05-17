@@ -1,16 +1,16 @@
 import { CopyOutlined } from '@ant-design/icons';
 import { App, Button, Descriptions, Typography } from 'antd';
 import dayjs from 'dayjs';
-import React, { useCallback, useContext, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import type { LogEntry } from '../../api/types/misc';
-import { DrawerContext } from '../app/App';
+import { useDrawerFrame } from '../drawer-stack';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 
 const { Text } = Typography;
 
 const LogViewer = () => {
-  const { drawerModel } = useContext(DrawerContext);
-  const log = drawerModel as unknown as LogEntry;
+  const { model } = useDrawerFrame<void, LogEntry>();
+  const log = (model || {}) as unknown as LogEntry;
   const { message } = App.useApp();
   const { t } = useTranslation();
 

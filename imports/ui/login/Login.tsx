@@ -1,8 +1,9 @@
 import { App, Button, Card, Col, Form, Input, Row, Typography } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
-import RegistrationModal from '../registration/RegistrationModal';
+import { useDrawerStack } from '../drawer-stack';
+import RegistrationForm from '../registration/RegistrationForm';
 
 interface LoginValues {
   username: string;
@@ -12,7 +13,7 @@ interface LoginValues {
 export default function Login() {
   const { t } = useTranslation();
   const { notification } = App.useApp();
-  const [open, setOpen] = useState(false);
+  const drawerStack = useDrawerStack();
 
   const handleSubmit = useCallback(
     (values: LoginValues) => {
@@ -29,6 +30,14 @@ export default function Login() {
     [notification, t]
   );
 
+  const handleRegister = useCallback(() => {
+    void drawerStack.push<string, Record<string, unknown>>({
+      title: t('modals.registration'),
+      Component: RegistrationForm,
+      model: {},
+    });
+  }, [drawerStack, t]);
+
   return (
     <Card className="login" title={<Typography.Title level={2}>{t('auth.login')}</Typography.Title>} type="inner">
       <Form layout="vertical" onFinish={handleSubmit}>
@@ -40,7 +49,7 @@ export default function Login() {
         </Form.Item>
         <Row gutter={[16, 16]} align="middle">
           <Col span={12}>
-            <Button onClick={() => setOpen(true)}>{t('auth.register')}</Button>
+            <Button onClick={handleRegister}>{t('auth.register')}</Button>
           </Col>
           <Col span={12}>
             <Button type="primary" htmlType="submit">
@@ -49,7 +58,6 @@ export default function Login() {
           </Col>
         </Row>
       </Form>
-      <RegistrationModal open={open} setOpen={setOpen} />
     </Card>
   );
 }

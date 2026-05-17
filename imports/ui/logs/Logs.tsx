@@ -4,11 +4,11 @@ import dayjs from 'dayjs';
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
 import { useFind, useSubscribe } from 'meteor/react-meteor-data';
-import React, { useCallback, useContext, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import type { LogEntry } from '../../api/types/misc';
 import LogsCollection from '../../api/collections/logs.collection';
 import { useTranslation } from '../../i18n/LanguageContext';
-import { DrawerContext } from '../app/App';
+import { useDrawerStack } from '../drawer-stack';
 import SectionCard from '../section/SectionCard';
 import { useTourRef } from '../tour/TourContext';
 import TableContainer from '../table/body/TableContainer';
@@ -56,7 +56,7 @@ export default function Logs() {
   useSubscribe('logs', filter, options);
   const datasource = useFind(() => LogsCollection.find(filter, options), [filter, options]);
 
-  const drawer = useContext(DrawerContext);
+  const drawerStack = useDrawerStack();
   const { notification, message } = App.useApp();
 
   const handleActionChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,13 +70,16 @@ export default function Logs() {
   const handleView = useCallback(
     (e: React.MouseEvent<HTMLElement>, record: LogEntry) => {
       e.preventDefault();
-      drawer.setDrawerModel(record as unknown as Record<string, unknown>);
-      drawer.setDrawerTitle(t('logs.viewLog'));
-      drawer.setDrawerComponent(React.createElement(LogViewer));
-      drawer.setDrawerOpen(true);
-      drawer.setDrawerExtra(<></>);
+      // Read-only view: the frame resolves with undefined when the user
+      // closes it — there's no submit semantics for a log entry. This is
+      // the PRD's "non-form flow" example for the DrawerStack module.
+      void drawerStack.push<void, LogEntry>({
+        title: t('logs.viewLog'),
+        Component: LogViewer,
+        model: record,
+      });
     },
-    [drawer, t]
+    [drawerStack, t]
   );
 
   const handleDelete = useCallback(

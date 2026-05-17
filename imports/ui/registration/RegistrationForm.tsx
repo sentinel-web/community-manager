@@ -3,12 +3,11 @@ import type { ValidateStatus } from 'antd/es/form/FormItem';
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
 import { useFind, useSubscribe } from 'meteor/react-meteor-data';
-import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import DiscoveryTypesCollection from '../../api/collections/discoveryTypes.collection';
 import type { Registration } from '../../api/types';
 import { useTranslation } from '../../i18n/LanguageContext';
-import { DrawerContext } from '../app/App';
-import type { DrawerContextValue } from '../app/types';
+import { useDrawerFrame } from '../drawer-stack';
 import CollectionSelect, { type CollectionDoc } from '../components/CollectionSelect';
 import DiscoveryTypeForm from './discovery-types/DiscoveryTypesForm';
 
@@ -24,13 +23,9 @@ interface RegistrationFormValues {
   description?: string;
 }
 
-interface RegistrationFormProps {
-  setOpen: (open: boolean) => void;
-}
-
-export default function RegistrationForm({ setOpen }: RegistrationFormProps) {
+export default function RegistrationForm() {
   const [form] = Form.useForm<RegistrationFormValues>();
-  const drawer = useContext(DrawerContext) as DrawerContextValue;
+  const { model: rawModel, resolve, cancel } = useDrawerFrame<string, Partial<Registration>>();
   const { message, notification } = App.useApp();
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
@@ -40,8 +35,8 @@ export default function RegistrationForm({ setOpen }: RegistrationFormProps) {
 
   const model = useMemo((): Registration | Record<string, never> => {
     if (!Meteor.user()) return {};
-    return (drawer.drawerModel as unknown as Registration) || {};
-  }, [drawer.drawerModel]);
+    return (rawModel as unknown as Registration) || {};
+  }, [rawModel]);
 
   useEffect(() => {
     if (Object.keys(model).length > 0) {
@@ -100,29 +95,31 @@ export default function RegistrationForm({ setOpen }: RegistrationFormProps) {
   }, [form, discoveryTypes]);
 
   const handleSubmit = useCallback(
-    (values: RegistrationFormValues) => {
+    async (values: RegistrationFormValues) => {
       setLoading(true);
       const { name, id, age, discoveryType, discoveryTypeDetails, steamProfileLink, discordTag, rulesReadAndAccepted, description } = values;
       const args = [
         ...((model as Registration)?._id ? [(model as Registration)._id] : []),
         { name, id, age, discoveryType, discoveryTypeDetails, steamProfileLink, discordTag, rulesReadAndAccepted, description },
       ];
-      Meteor.callAsync(Meteor.user() && (model as Registration)?._id ? 'registrations.update' : 'registrations.insert', ...args)
-        .then(() => {
-          setOpen(false);
-          form.resetFields();
-          message.success(t('messages.registrationSuccessful'));
-        })
-        .catch(error => {
-          const err = error as Meteor.Error;
-          notification.error({
-            message: err.error as string,
-            description: err.message,
-          });
-        })
-        .finally(() => setLoading(false));
+      try {
+        const result = (await Meteor.callAsync(
+          Meteor.user() && (model as Registration)?._id ? 'registrations.update' : 'registrations.insert',
+          ...args
+        )) as string | undefined;
+        message.success(t('messages.registrationSuccessful'));
+        resolve((model as Registration)?._id ?? result);
+      } catch (error) {
+        const err = error as Meteor.Error;
+        notification.error({
+          message: err.error as string,
+          description: err.message,
+        });
+      } finally {
+        setLoading(false);
+      }
     },
-    [setOpen, form, model, message, notification, t],
+    [resolve, model, message, notification, t],
   );
 
   const handleValuesChange = useCallback(
@@ -197,6 +194,7 @@ export default function RegistrationForm({ setOpen }: RegistrationFormProps) {
         collection={DiscoveryTypesCollection as unknown as Mongo.Collection<CollectionDoc>}
         FormComponent={DiscoveryTypeForm}
         onChange={handleDiscoveryTypeChange}
+        useDrawerStack
       />
       {showDetails && (
         <Form.Item name="discoveryTypeDetails" label={t('registrations.discoveryTypeDetails')} rules={[{ type: 'string' }]}>
@@ -219,7 +217,7 @@ export default function RegistrationForm({ setOpen }: RegistrationFormProps) {
       )}
       <Row gutter={[16, 16]} align="middle" justify="end">
         <Col>
-          <Button onClick={() => setOpen(false)} danger>
+          <Button onClick={cancel} danger>
             {t('common.cancel')}
           </Button>
         </Col>
