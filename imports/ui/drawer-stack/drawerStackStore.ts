@@ -47,7 +47,7 @@ export function createDrawerStackStore(): DrawerStackStore {
         id,
         title: options.title,
         Component: options.Component,
-        model: options.model ?? {},
+        model: options.model,
         extra: options.extra ?? null,
         confirmCloseRef,
         resolveFn: value => resolve(value as R | undefined),

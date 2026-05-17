@@ -7,7 +7,7 @@ export type ConfirmCloseRef = { current: ConfirmClosePredicate | null };
 export interface PushFrameOptions<M = unknown> {
   title: string;
   Component: ComponentType<unknown>;
-  model?: M;
+  model: M;
   extra?: ReactNode;
 }
 
