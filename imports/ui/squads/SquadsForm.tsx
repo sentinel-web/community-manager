@@ -1,20 +1,14 @@
 import { App, Col, ColorPicker, Form, Input, Row, Switch, Upload } from 'antd';
 import type { RcFile } from 'antd/es/upload';
 import { Meteor } from 'meteor/meteor';
-import React, { useContext, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import type { Squad } from '../../api/types/squad';
-import type { DrawerContextValue } from '../app/types';
-import { DrawerContext, SubdrawerContext } from '../app/App';
+import { useDrawerFrame } from '../drawer-stack';
 import FormFooter from '../components/FormFooter';
 import { turnBase64ToImage, turnImageFileToBase64 } from '../profile-picture-input/ProfilePictureInput';
 import { getColorFromValues } from '../specializations/SpecializationForm';
 import SquadsSelect from './SquadsSelect';
-
-interface SquadsFormProps {
-  setOpen: (open: boolean) => void;
-  useSubdrawer?: boolean;
-}
 
 interface SquadsFormValues {
   name?: string;
@@ -27,17 +21,12 @@ interface SquadsFormValues {
   excludeFromOrbat?: boolean;
 }
 
-const SquadsForm = ({ setOpen, useSubdrawer = false }: SquadsFormProps) => {
+const SquadsForm = () => {
   const { t } = useTranslation();
   const { message, notification } = App.useApp();
-  const drawer = useContext(DrawerContext) as DrawerContextValue;
-  const subdrawer = useContext(SubdrawerContext) as DrawerContextValue;
+  const { model, resolve, cancel } = useDrawerFrame<string, Partial<Squad> & { _id?: string }>();
 
-  const model = useMemo(() => {
-    return useSubdrawer ? subdrawer.drawerModel || {} : drawer.drawerModel || {};
-  }, [drawer, subdrawer, useSubdrawer]);
-
-  const squad = model as unknown as Squad;
+  const squad = (model || {}) as unknown as Squad;
 
   const [file, setFile] = useState<RcFile | null>(null);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
@@ -45,7 +34,7 @@ const SquadsForm = ({ setOpen, useSubdrawer = false }: SquadsFormProps) => {
   useEffect(() => {
     if (!squad.image) return;
     setImageSrc(squad.image);
-  }, [model]);
+  }, [squad.image]);
 
   const handleCustomRequest = async () => {
     try {
@@ -67,21 +56,24 @@ const SquadsForm = ({ setOpen, useSubdrawer = false }: SquadsFormProps) => {
     const image = imageSrc;
     values.image = image;
     const args = [...(squad?._id ? [squad._id] : []), values];
-    Meteor.callAsync(Meteor.user() && squad?._id ? 'squads.update' : 'squads.insert', ...args)
-      .then(() => {
-        setOpen(false);
-        message.success(squad?._id ? t('messages.squadUpdated') : t('messages.squadCreated'));
-      })
-      .catch(error => {
-        notification.error({
-          message: error.error,
-          description: error.message,
-        });
+    try {
+      const result = (await Meteor.callAsync(
+        Meteor.user() && squad?._id ? 'squads.update' : 'squads.insert',
+        ...args
+      )) as string | undefined;
+      message.success(squad?._id ? t('messages.squadUpdated') : t('messages.squadCreated'));
+      resolve(squad?._id ?? result);
+    } catch (error) {
+      const err = error as Meteor.Error;
+      notification.error({
+        message: err.error as string,
+        description: err.message,
       });
+    }
   };
 
   return (
-    <Form layout="vertical" initialValues={model} onFinish={handleFinish}>
+    <Form layout="vertical" initialValues={squad} onFinish={handleFinish}>
       <Form.Item label={t('squads.logo')} name="image" rules={[{ required: false }]}>
         <Upload.Dragger
           fileList={file ? [file] : []}
@@ -118,7 +110,7 @@ const SquadsForm = ({ setOpen, useSubdrawer = false }: SquadsFormProps) => {
       <Form.Item label={t('squads.excludeFromOrbat')} name="excludeFromOrbat" valuePropName="checked">
         <Switch />
       </Form.Item>
-      <FormFooter setOpen={setOpen} />
+      <FormFooter onCancel={cancel} />
     </Form>
   );
 };

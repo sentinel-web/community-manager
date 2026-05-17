@@ -20,6 +20,7 @@ export default function Specializations() {
         FormComponent={SpecializationForm}
         columnsFactory={getSpecializationColumns}
         filterFactory={string => ({ name: { $regex: string, $options: 'i' } })}
+        useDrawerStack
       />
     </div>
   );
