@@ -31,7 +31,6 @@ export default function SpecializationsSelect({ multiple, name, label, rules, de
       subscription="specializations"
       placeholder={t('common.selectSpecializations')}
       extra={<></>}
-      useDrawerStack
     />
   );
 }

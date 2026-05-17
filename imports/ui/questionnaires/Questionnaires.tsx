@@ -41,7 +41,6 @@ const Questionnaires = () => {
         title={t('questionnaires.title')}
         FormComponent={QuestionnaireForm}
         columnsFactory={columnsFactory}
-        useDrawerStack
       />
     </div>
   );

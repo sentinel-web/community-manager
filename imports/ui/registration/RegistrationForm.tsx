@@ -194,7 +194,6 @@ export default function RegistrationForm() {
         collection={DiscoveryTypesCollection as unknown as Mongo.Collection<CollectionDoc>}
         FormComponent={DiscoveryTypeForm}
         onChange={handleDiscoveryTypeChange}
-        useDrawerStack
       />
       {showDetails && (
         <Form.Item name="discoveryTypeDetails" label={t('registrations.discoveryTypeDetails')} rules={[{ type: 'string' }]}>

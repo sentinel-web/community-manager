@@ -128,7 +128,6 @@ const EventForm = () => {
         collection={EventTypesCollection as unknown as Mongo.Collection<CollectionDoc>}
         subscription="eventTypes"
         FormComponent={EventTypesForm}
-        useDrawerStack
       />
       <MembersSelect multiple grouped name="hosts" label={t('events.hosts')} rules={[{ type: 'array' }]} defaultValue={model.hosts} />
       <MembersSelect multiple grouped name="attendees" label={t('events.attendees')} rules={[{ type: 'array' }]} defaultValue={model.attendees} />

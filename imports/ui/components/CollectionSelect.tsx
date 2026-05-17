@@ -5,9 +5,7 @@ import type { NamePath } from 'antd/es/form/interface';
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
 import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
-import React, { ComponentType, MouseEvent, ReactNode, useCallback, useContext, useMemo, useState } from 'react';
-import { DrawerContext, SubdrawerContext } from '../app/App';
-import type { DrawerContextValue } from '../app/types';
+import React, { ComponentType, MouseEvent, ReactNode, useCallback, useMemo, useState } from 'react';
 import { useDrawerStack } from '../drawer-stack';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 
@@ -33,11 +31,10 @@ interface CollectionSelectProps {
   name?: NamePath;
   label?: string;
   rules?: Rule[];
-  FormComponent?: ComponentType<{ setOpen: (open: boolean) => void; useSubdrawer?: boolean }>;
+  FormComponent?: ComponentType<unknown>;
   subscription?: string;
   extra?: ReactNode;
   query?: Mongo.Selector<CollectionDoc>;
-  useDrawerStack?: boolean;
 }
 
 interface OptionShape {
@@ -59,11 +56,8 @@ const CollectionSelect = ({
   subscription,
   extra = empty,
   query = emptyQuery,
-  useDrawerStack: useDrawerStackPath = false,
 }: CollectionSelectProps) => {
   const { modal } = App.useApp();
-  const drawer = useContext(DrawerContext) as DrawerContextValue;
-  const subdrawer = useContext(SubdrawerContext) as DrawerContextValue;
   const drawerStack = useDrawerStack();
   const parentForm = Form.useFormInstance() as unknown as { setFieldValue: (path: NamePath, value: unknown) => void } | undefined;
   const { t } = useTranslation();
@@ -125,46 +119,28 @@ const CollectionSelect = ({
   );
 
   const handleCreate = useCallback(async () => {
-    if (useDrawerStackPath) {
-      const inserted = await drawerStack.push<string, Record<string, unknown>>({
-        title: `${t('common.create')} ${label ?? ''}`,
-        Component: FormComponent as unknown as ComponentType<unknown>,
-        model: {},
-        extra,
-      });
-      if (inserted) writeBack(inserted);
-      return;
-    }
-    const usedDrawer = !drawer.drawerOpen ? drawer : subdrawer;
-    usedDrawer.setDrawerTitle(`${t('common.create')} ${label ?? ''}`);
-    usedDrawer.setDrawerModel({});
-    usedDrawer.setDrawerComponent(React.createElement(FormComponent!, { setOpen: usedDrawer.setDrawerOpen, useSubdrawer: drawer.drawerOpen }));
-    usedDrawer.setDrawerExtra(extra);
-    usedDrawer.setDrawerOpen(true);
-  }, [useDrawerStackPath, drawerStack, writeBack, drawer, subdrawer, FormComponent, label, t, extra]);
+    const inserted = await drawerStack.push<string, Record<string, unknown>>({
+      title: `${t('common.create')} ${label ?? ''}`,
+      Component: FormComponent as ComponentType<unknown>,
+      model: {},
+      extra,
+    });
+    if (inserted) writeBack(inserted);
+  }, [drawerStack, writeBack, FormComponent, label, t, extra]);
 
   const handleEdit = useCallback(
     async (e: MouseEvent<HTMLElement>, raw: CollectionDoc) => {
       e.preventDefault();
       e.stopPropagation();
-      if (useDrawerStackPath) {
-        await drawerStack.push<string, Record<string, unknown>>({
-          title: `${t('common.edit')} ${label ?? ''}`,
-          Component: FormComponent as unknown as ComponentType<unknown>,
-          model: raw as Record<string, unknown>,
-          extra,
-        });
-        // Edit returns the same id; no auto-select work needed.
-        return;
-      }
-      const usedDrawer = !drawer.drawerOpen ? drawer : subdrawer;
-      usedDrawer.setDrawerTitle(`${t('common.edit')} ${label ?? ''}`);
-      usedDrawer.setDrawerModel(raw as Record<string, unknown>);
-      usedDrawer.setDrawerComponent(React.createElement(FormComponent!, { setOpen: usedDrawer.setDrawerOpen, useSubdrawer: drawer.drawerOpen }));
-      usedDrawer.setDrawerExtra(extra);
-      usedDrawer.setDrawerOpen(true);
+      // Edit returns the same id; no auto-select work needed.
+      await drawerStack.push<string, Record<string, unknown>>({
+        title: `${t('common.edit')} ${label ?? ''}`,
+        Component: FormComponent as ComponentType<unknown>,
+        model: raw as Record<string, unknown>,
+        extra,
+      });
     },
-    [useDrawerStackPath, drawerStack, drawer, subdrawer, label, FormComponent, t, extra]
+    [drawerStack, label, FormComponent, t, extra]
   );
 
   const handleDelete = useCallback(

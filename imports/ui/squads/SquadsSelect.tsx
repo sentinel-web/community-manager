@@ -37,7 +37,6 @@ export default function SquadsSelect({ multiple, name, label, rules, defaultValu
       subscription="squads"
       placeholder={t('common.selectSquad')}
       extra={<></>}
-      useDrawerStack
     />
   );
 }
