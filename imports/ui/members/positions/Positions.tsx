@@ -16,6 +16,7 @@ const Positions = () => {
       FormComponent={PositionsForm}
       columnsFactory={getPositionColumns}
       Collection={PositionsCollection}
+      useDrawerStack
     />
   );
 };

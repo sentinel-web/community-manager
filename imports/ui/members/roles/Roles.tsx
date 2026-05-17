@@ -19,6 +19,7 @@ const Roles = () => {
         title={t('members.roles')}
         FormComponent={RolesForm}
         columnsFactory={getRolesColumns}
+        useDrawerStack
       />
     </div>
   );

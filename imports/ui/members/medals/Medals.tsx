@@ -19,6 +19,7 @@ const Medals = () => {
         FormComponent={MedalsForm}
         columnsFactory={getMedalColumns}
         Collection={MedalsCollection}
+        useDrawerStack
       />
     </div>
   );
