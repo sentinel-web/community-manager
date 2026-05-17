@@ -12,4 +12,12 @@ const { defineConfig } = require('@meteorjs/rspack');
  */
 module.exports = defineConfig(Meteor => {
   return {};
+  
 });
+module.exports = {
+  externals: [
+    'zlib-sync',
+    'bufferutil',
+    'utf-8-validate'
+  ],
+};
