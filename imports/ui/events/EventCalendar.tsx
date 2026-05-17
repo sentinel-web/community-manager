@@ -2,7 +2,7 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/de';
 import 'dayjs/locale/fr';
 import { useFind, useSubscribe } from 'meteor/react-meteor-data';
-import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Calendar, dayjsLocalizer } from 'react-big-calendar';
 import type { CalendarEvent, DateRange, View } from 'react-big-calendar';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
@@ -12,8 +12,7 @@ import EventTypesCollection from '../../api/collections/eventTypes.collection';
 import getLegibleTextColor from '../../helpers/colors/getLegibleTextColor';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { EventDoc } from '../../api/types/event';
-import { DrawerContext } from '../app/App';
-import type { DrawerContextValue } from '../app/types';
+import { useDrawerStack } from '../drawer-stack';
 import EventDetailPopover from './EventDetailPopover';
 import EventForm from './EventForm';
 import { useTourRef } from '../tour/TourContext';
@@ -28,7 +27,7 @@ interface EventCalendarProps {
 const EventCalendar = ({ datasource, setFilter }: EventCalendarProps) => {
   const calendarRef = useTourRef('events-calendar');
   const { t, language } = useLanguage();
-  const drawer = useContext(DrawerContext) as DrawerContextValue;
+  const drawerStack = useDrawerStack();
 
   // Set dayjs locale based on current language
   useEffect(() => {
@@ -49,14 +48,18 @@ const EventCalendar = ({ datasource, setFilter }: EventCalendarProps) => {
   useSubscribe('eventTypes', { _id: { $in: eventTypeIds } });
   const eventTypes = useFind(() => EventTypesCollection.find({ _id: { $in: eventTypeIds } }), [datasource]);
 
-  const openForm = (event?: Record<string, unknown>) => {
-    const isEdit = !!event?._id;
-    const model = event || {};
-    drawer.setDrawerTitle(isEdit ? t('events.editEvent') : t('events.createEvent'));
-    drawer.setDrawerModel(model);
-    drawer.setDrawerComponent(<EventForm setOpen={drawer.setDrawerOpen} />);
-    drawer.setDrawerOpen(true);
-  };
+  const openForm = useCallback(
+    (event?: Record<string, unknown>) => {
+      const isEdit = !!event?._id;
+      const model = event || {};
+      void drawerStack.push<string, Record<string, unknown>>({
+        title: isEdit ? t('events.editEvent') : t('events.createEvent'),
+        Component: EventForm,
+        model,
+      });
+    },
+    [drawerStack, t]
+  );
 
   const onEventDrop = ({ event, start, end, allDay }: { event: CalendarEvent; start: Date; end: Date; allDay?: boolean }) => {
     openForm({ ...(event as Record<string, unknown>), start, end, allDay });

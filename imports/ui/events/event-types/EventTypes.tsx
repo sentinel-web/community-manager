@@ -16,6 +16,7 @@ const EventTypes = () => {
       Collection={EventTypesCollection}
       FormComponent={EventTypesForm}
       columnsFactory={getEventTypeColumns}
+      useDrawerStack
     />
   );
 };

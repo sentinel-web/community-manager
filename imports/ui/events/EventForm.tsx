@@ -5,15 +5,14 @@ import dayjs, { Dayjs } from 'dayjs';
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
 import { useFind, useSubscribe } from 'meteor/react-meteor-data';
-import React, { useCallback, useContext, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import EventTypesCollection from '../../api/collections/eventTypes.collection';
 import SquadsCollection from '../../api/collections/squads.collection';
 import type { EventDoc } from '../../api/types/event';
 import type { CollectionDoc } from '../components/CollectionSelect';
 import { useTranslation } from '../../i18n/LanguageContext';
 import type { TranslateFn } from '../section/types';
-import { DrawerContext } from '../app/App';
-import type { DrawerContextValue } from '../app/types';
+import { useDrawerFrame } from '../drawer-stack';
 import CollectionSelect from '../components/CollectionSelect';
 import MembersSelect from '../members/MembersSelect';
 import { getColorFromValues } from '../specializations/SpecializationForm';
@@ -45,27 +44,23 @@ export const getDateFromValues = (values: Record<string, unknown>, key = 'date')
   return val as Date | undefined;
 };
 
-interface EventFormProps {
-  setOpen: (open: boolean) => void;
-}
-
-const EventForm = ({ setOpen }: EventFormProps) => {
+const EventForm = () => {
   const { message, notification, modal } = App.useApp();
   const { t } = useTranslation();
-  const drawer = useContext(DrawerContext) as DrawerContextValue;
+  const { model: rawModel, resolve, cancel } = useDrawerFrame<string, Partial<EventDoc>>();
 
   const model = useMemo(() => {
-    const data = (drawer.drawerModel || {}) as unknown as EventDoc;
+    const data = (rawModel || {}) as unknown as EventDoc;
     return {
       ...data,
       start: data.start ? dayjs(data.start) : null,
       end: data.end ? dayjs(data.end) : null,
       hosts: data.hosts || (data._id ? [] : [Meteor.userId()]),
     } as EventFormValues & { _id?: string };
-  }, [drawer]);
+  }, [rawModel]);
 
   const handleFinish = useCallback(
-    (values: EventFormValues) => {
+    async (values: EventFormValues) => {
       const wireValues = {
         ...values,
         color: getColorFromValues(values as unknown as Record<string, unknown>),
@@ -74,22 +69,19 @@ const EventForm = ({ setOpen }: EventFormProps) => {
       };
       const args = [...(model?._id ? [model._id] : []), wireValues];
       const endpoint = model?._id ? 'events.update' : 'events.insert';
-      const handleError = (error: Meteor.Error) => {
+      try {
+        const result = (await Meteor.callAsync(endpoint, ...args)) as string | undefined;
+        message.success(model?._id ? t('messages.eventUpdated') : t('messages.eventCreated'));
+        resolve(model?._id ?? result);
+      } catch (error) {
+        const err = error as Meteor.Error;
         notification.error({
-          message: error.error,
-          description: error.message,
+          message: err.error as string,
+          description: err.message,
         });
-      };
-      const handleSuccess = () => {
-        const text = model?._id ? t('messages.eventUpdated') : t('messages.eventCreated');
-        message.success(text);
-        setOpen(false);
-      };
-      Meteor.callAsync(endpoint, ...args)
-        .then(handleSuccess)
-        .catch(handleError);
+      }
     },
-    [model?._id, message, notification, setOpen, t]
+    [model?._id, message, notification, resolve, t]
   );
 
   const handleDelete = useCallback(() => {
@@ -99,20 +91,20 @@ const EventForm = ({ setOpen }: EventFormProps) => {
       cancelText: t('common.cancel'),
       okType: 'danger',
       onOk: async () => {
-        await Meteor.callAsync('events.remove', model._id)
-          .then(() => {
-            message.success(t('messages.eventDeleted'));
-            setOpen(false);
-          })
-          .catch((error: Meteor.Error) => {
-            notification.error({
-              message: error.error,
-              description: error.message,
-            });
+        try {
+          await Meteor.callAsync('events.remove', model._id);
+          message.success(t('messages.eventDeleted'));
+          cancel();
+        } catch (error) {
+          const err = error as Meteor.Error;
+          notification.error({
+            message: err.error as string,
+            description: err.message,
           });
+        }
       },
     });
-  }, [modal, message, setOpen, model, notification, t]);
+  }, [modal, message, cancel, model, notification, t]);
 
   const [form] = Form.useForm<EventFormValues>();
 
@@ -136,6 +128,7 @@ const EventForm = ({ setOpen }: EventFormProps) => {
         collection={EventTypesCollection as unknown as Mongo.Collection<CollectionDoc>}
         subscription="eventTypes"
         FormComponent={EventTypesForm}
+        useDrawerStack
       />
       <MembersSelect multiple grouped name="hosts" label={t('events.hosts')} rules={[{ type: 'array' }]} defaultValue={model.hosts} />
       <MembersSelect multiple grouped name="attendees" label={t('events.attendees')} rules={[{ type: 'array' }]} defaultValue={model.attendees} />
