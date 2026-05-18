@@ -8,6 +8,7 @@ export interface RankFormValues {
   color?: { toHexString?: () => string } | string;
   previousRankId?: string;
   nextRankId?: string;
+  discordRoleId?: string;
 }
 
 export interface RankPayload {
@@ -18,6 +19,7 @@ export interface RankPayload {
   previousRankId: string | undefined;
   nextRankId: string | undefined;
   type: 'player' | 'zeus';
+  discordRoleId: string | undefined;
 }
 
 /**
@@ -28,7 +30,7 @@ export interface RankPayload {
  * either a real abbreviation or absent, as its optional type promises.
  */
 export default function toRankPayload(values: RankFormValues): RankPayload {
-  const { name, abbreviation, description, previousRankId, nextRankId, type } = values;
+  const { name, abbreviation, description, previousRankId, nextRankId, type, discordRoleId } = values;
   return {
     name,
     abbreviation: abbreviation?.trim() || null,
@@ -37,5 +39,6 @@ export default function toRankPayload(values: RankFormValues): RankPayload {
     previousRankId,
     nextRankId,
     type,
+    discordRoleId,
   };
 }

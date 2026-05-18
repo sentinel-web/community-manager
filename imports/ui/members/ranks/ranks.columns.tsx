@@ -53,6 +53,13 @@ const getRankColumns: ColumnsFactory<Rank> = (handleEdit, handleDelete, permissi
       sorter: (a: Rank, b: Rank) => (a.color || '').localeCompare(b.color || ''),
       render: (color: string) => <ColoredTag color={color}>{color || '-'}</ColoredTag>,
     },
+    {
+      title: t('members.discordRole'),
+      dataIndex: 'discordRoleId',
+      key: 'discordRoleId',
+      ellipsis: true,
+      render: (discordRoleId: string) => discordRoleId ? <Tag color="blue">ID: {discordRoleId}</Tag> : <i>-</i>,
+    },
   ];
 
   if (canUpdate || canDelete) {

@@ -67,6 +67,13 @@ export default function RanksForm() {
         rules={[{ required: false, type: 'string' }]}
         defaultValue={model?.nextRankId as string | undefined}
       />
+      <Form.Item
+        name="discordRoleId"
+        label={t('members.discordRoleId')}
+        rules={[{ required: false, type: 'string', pattern: /^\d+$/, message: 'Muss eine gültige ID sein!' }]}
+      >
+        <Input placeholder={t('forms.placeholders.enterDiscordRoleId')} allowClear />
+      </Form.Item>
       <FormFooter onCancel={cancel} loading={loading} />
     </Form>
   );

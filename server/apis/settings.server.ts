@@ -37,7 +37,11 @@ if (Meteor.isServer) {
     });
   
     this.ready();
-    this.onStop(() => handle.stop());
+    this.onStop(() => {
+      if (handle && typeof handle.stop === 'function') {
+        handle.stop();
+      }
+    });
   //  return SettingsCollection.find(filter, options);
   });
 
@@ -58,7 +62,7 @@ if (Meteor.isServer) {
         { key }, 
         { $set: { key, value: processedValue } }
       );
-      if (key.startsWith('discord-bot')) {
+      if (key.startsWith('discord-')) {
         try {
           reloadDiscordBot().catch(console.error);
           await SettingsCollection.upsertAsync({ key: 'discord-error-message' }, { $set: { key: 'discord-error-message', value: null } });
