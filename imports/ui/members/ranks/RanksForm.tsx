@@ -14,6 +14,7 @@ interface RankFormValues {
   color?: { toHexString?: () => string } | string;
   previousRankId?: string;
   nextRankId?: string;
+  discordRoleId?: string;
 }
 
 export default function RanksForm() {
@@ -24,8 +25,8 @@ export default function RanksForm() {
     created: 'messages.rankCreated',
     updated: 'messages.rankUpdated',
     toPayload: values => {
-      const { name, description, previousRankId, nextRankId, type } = values;
-      return { name, color: getColorFromValues(values), description, previousRankId, nextRankId, type };
+      const { name, description, previousRankId, nextRankId, type, discordRoleId } = values;
+      return { name, color: getColorFromValues(values), description, previousRankId, nextRankId, type, discordRoleId };
     },
   });
 
@@ -75,6 +76,13 @@ export default function RanksForm() {
         rules={[{ required: false, type: 'string' }]}
         defaultValue={model?.nextRankId as string | undefined}
       />
+      <Form.Item
+        name="discordRoleId"
+        label={t('members.discordRoleId')}
+        rules={[{ required: false, type: 'string', pattern: /^\d+$/, message: 'Muss eine gültige ID sein!' }]}
+      >
+        <Input placeholder={t('forms.placeholders.enterDiscordRoleId')} allowClear />
+      </Form.Item>
       <FormFooter onCancel={cancel} loading={loading} />
     </Form>
   );
