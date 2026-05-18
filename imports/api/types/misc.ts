@@ -11,6 +11,7 @@ export interface Position extends ColoredEntity {
 }
 
 export interface Specialization extends ColoredEntity {
+  discordRoleId: string;
   linkToFile?: string;
   instructors?: string[];
   requiredSpecializations?: string[];

@@ -36,6 +36,7 @@ interface SpecializationFormValues {
   requiredSpecializations?: string[];
   requiredRankId?: string;
   description?: string;
+  discordRoleId?: string;
 }
 
 interface SpecializationFormProps {
@@ -104,6 +105,13 @@ const SpecializationForm = ({ setOpen, useSubdrawer }: SpecializationFormProps) 
       <RanksSelectTyped name="requiredRankId" label={t('specializations.requiredRank')} rules={[{ required: false, type: 'string' }]} defaultValue={model?.requiredRankId} />
       <Form.Item name="description" label={t('common.description')} rules={[{ required: false, type: 'string' }]}>
         <Input.TextArea autoSize placeholder={t('forms.placeholders.enterDescription')} />
+      </Form.Item>
+      <Form.Item 
+        name="discordRoleId" 
+        label={t('members.discordRoleId')} 
+        rules={[{ required: false, type: 'string', pattern: /^\d+$/, message: 'Muss eine gültige ID sein!' }]}
+      >
+        <Input placeholder={t('forms.placeholders.enterDiscordRoleId')} allowClear />
       </Form.Item>
       <FormFooter setOpen={setOpen} />
     </Form>

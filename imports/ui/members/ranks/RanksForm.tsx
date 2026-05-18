@@ -21,6 +21,7 @@ interface RankFormValues {
   color?: { toHexString?: () => string } | string;
   previousRankId?: string;
   nextRankId?: string;
+  discordRoleId?: string;
 }
 
 export default function RanksForm({ setOpen, useSubdrawer }: RanksFormProps) {
@@ -51,8 +52,8 @@ export default function RanksForm({ setOpen, useSubdrawer }: RanksFormProps) {
   const handleSubmit = useCallback(
     (values: RankFormValues) => {
       setLoading(true);
-      const { name, description, previousRankId, nextRankId, type } = values;
-      const args = [...(model?._id ? [model._id] : []), { name, color: getColorFromValues(values as unknown as Record<string, unknown>), description, previousRankId, nextRankId, type }];
+      const { name, description, previousRankId, nextRankId, type, discordRoleId } = values;
+      const args = [...(model?._id ? [model._id] : []), { name, color: getColorFromValues(values as unknown as Record<string, unknown>), description, previousRankId, nextRankId, type, discordRoleId }];
       Meteor.callAsync(Meteor.user() && model?._id ? 'ranks.update' : 'ranks.insert', ...args)
         .then(() => {
           setOpen(false);
@@ -102,6 +103,13 @@ export default function RanksForm({ setOpen, useSubdrawer }: RanksFormProps) {
         rules={[{ required: false, type: 'string' }]}
         defaultValue={model?.nextRankId as string | undefined}
       />
+      <Form.Item 
+        name="discordRoleId" 
+        label={t('members.discordRoleId')} 
+        rules={[{ required: false, type: 'string', pattern: /^\d+$/, message: 'Muss eine gültige ID sein!' }]}
+      >
+        <Input placeholder={t('forms.placeholders.enterDiscordRoleId')} allowClear />
+      </Form.Item>
       <FormFooter setOpen={setOpen} />
     </Form>
   );

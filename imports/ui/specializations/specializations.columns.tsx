@@ -113,6 +113,13 @@ const getSpecializationColumns = (
           '-'
         ),
     },
+    {
+      title: t('members.discordRole'),
+      dataIndex: 'discordRoleId',
+      key: 'discordRoleId',
+      ellipsis: true,
+      render: (discordRoleId: string) => discordRoleId ? <Tag color="blue">ID: {discordRoleId}</Tag> : <i>-</i>,
+    },
   ];
 
   if (canUpdate || canDelete) {
