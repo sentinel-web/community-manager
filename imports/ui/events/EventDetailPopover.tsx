@@ -104,6 +104,23 @@ export default function EventDetailPopover({ event, open, setOpen, onEdit }: Eve
                   <RichTextView html={detail.description} />
                 </Descriptions.Item>
               )}
+              {detail.preset && (
+                <Descriptions.Item label="Preset / Link">
+                  {detail.preset.startsWith('file:') ? (() => {
+                    const [fileMeta, dataUrl] = detail.preset.split(':::');
+                    const filename = fileMeta.replace('file:', '');
+                    return (
+                      <a href={dataUrl} download={filename} style={{ fontWeight: 'bold' }}>
+                        💾 {filename} (Herunterladen)
+                      </a>
+                    );
+                  })() : (
+                    <a href={detail.preset} target="_blank" rel="noreferrer">
+                      🔗 Link öffnen
+                    </a>
+                  )}
+                </Descriptions.Item>
+              )}
             </Descriptions>
           </Col>
           {isSignedUp && (

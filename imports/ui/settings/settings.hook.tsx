@@ -13,6 +13,7 @@ export interface UseSettingsResult {
   discordBotToken?: string;
   discordServerId?: string;
   discordRecruitmentChannelId?: string;
+  discordEventsChannelId?: string;
   discordErrorMessage?: string;
 }
 
@@ -23,6 +24,7 @@ export default function useSettings(): UseSettingsResult {
     ready, communityTitle, communityLogo, communityColor, 
     communityNameBlackList, communityIdBlackList, 
     discordEnabled, discordBotToken, discordServerId,
+    discordRecruitmentChannelId, discordEventsChannelId, // 👈 1. SCHRITT: Hier destrukturieren!
     discordErrorMessage 
   } = useTracker(() => {
     const publicSub = Meteor.subscribe('settings.public');
@@ -40,13 +42,16 @@ export default function useSettings(): UseSettingsResult {
       discordBotToken: SettingsCollection.findOne({ key: 'discord-bot-token' })?.value as string | undefined,
       discordServerId: SettingsCollection.findOne({ key: 'discord-server-id' })?.value as string | undefined,
       discordRecruitmentChannelId: SettingsCollection.findOne({ key: 'discord-recruitment-channel-id' })?.value as string | undefined,
+      discordEventsChannelId: SettingsCollection.findOne({ key: 'discord-events-channel-id' })?.value as string | undefined,
       discordErrorMessage: SettingsCollection.findOne({ key: 'discord-error-message' })?.value as string | undefined,
     };
   }, []);
+
   return { 
     ready, communityTitle, communityLogo, communityColor, 
     communityNameBlackList, communityIdBlackList, 
     discordEnabled, discordBotToken, discordServerId,
+    discordRecruitmentChannelId, discordEventsChannelId, // 👈 2. SCHRITT: Hier im Hook-Return zurückgeben!
     discordErrorMessage 
   };
 }

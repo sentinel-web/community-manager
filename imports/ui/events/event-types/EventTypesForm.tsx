@@ -1,4 +1,4 @@
-import { ColorPicker, Form, Input } from 'antd';
+import { ColorPicker, Form, Input, Switch } from 'antd';
 import React, { useEffect } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import useEntityForm from '../../hooks/useEntityForm';
@@ -14,8 +14,8 @@ export default function EventTypesForm() {
     created: 'messages.eventTypeCreated',
     updated: 'messages.eventTypeUpdated',
     toPayload: values => {
-      const { name, description } = values as { name: string; description?: string };
-      return { name, color: getColorFromValues(values), description };
+      const { name, description, createDiscordEvent } = values as { name: string; description?: string; createDiscordEvent?: boolean };
+      return { name, color: getColorFromValues(values), description, createDiscordEvent };
     },
   });
 
@@ -41,6 +41,9 @@ export default function EventTypesForm() {
       </Form.Item>
       <Form.Item name="color" label={t('common.color')}>
         <ColorPicker format="hex" />
+      </Form.Item>
+      <Form.Item name="createDiscordEvent" label="Discord Event-Benachrichtigung erstellen?" valuePropName="checked">
+        <Switch checkedChildren="Ja" unCheckedChildren="Nein" />
       </Form.Item>
       <FormFooter onCancel={cancel} loading={loading} />
     </Form>

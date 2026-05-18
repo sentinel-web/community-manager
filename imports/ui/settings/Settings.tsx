@@ -24,6 +24,8 @@ async function getEventValue(key: string, e: unknown): Promise<string | string[]
       case 'discord-server-id': 
       case 'discord-recruitment-channel-id':
         return (e as React.ChangeEvent<HTMLInputElement>).target.value;
+        case 'discord-events-channel-id': // 👈 NEU
+        return (e as React.ChangeEvent<HTMLInputElement>).target.value;
       case 'discord-enabled': 
         return (e as { target: { checked: boolean } }).target.checked;
     case 'community-logo':
@@ -72,7 +74,7 @@ async function turnImageFileIntoWebp(file: File): Promise<Blob> {
 
 export default function Settings() {
   const settingsRef = useTourRef('settings-section');
-  const { ready, communityTitle, communityLogo, communityColor, communityNameBlackList, communityIdBlackList, discordEnabled, discordBotToken, discordServerId, discordRecruitmentChannelId, discordErrorMessage } = useSettings();
+  const { ready, communityTitle, communityLogo, communityColor, communityNameBlackList, communityIdBlackList, discordEnabled, discordBotToken, discordServerId, discordRecruitmentChannelId, discordEventsChannelId, discordErrorMessage } = useSettings();
   const { t } = useTranslation();
 
   const handleChange: HandleChangeFn = useCallback(async (e: unknown, key: string) => {
@@ -111,6 +113,7 @@ export default function Settings() {
                       discordBotToken={discordBotToken}
                       discordServerId={discordServerId}
                       discordRecruitmentChannelId={discordRecruitmentChannelId}
+                      discordEventsChannelId={discordEventsChannelId}
                       discordErrorMessage={discordErrorMessage}
                       handleChange={handleChange}
                       t={t}
@@ -378,12 +381,13 @@ interface DiscordSettingsProps {
   discordBotToken?: string;
   discordServerId?: string;
   discordRecruitmentChannelId?: string;
+  discordEventsChannelId?: string;
   discordErrorMessage?: string;
   handleChange: HandleChangeFn;
   t: TFn;
 }
 
-function DiscordSettings({ discordEnabled, discordBotToken, discordServerId, discordRecruitmentChannelId, handleChange, discordErrorMessage, t }: DiscordSettingsProps) {
+function DiscordSettings({ discordEnabled, discordBotToken, discordServerId, discordRecruitmentChannelId, handleChange, discordErrorMessage,discordEventsChannelId, t }: DiscordSettingsProps) {
   return (
     <Row gutter={[16, 16]}>
       <SettingTitle title={t('settings.discordIntegration')} />
@@ -419,6 +423,14 @@ function DiscordSettings({ discordEnabled, discordBotToken, discordServerId, dis
           <Col xs={24} lg={12}>
             <Typography.Text strong>Recruitment Channel ID</Typography.Text>
             <Input style={{ marginTop: 8 }} value={discordRecruitmentChannelId} onChange={e => handleChange(e, 'discord-recruitment-channel-id')} />
+          </Col>
+          <Col xs={24} lg={12}>
+            <Typography.Text strong>Ankündigungs-Kanal ID (Events)</Typography.Text>
+            <Input 
+              style={{ marginTop: 8 }}
+              value={discordEventsChannelId} 
+              onChange={e => handleChange(e, 'discord-events-channel-id')} 
+            />
           </Col>
         </>
       )}
