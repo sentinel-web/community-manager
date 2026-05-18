@@ -7,6 +7,7 @@ export interface ColoredEntity {
   name: string;
   color?: string;
   description?: string;
+  createDiscordEvent?: boolean;
 }
 
 export type AttendanceStatus = -2 | -1 | 0 | 1 | 2;

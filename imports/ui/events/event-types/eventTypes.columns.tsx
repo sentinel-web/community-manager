@@ -43,6 +43,12 @@ const getEventTypeColumns = (
       sorter: (a, b) => Number(a.countsForInactivity !== false) - Number(b.countsForInactivity !== false),
       render: (countsForInactivity: boolean | undefined) => (countsForInactivity === false ? t('common.no') : t('common.yes')),
     },
+    {
+      title: 'Discord Sync',
+      dataIndex: 'createDiscordEvent',
+      key: 'createDiscordEvent',
+      render: (createDiscordEvent: boolean) => createDiscordEvent ? <Tag color="green">Aktiv</Tag> : <Tag color="default">Inaktiv</Tag>,
+    },
   ];
 
   if (canUpdate || canDelete) {
