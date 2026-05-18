@@ -36,6 +36,12 @@ const getEventTypeColumns = (
       sorter: (a, b) => (a.color || '').localeCompare(b.color || ''),
       render: (color: string | null) => <Tag color={color || 'transparent'}>{color}</Tag>,
     },
+    {
+      title: 'Discord Sync',
+      dataIndex: 'createDiscordEvent',
+      key: 'createDiscordEvent',
+      render: (createDiscordEvent: boolean) => createDiscordEvent ? <Tag color="green">Aktiv</Tag> : <Tag color="default">Inaktiv</Tag>,
+    },
   ];
 
   if (canUpdate || canDelete) {

@@ -1,4 +1,4 @@
-import { App, ColorPicker, Form, Input } from 'antd';
+import { App, ColorPicker, Form, Input, Switch } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
@@ -38,8 +38,8 @@ export default function EventTypesForm({ setOpen, useSubdrawer = false }: EventT
   const handleSubmit = useCallback(
     (values: Record<string, unknown>) => {
       setLoading(true);
-      const { name, description } = values as { name: string; description?: string };
-      const args = [...(model?._id ? [model._id] : []), { name, color: getColorFromValues(values), description }];
+      const { name, description, createDiscordEvent } = values as { name: string; description?: string; createDiscordEvent?: boolean };
+      const args = [...(model?._id ? [model._id] : []), { name, color: getColorFromValues(values), description, createDiscordEvent }];
       Meteor.callAsync(Meteor.user() && model?._id ? 'eventTypes.update' : 'eventTypes.insert', ...args)
         .then(() => {
           setOpen(false);
@@ -58,7 +58,7 @@ export default function EventTypesForm({ setOpen, useSubdrawer = false }: EventT
   );
 
   return (
-    <Form form={form} layout="vertical" onFinish={handleSubmit} disabled={loading}>
+    <Form form={form} layout="vertical" onFinish={handleSubmit} disabled={loading} initialValues={model}>
       <Form.Item name="name" label={t('common.name')} rules={[{ required: true, type: 'string' }]} required>
         <Input placeholder={t('forms.placeholders.enterName')} />
       </Form.Item>
@@ -67,6 +67,9 @@ export default function EventTypesForm({ setOpen, useSubdrawer = false }: EventT
       </Form.Item>
       <Form.Item name="color" label={t('common.color')}>
         <ColorPicker format="hex" />
+      </Form.Item>
+      <Form.Item name="createDiscordEvent" label="Discord Event-Benachrichtigung erstellen?" valuePropName="checked">
+        <Switch checkedChildren="Ja" unCheckedChildren="Nein" />
       </Form.Item>
       <FormFooter setOpen={setOpen} />
     </Form>

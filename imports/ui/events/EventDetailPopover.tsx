@@ -104,8 +104,22 @@ export default function EventDetailPopover({ event, open, setOpen, onEdit }: Eve
               <Descriptions.Item label={t('events.attendeeCount')}>
                 {detail.resolvedAttendees?.length || 0}
               </Descriptions.Item>
-              {detail.description && (
-                <Descriptions.Item label={t('common.description')}>{detail.description}</Descriptions.Item>
+              {detail.preset && (
+                <Descriptions.Item label="Preset / Link">
+                  {detail.preset.startsWith('file:') ? (() => {
+                    const [fileMeta, dataUrl] = detail.preset.split(':::');
+                    const filename = fileMeta.replace('file:', '');
+                    return (
+                      <a href={dataUrl} download={filename} style={{ fontWeight: 'bold' }}>
+                        💾 {filename} (Herunterladen)
+                      </a>
+                    );
+                  })() : (
+                    <a href={detail.preset} target="_blank" rel="noreferrer">
+                      🔗 Link öffnen
+                    </a>
+                  )}
+                </Descriptions.Item>
               )}
             </Descriptions>
           </Col>

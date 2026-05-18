@@ -1,15 +1,19 @@
-import { Client, GatewayIntentBits } from 'discord.js';
+import { Client, GatewayIntentBits, Partials } from 'discord.js';
 import { Meteor } from 'meteor/meteor';
+import dayjs from 'dayjs'; 
 import SettingsCollection from '../../imports/api/collections/settings.collection';
 import { decrypt } from '../encryption';
 import RegistrationsCollection from '/imports/api/collections/registrations.collection';
 import RolesCollection from '/imports/api/collections/roles.collection';
 import RanksCollection from '/imports/api/collections/ranks.collection';
 import SpecializationsCollection from '../../imports/api/collections/specializations.collection';
+import EventsCollection from '/imports/api/collections/events.collection'; 
+import EventTypesCollection from '/imports/api/collections/eventTypes.collection'; 
 
 let client: Client | null = null;
 let registrationObserverHandle: any = null;
 let userObserverHandle: any = null;
+let eventObserverHandle: any = null; 
 
 export const initializeDiscordBot = async () => {
   const tokenSetting = await SettingsCollection.findOneAsync({ key: 'discord-bot-token' });
@@ -28,8 +32,14 @@ export const initializeDiscordBot = async () => {
       intents: [
         GatewayIntentBits.Guilds, 
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.GuildMembers 
-      ] 
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildScheduledEvents // Aktiviert für Event-Interaktionen
+      ],
+      partials: [
+        Partials.User, 
+        Partials.GuildMember, 
+        Partials.GuildScheduledEvent
+      ]
     });
 
     await new Promise<void>((resolve, reject) => {
@@ -49,7 +59,7 @@ export const initializeDiscordBot = async () => {
         console.log(`[Discord] Synchronisations-Infrastruktur aktiv für Server: ${serverId}`);
 
         // ==========================================
-        // RICHTUNG 1: Discord -> Website (Inbound)
+        // RICHTUNG 1: Discord -> Website (User-Rollen)
         // ==========================================
         client!.on('guildMemberUpdate', async (oldMember, newMember) => {
           const oldRoles = Array.from(oldMember.roles.cache.keys());
@@ -57,11 +67,9 @@ export const initializeDiscordBot = async () => {
           
           if (oldRoles.length === newRoles.length && oldRoles.every(r => newRoles.includes(r))) return;
 
-          // GEÄNDERT: Wir holen den Usernamen/Tag des Discord-Benutzers
           const username = newMember.user.username;
           const fullTag = newMember.user.tag;
 
-          // Wir suchen in der DB nach dem discordTag (unterstützt neuen Namen & altes Format mit #0000)
           const user = await Meteor.users.findOneAsync({ 
             $or: [
               { 'profile.discordTag': username },
@@ -72,21 +80,18 @@ export const initializeDiscordBot = async () => {
 
           const updateFields: Record<string, any> = {};
 
-          // 1. Sync Ränge
           const matchingRank = await RanksCollection.findOneAsync({ discordRoleId: { $in: newRoles } } as any);
           if (matchingRank && user.profile!.rankId !== matchingRank._id) {
             updateFields['profile.rankId'] = matchingRank._id;
             console.log(`[Discord -> Web] Rang von ${newMember.user.tag} auf [${matchingRank.name}] aktualisiert.`);
           }
 
-          // 2. Sync System-Rollen
           const matchingRole = await RolesCollection.findOneAsync({ discordRoleId: { $in: newRoles } } as any);
           if (matchingRole && user.profile!.roleId !== matchingRole._id) {
             updateFields['profile.roleId'] = matchingRole._id;
             console.log(`[Discord -> Web] System-Rolle von ${newMember.user.tag} auf [${matchingRole.name}] aktualisiert.`);
           }
 
-          // 3. Sync Spezialisierungen
           const allSpecs = await SpecializationsCollection.find({ 
             discordRoleId: { $exists: true, $ne: "" } 
           } as any).fetchAsync();
@@ -114,6 +119,82 @@ export const initializeDiscordBot = async () => {
 
           if (Object.keys(updateFields).length > 0) {
             await Meteor.users.updateAsync(user._id, { $set: updateFields });
+          }
+        });
+
+        // ==========================================
+        // RICHTUNG 1B: Discord-Events -> Website (NEU)
+        // ==========================================
+        
+        // A) User klickt auf "Interessiert"
+        client!.on('guildScheduledEventUserAdd', async (scheduledEvent, discordUser) => {
+          // FIX: Wenn das User-Objekt unvollständig ist, laden wir die echten Daten (Username, Tag etc.) von Discord nach
+          if (discordUser.partial) {
+            await discordUser.fetch().catch(console.error);
+          }
+
+          console.log(`[Discord-Event] Klick auf "Interessiert" registriert von User: ${discordUser.tag} für Discord-Event-ID: ${scheduledEvent.id}`);
+          
+          // 1. Passendes Event in der Web-DB suchen
+          const webEvent = await EventsCollection.findOneAsync({ discordEventId: scheduledEvent.id } as any);
+          if (!webEvent) {
+            console.warn(`[Discord-Event] ❌ Kein passendes Webpanel-Event für die Discord-Event-ID [${scheduledEvent.id}] gefunden.`);
+            return;
+          }
+
+          console.log(`[Discord-Event] 🔍 Passendes Web-Event gefunden: "${webEvent.name}" (${webEvent._id})`);
+
+          // 2. User anhand des Discord-Tags suchen (Case-Insensitive via Regex)
+          const user = await Meteor.users.findOneAsync({ 
+            $or: [
+              { 'profile.discordTag': { $regex: `^${discordUser.username}$`, $options: 'i' } },
+              { 'profile.discordTag': { $regex: `^${discordUser.tag}$`, $options: 'i' } }
+            ]
+          });
+
+          if (!user) {
+            console.warn(`[Discord-Event] ❌ Kein registrierter Webpanel-User mit dem Discord-Tag "${discordUser.username}" oder "${discordUser.tag}" in der Datenbank gefunden.`);
+            return;
+          }
+
+          // 3. In die Teilnehmerliste eintragen
+          try {
+            await EventsCollection.updateAsync(webEvent._id!, {
+              $addToSet: { attendees: user._id }
+            } as never);
+            console.log(`[Discord -> Web] 🎉 ${user.username} wurde erfolgreich als Teilnehmer für "${webEvent.name}" eingetragen!`);
+          } catch (err) {
+            console.error(`[Discord -> Web] Fehler beim Aktualisieren der Teilnehmerliste für Event:`, err);
+          }
+        });
+
+        // B) User entfernt das "Interessiert" wieder
+        client!.on('guildScheduledEventUserRemove', async (scheduledEvent, discordUser) => {
+          if (discordUser.partial) {
+            await discordUser.fetch().catch(console.error);
+          }
+
+          console.log(`[Discord-Event] "Interessiert" entfernt von User: ${discordUser.tag} für Discord-Event-ID: ${scheduledEvent.id}`);
+          
+          const webEvent = await EventsCollection.findOneAsync({ discordEventId: scheduledEvent.id } as any);
+          if (!webEvent) return;
+
+          const user = await Meteor.users.findOneAsync({ 
+            $or: [
+              { 'profile.discordTag': { $regex: `^${discordUser.username}$`, $options: 'i' } },
+              { 'profile.discordTag': { $regex: `^${discordUser.tag}$`, $options: 'i' } }
+            ]
+          });
+
+          if (user) {
+            try {
+              await EventsCollection.updateAsync(webEvent._id!, {
+                $pull: { attendees: user._id }
+              } as never);
+              console.log(`[Discord -> Web] 📝 ${user.username} wurde erfolgreich aus der Teilnehmerliste von "${webEvent.name}" entfernt.`);
+            } catch (err) {
+              console.error(`[Discord -> Web] Fehler beim Entfernen aus der Teilnehmerliste:`, err);
+            }
           }
         });
 
@@ -147,16 +228,11 @@ export const initializeDiscordBot = async () => {
                   return;
                 }
 
-                // KORREKTUR: Spezialisierungen hier nach oben deklarieren, damit die Logs darauf zugreifen können
                 const newSpecs: string[] = newSub.profile.specializationIds || [];
                 const oldSpecs: string[] = oldSub.profile?.specializationIds || [];
                 const addedSpecs = newSpecs.filter(id => !oldSpecs.includes(id));
                 const removedSpecs = oldSpecs.filter(id => !newSpecs.includes(id));
 
-                // DIAGNOSE-LOGS (Jetzt an sicherer Stelle)
-               
-
-                // 1. Rang-Rolle abgleichen
                 if (newSub.profile.rankId !== oldSub.profile?.rankId) {
                   if (oldSub.profile?.rankId) {
                     const oldRank = await RanksCollection.findOneAsync(oldSub.profile.rankId);
@@ -176,7 +252,6 @@ export const initializeDiscordBot = async () => {
                   }
                 }
 
-                // 2. System-Rolle abgleichen
                 if (newSub.profile.roleId !== oldSub.profile?.roleId) {
                   if (oldSub.profile?.roleId) {
                     const oldRole = await RolesCollection.findOneAsync(oldSub.profile.roleId);
@@ -196,7 +271,6 @@ export const initializeDiscordBot = async () => {
                   }
                 }
 
-                // 3. Spezialisierungs-Rollen abgleichen
                 for (const specId of addedSpecs) {
                   const spec = await SpecializationsCollection.findOneAsync(specId);
                   if (spec?.discordRoleId && guild.roles.cache.has(spec.discordRoleId)) {
@@ -262,6 +336,125 @@ export const initializeDiscordBot = async () => {
         });
         initializingRegs = false; 
 
+        // ==========================================
+        // AUTOMATIC EVENT ANNOUNCEMENTS (Erweitert)
+        // ==========================================
+        let initializingEvents = true;
+        eventObserverHandle = EventsCollection.find().observe({
+          added: (doc: any) => {
+            if (initializingEvents) return;
+
+            Meteor.defer(async () => {
+              try {
+                const eventTypeDoc = await EventTypesCollection.findOneAsync(doc.eventType);
+                if (!eventTypeDoc?.createDiscordEvent) return;
+
+                const channelSetting = await SettingsCollection.findOneAsync({ key: 'discord-events-channel-id' });
+                const channelId = channelSetting?.value as string | undefined;
+                if (!channelId) return;
+
+                const guild = client?.guilds.cache.get(serverId) || await client?.guilds.fetch(serverId).catch(() => null);
+                if (!guild) return;
+
+                const channel = guild.channels.cache.get(channelId) || await guild.channels.fetch(channelId).catch(() => null);
+
+                let discordEventUrl = '';
+                try {
+                  const startTime = doc.start ? new Date(doc.start) : null;
+                  const endTime = doc.end ? new Date(doc.end) : null;
+
+                  if (startTime) {
+                    const nowWithBuffer = new Date(Date.now() + 60000);
+                    const verifiedStart = startTime < new Date() ? nowWithBuffer : startTime;
+                    const verifiedEnd = endTime && endTime > verifiedStart ? endTime : new Date(verifiedStart.getTime() + 3600000);
+
+                    const scheduledEvent = await guild.scheduledEvents.create({
+                      name: doc.name,
+                      description: doc.description || 'Anmeldung über das Webpanel erforderlich.',
+                      scheduledStartTime: verifiedStart,
+                      scheduledEndTime: verifiedEnd,
+                      privacyLevel: 2, 
+                      entityType: 3,   
+                      entityMetadata: {
+                        // 👈 KORREKTUR: Wenn es eine Datei ist, senden wir nur den reinen Dateinamen an die Location (Limit: 100 Zeichen!)
+                        location: doc.preset && doc.preset.startsWith('file:') 
+                          ? doc.preset.split(':::')[0].replace('file:', '').substring(0, 90)
+                          : (doc.preset || 'Webpanel / Arma Server').substring(0, 90)
+                      }
+                    });
+
+                    discordEventUrl = scheduledEvent.url;
+                    console.log(`[Discord Events] Echtes geplantes Event für "${doc.name}" erstellt.`);
+
+                    // GEÄNDERT: Wir speichern die Discord Event-ID zurück in unsere Web-Datenbank,
+                    // damit die Klick-Interaktionen für dieses Event gematcht werden können!
+                    await EventsCollection.updateAsync(doc._id, {
+                      $set: { discordEventId: scheduledEvent.id }
+                    } as never).catch(console.error);
+                  }
+                } catch (eventCreateError) {
+                  console.error('[Discord Events] Fehler beim Erstellen des geplanten Discord-Events:', eventCreateError);
+                }
+
+                if (channel && 'send' in channel) {
+                  const startTimeStr = doc.start ? dayjs(doc.start).format('DD.MM.YYYY [um] HH:mm [Uhr]') : '-';
+                  const endTimeStr = doc.end ? dayjs(doc.end).format('DD.MM.YYYY [um] HH:mm [Uhr]') : '-';
+
+                  let filesPayload: any[] = [];
+                  let presetLine = '';
+
+                  if (doc.preset) {
+                    if (doc.preset.startsWith('file:')) {
+                      try {
+                        const [fileMeta, dataUrl] = doc.preset.split(':::');
+                        const filename = fileMeta.replace('file:', '');
+                        
+                        // Base64-Inhalt isolieren und in NodeJS-Buffer konvertieren
+                        const base64Data = dataUrl.split(',')[1];
+                        const buffer = Buffer.from(base64Data, 'base64');
+                        
+                        filesPayload.push({
+                          attachment: buffer,
+                          name: filename
+                        });
+                        presetLine = `📁 **Preset-Datei:** ${filename} (Siehe Anhang 📎)\n`;
+                      } catch (err) {
+                        console.error('[Discord Events] Fehler beim Verarbeiten des Datei-Anhangs:', err);
+                        presetLine = `📁 **Preset-Datei:** Fehler beim Laden\n`;
+                      }
+                    } else {
+                      presetLine = `🔗 **Preset-Link:** ${doc.preset}\n`;
+                    }
+                  }
+
+                  const messageContent = 
+                    `📅 **NEUES COMMUNITY-EVENT** 📅\n` +
+                    `--------------------------------------------------\n` +
+                    `📝 **Name:** ${doc.name}\n` +
+                    `🏷️ **Typ:** ${eventTypeDoc.name}\n` +
+                    `⏰ **Start:** ${startTimeStr}\n` +
+                    `⏳ **Ende:** ${endTimeStr}\n` +
+                    (doc.description ? `📖 **Beschreibung:**\n> ${doc.description}\n` : '') +
+                    presetLine + // 👈 Unsere dynamisch generierte Zeile
+                    (discordEventUrl ? `📌 **Discord Event:** ${discordEventUrl}\n` : '') + 
+                    `--------------------------------------------------\n` +
+                    `👉 *Melde dich jetzt im Webpanel an!*`;
+
+                  // Sende Text und hänge die Datei (falls vorhanden) nativ an
+                  await (channel as any).send({ 
+                    content: messageContent, 
+                    files: filesPayload.length > 0 ? filesPayload : undefined 
+                  });
+                  console.log(`[Discord Events] Text-Ankündigung für "${doc.name}" gepostet.`);
+                }
+              } catch (err) {
+                console.error('[Discord Events] Fehler beim Verarbeiten des neuen Events:', err);
+              }
+            });
+          }
+        });
+        initializingEvents = false;
+
         resolve();
       });
 
@@ -273,11 +466,7 @@ export const initializeDiscordBot = async () => {
   } catch (error) {
     const errMsg = (error as Error).message;
     console.error('[Discord] Fehler beim Bot-Start:', errMsg);
-    
-    await SettingsCollection.upsertAsync(
-      { key: 'discord-error-message' }, 
-      { $set: { key: 'discord-error-message', value: errMsg } }
-    );
+    await SettingsCollection.upsertAsync({ key: 'discord-error-message' }, { $set: { key: 'discord-error-message', value: errMsg } });
   }
 };
 
@@ -286,14 +475,20 @@ const cleanUpBot = async () => {
     await client.destroy().catch(console.error);
     client = null;
   }
-  if (registrationObserverHandle) {
+  if (registrationObserverHandle && typeof registrationObserverHandle.stop === 'function') {
     registrationObserverHandle.stop();
-    registrationObserverHandle = null;
   }
-  if (userObserverHandle) {
+  registrationObserverHandle = null;
+
+  if (userObserverHandle && typeof userObserverHandle.stop === 'function') {
     userObserverHandle.stop();
-    userObserverHandle = null;
   }
+  userObserverHandle = null;
+
+  if (eventObserverHandle && typeof eventObserverHandle.stop === 'function') {
+    eventObserverHandle.stop();
+  }
+  eventObserverHandle = null;
 };
 
 export const reloadDiscordBot = async () => {

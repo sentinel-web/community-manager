@@ -1,5 +1,5 @@
-import { DeleteOutlined, SaveOutlined, TeamOutlined, UsergroupAddOutlined } from '@ant-design/icons';
-import { App, Button, Col, ColorPicker, DatePicker, Form, Input, Row, Select, Switch } from 'antd';
+import { DeleteOutlined, SaveOutlined, TeamOutlined, UsergroupAddOutlined, UploadOutlined } from '@ant-design/icons';
+import { App, Button, Col, ColorPicker, DatePicker, Form, Input, Row, Select, Switch, Radio, Tag, Upload } from 'antd';
 import type { FormInstance } from 'antd';
 import dayjs, { Dayjs } from 'dayjs';
 import { Meteor } from 'meteor/meteor';
@@ -25,7 +25,6 @@ const styles = {
   },
 };
 
-/** Form values — DatePicker yields Dayjs objects, not Date. */
 interface EventFormValues {
   start: Dayjs | null;
   end: Dayjs | null;
@@ -54,6 +53,9 @@ const EventForm = ({ setOpen }: EventFormProps) => {
   const { t } = useTranslation();
   const drawer = useContext(DrawerContext) as DrawerContextValue;
 
+  // FIX 1: 'form' an den absoluten Anfang verschoben, damit es für alle Callbacks darüber sichtbar ist!
+  const [form] = Form.useForm<EventFormValues>();
+
   const model = useMemo(() => {
     const data = (drawer.drawerModel || {}) as unknown as EventDoc;
     return {
@@ -64,32 +66,46 @@ const EventForm = ({ setOpen }: EventFormProps) => {
     } as EventFormValues & { _id?: string };
   }, [drawer]);
 
+  const [presetType, setPresetType] = useState<'link' | 'file'>('link');
+  const [uploadedFileName, setUploadedFileName] = useState<string>('');
+
+  React.useEffect(() => {
+    if (model.preset?.startsWith('file:')) {
+      setPresetType('file');
+      const [fileMeta] = model.preset.split(':::');
+      setUploadedFileName(fileMeta.replace('file:', ''));
+    } else {
+      setPresetType('link');
+      setUploadedFileName('');
+    }
+  }, [model]);
+
   const handleFinish = useCallback(
     (values: EventFormValues) => {
       const wireValues = {
         ...values,
+        // FIX 2: Wert explizit aus dem Form-Store auslesen (wichtig für den preserve-State der Datei)
+        preset: form.getFieldValue('preset'),
         color: getColorFromValues(values as unknown as Record<string, unknown>),
         start: getDateFromValues(values as unknown as Record<string, unknown>, 'start'),
         end: getDateFromValues(values as unknown as Record<string, unknown>, 'end'),
       };
       const args = [...(model?._id ? [model._id] : []), wireValues];
       const endpoint = model?._id ? 'events.update' : 'events.insert';
-      const handleError = (error: Meteor.Error) => {
-        notification.error({
-          message: error.error,
-          description: error.message,
-        });
-      };
-      const handleSuccess = () => {
-        const text = model?._id ? t('messages.eventUpdated') : t('messages.eventCreated');
-        message.success(text);
-        setOpen(false);
-      };
+      
       Meteor.callAsync(endpoint, ...args)
-        .then(handleSuccess)
-        .catch(handleError);
+        .then(() => {
+          message.success(model?._id ? t('messages.eventUpdated') : t('messages.eventCreated'));
+          setOpen(false);
+        })
+        .catch((error: Meteor.Error) => {
+          notification.error({
+            message: error.error,
+            description: error.message,
+          });
+        });
     },
-    [model?._id, message, notification, setOpen, t]
+    [model?._id, message, notification, setOpen, t, form] // 'form' im Dependency-Array ergänzt
   );
 
   const handleDelete = useCallback(() => {
@@ -114,10 +130,8 @@ const EventForm = ({ setOpen }: EventFormProps) => {
     });
   }, [modal, message, setOpen, model, notification, t]);
 
-  const [form] = Form.useForm<EventFormValues>();
-
   return (
-    <Form form={form} layout="vertical" initialValues={model} onFinish={handleFinish}>
+    <Form form={form} layout="vertical" initialValues={model} onFinish={handleFinish} preserve={true}>
       <Form.Item name="start" label={t('events.startDate')} rules={[{ required: true, type: 'date' }]}>
         <DatePicker style={styles.datePicker} showTime />
       </Form.Item>
@@ -127,6 +141,7 @@ const EventForm = ({ setOpen }: EventFormProps) => {
       <Form.Item name="name" label={t('common.name')} rules={[{ required: true, type: 'string' }]}>
         <Input placeholder={t('forms.placeholders.enterTitle')} />
       </Form.Item>
+      
       <CollectionSelect
         defaultValue={model.eventType}
         name="eventType"
@@ -137,9 +152,11 @@ const EventForm = ({ setOpen }: EventFormProps) => {
         subscription="eventTypes"
         FormComponent={EventTypesForm}
       />
+      
       <MembersSelect multiple grouped name="hosts" label={t('events.hosts')} rules={[{ type: 'array' }]} defaultValue={model.hosts} />
       <MembersSelect multiple grouped name="attendees" label={t('events.attendees')} rules={[{ type: 'array' }]} defaultValue={model.attendees} />
       <SquadQuickAdd form={form} t={t} />
+      
       <Row gutter={[16, 16]} style={{ flexWrap: 'nowrap' }}>
         <Col flex="auto">
           <Form.Item name="isPrivate" label={t('forms.labels.isPrivate')} valuePropName="checked" rules={[{ type: 'boolean' }]}>
@@ -152,12 +169,67 @@ const EventForm = ({ setOpen }: EventFormProps) => {
           </Form.Item>
         </Col>
       </Row>
-      <Form.Item name="preset" label={t('forms.labels.presetLink')} rules={[{ type: 'string' }]}>
-        <Input placeholder={t('forms.placeholders.enterPresetLink')} />
+
+      {/* Flexibles Preset-Feld */}
+      <Form.Item label={t('forms.labels.presetLink') || 'Preset'}>
+        <Radio.Group 
+          value={presetType} 
+          onChange={e => {
+            setPresetType(e.target.value);
+            form.setFieldValue('preset', '');
+            setUploadedFileName('');
+          }} 
+          style={{ marginBottom: 8 }}
+        >
+          <Radio value="link">Web-Link</Radio>
+          <Radio value="file">Datei-Upload</Radio>
+        </Radio.Group>
+
+        {presetType === 'link' ? (
+          <Form.Item name="preset" noStyle rules={[{ type: 'string' }]}>
+            <Input placeholder={t('forms.placeholders.enterPresetLink')} />
+          </Form.Item>
+        ) : (
+          <Row gutter={[8, 8]} align="middle">
+            <Col>
+              <Upload
+                beforeUpload={(file) => {
+                  const reader = new FileReader();
+                  reader.onload = (uploadEvent) => {
+                    const dataUrl = uploadEvent.target?.result as string;
+                    const finalValue = `file:${file.name}:::${dataUrl}`;
+                    form.setFieldValue('preset', finalValue);
+                    setUploadedFileName(file.name);
+                  };
+                  reader.readAsDataURL(file);
+                  return false;
+                }}
+                showUploadList={false}
+                accept=".html,.txt,.json"
+              >
+                <Button icon={<UploadOutlined />}>Datei auswählen</Button>
+              </Upload>
+            </Col>
+            <Col flex="auto">
+              {uploadedFileName ? (
+                <Tag color="blue" closable onClose={() => {
+                  form.setFieldValue('preset', '');
+                  setUploadedFileName('');
+                }}>
+                  {uploadedFileName}
+                </Tag>
+              ) : (
+                <span style={{ color: '#8c8c8c' }}>Keine Datei ausgewählt</span>
+              )}
+            </Col>
+          </Row>
+        )}
       </Form.Item>
+
       <Form.Item name="description" label={t('common.description')} rules={[{ type: 'string' }]}>
         <Input.TextArea autoSize placeholder={t('forms.placeholders.enterDescription')} />
       </Form.Item>
+      
       <Row gutter={[16, 16]} justify="end" align="middle">
         {model?._id && (
           <Col>
