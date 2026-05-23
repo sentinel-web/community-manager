@@ -23,7 +23,6 @@ interface AppSettings {
 }
 
 export default function App() {
-  const { message, notification } = AntdApp.useApp();
   const { communityColor } = useSettings() as unknown as AppSettings;
   const [theme, setTheme] = useState<ThemeMode>(getPreferedTheme);
   const [navigationValue, setNavigationValue] = useState<string>(getNavigationValue);
@@ -65,7 +64,7 @@ export default function App() {
                 algorithm: theme === 'dark' ? AntdTheme.darkAlgorithm : AntdTheme.defaultAlgorithm,
               }}
             >
-              <AntdApp className="app" message={{ ...message, maxCount: 1 }} notification={{ ...notification, maxCount: 3 }}>
+              <AntdApp className="app" message={{ maxCount: 1 }} notification={{ maxCount: 3 }}>
                 <DrawerStackProvider>
                   <Layout>
                     <Layout.Header>
