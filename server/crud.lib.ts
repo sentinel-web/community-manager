@@ -87,6 +87,7 @@ export function getCollection<K extends CrudCollectionName>(
 // stays as code until a third site appears.
 const HTML_FIELDS: Partial<Record<CrudCollectionName, readonly string[]>> = {
   briefingTemplates: ['content'],
+  events: ['description'],
 };
 
 function sanitizeHtmlFields(collection: CrudCollectionName, payload: Record<string, unknown>): void {

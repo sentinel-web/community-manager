@@ -5,6 +5,7 @@ import { useTracker } from 'meteor/react-meteor-data';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import type { EventDoc } from '../../api/types/event';
+import RichTextView from '../components/RichTextView';
 
 interface ResolvedMember {
   _id: string;
@@ -105,7 +106,9 @@ export default function EventDetailPopover({ event, open, setOpen, onEdit }: Eve
                 {detail.resolvedAttendees?.length || 0}
               </Descriptions.Item>
               {detail.description && (
-                <Descriptions.Item label={t('common.description')}>{detail.description}</Descriptions.Item>
+                <Descriptions.Item label={t('common.description')}>
+                  <RichTextView html={detail.description} />
+                </Descriptions.Item>
               )}
             </Descriptions>
           </Col>
