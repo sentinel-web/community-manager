@@ -9,7 +9,7 @@ import RanksCollection from '../../api/collections/ranks.collection';
 import RolesCollection from '../../api/collections/roles.collection';
 import type { Member } from '../../api/types/member';
 import { useTranslation } from '../../i18n/LanguageContext';
-import { useDrawerFrame } from '../drawer-stack';
+import { DrawerFooter, useDrawerFrame } from '../drawer-stack';
 import CollectionSelect, { type CollectionDoc } from '../components/CollectionSelect';
 import { getDateFromValues } from '../events/EventForm';
 import ProfilePictureInput from '../profile-picture-input/ProfilePictureInput';
@@ -309,18 +309,20 @@ export default function MemberForm() {
       <Form.Item name={['profile', 'hasCustomArmour']} label={t('forms.labels.hasCustomArmour')} valuePropName="checked" rules={[{ type: 'boolean' }]}>
         <Switch />
       </Form.Item>
-      <Row gutter={[16, 16]} align="middle" justify="end">
-        <Col>
-          <Button onClick={handleCancel} danger>
-            {t('common.cancel')}
-          </Button>
-        </Col>
-        <Col>
-          <Button type="primary" htmlType="submit" loading={loading} disabled={disableSubmit}>
-            {t('common.submit')}
-          </Button>
-        </Col>
-      </Row>
+      <DrawerFooter>
+        <Row gutter={[16, 16]} align="middle" justify="end">
+          <Col>
+            <Button onClick={handleCancel} danger>
+              {t('common.cancel')}
+            </Button>
+          </Col>
+          <Col>
+            <Button type="primary" onClick={() => form.submit()} loading={loading} disabled={disableSubmit}>
+              {t('common.submit')}
+            </Button>
+          </Col>
+        </Row>
+      </DrawerFooter>
     </Form>
   );
 }

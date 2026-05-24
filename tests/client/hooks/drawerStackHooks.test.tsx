@@ -83,6 +83,7 @@ if (Meteor.isClient) {
         resolve: () => {},
         cancel: () => {},
         confirmCloseRef: { current: null },
+        footerContainer: null,
       };
       const result = await renderHook(useDrawerFrame, children => (
         <FrameContext.Provider value={fakeFrame}>{children}</FrameContext.Provider>
@@ -110,6 +111,7 @@ if (Meteor.isClient) {
         resolve: () => {},
         cancel: () => {},
         confirmCloseRef: ref,
+        footerContainer: null,
       };
       const predicate = () => false;
       await renderHook(() => useConfirmClose(predicate), children => (

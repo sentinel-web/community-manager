@@ -13,7 +13,7 @@ import type { EventDoc, BriefingTemplate } from '../../api/types';
 import type { CollectionDoc } from '../components/CollectionSelect';
 import { useTranslation } from '../../i18n/LanguageContext';
 import type { TranslateFn } from '../section/types';
-import { useDrawerFrame } from '../drawer-stack';
+import { DrawerFooter, useDrawerFrame } from '../drawer-stack';
 import CollectionSelect from '../components/CollectionSelect';
 import MembersSelect from '../members/MembersSelect';
 import RichTextEditor from '../components/RichTextEditor';
@@ -154,20 +154,22 @@ const EventForm = () => {
       <Form.Item name="description" label={t('common.description')} rules={[{ type: 'string' }]}>
         <RichTextEditor placeholder={t('forms.placeholders.enterDescription')} />
       </Form.Item>
-      <Row gutter={[16, 16]} justify="end" align="middle">
-        {model?._id && (
+      <DrawerFooter>
+        <Row gutter={[16, 16]} justify="end" align="middle">
+          {model?._id && (
+            <Col>
+              <Button type="primary" onClick={handleDelete} icon={<DeleteOutlined />} danger>
+                {t('common.delete')}
+              </Button>
+            </Col>
+          )}
           <Col>
-            <Button type="primary" onClick={handleDelete} icon={<DeleteOutlined />} danger>
-              {t('common.delete')}
+            <Button type="primary" onClick={() => form.submit()} icon={<SaveOutlined />}>
+              {t('common.save')}
             </Button>
           </Col>
-        )}
-        <Col>
-          <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
-            {t('common.save')}
-          </Button>
-        </Col>
-      </Row>
+        </Row>
+      </DrawerFooter>
     </Form>
   );
 };
