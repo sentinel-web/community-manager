@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "ESNext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "jsx": "react",
     "strict": true,
     "esModuleInterop": true,
@@ -12,11 +12,10 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "baseUrl": ".",
     "paths": {
       "/*": ["./*"],
       "/imports/*": ["./imports/*"],
-      "meteor/*": [".meteor/local/types/packages.d.ts"]
+      "meteor/*": ["./.meteor/local/types/packages.d.ts"]
     },
     "types": ["node", "mocha"]
   },
