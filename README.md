@@ -6,15 +6,19 @@ A web application for managing ArmA III communities. Built with Meteor.js, React
 
 **Key Features:**
 - Event management with calendar and attendance tracking
+- Rich-text briefing templates for events
 - Member management with ranks, squads, and specializations
+- Member registration and application flow
 - Task management with Kanban board
 - Organization chart (ORBAT) visualization
+- Questionnaires with anonymous responses
+- Audit logging and database backup/restore
 - Role-based access control (RBAC)
 - Multi-language support (English, German, French)
 
 ## Requirements
 
-- [Node.js 20.x](https://nodejs.org/en) (matches the version CI runs)
+- [Node.js 22.x](https://nodejs.org/en) (matches Meteor's bundled Node and the version CI runs)
 - [Meteor.js 3.4+](https://docs.meteor.com/about/install.html)
 - A text editor — we use [VS Code](https://code.visualstudio.com/download) with ESLint and Prettier so contributions match project style
 - MongoDB itself is **not** required for development — Meteor bundles it. Install [MongoDB Compass](https://www.mongodb.com/try/download/compass) only if you want to inspect the database.

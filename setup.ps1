@@ -3,6 +3,10 @@
 
 $ErrorActionPreference = "Stop"
 
+# Node major the project targets. Keep in sync with Meteor's bundled Node
+# (`meteor node -v`), the Dockerfile, CI, and setup.sh's NodeSource pin.
+$NodeVersion = "22"
+
 function Write-Header {
     Write-Host ""
     Write-Host "========================================" -ForegroundColor Blue
@@ -43,29 +47,54 @@ function Test-Administrator {
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
-function Install-NodeJS {
-    Write-Step "Installing Node.js..."
+function Update-SessionPath {
+    # Pull the freshly-written Machine + User PATH into the current session so a
+    # just-installed tool (nvm, the nvm Node symlink) resolves without a restart.
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+}
 
-    if (Test-Command "winget") {
-        Write-Info "Using winget..."
-        winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements
-    }
-    elseif (Test-Command "choco") {
-        Write-Info "Using Chocolatey..."
-        choco install nodejs-lts -y
+function Install-NodeWithNvm {
+    Write-Step "Setting up Node.js $NodeVersion via nvm-windows..."
+
+    # nvm-windows manages the active Node via a symlink; a non-nvm Node already on
+    # PATH can shadow it, so existing standalone installs should be removed first.
+    Write-Info "If a non-nvm Node.js is installed, uninstall it first so nvm can manage the active version."
+
+    if (-not (Test-Command "nvm")) {
+        Write-Info "nvm-windows not found. Installing it..."
+        if (Test-Command "winget") {
+            winget install CoreyButler.NVMforWindows --accept-package-agreements --accept-source-agreements
+        }
+        elseif (Test-Command "choco") {
+            choco install nvm -y
+        }
+        else {
+            Write-Error "No package manager found (winget or chocolatey) to install nvm-windows."
+            Write-Info "Install it manually: https://github.com/coreybutler/nvm-windows/releases"
+            Write-Info "Then re-run this script."
+            exit 1
+        }
+        Update-SessionPath
     }
     else {
-        Write-Error "No package manager found (winget or chocolatey)."
-        Write-Info "Please install Node.js manually from: https://nodejs.org/en/download/"
-        Write-Info "Or install winget: https://aka.ms/getwinget"
-        Write-Info "Or install Chocolatey: https://chocolatey.org/install"
-        exit 1
+        Write-Success "nvm-windows is already installed."
     }
 
-    # Refresh environment variables
-    $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+    # `nvm install 22` grabs the latest 22.x patch — floating within the major,
+    # mirroring the NodeSource `setup_22.x` line used in setup.sh.
+    Write-Info "Installing and activating Node.js $NodeVersion..."
+    nvm install $NodeVersion
+    nvm use $NodeVersion
+    Update-SessionPath
 
-    Write-Success "Node.js installed successfully!"
+    if (Test-Command "node") {
+        Write-Success "Node.js $(node --version) active via nvm-windows."
+    }
+    else {
+        Write-Info "Node was installed via nvm but isn't on PATH for this session yet."
+        Write-Info "Open a new terminal (or run 'nvm use $NodeVersion') and re-run this script."
+        exit 1
+    }
 }
 
 function Install-Meteor {
@@ -97,14 +126,21 @@ function Main {
         Write-Info "Some installations may require elevated permissions."
     }
 
-    # Check and install Node.js
-    Write-Step "Checking for Node.js..."
+    # Check Node.js — the project needs Node $NodeVersion.x (matches Meteor's bundled Node)
+    Write-Step "Checking Node.js..."
+    $nodeOk = $false
     if (Test-Command "node") {
         $nodeVersion = node --version
-        Write-Success "Node.js is already installed: $nodeVersion"
+        if ($nodeVersion -match "^v$NodeVersion\.") {
+            Write-Success "Node.js $nodeVersion is active (matches required major $NodeVersion)."
+            $nodeOk = $true
+        }
+        else {
+            Write-Info "Node.js $nodeVersion is active, but the project needs Node $NodeVersion.x."
+        }
     }
-    else {
-        Install-NodeJS
+    if (-not $nodeOk) {
+        Install-NodeWithNvm
     }
 
     # Check npm
