@@ -1,4 +1,3 @@
-# Playwright E2E test output
-e2e/playwright-report/
-e2e/test-results/
-e2e/.auth/
+# Playwright E2E (test specs, page objects, fixtures, transient artifacts)
+# Excluded entirely so Playwright file activity does not trigger Meteor HMR mid-test
+e2e/
