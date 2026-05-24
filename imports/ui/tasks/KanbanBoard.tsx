@@ -2,9 +2,10 @@ import { CommentOutlined } from '@ant-design/icons';
 import { Badge, Button, Card, Col, Empty, Grid, Row, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { Meteor } from 'meteor/meteor';
-import { useTracker } from 'meteor/react-meteor-data';
+import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
 import React, { useMemo } from 'react';
 import { DragDropContext, Draggable, Droppable, type DropResult } from 'react-beautiful-dnd';
+import TaskStatusCollection from '../../api/collections/taskStatus.collection';
 import type { Task } from '../../api/types/task';
 import { useTranslation } from '../../i18n/LanguageContext';
 import type { RowClickEvent } from '../section/types';
@@ -27,7 +28,14 @@ export default function KanbanBoard({ datasource, handleEdit, handleDelete }: Ka
     Meteor.callAsync('tasks.update', draggableId, { status: destination.droppableId });
   };
 
-  const options = useTracker(() => (Meteor.user()?.profile?.taskFilter?.status as string[] | undefined) || [], []);
+  const selectedStatuses = useTracker(() => (Meteor.user()?.profile?.taskFilter?.status as string[] | undefined) || [], []);
+  useSubscribe('taskStatus', {});
+  const allStatuses = useFind(() => TaskStatusCollection.find({}), []);
+  // No status filter selected → show every task-status as a column instead of nothing.
+  const options = useMemo(
+    () => (selectedStatuses.length ? selectedStatuses : allStatuses.map(status => status._id as string)),
+    [selectedStatuses, allStatuses]
+  );
 
   const columns = useMemo(() => {
     const result: Record<string, Task[]> = datasource?.reduce<Record<string, Task[]>>((acc, task) => {
