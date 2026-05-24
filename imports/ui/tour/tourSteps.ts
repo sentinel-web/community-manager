@@ -112,6 +112,13 @@ export default function getTourSteps(t: TranslateFn, refs: RefsRef, actions: Act
       },
     },
     {
+      title: t('tour.stepBriefingTemplatesTitle'),
+      description: t('tour.stepBriefingTemplatesDescription'),
+      target: () => refs.current['briefing-templates-section']?.current,
+      page: 'briefingTemplates',
+      refKey: 'briefing-templates-section',
+    },
+    {
       title: t('tour.step11Title'),
       description: t('tour.step11Description'),
       target: () => refs.current['tasks-section']?.current,

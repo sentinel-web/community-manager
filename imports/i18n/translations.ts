@@ -608,6 +608,8 @@ export const translations = {
   "tour.step8Title": { en: "Medals", de: "Auszeichnungen", fr: "Médailles" },
   "tour.step9Description": { en: "View events color-coded by type on an interactive calendar.", de: "Events farblich nach Typ auf einem interaktiven Kalender anzeigen.", fr: "Voir les événements colorés par type sur un calendrier interactif." },
   "tour.step9Title": { en: "Event Calendar", de: "Eventkalender", fr: "Calendrier" },
+  "tour.stepBriefingTemplatesDescription": { en: "Build reusable rich-text briefings and load them straight into event descriptions.", de: "Wiederverwendbare Rich-Text-Briefings erstellen und direkt in Event-Beschreibungen laden.", fr: "Créer des briefings réutilisables en texte enrichi et les charger directement dans les descriptions d'événements." },
+  "tour.stepBriefingTemplatesTitle": { en: "Briefing Templates", de: "Briefing-Vorlagen", fr: "Modèles de briefing" },
   "validation.invalidEmail": { en: "Invalid email address", de: "Ungültige E-Mail-Adresse", fr: "Adresse e-mail invalide" },
   "validation.invalidNumber": { en: "Invalid number", de: "Ungültige Zahl", fr: "Nombre invalide" },
   "validation.maxLength": { en: "Maximum {{max}} characters", de: "Maximal {{max}} Zeichen", fr: "Maximum {{max}} caractères" },
