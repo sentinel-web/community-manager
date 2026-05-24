@@ -33,6 +33,7 @@ const CRUD_MODULES = [
   { name: 'specializations', labelKey: 'navigation.specializations' },
   { name: 'medals', labelKey: 'navigation.medals' },
   { name: 'eventTypes', labelKey: 'navigation.eventTypes' },
+  { name: 'briefingTemplates', labelKey: 'navigation.briefingTemplates' },
   { name: 'taskStatus', labelKey: 'navigation.taskStatus' },
   { name: 'registrations', labelKey: 'navigation.registrations' },
   { name: 'discoveryTypes', labelKey: 'navigation.discoveryTypes' },

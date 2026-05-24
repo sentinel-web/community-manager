@@ -1,5 +1,6 @@
 import type {
   Attendances,
+  BriefingTemplate,
   DiscoveryType,
   EventDoc,
   EventType,
@@ -21,6 +22,7 @@ import type {
 
 export interface CrudCollectionMap {
   attendances: Attendances;
+  briefingTemplates: BriefingTemplate;
   discoveryTypes: DiscoveryType;
   events: EventDoc;
   eventTypes: EventType;

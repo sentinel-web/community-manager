@@ -3,6 +3,11 @@ import type { ColoredEntity } from './shared';
 export type Medal = ColoredEntity;
 export type EventType = ColoredEntity;
 export type TaskStatus = ColoredEntity;
+
+/** A reusable rich-text briefing block; `content` holds sanitized HTML (ADR 0001). */
+export interface BriefingTemplate extends ColoredEntity {
+  content?: string;
+}
 export interface DiscoveryType extends ColoredEntity {
   hasTextInput?: boolean;
 }

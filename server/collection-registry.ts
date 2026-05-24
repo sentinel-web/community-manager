@@ -34,6 +34,7 @@ export interface CollectionRegistryEntry {
 // the same omission under loosened type checks.
 export const COLLECTION_REGISTRY: Record<CrudCollectionName, CollectionRegistryEntry> = {
   attendances: { module: 'events' },
+  briefingTemplates: { module: 'briefingTemplates', displayField: 'name' },
   // Discovery types are surfaced on the public (pre-auth) registration form,
   // so guests must be able to read them. The docs carry nothing sensitive.
   discoveryTypes: { module: 'discoveryTypes', allowsAnonymous: { read: true } },
