@@ -24,7 +24,9 @@ function SectionCardTitle({ title }: SectionCardTitleProps) {
   return (
     <Row gutter={[16, 16]}>
       <Col span={24}>
-        <Typography.Title level={2}>{title}</Typography.Title>
+        <Typography.Title level={2} ellipsis={{ tooltip: title }} style={{ marginBottom: 0 }}>
+          {title}
+        </Typography.Title>
       </Col>
     </Row>
   );
