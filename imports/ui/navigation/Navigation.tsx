@@ -30,6 +30,10 @@ import RolesCollection from '../../api/collections/roles.collection';
 import type { Role } from '../../api/types';
 import useNavigation from './navigation.hook';
 import { useTranslation } from '../../i18n/LanguageContext';
+import useUserMenu from '../components/useUserMenu';
+
+// Keys handled as user actions (in the mobile menu) rather than navigation.
+const USER_ACTION_KEYS = new Set(['profile', 'changePassword', 'logout']);
 
 type PermissionModule = keyof Role;
 
@@ -133,6 +137,8 @@ export default function Navigation() {
   const { t } = useTranslation();
 
   const { navigationValue, setNavigationValue } = useNavigation();
+  const { actionItems, handleAction, profileModal } = useUserMenu();
+  const isMobile = !breakpoints.md;
   useEffect(() => {
     window.addEventListener('popstate', () => {
       if (navigationValue !== getNavigationValue()) {
@@ -146,10 +152,14 @@ export default function Navigation() {
 
   const handleNavigationClick = useCallback(
     ({ key }: { key: string }) => {
+      if (USER_ACTION_KEYS.has(key)) {
+        handleAction(key);
+        return;
+      }
       setNavigationValue(key);
       window.history.pushState(null, '', `${window.location.origin}/${key}`);
     },
-    [setNavigationValue]
+    [setNavigationValue, handleAction]
   );
 
   useSubscribe('roles', { _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 });
@@ -341,8 +351,20 @@ export default function Navigation() {
       });
     }
 
+    // On mobile the bottom footer (user identity + actions) is hidden, so its
+    // controls live here instead — under a header showing who is signed in.
+    if (isMobile && user) {
+      newItems.push({ key: 'div-user', type: 'divider' });
+      newItems.push({
+        key: 'user-header',
+        type: 'group',
+        label: user.profile?.name || user.username,
+      });
+      newItems.push(...actionItems);
+    }
+
     return newItems;
-  }, [roles, navigationValue, t]);
+  }, [roles, navigationValue, t, isMobile, user, actionItems]);
 
   const shortcutLabel = useMemo(() => getPaletteShortcutLabel(), []);
 
@@ -355,6 +377,9 @@ export default function Navigation() {
             selectedKeys: [navigationValue],
             items,
             onClick: handleNavigationClick,
+            // Cap to the viewport and scroll: the menu can be tall on mobile
+            // (all nav entries + the user section that replaces the footer).
+            style: { maxHeight: 'calc(100dvh - 72px)', overflowY: 'auto' },
           }}
         >
           <Tooltip title={t('palette.shortcutHint', { shortcut: shortcutLabel })} placement="bottomRight">
@@ -364,6 +389,7 @@ export default function Navigation() {
           </Tooltip>
         </Dropdown>
       )}
+      {isMobile && user && profileModal}
     </nav>
   );
 }

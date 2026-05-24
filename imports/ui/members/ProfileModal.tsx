@@ -14,7 +14,11 @@ export default function ProfileModal({ showProfile = false, toggleProfile = () =
   const [profileStats, setProfileStats] = useState<Record<string, unknown> | null>(null);
   const { t } = useTranslation();
   useEffect(() => {
-    Meteor.callAsync('members.profileStats').then((data: Record<string, unknown>) => setProfileStats(data));
+    // Guard the rejection: profileStats requires auth, so a logged-out mount
+    // would otherwise surface an uncaught Unauthorized (dev-overlay) error.
+    Meteor.callAsync('members.profileStats')
+      .then((data: Record<string, unknown>) => setProfileStats(data))
+      .catch(() => setProfileStats(null));
   }, []);
 
   return (

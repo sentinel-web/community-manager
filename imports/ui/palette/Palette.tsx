@@ -258,7 +258,7 @@ export default function Palette() {
         if (isOpen) inputRef.current?.focus();
       }}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', maxHeight: '60vh' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', maxHeight: '60dvh' }}>
         <div
           role="status"
           aria-live="polite"
