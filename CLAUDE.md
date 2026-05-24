@@ -12,7 +12,7 @@ npm run update         # Update all Meteor/npm packages and fix vulnerabilities
 npm run visualize      # Analyze production bundle size
 ```
 
-Test user auto-created in development mode only: `admin` / `admin` (requires `NODE_ENV !== 'production'`)
+Test user auto-created in development mode only: `admin` / `admin` (requires `NODE_ENV !== 'production'`). Comprehensive demo data (members, events, tasks, briefing templates, etc.) is wiped-and-reseeded on demand via the `demoData.generate` method (dev only) — see `server/apis/demoData.server.ts`.
 
 ## Architecture
 
@@ -22,8 +22,9 @@ This is a **Meteor.js 3.4+** full-stack application for managing ArmA III commun
 
 ```
 client/main.tsx         # Client entry point
-server/main.ts          # Server setup, permissions, validation, test data
+server/main.ts          # Server setup, permissions, validation, dev admin user
 server/apis/            # API implementations (members, events, backup, logs, etc.) — *.server.ts
+server/apis/demoData.server.ts  # On-demand demo-data seeder (demoData.generate, dev only)
 server/crud.lib.ts      # Generic CRUD method/publish generator
 server/collection-registry.ts  # Per-collection permission/FK/audit metadata (COLLECTION_REGISTRY)
 server/mutation-pipeline.ts    # Shared server-mutation lifecycle (runMutation: auth→perm→validate→body→audit)
