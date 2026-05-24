@@ -77,7 +77,7 @@ export default function EventDetailPopover({ event, open, setOpen, onEdit }: Eve
           </Button>
         </Space>
       }
-      destroyOnClose
+      destroyOnHidden
     >
       {loading ? (
         <Row justify="center" style={{ padding: 24 }}>
