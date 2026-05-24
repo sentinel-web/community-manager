@@ -42,6 +42,22 @@ Source of truth is `imports/i18n/translations.ts` — a flat `Record<DottedKey, 
 
 The previous design (three hand-synchronized `locales/{en,de,fr}.json` files + a `getTranslation` walker that returned the key string on miss) had no way to express any of these invariants. The deepening removes the JSON files entirely; the locale set lives once, in TypeScript.
 
+### DrawerStack
+
+The single deep module (`imports/ui/drawer-stack/`) that owns the side-panel UI for nested entity editing. Replaces the two parallel `DrawerContext` / `SubdrawerContext` providers and the hand-rolled depth heuristic (`useSubdrawer` boolean prop, `const usedDrawer = !drawer.drawerOpen ? drawer : subdrawer`) that previously sprawled across `Section`, `CollectionSelect`, and every nested form (`RanksForm`, `SquadsForm`, `SpecializationForm`, …).
+
+Internally the module holds an ordered array of **frames**. Each `InternalFrame` carries `{ id, title, Component, model, extra, confirmCloseRef, resolveFn, settled }`; the slice handed to a form through `FrameContext` is `{ model, resolve, cancel, confirmCloseRef }`. The renderer reflects the array as a recursively nested chain of antd `<Drawer>` elements — depth is unbounded, no caller is depth-aware.
+
+The seam is three hooks:
+
+- **`useDrawerStack()`** — used by openers (`Section`, `CollectionSelect`, `Palette`). Exposes `push<R, M>(options): Promise<R | undefined>`, where `options` is `{ title, Component, model, extra? }`. Every push returns a promise that resolves with the value the form passes to its frame's `resolve`, or `undefined` if the user cancels. This is the new leverage: a `CollectionSelect` inside a `SquadsForm` can `await editor.push(...)` to create a new `Rank` inline and receive the inserted doc back, auto-selecting it — eliminating the "create, close, re-find" dance.
+- **`useDrawerFrame<R, M>()`** — used by forms. Returns `{ model, resolve, cancel }`, resolving the topologically-nearest frame, so a form has no idea (and no need to know) what depth it's rendered at. Replaces both `useContext(useSubdrawer ? SubdrawerContext : DrawerContext)` and the `setOpen` / `useSubdrawer` props on every form.
+- **`useConfirmClose(predicate)`** — used by forms with unsaved-state guards. Writes the predicate into the nearest frame's `confirmCloseRef.current` on every render; the predicate returns `boolean | Promise<boolean>`.
+
+Close semantics: when the user dismisses the top frame (antd `onClose` from X-click or mask-click), the stack invokes the predicate stored in that frame's `confirmCloseRef` first; it may return `false` (or a `Promise<boolean>`) to abort the close. User-initiated close is the only path that runs the predicate — code-initiated `resolve(value)` / `cancel()` from inside a form is authoritative and skips the prompt. Programmatic close of a non-top frame cascades down: any frames stacked above also resolve with `undefined`, matching the modal-dialog convention.
+
+The depth pattern that previously required a `useSubdrawer: boolean` prop drilled through every nested form, plus an `if (drawer.drawerOpen) use subdrawer else use drawer` branch at each open site, is now structurally impossible — there is no second context to choose between, and frames don't expose their depth on the seam.
+
 ## Doctrines
 
 ### Rule of three
