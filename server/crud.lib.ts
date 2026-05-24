@@ -7,7 +7,7 @@ import {
   clearRoleCache,
 } from './main';
 import { createLog } from './apis/logs.server';
-import { runMutation } from './mutation-pipeline';
+import { runMutation, snapshotTouchedFields } from './mutation-pipeline';
 import { COLLECTION_REGISTRY } from './collection-registry';
 import { enforceIntegrityOnDelete, buildRemoveAuditPayload, validateForeignKeys } from './integrity';
 import type { CrudCollectionMap, CrudCollectionName } from '/imports/api/types';
@@ -159,11 +159,20 @@ function createCollectionMethods(collection: CrudCollectionName): void {
               operation: 'update',
               action: auditAllowed ? `${collection}.updated` : undefined,
               auditShape: 'update',
+              redact: registryEntry.redact?.update,
               permissionModule,
               fallbackFlag: fallback?.update,
               validate: ([targetId, changes]) => {
                 validateString(targetId, false);
                 validateObject(changes, false);
+              },
+              // One indexed _id read so the audit log captures pre-update values
+              // for the touched fields, enabling a before→after diff view.
+              captureBefore: async ([targetId, changes]) => {
+                const doc = await Collection.findOneAsync(targetId);
+                return doc
+                  ? snapshotTouchedFields(doc as Record<string, unknown>, changes as Record<string, unknown>)
+                  : undefined;
               },
             },
             [id, data] as const,

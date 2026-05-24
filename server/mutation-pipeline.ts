@@ -15,10 +15,16 @@ export interface MutationDescriptor<TArgs extends readonly unknown[], TResult> {
   readonly action?: string;
   readonly auditShape?: AuditShape;
   readonly audit?: (args: TArgs, result: TResult) => Record<string, unknown>;
-  // Top-level keys to strip from the standard audit payload before logging.
-  // Applied only to standard auditShape paths; descriptor.audit functions own
-  // their own redaction.
+  // Sensitive keys to strip from the standard audit payload before logging.
+  // Shape-aware (see buildStandardPayload): stripped at the top level for
+  // `insert`, and from within `changes`/`before` for `update`. Applied only to
+  // standard auditShape paths; descriptor.audit functions own their redaction.
   readonly redact?: readonly string[];
+  // Snapshot taken after validation/permission checks but BEFORE `body` runs,
+  // so it can read the pre-mutation document. Its return is folded into the
+  // standard `update` audit payload as `before`, giving logs a true
+  // before→after diff. Returns undefined to omit (e.g. doc not found).
+  readonly captureBefore?: (args: TArgs) => Promise<Record<string, unknown> | undefined>;
   readonly requireAuth?: boolean;
   readonly allowAnonymous?: boolean;
   readonly permissionModule?: string | null;
@@ -45,20 +51,63 @@ function buildDenialAction<TArgs extends readonly unknown[], TResult>(
   return `${descriptor.collection}.${OP_TO_DENIAL_SEGMENT[descriptor.operation]}.denied`;
 }
 
+// Resolve a (possibly dotted) key against a document. Mirrors how the generic
+// update accepts both nested objects (`{ profile: {...} }`) and dotted-path
+// modifiers (`{ 'profile.specializationIds': [...] }`).
+function getByPath(doc: Record<string, unknown>, path: string): unknown {
+  if (!path.includes('.')) return doc[path];
+  return path.split('.').reduce<unknown>((acc, seg) => {
+    if (acc == null || typeof acc !== 'object') return undefined;
+    return (acc as Record<string, unknown>)[seg];
+  }, doc);
+}
+
+// Build the pre-mutation snapshot for an update, keyed identically to `changes`
+// so the diff view can zip the two maps without path-matching. Each key in
+// `changes` (plain or dotted) maps to its current value on `doc`.
+export function snapshotTouchedFields(
+  doc: Record<string, unknown>,
+  changes: Record<string, unknown>,
+): Record<string, unknown> {
+  const before: Record<string, unknown> = {};
+  for (const key of Object.keys(changes)) {
+    before[key] = getByPath(doc, key);
+  }
+  return before;
+}
+
+function omitKeys(source: Record<string, unknown>, redactSet: Set<string>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(source)) {
+    if (!redactSet.has(key)) out[key] = value;
+  }
+  return out;
+}
+
 function buildStandardPayload<TArgs extends readonly unknown[], TResult>(
   shape: AuditShape,
   args: TArgs,
   result: TResult,
+  before: Record<string, unknown> | undefined,
+  redact: readonly string[] | undefined,
 ): Record<string, unknown> {
+  const redactSet = redact?.length ? new Set(redact) : undefined;
   switch (shape) {
     case 'insert': {
       const payload = (args[0] ?? {}) as Record<string, unknown>;
-      return { id: result as unknown as string, ...payload };
+      const merged = { id: result as unknown as string, ...payload };
+      return redactSet ? omitKeys(merged, redactSet) : merged;
     }
     case 'update': {
       const id = args[0] as string;
-      const changes = (args[1] ?? {}) as Record<string, unknown>;
-      return { id, changes };
+      const rawChanges = (args[1] ?? {}) as Record<string, unknown>;
+      const changes = redactSet ? omitKeys(rawChanges, redactSet) : rawChanges;
+      const payload: Record<string, unknown> = { id, changes };
+      if (before) {
+        const cleanBefore = redactSet ? omitKeys(before, redactSet) : before;
+        if (Object.keys(cleanBefore).length > 0) payload.before = cleanBefore;
+      }
+      return payload;
     }
     case 'remove': {
       const id = args[0] as string;
@@ -133,21 +182,16 @@ export async function runMutation<TArgs extends readonly unknown[], TResult>(
     }
   }
 
+  // Snapshot the pre-mutation state before the body mutates the document.
+  const before = descriptor.captureBefore ? await descriptor.captureBefore(args) : undefined;
+
   const result = await body(args);
 
   if (descriptor.action) {
     if (descriptor.audit) {
       await createLog(descriptor.action, descriptor.audit(args, result));
     } else if (descriptor.auditShape) {
-      let payload = buildStandardPayload(descriptor.auditShape, args, result);
-      if (descriptor.redact?.length) {
-        const redactSet = new Set(descriptor.redact);
-        const redacted: Record<string, unknown> = {};
-        for (const [key, value] of Object.entries(payload)) {
-          if (!redactSet.has(key)) redacted[key] = value;
-        }
-        payload = redacted;
-      }
+      const payload = buildStandardPayload(descriptor.auditShape, args, result, before, descriptor.redact);
       await createLog(descriptor.action, payload);
     }
   }

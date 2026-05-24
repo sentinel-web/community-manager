@@ -91,6 +91,9 @@ describe('crud.lib — medals happy path + permission enforcement', () => {
     const log = await findLatestAuditLog('medals.updated', insertedMedalId);
     assert.ok(log, 'Expected a medals.updated log entry');
     assert.deepStrictEqual(log.payload.changes, { color: '#0000ff' });
+    // before-capture: the audit log records the touched field's pre-update
+    // value, keyed identically to `changes`, enabling a before→after diff.
+    assert.deepStrictEqual(log.payload.before, { color: '#ff0000' });
   });
 
   it('count respects permissions (reader allowed, unauthorized denied)', async () => {

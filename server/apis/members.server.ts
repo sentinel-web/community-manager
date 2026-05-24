@@ -13,7 +13,7 @@ import SpecializationsCollection from '../../imports/api/collections/specializat
 import SquadsCollection from '../../imports/api/collections/squads.collection';
 import { validateObject, validatePublish, validateString, validateUserId, checkPermission, checkSpecialPermission, getSquadScope, isOfficerOrAdmin, getUserRole } from '../main';
 import { createLog } from './logs.server';
-import { runMutation } from '../mutation-pipeline';
+import { runMutation, snapshotTouchedFields } from '../mutation-pipeline';
 import { COLLECTION_REGISTRY } from '../collection-registry';
 import { enforceIntegrityOnDelete, buildRemoveAuditPayload, validateForeignKeys } from '../integrity';
 import type { Role } from '/imports/api/types';
@@ -101,10 +101,19 @@ if (Meteor.isServer) {
           operation: 'update',
           action: 'members.updated',
           auditShape: 'update',
+          redact: COLLECTION_REGISTRY.members.redact?.update,
           permissionModule: 'members',
           validate: ([id, d]) => {
             validateString(id, false);
             validateObject(d, false);
+          },
+          // Snapshot the touched fields' current values for the before→after
+          // diff view. Sensitive keys are stripped via the `redact` list above.
+          captureBefore: async ([targetId, changes]) => {
+            const doc = await MembersCollection.findOneAsync(targetId);
+            return doc
+              ? snapshotTouchedFields(doc as unknown as Record<string, unknown>, changes as Record<string, unknown>)
+              : undefined;
           },
           permissionOverride: async (ctx, [, d]) => {
             // specOnly + canManageSpecializations: a non-update-permitted caller

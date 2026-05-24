@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import { Meteor } from 'meteor/meteor';
-import { runMutation } from '../../server/mutation-pipeline';
+import { runMutation, snapshotTouchedFields } from '../../server/mutation-pipeline';
 import LogsCollection from '../../imports/api/collections/logs.collection';
 import MedalsCollection from '../../imports/api/collections/medals.collection';
 import {
@@ -193,6 +193,64 @@ describe('mutation-pipeline — runMutation seam mechanics', () => {
     assert.deepStrictEqual(log.payload, { id: 'target-id', changes: { color: '#000' } });
   });
 
+  it('update with captureBefore folds touched pre-values into payload.before', async () => {
+    await runMutation(
+      { userId: adminUserId },
+      {
+        collection: FAKE_COLLECTION,
+        operation: 'update',
+        action: `${FAKE_COLLECTION}.updated`,
+        auditShape: 'update',
+        permissionModule: 'medals',
+        captureBefore: async () => ({ color: '#fff' }),
+      },
+      ['target-id', { color: '#000' }] as const,
+      async () => 1,
+    );
+    const log = await findLatestPipelineLog(`${FAKE_COLLECTION}.updated`);
+    assert.ok(log);
+    assert.deepStrictEqual(log.payload, { id: 'target-id', changes: { color: '#000' }, before: { color: '#fff' } });
+  });
+
+  it('captureBefore returning undefined omits the before key (e.g. doc not found)', async () => {
+    await runMutation(
+      { userId: adminUserId },
+      {
+        collection: FAKE_COLLECTION,
+        operation: 'update',
+        action: `${FAKE_COLLECTION}.updated`,
+        auditShape: 'update',
+        permissionModule: 'medals',
+        captureBefore: async () => undefined,
+      },
+      ['target-id', { color: '#000' }] as const,
+      async () => 1,
+    );
+    const log = await findLatestPipelineLog(`${FAKE_COLLECTION}.updated`);
+    assert.ok(log);
+    assert.deepStrictEqual(log.payload, { id: 'target-id', changes: { color: '#000' } });
+  });
+
+  it('update redact strips sensitive keys from both changes and before', async () => {
+    await runMutation(
+      { userId: adminUserId },
+      {
+        collection: FAKE_COLLECTION,
+        operation: 'update',
+        action: `${FAKE_COLLECTION}.updated`,
+        auditShape: 'update',
+        redact: ['password'],
+        permissionModule: 'medals',
+        captureBefore: async () => ({ name: 'old', password: 'old-hash' }),
+      },
+      ['target-id', { name: 'new', password: 'new-hash' }] as const,
+      async () => 1,
+    );
+    const log = await findLatestPipelineLog(`${FAKE_COLLECTION}.updated`);
+    assert.ok(log);
+    assert.deepStrictEqual(log.payload, { id: 'target-id', changes: { name: 'new' }, before: { name: 'old' } });
+  });
+
   it('body succeeds — standard remove audit shape: { id }', async () => {
     await runMutation(
       { userId: adminUserId },
@@ -357,5 +415,33 @@ describe('mutation-pipeline — factory and direct call paths produce equivalent
       'Factory and direct payloads must have identical key sets',
     );
     assert.strictEqual(factoryShape.color, directShape.color);
+  });
+});
+
+describe('mutation-pipeline — snapshotTouchedFields', () => {
+  it('captures top-level and dotted-path values, keyed identically to changes', () => {
+    const doc = { name: 'Alpha', profile: { rankId: 'r1', specializationIds: ['s1'] } };
+    const changes = { name: 'Beta', 'profile.specializationIds': ['s2'] };
+    assert.deepStrictEqual(snapshotTouchedFields(doc, changes), {
+      name: 'Alpha',
+      'profile.specializationIds': ['s1'],
+    });
+  });
+
+  it('captures the whole nested object when a top-level key is touched', () => {
+    const doc = { profile: { rankId: 'r1', name: 'Old' } };
+    assert.deepStrictEqual(snapshotTouchedFields(doc, { profile: { rankId: 'r2' } }), {
+      profile: { rankId: 'r1', name: 'Old' },
+    });
+  });
+
+  it('yields undefined for keys absent on the doc (added fields)', () => {
+    assert.deepStrictEqual(snapshotTouchedFields({}, { color: '#000' }), { color: undefined });
+  });
+
+  it('yields undefined for dotted paths whose intermediate is missing', () => {
+    assert.deepStrictEqual(snapshotTouchedFields({ profile: null }, { 'profile.rankId': 'r1' }), {
+      'profile.rankId': undefined,
+    });
   });
 });
