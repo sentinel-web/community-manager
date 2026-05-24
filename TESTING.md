@@ -399,33 +399,51 @@ describe('checkPermission', () => {
 });
 ```
 
-### React Hooks (Client Tests)
+### React Hooks & Components (Client Tests)
 
-Test custom hooks with `@testing-library/react-hooks` (future):
+> ⚠️ **Client tests do not run in `npm test` or CI.** `meteor test --once` only
+> executes **server** tests; it ends with `RUNNING SERVER TESTS` and prints
+> `Load the app in a browser to run client tests, or set the
+> TEST_BROWSER_DRIVER environment variable.` We do not set that variable and no
+> headless browser is installed, so any test guarded by `if (Meteor.isClient)`
+> **never executes in CI** — it can only run in watch mode (`npm run test-app`)
+> with a browser open at `localhost:3000`.
+>
+> **Consequence:** never rely on a client-only test as a CI regression guard.
+> For logic that needs a DOM, mirror it with a **pure-logic server test** that
+> runs everywhere (see `drawerStackStore.test.ts`, which covers the same
+> behaviour as the DOM-rendering `drawerStackHooks.test.tsx` without a browser).
+> For real-browser behaviour that must be guarded in CI, use a Playwright e2e
+> test (`npm run e2e`) instead.
 
-```javascript
-// tests/client/hooks/useTranslation.test.js
-import { renderHook } from '@testing-library/react-hooks';
-import { useTranslation } from '/imports/i18n/LanguageContext.jsx';
+Client tests render real components into a DOM using `react-dom/client` + `act()`,
+gated on `Meteor.isClient` so the server run skips them. Use `require()` (not
+`import`) for the modules under test to avoid load-order issues:
 
-describe('useTranslation', () => {
-  it('returns translation function', () => {
-    const { result } = renderHook(() => useTranslation(), {
-      wrapper: LanguageProvider
-    });
+```tsx
+// tests/client/hooks/example.test.tsx
+import assert from 'node:assert';
+import { Meteor } from 'meteor/meteor';
+import React from 'react';
 
-    assert.strictEqual(typeof result.current.t, 'function');
+if (Meteor.isClient) {
+  const ReactDOMClient = require('react-dom/client') as typeof import('react-dom/client');
+  const { act } = require('react-dom/test-utils') as { act: (cb: () => void | Promise<void>) => Promise<void> };
+
+  it('renders into a real DOM node', async () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = ReactDOMClient.createRoot(container);
+    await act(async () => root.render(<SomeComponent />));
+    assert.ok(container.querySelector('.expected-selector'));
+    await act(async () => root.unmount());
+    container.remove();
   });
-
-  it('translates known keys', () => {
-    const { result } = renderHook(() => useTranslation(), {
-      wrapper: LanguageProvider
-    });
-
-    assert.strictEqual(result.current.t('common.save'), 'Save');
-  });
-});
+}
 ```
+
+See `tests/client/hooks/drawerStackHooks.test.tsx` for the full `renderHook`
+helper and provider-wrapping patterns.
 
 ---
 
