@@ -1,4 +1,4 @@
-import { Button } from 'antd';
+import { Button, Col } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import { useTracker } from 'meteor/react-meteor-data';
 import { Mongo } from 'meteor/mongo';
@@ -53,7 +53,11 @@ export default function Tasks() {
         FormComponent={TaskForm}
         columnsFactory={getTaskColumns}
         customView={filter?.type === 'kanban' ? KanbanBoard : false}
-        headerExtra={<Button onClick={openFilterDrawer}>{t('tasks.filter')}</Button>}
+        headerExtra={
+          <Col>
+            <Button onClick={openFilterDrawer}>{t('tasks.filter')}</Button>
+          </Col>
+        }
         filterFactory={filterFactory}
       />
     </div>

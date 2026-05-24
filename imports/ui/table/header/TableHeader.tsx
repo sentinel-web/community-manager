@@ -6,6 +6,8 @@ interface TableHeaderProps {
   handleChange?: (event: ChangeEvent<HTMLInputElement>) => void;
   value?: string;
   handleCreate?: () => void;
+  /** Rendered between the search field and the create button inside the antd
+   *  Row — must be `<Col>`(s) so it gets the gutter spacing and wrap behavior. */
   extra?: ReactNode;
   canCreate?: boolean;
 }
