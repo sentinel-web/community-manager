@@ -134,7 +134,10 @@ export default function Orbat() {
         title={<Typography.Title level={3}>{t('orbat.title')}</Typography.Title>}
         extra={<OrbatViewSelector viewType={viewType} handleChange={setViewType} t={t} />}
       >
-        <div style={{ overflow: 'auto' }}>
+        {/* Horizontal-only scroll: a wide org tree pans sideways within the card
+            rather than pushing a page-level scrollbar, while vertical growth flows
+            into the page's content scroll instead of a nested vertical scrollbar. */}
+        <div style={{ overflowX: 'auto' }}>
           {options?.length === 0 && <Empty />}
           {options.map(option => {
             return (
