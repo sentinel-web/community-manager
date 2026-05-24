@@ -35,9 +35,8 @@ export default function Tasks() {
 
   const filterFactory = useCallback(
     (string: string): Mongo.Selector<Task> => {
-      const newFilter: Mongo.Selector<Task> = {
-        status: { $in: filter?.status || [] },
-      };
+      const newFilter: Mongo.Selector<Task> = {};
+      if (filter?.status?.length) (newFilter as Record<string, unknown>).status = { $in: filter.status };
       if (string) (newFilter as Record<string, unknown>).name = { $regex: string, $options: 'i' };
       if (filter?.participants?.length) (newFilter as Record<string, unknown>).participants = { $in: filter.participants };
       return newFilter;
