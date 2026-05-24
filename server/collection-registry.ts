@@ -52,7 +52,7 @@ export const COLLECTION_REGISTRY: Record<CrudCollectionName, CollectionRegistryE
   medals: { module: 'medals' },
   members: {
     module: 'members',
-    redact: { insert: ['password'] },
+    redact: { insert: ['password'], update: ['password'] },
     displayField: 'profile.name',
     foreignKeys: [
       { field: 'profile.roleId', target: 'roles', kind: 'scalar', onDelete: 'block' },

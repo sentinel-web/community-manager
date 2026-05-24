@@ -4,6 +4,7 @@ import dayjs from 'dayjs';
 import React, { useCallback, useMemo } from 'react';
 import type { LogEntry } from '../../api/types/misc';
 import { useDrawerFrame } from '../drawer-stack';
+import LogDiffView from './LogDiffView';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 
 const { Text } = Typography;
@@ -13,6 +14,9 @@ const LogViewer = () => {
   const log = (model || {}) as unknown as LogEntry;
   const { message } = App.useApp();
   const { t } = useTranslation();
+  // Update logs carry { id, changes, before? } — rendered as a before→after
+  // diff. All other actions keep the raw JSON payload view.
+  const isUpdate = Boolean(log?.action?.endsWith('.updated'));
 
   const handleCopyId = useCallback(async () => {
     try {
@@ -53,14 +57,17 @@ const LogViewer = () => {
       {
         key: 'payload',
         label: t('logs.payload'),
-        children: (
-          <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: '300px', overflow: 'auto' }}>
-            {log?.payload ? JSON.stringify(log.payload, null, 2) : '-'}
-          </pre>
-        ),
+        children:
+          isUpdate && log?.payload ? (
+            <LogDiffView payload={log.payload} />
+          ) : (
+            <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: '300px', overflow: 'auto' }}>
+              {log?.payload ? JSON.stringify(log.payload, null, 2) : '-'}
+            </pre>
+          ),
       },
     ],
-    [log, t, handleCopyId]
+    [log, t, handleCopyId, isUpdate]
   );
 
   return <Descriptions column={1} bordered items={items} />;
