@@ -6,6 +6,7 @@ import './helpers/colors/hexToRgb.test';
 import './helpers/colors/parseColor.test';
 import './server/crudMethods.test';
 import './server/getCollection.test';
+import './server/htmlSanitizer.test';
 import './server/i18n.extractParams.test';
 import './server/i18n.invariants.test';
 import './server/integrity.test';

@@ -21,6 +21,7 @@
     "@babel/runtime": "^7.25.4",
     "@swc/helpers": "^0.5.17",
     "antd": "^5.20.2",
+    "dompurify": "^3.4.5",
     "fuse.js": "^7.3.0",
     "jszip": "^3.10.1",
     "meteor-node-stubs": "^1.2.7",
@@ -30,7 +31,8 @@
     "react-dom": "^18.3.1",
     "react-organizational-chart": "^2.2.1",
     "recharts": "^3.7.0",
-    "rrule": "^2.8.1"
+    "rrule": "^2.8.1",
+    "sanitize-html": "^2.17.4"
   },
   "meteor": {
     "mainModule": {
@@ -55,6 +57,7 @@
     "@types/node": "^20.14.0",
     "@types/react-beautiful-dnd": "^13.1.8",
     "@types/react-dom": "^18.3.7",
+    "@types/sanitize-html": "^2.16.1",
     "eslint": "^9.28.0",
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-react": "^7.37.5",

@@ -4,6 +4,14 @@ Project-wide domain language and load-bearing decisions. ADRs go in `docs/adr/`.
 
 ## Domain terms
 
+### BriefingTemplate
+
+A reusable, named block of rich-text content that members load into an **event description** to seed a briefing. Stored in its own simple-CRUD collection (`briefingTemplates`), shape `{ name, color, content, description }` where `content` is the rich-text body (sanitized HTML) and `description` is a short plain-text note shown in the templates list. Rides on a new `briefingTemplates` permission module.
+
+Loading a template into an event is a **one-way copy (snapshot)**: the template's `content` is copied into the event's `description` at load time and is freely editable afterward. The event keeps no reference to the template, and editing a template never propagates to past events. There is intentionally no `briefingTemplateId` on the event.
+
+Rich text is stored as **sanitized HTML** and sanitized at two points — on the server write path (so Mongo never holds hostile markup) and again at client render, immediately before the HTML is injected into the DOM. A single library-agnostic allow-list (`imports/api/htmlSanitizer/sanitizePolicy.ts`) is the shared source of truth; the server enforces it with `sanitize-html` and the client with DOMPurify. Only two surfaces are rich text: the briefing-template `content` and the event `description`. Every other collection's `description` stays plain text.
+
 ### MutationWithAudit
 
 The single deep module (`server/mutation-pipeline.ts`) that owns the standard server-mutation lifecycle. Lifecycle stages, in order:
