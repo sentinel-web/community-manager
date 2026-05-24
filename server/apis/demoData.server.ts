@@ -1,6 +1,7 @@
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
 import AttendancesCollection from '../../imports/api/collections/attendances.collection';
+import BriefingTemplatesCollection from '../../imports/api/collections/briefingTemplates.collection';
 import DiscoveryTypesCollection from '../../imports/api/collections/discoveryTypes.collection';
 import EventsCollection from '../../imports/api/collections/events.collection';
 import EventTypesCollection from '../../imports/api/collections/eventTypes.collection';
@@ -24,9 +25,10 @@ import { createLog } from './logs.server';
 
 async function wipeAllCollections(): Promise<void> {
   // Every collection-wipe is independent — racing them through Promise.all
-  // turns a 19-step waterfall into a single round-trip.
+  // turns a 20-step waterfall into a single round-trip.
   await Promise.all([
     AttendancesCollection.removeAsync({}),
+    BriefingTemplatesCollection.removeAsync({}),
     DiscoveryTypesCollection.removeAsync({}),
     EventsCollection.removeAsync({}),
     EventTypesCollection.removeAsync({}),
@@ -157,6 +159,34 @@ const TASK_STATUSES: unknown[] = [
   { _id: 'done', name: 'Done', color: '#52c41a', description: 'Completed tasks' },
 ];
 
+// Briefing templates: reusable rich-text blocks loaded into event descriptions.
+// `content` is sanitized HTML (ADR 0001) and only uses tags from the shared
+// allow-list (imports/api/htmlSanitizer/sanitizePolicy.ts).
+const BRIEFING_TEMPLATES: unknown[] = [
+  {
+    _id: 'tpl-operation',
+    name: 'Operation Briefing',
+    color: '#f5222d',
+    description: 'Standard mission briefing for full-scale operations',
+    content:
+      '<h3>Situation</h3><p>Describe the area of operations, friendly forces, and known enemy presence.</p>' +
+      '<h3>Mission</h3><p><strong>Who, what, where, when, and why.</strong> State the objective in a single clear sentence.</p>' +
+      '<h3>Execution</h3><ul><li>Phase 1 — Insertion</li><li>Phase 2 — Assault</li><li>Phase 3 — Consolidation and exfil</li></ul>' +
+      '<h3>Comms</h3><p>Short range: <em>squad net</em>. Long range: <em>command net</em>. Maintain radio discipline.</p>',
+  },
+  {
+    _id: 'tpl-training',
+    name: 'Training Session',
+    color: '#1890ff',
+    description: 'Outline for skill-building and certification sessions',
+    content:
+      '<h3>Objectives</h3><p>By the end of this session, attendees should be able to:</p>' +
+      '<ul><li>Demonstrate the core technique</li><li>Apply it under time pressure</li><li>Operate safely as part of a team</li></ul>' +
+      '<h3>Prerequisites</h3><p>Bring the required kit and review the relevant SOP beforehand.</p>' +
+      '<blockquote>Slots are limited — sign up early.</blockquote>',
+  },
+];
+
 interface MemberSeed {
   username: string;
   password: string;
@@ -181,10 +211,10 @@ function createEvents(): unknown[] {
   const day = 24 * 60 * 60 * 1000;
   return [
     { _id: 'evt-1', name: 'Basic Infantry Training', start: new Date(now - 14 * day), end: new Date(now - 14 * day + 3 * 60 * 60 * 1000), eventType: 'training', hosts: [], attendees: [], description: 'Fundamentals of infantry tactics' },
-    { _id: 'evt-2', name: 'Operation Thunderstrike', start: new Date(now - 7 * day), end: new Date(now - 7 * day + 4 * 60 * 60 * 1000), eventType: 'operation', hosts: [], attendees: [], color: '#f5222d', description: 'Large-scale combined arms operation' },
+    { _id: 'evt-2', name: 'Operation Thunderstrike', start: new Date(now - 7 * day), end: new Date(now - 7 * day + 4 * 60 * 60 * 1000), eventType: 'operation', hosts: [], attendees: [], color: '#f5222d', description: '<h3>Operation Thunderstrike</h3><p>Large-scale <strong>combined arms</strong> operation against entrenched positions in the northern sector.</p><ul><li>Alpha — frontal assault</li><li>Bravo — fire support</li><li>Charlie — flanking recon</li></ul><p><em>Mandatory attendance for all squad leaders.</em></p>' },
     { _id: 'evt-3', name: 'Marksman Qualification', start: new Date(now - 3 * day), end: new Date(now - 3 * day + 2 * 60 * 60 * 1000), eventType: 'training', hosts: [], attendees: [], description: 'Marksmanship certification course' },
-    { _id: 'evt-4', name: 'Weekly Briefing', start: new Date(now + 1 * day), end: new Date(now + 1 * day + 1 * 60 * 60 * 1000), eventType: 'briefing', hosts: [], attendees: [], description: 'Weekly community status update' },
-    { _id: 'evt-5', name: 'Operation Nightfall', start: new Date(now + 4 * day), end: new Date(now + 4 * day + 4 * 60 * 60 * 1000), eventType: 'operation', hosts: [], attendees: [], color: '#722ed1', description: 'Night operations training exercise' },
+    { _id: 'evt-4', name: 'Weekly Briefing', start: new Date(now + 1 * day), end: new Date(now + 1 * day + 1 * 60 * 60 * 1000), eventType: 'briefing', hosts: [], attendees: [], description: '<p>Weekly community status update. Agenda:</p><ol><li>Review of last week\'s operations</li><li>Upcoming events and sign-ups</li><li>Open floor for questions</li></ol>' },
+    { _id: 'evt-5', name: 'Operation Nightfall', start: new Date(now + 4 * day), end: new Date(now + 4 * day + 4 * 60 * 60 * 1000), eventType: 'operation', hosts: [], attendees: [], color: '#722ed1', description: '<h3>Operation Nightfall</h3><p>Night operations training exercise focused on <strong>low-light coordination</strong> and IR discipline.</p><blockquote>Bring NVGs and ensure IR strobes are functional before the session.</blockquote>' },
     { _id: 'evt-6', name: 'Game Night', start: new Date(now + 7 * day), end: new Date(now + 7 * day + 3 * 60 * 60 * 1000), eventType: 'social', hosts: [], attendees: [], description: 'Casual gaming and community bonding' },
     { _id: 'evt-7', name: 'Advanced CQB Training', start: new Date(now + 10 * day), end: new Date(now + 10 * day + 2 * 60 * 60 * 1000), eventType: 'training', hosts: [], attendees: [], description: 'Close quarters battle techniques' },
   ];
@@ -295,6 +325,7 @@ async function insertDemoData(): Promise<void> {
   await Promise.all(DISCOVERY_TYPES.map(dt => DiscoveryTypesCollection.insertAsync(dt as never)));
   await Promise.all(EVENT_TYPES.map(et => EventTypesCollection.insertAsync(et as never)));
   await Promise.all(TASK_STATUSES.map(ts => TaskStatusCollection.insertAsync(ts as never)));
+  await Promise.all(BRIEFING_TEMPLATES.map(tpl => BriefingTemplatesCollection.insertAsync(tpl as never)));
 
   // Members: each member's three-step chain (account create → avatar insert →
   // profile attach) stays sequential because each step depends on the previous
