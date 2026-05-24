@@ -1,4 +1,4 @@
-import { App as AntdApp, theme as AntdTheme, ConfigProvider, Layout } from 'antd';
+import { App as AntdApp, theme as AntdTheme, ConfigProvider, Grid, Layout } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import React, { createContext, useCallback, useEffect, useState } from 'react';
 import Footer from '../footer/Footer';
@@ -24,6 +24,8 @@ interface AppSettings {
 
 export default function App() {
   const { communityColor } = useSettings() as unknown as AppSettings;
+  const screens = Grid.useBreakpoint();
+  const isMobile = !screens.md;
   const [theme, setTheme] = useState<ThemeMode>(getPreferedTheme);
   const [navigationValue, setNavigationValue] = useState<string>(getNavigationValue);
 
@@ -73,9 +75,11 @@ export default function App() {
                     <Layout.Content style={{ flex: 1, overflow: 'auto' }}>
                       <Main />
                     </Layout.Content>
-                    <Layout.Footer>
-                      <Footer />
-                    </Layout.Footer>
+                    {!isMobile && (
+                      <Layout.Footer>
+                        <Footer />
+                      </Layout.Footer>
+                    )}
                   </Layout>
                   {Meteor.isDevelopment && <DemoTour />}
                   <Palette />

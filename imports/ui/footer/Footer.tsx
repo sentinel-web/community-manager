@@ -1,29 +1,16 @@
-import { DownOutlined, IdcardOutlined, LockFilled, LogoutOutlined } from '@ant-design/icons';
-import { App, Avatar, Button, Col, Dropdown, Form, Grid, Input, List, Modal, Row, Typography } from 'antd';
+import { DownOutlined } from '@ant-design/icons';
+import { Avatar, Button, Col, Dropdown, Grid, List, Row, Typography } from 'antd';
 import type { DropdownProps } from 'antd';
-import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
 import { useTracker } from 'meteor/react-meteor-data';
-import React, { useCallback, useEffect, useState } from 'react';
-import { useTranslation } from '../../i18n/LanguageContext';
-import ProfileModal from '../members/ProfileModal';
-
-interface ChangePasswordValues {
-  oldPassword: string;
-  newPassword: string;
-}
+import React, { useEffect, useState } from 'react';
+import useUserMenu from '../components/useUserMenu';
 
 export default function Footer() {
   const breakpoints = Grid.useBreakpoint();
   const user = useTracker(() => Meteor.user(), []);
-  const { modal, message } = App.useApp();
-  const { t } = useTranslation();
   const [imageSrc, setImageSrc] = useState<string | null>(null);
-  const [showProfile, setShowProfile] = useState(false);
-
-  const toggleProfile = useCallback(() => {
-    setShowProfile(prev => !prev);
-  }, []);
+  const { actionItems, handleAction, profileModal } = useUserMenu();
 
   useEffect(() => {
     const profilePictureId = user?.profile?.profilePictureId;
@@ -39,42 +26,6 @@ export default function Footer() {
       setImageSrc(null);
     }
   }, [user?.profile?.profilePictureId]);
-
-  const startChangePassword = useCallback(() => {
-    function handleSubmit({ oldPassword, newPassword }: ChangePasswordValues) {
-      Accounts.changePassword(oldPassword, newPassword, error => {
-        if (error) {
-          message.error({ content: error.message });
-        } else {
-          Modal.destroyAll();
-        }
-      });
-    }
-
-    modal.confirm({
-      title: t('auth.changePassword'),
-      footer: null,
-      centered: true,
-      closable: true,
-      content: (
-        <Form layout="vertical" onFinish={handleSubmit}>
-          <Form.Item label={t('auth.currentPassword')} name="oldPassword" rules={[{ required: true, type: 'string' }]} required>
-            <Input.Password placeholder={t('forms.placeholders.enterPassword')} autoComplete="off" />
-          </Form.Item>
-          <Form.Item label={t('auth.newPassword')} name="newPassword" rules={[{ required: true, type: 'string' }]} required>
-            <Input.Password placeholder={t('forms.placeholders.enterPassword')} autoComplete="off" />
-          </Form.Item>
-          <Row gutter={[16, 16]} justify="end" align="middle">
-            <Col>
-              <Button type="primary" htmlType="submit">
-                {t('common.submit')}
-              </Button>
-            </Col>
-          </Row>
-        </Form>
-      ),
-    });
-  }, [modal, message, t]);
 
   if (!user) {
     return <></>;
@@ -118,17 +69,11 @@ export default function Footer() {
         <Dropdown
           placement={'right' as unknown as DropdownProps['placement']}
           trigger={['click']}
-          menu={{
-            items: [
-              { key: 'changePassword', label: t('auth.changePassword'), icon: <LockFilled />, onClick: startChangePassword },
-              { key: 'profile', label: t('auth.profile'), icon: <IdcardOutlined />, onClick: toggleProfile },
-              { key: 'logout', label: t('auth.logout'), danger: true, icon: <LogoutOutlined />, onClick: () => Meteor.logout() },
-            ],
-          }}
+          menu={{ items: actionItems, onClick: ({ key }) => handleAction(key) }}
         >
           <Button type="text" icon={<DownOutlined />} />
         </Dropdown>
-        <ProfileModal showProfile={showProfile} toggleProfile={toggleProfile} />
+        {profileModal}
       </Col>
     </Row>
   );
