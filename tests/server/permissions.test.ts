@@ -178,9 +178,19 @@ describe('COLLECTION_REGISTRY', () => {
     assert.strictEqual(COLLECTION_REGISTRY.medals.fallback, undefined);
   });
 
-  it('declares allowsAnonymous only for registrations.insert', () => {
+  it('declares anonymous insert only for registrations', () => {
     assert.strictEqual(COLLECTION_REGISTRY.registrations.allowsAnonymous?.insert, true);
     assert.strictEqual(COLLECTION_REGISTRY.medals.allowsAnonymous, undefined);
+  });
+
+  it('declares anonymous read only for discoveryTypes (public registration form)', () => {
+    // The pre-auth registration form reads discoveryTypes; nothing else should
+    // be publicly readable via the generic publication.
+    assert.strictEqual(COLLECTION_REGISTRY.discoveryTypes.allowsAnonymous?.read, true);
+    for (const [name, entry] of Object.entries(COLLECTION_REGISTRY)) {
+      if (name === 'discoveryTypes') continue;
+      assert.notStrictEqual(entry.allowsAnonymous?.read, true, `${name} must not allow anonymous read`);
+    }
   });
 
   it('does not declare any CRUD-style module that overlaps with BOOLEAN_MODULES', () => {
