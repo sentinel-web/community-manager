@@ -133,6 +133,7 @@ describe('COLLECTION_REGISTRY', () => {
   it('has an entry for every CrudCollectionName', () => {
     const expected: readonly CrudCollectionName[] = [
       'attendances',
+      'briefingTemplates',
       'discoveryTypes',
       'events',
       'eventTypes',

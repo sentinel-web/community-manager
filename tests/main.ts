@@ -4,6 +4,7 @@ import './helpers/colors/getLegibleTextColor.test';
 import './helpers/colors/getLuminance.test';
 import './helpers/colors/hexToRgb.test';
 import './helpers/colors/parseColor.test';
+import './server/briefingTemplatesMethods.test';
 import './server/crudMethods.test';
 import './server/getCollection.test';
 import './server/htmlSanitizer.test';

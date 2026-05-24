@@ -10,9 +10,11 @@ import { createLog } from './apis/logs.server';
 import { runMutation, snapshotTouchedFields } from './mutation-pipeline';
 import { COLLECTION_REGISTRY } from './collection-registry';
 import { enforceIntegrityOnDelete, buildRemoveAuditPayload, validateForeignKeys } from './integrity';
+import { sanitizeHtml } from './htmlSanitizer';
 import type { CrudCollectionMap, CrudCollectionName } from '/imports/api/types';
 
 import AttendancesCollection from '../imports/api/collections/attendances.collection';
+import BriefingTemplatesCollection from '../imports/api/collections/briefingTemplates.collection';
 import DiscoveryTypesCollection from '../imports/api/collections/discoveryTypes.collection';
 import EventsCollection from '../imports/api/collections/events.collection';
 import EventTypesCollection from '../imports/api/collections/eventTypes.collection';
@@ -38,6 +40,8 @@ export function getCollection<K extends CrudCollectionName>(
   switch (collection) {
     case 'attendances':
       return AttendancesCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
+    case 'briefingTemplates':
+      return BriefingTemplatesCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
     case 'discoveryTypes':
       return DiscoveryTypesCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
     case 'events':
@@ -74,6 +78,24 @@ export function getCollection<K extends CrudCollectionName>(
       return TaskStatusCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
     default:
       throw new Meteor.Error(404, `Collection "${collection}" not found`);
+  }
+}
+
+// Rich-text HTML fields, sanitized on every write so MongoDB never stores
+// hostile markup (ADR 0001). Kept as inline code rather than a registry field:
+// per the Rule of Three doctrine, a variation present in only 1–2 collections
+// stays as code until a third site appears.
+const HTML_FIELDS: Partial<Record<CrudCollectionName, readonly string[]>> = {
+  briefingTemplates: ['content'],
+};
+
+function sanitizeHtmlFields(collection: CrudCollectionName, payload: Record<string, unknown>): void {
+  const fields = HTML_FIELDS[collection];
+  if (!fields) return;
+  for (const field of fields) {
+    if (typeof payload[field] === 'string') {
+      payload[field] = sanitizeHtml(payload[field]);
+    }
   }
 }
 
@@ -146,6 +168,7 @@ function createCollectionMethods(collection: CrudCollectionName): void {
               if (collection === 'tasks') {
                 p.createdAt = new Date();
               }
+              sanitizeHtmlFields(collection, p);
               await validateForeignKeys(collection, p);
               return Collection.insertAsync(p as unknown as CrudCollectionMap[typeof collection]);
             },
@@ -177,6 +200,7 @@ function createCollectionMethods(collection: CrudCollectionName): void {
             },
             [id, data] as const,
             async ([targetId, changes]) => {
+              sanitizeHtmlFields(collection, changes as Record<string, unknown>);
               // The generic CRUD .update wraps changes in $set, so validation
               // runs against the same modifier Mongo will see — touched-fields
               // semantics fall out naturally.

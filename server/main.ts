@@ -220,6 +220,7 @@ if (Meteor.isServer) {
 
 const collectionNames: readonly CrudCollectionName[] = [
   'attendances',
+  'briefingTemplates',
   'discoveryTypes',
   'eventTypes',
   'medals',

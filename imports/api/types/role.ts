@@ -23,6 +23,7 @@ export interface Role {
   specializations?: boolean | CrudPermission;
   medals?: boolean | CrudPermission;
   eventTypes?: boolean | CrudPermission;
+  briefingTemplates?: boolean | CrudPermission;
   taskStatus?: boolean | CrudPermission;
   registrations?: boolean | CrudPermission;
   discoveryTypes?: boolean | CrudPermission;

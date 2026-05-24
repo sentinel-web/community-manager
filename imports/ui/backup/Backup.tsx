@@ -18,6 +18,7 @@ import { useTourRef } from '../tour/TourContext';
 // the map — preserves pre-cutover defensive behavior.
 export const COLLECTION_LABEL_KEYS = {
   attendances: 'collections.attendances',
+  briefingTemplates: 'collections.briefingTemplates',
   discoveryTypes: 'collections.discoveryTypes',
   events: 'collections.events',
   eventTypes: 'collections.eventTypes',

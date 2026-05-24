@@ -11,6 +11,7 @@ import {
   MenuOutlined,
   OrderedListOutlined,
   SettingOutlined,
+  SnippetsOutlined,
   SolutionOutlined,
   TagOutlined,
   TagsOutlined,
@@ -71,6 +72,9 @@ export function getNavigationValue(): string {
   }
   if (pathname.includes('/eventTypes')) {
     return 'eventTypes';
+  }
+  if (pathname.includes('/briefingTemplates')) {
+    return 'briefingTemplates';
   }
   if (pathname.includes('/tasks')) {
     return 'tasks';
@@ -189,7 +193,14 @@ export default function Navigation() {
         icon: <TagsOutlined />,
       });
     }
-    if (hasAccess(role, 'events') || hasAccess(role, 'eventTypes')) {
+    if (hasAccess(role, 'briefingTemplates')) {
+      newItems.push({
+        key: 'briefingTemplates',
+        label: t('navigation.briefingTemplates'),
+        icon: <SnippetsOutlined />,
+      });
+    }
+    if (hasAccess(role, 'events') || hasAccess(role, 'eventTypes') || hasAccess(role, 'briefingTemplates')) {
       newItems.push({
         key: 'div-1',
         type: 'divider',

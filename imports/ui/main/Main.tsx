@@ -37,6 +37,7 @@ const Orbat = lazy(() => import('../orbat/Orbat'));
 const Members = lazy(() => import('../members/Members'));
 const Events = lazy(() => import('../events/Events'));
 const EventTypes = lazy(() => import('../events/event-types/EventTypes'));
+const BriefingTemplates = lazy(() => import('../briefing-templates/BriefingTemplates'));
 const Tasks = lazy(() => import('../tasks/Tasks'));
 const TaskStatuses = lazy(() => import('../tasks/task-status/TaskStatuses'));
 const Specializations = lazy(() => import('../specializations/Specializations'));
@@ -90,6 +91,7 @@ export default function Main() {
           {hasAccess && navigationValue === 'orbat' && <Orbat />}
           {hasAccess && navigationValue === 'events' && <Events />}
           {hasAccess && navigationValue === 'eventTypes' && <EventTypes />}
+          {hasAccess && navigationValue === 'briefingTemplates' && <BriefingTemplates />}
           {hasAccess && navigationValue === 'tasks' && <Tasks />}
           {hasAccess && navigationValue === 'taskStatus' && <TaskStatuses />}
           {hasAccess && navigationValue === 'squads' && <Squads />}

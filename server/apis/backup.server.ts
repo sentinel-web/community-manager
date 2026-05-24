@@ -12,6 +12,7 @@ const BACKUP_COLLECTIONS: readonly CrudCollectionName[] = [
   'attendances',
   'events',
   'eventTypes',
+  'briefingTemplates',
   'tasks',
   'taskStatus',
   'squads',
