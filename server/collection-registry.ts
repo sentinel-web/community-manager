@@ -14,7 +14,10 @@ export interface ForeignKeyEdge {
 export interface CollectionRegistryEntry {
   readonly module: string;
   readonly fallback?: { readonly create?: string; readonly update?: string };
-  readonly allowsAnonymous?: { readonly insert?: boolean };
+  // `insert` opens the generic `.insert` method to unauthenticated callers
+  // (see mutation-pipeline.ts); `read` opens the generic publication to them
+  // (see crud.lib.ts). Both are opt-in per collection and default to gated.
+  readonly allowsAnonymous?: { readonly insert?: boolean; readonly read?: boolean };
   readonly redact?: { readonly insert?: readonly string[]; readonly update?: readonly string[] };
   // Outgoing foreign-key edges (this collection's references to other collections).
   // Inverted to incoming-edges at boot inside server/integrity.ts.
@@ -31,7 +34,9 @@ export interface CollectionRegistryEntry {
 // the same omission under loosened type checks.
 export const COLLECTION_REGISTRY: Record<CrudCollectionName, CollectionRegistryEntry> = {
   attendances: { module: 'events' },
-  discoveryTypes: { module: 'discoveryTypes' },
+  // Discovery types are surfaced on the public (pre-auth) registration form,
+  // so guests must be able to read them. The docs carry nothing sensitive.
+  discoveryTypes: { module: 'discoveryTypes', allowsAnonymous: { read: true } },
   events: {
     module: 'events',
     fallback: { create: 'canCreateEvents' },

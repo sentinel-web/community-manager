@@ -83,8 +83,9 @@ const MAX_PUBLISH_LIMIT = 1000;
 function createCollectionPublish(collection: CrudCollectionName): void {
   if (Meteor.isServer) {
     const Collection = getCollection(collection);
+    const allowsAnonymousRead = COLLECTION_REGISTRY[collection].allowsAnonymous?.read === true;
     Meteor.publish(collection, function (filter: Record<string, unknown> = {}, options: Record<string, unknown> = {}) {
-      if (!this.userId) return this.ready();
+      if (!this.userId && !allowsAnonymousRead) return this.ready();
       validateObject(filter, false);
       validateObject(options, false);
 
