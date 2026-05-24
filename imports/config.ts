@@ -13,7 +13,9 @@ export function getDrawerWidth(windowWidth: number): number {
 }
 
 export function getModalWidth(windowWidth: number): number {
-  return windowWidth * LAYOUT.MODAL_WIDTH_RATIO;
+  // Full viewport width below the mobile breakpoint (a 75%-wide centered modal
+  // is cramped on a phone); the configured ratio on larger screens.
+  return windowWidth < BREAKPOINTS.MOBILE ? windowWidth : windowWidth * LAYOUT.MODAL_WIDTH_RATIO;
 }
 
 export function isDeviceUnsupported(windowWidth: number): boolean {

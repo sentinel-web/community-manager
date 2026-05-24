@@ -1,3 +1,4 @@
+import './client/config.test';
 import './client/hooks/drawerStackHooks.test';
 import './client/hooks/drawerStackStore.test';
 import './helpers/colors/getLegibleTextColor.test';
