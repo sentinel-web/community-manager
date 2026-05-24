@@ -15,7 +15,7 @@ COPY . .
 RUN meteor build --server-only --directory /built-app
 
 # ---------- Production stage ----------
-FROM node:20-slim AS production
+FROM node:22-slim AS production
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends tini curl ca-certificates \

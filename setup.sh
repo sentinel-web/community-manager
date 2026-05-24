@@ -58,15 +58,15 @@ install_node() {
         linux)
             if command_exists apt-get; then
                 print_info "Using apt package manager..."
-                curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+                curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
                 sudo apt-get install -y nodejs
             elif command_exists dnf; then
                 print_info "Using dnf package manager..."
-                curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
+                curl -fsSL https://rpm.nodesource.com/setup_22.x | sudo bash -
                 sudo dnf install -y nodejs
             elif command_exists yum; then
                 print_info "Using yum package manager..."
-                curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
+                curl -fsSL https://rpm.nodesource.com/setup_22.x | sudo bash -
                 sudo yum install -y nodejs
             elif command_exists pacman; then
                 print_info "Using pacman package manager..."
