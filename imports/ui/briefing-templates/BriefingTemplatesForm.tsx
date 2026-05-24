@@ -1,6 +1,6 @@
 import { App, ColorPicker, Form, Input } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import { getColorFromValues } from '/imports/helpers/colors/getColorFromValues';
 import { useDrawerFrame } from '../drawer-stack';
@@ -13,25 +13,33 @@ export default function BriefingTemplatesForm() {
   const [form] = Form.useForm();
   const { message, notification } = App.useApp();
   const [loading, setLoading] = useState(false);
-  const { model, resolve, cancel } = useDrawerFrame<string, Partial<BriefingTemplate>>();
+  const { model: rawModel, resolve, cancel } = useDrawerFrame<string, Partial<BriefingTemplate>>();
 
-  useEffect(() => {
-    if (model && Object.keys(model).length > 0) {
-      form.setFieldsValue(model);
-    } else {
-      form.setFieldsValue({ name: '', content: '', description: '', color: null });
-    }
-  }, [model, form.setFieldsValue]);
+  // Provide values synchronously via initialValues (not a setFieldsValue effect):
+  // the RichTextEditor initializes its document from `value` on first render, so
+  // a deferred effect would race the editor's own lifecycle and lose the content.
+  const model = useMemo(
+    () => ({
+      name: rawModel?.name ?? '',
+      content: rawModel?.content ?? '',
+      description: rawModel?.description ?? '',
+      color: rawModel?.color ?? null,
+    }),
+    [rawModel]
+  );
 
   const handleSubmit = useCallback(
     async (values: Record<string, unknown>) => {
       setLoading(true);
       const { name, description, content } = values as { name: string; description?: string; content?: string };
-      const args = [...(model?._id ? [model._id] : []), { name, color: getColorFromValues(values), description, content }];
+      const args = [...(rawModel?._id ? [rawModel._id] : []), { name, color: getColorFromValues(values), description, content }];
       try {
-        const result = (await Meteor.callAsync(model?._id ? 'briefingTemplates.update' : 'briefingTemplates.insert', ...args)) as string | undefined;
-        message.success(model?._id ? t('messages.briefingTemplateUpdated') : t('messages.briefingTemplateCreated'));
-        resolve(model?._id ?? result);
+        const result = (await Meteor.callAsync(
+          rawModel?._id ? 'briefingTemplates.update' : 'briefingTemplates.insert',
+          ...args
+        )) as string | undefined;
+        message.success(rawModel?._id ? t('messages.briefingTemplateUpdated') : t('messages.briefingTemplateCreated'));
+        resolve(rawModel?._id ?? result);
       } catch (error) {
         const err = error as Meteor.Error;
         notification.error({ message: err.error as string, description: err.message });
@@ -39,11 +47,11 @@ export default function BriefingTemplatesForm() {
         setLoading(false);
       }
     },
-    [model, resolve, message, notification, t]
+    [rawModel, resolve, message, notification, t]
   );
 
   return (
-    <Form form={form} layout="vertical" onFinish={handleSubmit} disabled={loading}>
+    <Form form={form} layout="vertical" initialValues={model} onFinish={handleSubmit} disabled={loading}>
       <Form.Item name="name" label={t('common.name')} rules={[{ required: true, type: 'string' }]} required>
         <Input placeholder={t('forms.placeholders.enterName')} />
       </Form.Item>
