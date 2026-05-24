@@ -1,4 +1,4 @@
-import { DeleteOutlined, SaveOutlined, TeamOutlined, UsergroupAddOutlined } from '@ant-design/icons';
+import { DeleteOutlined, SaveOutlined, SnippetsOutlined, TeamOutlined, UsergroupAddOutlined } from '@ant-design/icons';
 import { App, Button, Col, ColorPicker, DatePicker, Form, Input, Row, Select, Switch } from 'antd';
 import type { FormInstance } from 'antd';
 import dayjs, { Dayjs } from 'dayjs';
@@ -7,14 +7,17 @@ import { Mongo } from 'meteor/mongo';
 import { useFind, useSubscribe } from 'meteor/react-meteor-data';
 import React, { useCallback, useMemo, useState } from 'react';
 import EventTypesCollection from '../../api/collections/eventTypes.collection';
+import BriefingTemplatesCollection from '../../api/collections/briefingTemplates.collection';
 import SquadsCollection from '../../api/collections/squads.collection';
-import type { EventDoc } from '../../api/types/event';
+import type { EventDoc, BriefingTemplate } from '../../api/types';
 import type { CollectionDoc } from '../components/CollectionSelect';
 import { useTranslation } from '../../i18n/LanguageContext';
 import type { TranslateFn } from '../section/types';
 import { useDrawerFrame } from '../drawer-stack';
 import CollectionSelect from '../components/CollectionSelect';
 import MembersSelect from '../members/MembersSelect';
+import RichTextEditor from '../components/RichTextEditor';
+import shouldConfirmTemplateOverwrite from '/imports/helpers/shouldConfirmTemplateOverwrite';
 import { getColorFromValues } from '../specializations/SpecializationForm';
 import EventTypesForm from './event-types/EventTypesForm';
 
@@ -147,8 +150,9 @@ const EventForm = () => {
       <Form.Item name="preset" label={t('forms.labels.presetLink')} rules={[{ type: 'string' }]}>
         <Input placeholder={t('forms.placeholders.enterPresetLink')} />
       </Form.Item>
+      <BriefingTemplatePicker form={form} t={t} />
       <Form.Item name="description" label={t('common.description')} rules={[{ type: 'string' }]}>
-        <Input.TextArea autoSize placeholder={t('forms.placeholders.enterDescription')} />
+        <RichTextEditor placeholder={t('forms.placeholders.enterDescription')} />
       </Form.Item>
       <Row gutter={[16, 16]} justify="end" align="middle">
         {model?._id && (
@@ -237,6 +241,71 @@ const SquadQuickAdd = ({ form, t }: SquadQuickAddProps) => {
       <Col>
         <Button icon={<UsergroupAddOutlined />} onClick={handleAddAll} loading={loading}>
           {t('events.addAll')}
+        </Button>
+      </Col>
+    </Row>
+  );
+};
+
+interface BriefingTemplatePickerProps {
+  form: FormInstance<EventFormValues>;
+  t: TranslateFn;
+}
+
+/**
+ * Picks a briefing template and loads its content into the event description as
+ * a one-way copy (snapshot — no link kept, see CONTEXT.md BriefingTemplate). If
+ * the description already holds real content, confirm before overwriting.
+ */
+const BriefingTemplatePicker = ({ form, t }: BriefingTemplatePickerProps) => {
+  const { modal } = App.useApp();
+  const [selected, setSelected] = useState<string | undefined>(undefined);
+  useSubscribe('briefingTemplates', {}, {});
+  const templates = useFind(() => BriefingTemplatesCollection.find({}), []);
+  const options = useMemo(() => templates.map((tpl: BriefingTemplate) => ({ label: tpl.name, value: tpl._id })), [templates]);
+
+  const applyTemplate = useCallback(
+    (content: string) => {
+      form.setFieldsValue({ description: content });
+    },
+    [form]
+  );
+
+  const handleLoad = useCallback(() => {
+    const tpl = templates.find((x: BriefingTemplate) => x._id === selected);
+    if (!tpl) return;
+    const content = tpl.content || '';
+    const current = form.getFieldValue('description') as string | undefined;
+    if (shouldConfirmTemplateOverwrite(current)) {
+      modal.confirm({
+        title: t('events.overwriteDescriptionTitle'),
+        content: t('events.overwriteDescriptionBody'),
+        okText: t('common.confirm'),
+        cancelText: t('common.cancel'),
+        onOk: () => applyTemplate(content),
+      });
+    } else {
+      applyTemplate(content);
+    }
+  }, [selected, templates, form, modal, t, applyTemplate]);
+
+  return (
+    <Row gutter={[8, 8]} style={{ marginBottom: 16 }} align="middle">
+      <Col flex="auto">
+        <Select
+          style={{ width: '100%' }}
+          placeholder={t('events.selectTemplate')}
+          value={selected}
+          onChange={setSelected}
+          options={options}
+          allowClear
+          showSearch
+          optionFilterProp="label"
+        />
+      </Col>
+      <Col>
+        <Button icon={<SnippetsOutlined />} onClick={handleLoad} disabled={!selected}>
+          {t('events.loadTemplate')}
         </Button>
       </Col>
     </Row>
