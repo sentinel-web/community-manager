@@ -92,8 +92,10 @@ html {
         align-items: center;
 
         img {
-          height: 5vh;
-          width: 5vh;
+          /* Fixed size, not vh: vh scales the logo with viewport *height*, so it
+             shrank on short/emulated viewports. */
+          height: 40px;
+          width: 40px;
           object-fit: cover;
         }
       }
