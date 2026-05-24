@@ -12,7 +12,14 @@ npm run update         # Update all Meteor/npm packages and fix vulnerabilities
 npm run visualize      # Analyze production bundle size
 ```
 
-Test user auto-created in development mode only: `admin` / `admin` (requires `NODE_ENV !== 'production'`). Comprehensive demo data (members, events, tasks, briefing templates, etc.) is wiped-and-reseeded on demand via the `demoData.generate` method (dev only) — see `server/apis/demoData.server.ts`.
+Test user auto-created in development mode only: `admin` / `admin` (requires `NODE_ENV !== 'production'`).
+
+**Demo Data Generation** (`server/apis/demoData.server.ts`) — comprehensive sample data (all reference collections, members, events, attendances, tasks, questionnaires + responses, registrations, briefing templates, settings) generated on demand, dev-only:
+- **Trigger (UI):** Settings page → "Generate Demo Data" (`DemoDataSettings` in `imports/ui/settings/Settings.tsx`) → `Popconfirm` → `Meteor.callAsync('demoData.generate')` → success alert + `window.location.reload()`
+- **Server method** (`demoData.generate`): rejects in production (403) → `validateUserId` → `checkPermission(userId, 'settings')` → `wipeAllCollections()` → `insertDemoData()` → `createLog('demoData.generated')`
+- **Destructive — full reset, not append:** `wipeAllCollections()` empties every collection before reseeding. Seeds use fixed explicit `_id`s; reference collections are inserted before the members/events/etc. that FK-reference them
+- **Adding a collection:** wire it into both `wipeAllCollections()` and `insertDemoData()` (and keep both alphabetical), or its data silently leaks across regenerations
+- Rich-text seed fields (event `description`, briefing-template `content`) must use only tags from the sanitizer allow-list (`imports/api/htmlSanitizer/sanitizePolicy.ts`)
 
 ## Architecture
 
