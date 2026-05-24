@@ -389,7 +389,7 @@ export default function Navigation() {
           </Tooltip>
         </Dropdown>
       )}
-      {isMobile && profileModal}
+      {isMobile && user && profileModal}
     </nav>
   );
 }
