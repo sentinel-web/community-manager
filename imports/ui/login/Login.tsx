@@ -48,10 +48,10 @@ export default function Login() {
           <Input.Password placeholder={t('auth.enterPassword')} autoComplete="current-password" />
         </Form.Item>
         <Row gutter={[16, 16]} align="middle">
-          <Col span={12}>
+          <Col xs={24} md={12}>
             <Button onClick={handleRegister}>{t('auth.register')}</Button>
           </Col>
-          <Col span={12}>
+          <Col xs={24} md={12}>
             <Button type="primary" htmlType="submit">
               {t('auth.login')}
             </Button>
