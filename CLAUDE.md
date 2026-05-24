@@ -118,6 +118,8 @@ Field-level schemas for every collection: [`docs/collections.md`](docs/collectio
 - `dashboard/`, `questionnaires/`, `registration/`, `members/`, `squads/`, `specializations/`, `logs/`, `settings/`, `backup/`
 - Chrome: `app/`, `header/`, `footer/`, `navigation/`, `login/`, `theme/`, `title/`, `logo/`, `profile-picture-input/`, `suspense/`, `section/`, `table/`, `components/`
 
+Full index of every navigable view, drawer form, drawer viewer, and embedded widget: [`docs/views-and-forms.md`](docs/views-and-forms.md).
+
 ## Deployment
 
 Docker + Traefik (production), Node 22, MongoDB 7. Full env vars and compose notes: [`docs/deployment.md`](docs/deployment.md).
