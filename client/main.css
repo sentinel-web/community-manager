@@ -53,7 +53,12 @@ h6 {
 }
 
 html {
+  /* dvh tracks the *visible* viewport; plain vh is the large viewport that
+     ignores the mobile address bar, which pushed the app's scroll container
+     below the fold ("scrolls but not everything visible"). vh stays as a
+     fallback for browsers without dvh. */
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
 
   body {

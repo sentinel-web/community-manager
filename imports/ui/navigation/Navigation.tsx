@@ -379,7 +379,7 @@ export default function Navigation() {
             onClick: handleNavigationClick,
             // Cap to the viewport and scroll: the menu can be tall on mobile
             // (all nav entries + the user section that replaces the footer).
-            style: { maxHeight: 'calc(100vh - 72px)', overflowY: 'auto' },
+            style: { maxHeight: 'calc(100dvh - 72px)', overflowY: 'auto' },
           }}
         >
           <Tooltip title={t('palette.shortcutHint', { shortcut: shortcutLabel })} placement="bottomRight">
