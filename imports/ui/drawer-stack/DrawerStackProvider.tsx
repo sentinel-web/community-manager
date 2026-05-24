@@ -1,6 +1,7 @@
 import { Drawer } from 'antd';
 import React, { createContext, ReactNode, useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
 import { getDrawerWidth } from '../../config';
+import useViewportSize from '../hooks/useViewportSize';
 import { createDrawerStackStore, type DrawerStackStore } from './drawerStackStore';
 import type { DrawerStackApi, FrameContextValue, InternalFrame, PushFrameOptions } from './types';
 
@@ -69,6 +70,7 @@ interface FrameDrawerProps {
 }
 
 function FrameDrawer({ frame, isTop, store, children }: FrameDrawerProps) {
+  const { width } = useViewportSize();
   const handleClose = useCallback(() => {
     void store.tryClose(frame.id);
   }, [store, frame.id]);
@@ -87,7 +89,7 @@ function FrameDrawer({ frame, isTop, store, children }: FrameDrawerProps) {
 
   return (
     <Drawer
-      width={getDrawerWidth(window.innerWidth)}
+      width={getDrawerWidth(width)}
       open={true}
       onClose={handleClose}
       title={frame.title}

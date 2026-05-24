@@ -5,6 +5,7 @@ import React, { lazy, useMemo } from 'react';
 import RolesCollection from '../../api/collections/roles.collection';
 import type { Role, CrudPermission } from '../../api/types';
 import { isDeviceUnsupported } from '../../config';
+import useViewportSize from '../hooks/useViewportSize';
 import Login from '../login/Login';
 import useNavigation from '../navigation/navigation.hook';
 import Suspense from '../suspense/Suspense';
@@ -56,6 +57,7 @@ const MyQuestionnaires = lazy(() => import('../questionnaires/MyQuestionnaires')
 
 export default function Main() {
   const { navigationValue } = useNavigation();
+  const { width } = useViewportSize();
   const { loggedIn, user } = useTracker(() => {
     return {
       loggedIn: !!Meteor.userId(),
@@ -73,7 +75,7 @@ export default function Main() {
     return checkAccess(role, navigationValue);
   }, [roles, navigationValue]);
 
-  if (isDeviceUnsupported(window.innerWidth)) {
+  if (isDeviceUnsupported(width)) {
     return (
       <section className="container">
         <Result status="500" title="406 - Not supported" subTitle="Sorry, this device is not supported." />
