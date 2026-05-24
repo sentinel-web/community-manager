@@ -63,6 +63,10 @@ declare module 'react-big-calendar' {
     onSelectEvent?: (event: CalendarEvent, e: React.SyntheticEvent) => void;
     eventPropGetter?: (event: CalendarEvent) => { style?: CSSProperties; className?: string };
     onRangeChange?: (range: Date[] | DateRange, view?: View) => void;
+    view?: View;
+    onView?: (view: View) => void;
+    defaultView?: View;
+    views?: View[];
     resizable?: boolean;
     selectable?: boolean;
     style?: CSSProperties;

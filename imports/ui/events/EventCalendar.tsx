@@ -10,6 +10,7 @@ import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import EventTypesCollection from '../../api/collections/eventTypes.collection';
 import getLegibleTextColor from '../../helpers/colors/getLegibleTextColor';
+import { BREAKPOINTS } from '../../config';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { EventDoc } from '../../api/types/event';
 import { useDrawerStack } from '../drawer-stack';
@@ -112,7 +113,12 @@ const EventCalendar = ({ datasource, setFilter }: EventCalendarProps) => {
     [t]
   );
 
-  const [currentView, setCurrentView] = useState<View>('month');
+  // Default to the agenda list below the mobile breakpoint — react-big-calendar's
+  // month grid is unreadable on a phone. Read once at mount; the user can switch
+  // views afterwards via the (controlled) toolbar.
+  const [currentView, setCurrentView] = useState<View>(() =>
+    typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.MOBILE ? 'agenda' : 'month'
+  );
 
   const handleRangeChange = useCallback(
     (value: Date[] | DateRange, view?: View) => {
@@ -168,6 +174,8 @@ const EventCalendar = ({ datasource, setFilter }: EventCalendarProps) => {
           onSelectEvent={onSelectEvent}
           eventPropGetter={eventPropGetter}
           onRangeChange={handleRangeChange}
+          view={currentView}
+          onView={setCurrentView}
           resizable
           selectable
         />
