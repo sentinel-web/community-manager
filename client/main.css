@@ -47,7 +47,11 @@ html {
      fallback for browsers without dvh. */
   height: 100vh;
   height: 100dvh;
-  width: 100vw;
+  /* 100vw includes the vertical scrollbar's width, so with classic (non-overlay)
+     scrollbars the page becomes scrollbar-width too wide and shows a spurious
+     horizontal scrollbar. 100% resolves to the viewport's content width. */
+  width: 100%;
+  overflow: hidden;
 
   body {
     margin: 0;
