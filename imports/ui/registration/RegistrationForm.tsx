@@ -50,6 +50,9 @@ export default function RegistrationForm() {
     { success: t('messages.registrationSuccessful') }
   );
 
+  const { call: validateNameCall } = useMethod<boolean>('registrations.validateName', { notify: false });
+  const { call: validateIdCall } = useMethod<boolean>('registrations.validateId', { notify: false });
+
   useEffect(() => {
     if (Object.keys(model).length > 0) {
       form.setFieldsValue(model as unknown as RegistrationFormValues);
@@ -67,31 +70,29 @@ export default function RegistrationForm() {
     }
   }, [model, form.setFieldsValue]);
 
-  const validateName = useCallback(() => {
+  const validateName = useCallback(async () => {
     const value = form.getFieldValue('name');
     setNameError('validating');
-    Meteor.callAsync('registrations.validateName', value, (model as Registration)?._id)
-      .then((result: boolean) => {
-        setNameError(result ? 'success' : 'error');
-        setNameAvailable(result);
-      })
-      .catch(() => {
-        setNameError('warning');
-      });
-  }, [form.getFieldValue, (model as Registration)?._id]);
+    const res = await validateNameCall(value, (model as Registration)?._id);
+    if (res.ok) {
+      setNameError(res.data ? 'success' : 'error');
+      setNameAvailable(res.data);
+    } else {
+      setNameError('warning');
+    }
+  }, [form.getFieldValue, (model as Registration)?._id, validateNameCall]);
 
-  const validateId = useCallback(() => {
+  const validateId = useCallback(async () => {
     const value = form.getFieldValue('id');
     setIdError('validating');
-    Meteor.callAsync('registrations.validateId', value, (model as Registration)?._id)
-      .then((result: boolean) => {
-        setIdError(result ? 'success' : 'error');
-        setIdAvailable(result);
-      })
-      .catch(() => {
-        setIdError('warning');
-      });
-  }, [form.getFieldValue, (model as Registration)?._id]);
+    const res = await validateIdCall(value, (model as Registration)?._id);
+    if (res.ok) {
+      setIdError(res.data ? 'success' : 'error');
+      setIdAvailable(res.data);
+    } else {
+      setIdError('warning');
+    }
+  }, [form.getFieldValue, (model as Registration)?._id, validateIdCall]);
 
   useSubscribe('discoveryTypes', {}, {});
   const discoveryTypes = useFind(() => DiscoveryTypesCollection.find({}), []);

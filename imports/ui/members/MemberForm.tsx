@@ -83,6 +83,9 @@ export default function MemberForm() {
     success: t('messages.saveSuccessful'),
   });
 
+  const { call: validateNameCall } = useMethod<boolean>('members.validateName', { notify: false });
+  const { call: validateIdCall } = useMethod<boolean>('members.validateId', { notify: false });
+
   useEffect(() => {
     if (Object.keys(model).length > 0) {
       const data = { ...model } as Record<string, unknown>;
@@ -119,31 +122,29 @@ export default function MemberForm() {
     }
   }, [model, form.setFieldsValue]);
 
-  const validateName = useCallback(() => {
+  const validateName = useCallback(async () => {
     const value = form.getFieldValue(['profile', 'name']);
     setNameError('validating');
-    Meteor.callAsync('members.validateName', value, model?._id || false)
-      .then((result: boolean) => {
-        setNameError(result ? 'success' : 'error');
-        setNameAvailable(result);
-      })
-      .catch(() => {
-        setNameError('warning');
-      });
-  }, [form, model?._id]);
+    const res = await validateNameCall(value, model?._id || false);
+    if (res.ok) {
+      setNameError(res.data ? 'success' : 'error');
+      setNameAvailable(res.data);
+    } else {
+      setNameError('warning');
+    }
+  }, [form, model?._id, validateNameCall]);
 
-  const validateId = useCallback(() => {
+  const validateId = useCallback(async () => {
     const value = form.getFieldValue(['profile', 'id']);
     setIdError('validating');
-    Meteor.callAsync('members.validateId', value, model?._id || false)
-      .then((result: boolean) => {
-        setIdError(result ? 'success' : 'error');
-        setIdAvailable(result);
-      })
-      .catch(() => {
-        setIdError('warning');
-      });
-  }, [form, model?._id]);
+    const res = await validateIdCall(value, model?._id || false);
+    if (res.ok) {
+      setIdError(res.data ? 'success' : 'error');
+      setIdAvailable(res.data);
+    } else {
+      setIdError('warning');
+    }
+  }, [form, model?._id, validateIdCall]);
 
   const handleSubmit = useCallback(
     async (values: MemberFormValues) => {
