@@ -1,8 +1,9 @@
-import { App, ColorPicker, Form, Input, Switch } from 'antd';
+import { ColorPicker, Form, Input, Switch } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import { useDrawerFrame } from '../../drawer-stack';
+import useMethod from '../../hooks/useMethod';
 import FormFooter from '../../components/FormFooter';
 import { getColorFromValues } from '/imports/helpers/colors/getColorFromValues';
 import type { DiscoveryType } from '../../../api/types';
@@ -10,9 +11,11 @@ import type { DiscoveryType } from '../../../api/types';
 export default function DiscoveryTypeForm() {
   const { t } = useTranslation();
   const [form] = Form.useForm();
-  const { message, notification } = App.useApp();
-  const [loading, setLoading] = useState(false);
   const { model, resolve, cancel } = useDrawerFrame<string, Partial<DiscoveryType> & { _id?: string }>();
+
+  const { call, loading } = useMethod<string | undefined>(Meteor.user() && model?._id ? 'discoveryTypes.update' : 'discoveryTypes.insert', {
+    success: model?._id ? t('messages.discoveryTypeUpdated') : t('messages.discoveryTypeCreated'),
+  });
 
   useEffect(() => {
     if (model && Object.keys(model).length > 0) {
@@ -29,27 +32,13 @@ export default function DiscoveryTypeForm() {
 
   const handleSubmit = useCallback(
     async (values: Record<string, unknown>) => {
-      setLoading(true);
       const { name, description, hasTextInput } = values as { name: string; description?: string; hasTextInput?: boolean };
-      const args = [
-        ...(model?._id ? [model._id] : []),
-        { name, color: getColorFromValues(values), description, hasTextInput: !!hasTextInput },
-      ];
-      try {
-        const result = (await Meteor.callAsync(
-          Meteor.user() && model?._id ? 'discoveryTypes.update' : 'discoveryTypes.insert',
-          ...args
-        )) as string | undefined;
-        message.success(model?._id ? t('messages.discoveryTypeUpdated') : t('messages.discoveryTypeCreated'));
-        resolve(model?._id ?? result);
-      } catch (error) {
-        const err = error as Meteor.Error;
-        notification.error({ message: err.error as string, description: err.message });
-      } finally {
-        setLoading(false);
-      }
+      const args = [...(model?._id ? [model._id] : []), { name, color: getColorFromValues(values), description, hasTextInput: !!hasTextInput }];
+      const res = await call(...args);
+      if (!res.ok) return;
+      resolve(model?._id ?? res.data);
     },
-    [model, resolve, message, notification, t]
+    [model, resolve, call]
   );
 
   return (
@@ -66,7 +55,7 @@ export default function DiscoveryTypeForm() {
       <Form.Item name="hasTextInput" label={t('registrations.hasTextInput')} valuePropName="checked" rules={[{ type: 'boolean' }]}>
         <Switch />
       </Form.Item>
-      <FormFooter onCancel={cancel} />
+      <FormFooter onCancel={cancel} loading={loading} />
     </Form>
   );
 }

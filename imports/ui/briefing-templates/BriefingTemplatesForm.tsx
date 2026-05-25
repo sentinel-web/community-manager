@@ -1,9 +1,9 @@
-import { App, ColorPicker, Form, Input } from 'antd';
-import { Meteor } from 'meteor/meteor';
-import React, { useCallback, useMemo, useState } from 'react';
+import { ColorPicker, Form, Input } from 'antd';
+import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import { getColorFromValues } from '/imports/helpers/colors/getColorFromValues';
 import { useDrawerFrame } from '../drawer-stack';
+import useMethod from '../hooks/useMethod';
 import FormFooter from '../components/FormFooter';
 import RichTextEditor from '../components/RichTextEditor';
 import type { BriefingTemplate } from '../../api/types';
@@ -11,9 +11,11 @@ import type { BriefingTemplate } from '../../api/types';
 export default function BriefingTemplatesForm() {
   const { t } = useTranslation();
   const [form] = Form.useForm();
-  const { message, notification } = App.useApp();
-  const [loading, setLoading] = useState(false);
   const { model: rawModel, resolve, cancel } = useDrawerFrame<string, Partial<BriefingTemplate>>();
+
+  const { call, loading } = useMethod<string | undefined>(rawModel?._id ? 'briefingTemplates.update' : 'briefingTemplates.insert', {
+    success: rawModel?._id ? t('messages.briefingTemplateUpdated') : t('messages.briefingTemplateCreated'),
+  });
 
   // Provide values synchronously via initialValues (not a setFieldsValue effect):
   // the RichTextEditor initializes its document from `value` on first render, so
@@ -30,24 +32,13 @@ export default function BriefingTemplatesForm() {
 
   const handleSubmit = useCallback(
     async (values: Record<string, unknown>) => {
-      setLoading(true);
       const { name, description, content } = values as { name: string; description?: string; content?: string };
       const args = [...(rawModel?._id ? [rawModel._id] : []), { name, color: getColorFromValues(values), description, content }];
-      try {
-        const result = (await Meteor.callAsync(
-          rawModel?._id ? 'briefingTemplates.update' : 'briefingTemplates.insert',
-          ...args
-        )) as string | undefined;
-        message.success(rawModel?._id ? t('messages.briefingTemplateUpdated') : t('messages.briefingTemplateCreated'));
-        resolve(rawModel?._id ?? result);
-      } catch (error) {
-        const err = error as Meteor.Error;
-        notification.error({ message: err.error as string, description: err.message });
-      } finally {
-        setLoading(false);
-      }
+      const res = await call(...args);
+      if (!res.ok) return;
+      resolve(rawModel?._id ?? res.data);
     },
-    [rawModel, resolve, message, notification, t]
+    [rawModel, resolve, call]
   );
 
   return (
@@ -64,7 +55,7 @@ export default function BriefingTemplatesForm() {
       <Form.Item name="color" label={t('common.color')}>
         <ColorPicker format="hex" />
       </Form.Item>
-      <FormFooter onCancel={cancel} />
+      <FormFooter onCancel={cancel} loading={loading} />
     </Form>
   );
 }

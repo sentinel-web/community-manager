@@ -1,4 +1,4 @@
-import { Alert, App, Button, Col, DatePicker, Divider, Form, Input, InputNumber, Row, Switch } from 'antd';
+import { Alert, Button, Col, DatePicker, Divider, Form, Input, InputNumber, Row, Switch } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
@@ -10,6 +10,7 @@ import RolesCollection from '../../api/collections/roles.collection';
 import type { Member } from '../../api/types/member';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerFooter, useDrawerFrame } from '../drawer-stack';
+import useMethod from '../hooks/useMethod';
 import CollectionSelect, { type CollectionDoc } from '../components/CollectionSelect';
 import { getDateFromValues } from '../events/EventForm';
 import ProfilePictureInput from '../profile-picture-input/ProfilePictureInput';
@@ -55,7 +56,6 @@ interface MemberFormValues {
   profile?: MemberFormProfile;
 }
 
-
 export const transformDateToDays = (values: Record<string, unknown>, key = 'date'): Dayjs | undefined => {
   if (values[key]) return dayjs(values[key] as dayjs.ConfigType);
   return values[key] as undefined;
@@ -64,9 +64,7 @@ export const transformDateToDays = (values: Record<string, unknown>, key = 'date
 export default function MemberForm() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [form] = Form.useForm<any>();
-  const { message, notification } = App.useApp();
   const { t } = useTranslation();
-  const [loading, setLoading] = useState(false);
   // Independent availability signals derived into disableSubmit — see the same
   // pattern in RegistrationForm. Previously a single disableSubmit was written
   // by two async validations that clobbered each other; here they also never
@@ -80,6 +78,11 @@ export default function MemberForm() {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const { model: rawModel, resolve, cancel } = useDrawerFrame<string, Partial<Member>>();
   const model = useMemo(() => (rawModel || {}) as Member, [rawModel]);
+
+  const { call, loading } = useMethod<string | undefined>(Meteor.user() && model?._id ? 'members.update' : 'members.insert', {
+    success: t('messages.saveSuccessful'),
+  });
+
   useEffect(() => {
     if (Object.keys(model).length > 0) {
       const data = { ...model } as Record<string, unknown>;
@@ -149,7 +152,6 @@ export default function MemberForm() {
       // hidden submit button — which bypasses `disableSubmit` (name or id
       // already in use / rules not accepted) unless we re-check here.
       if (loading || disableSubmit) return;
-      setLoading(true);
       const payload = {
         ...values,
         profile: {
@@ -159,24 +161,11 @@ export default function MemberForm() {
         },
       };
       const args = model?._id ? [model._id, payload] : [payload];
-      try {
-        const result = (await Meteor.callAsync(
-          Meteor.user() && model?._id ? 'members.update' : 'members.insert',
-          ...args
-        )) as string | undefined;
-        message.success(t('messages.saveSuccessful'));
-        resolve(model?._id ?? result);
-      } catch (error) {
-        const err = error as Meteor.Error;
-        notification.error({
-          message: err.error as string,
-          description: err.message,
-        });
-      } finally {
-        setLoading(false);
-      }
+      const res = await call(...args);
+      if (!res.ok) return;
+      resolve(model?._id ?? res.data);
     },
-    [model?._id, resolve, message, notification, t, loading, disableSubmit]
+    [model?._id, resolve, call, loading, disableSubmit]
   );
 
   const handleValuesChange = useCallback(
@@ -246,7 +235,13 @@ export default function MemberForm() {
       <Form.Item name={['profile', 'name']} label={t('common.name')} rules={[{ required: true, type: 'string' }]} status={nameError} required>
         <Input placeholder={t('forms.placeholders.enterName')} />
       </Form.Item>
-      <SquadsSelect multiple={false} name={['profile', 'squadId']} label={t('members.squad')} rules={[{ type: 'string' }]} defaultValue={model?.profile?.squadId} />
+      <SquadsSelect
+        multiple={false}
+        name={['profile', 'squadId']}
+        label={t('members.squad')}
+        rules={[{ type: 'string' }]}
+        defaultValue={model?.profile?.squadId}
+      />
       <CollectionSelect
         defaultValue={model?.profile?.rankId}
         FormComponent={RanksForm}
@@ -288,7 +283,13 @@ export default function MemberForm() {
         defaultValue={model?.profile?.specializationIds}
         multiple
       />
-      <MedalsSelect name={['profile', 'medalIds']} label={t('members.medals')} rules={[{ type: 'array' }]} defaultValue={model?.profile?.medalIds} multiple />
+      <MedalsSelect
+        name={['profile', 'medalIds']}
+        label={t('members.medals')}
+        rules={[{ type: 'array' }]}
+        defaultValue={model?.profile?.medalIds}
+        multiple
+      />
       <CollectionSelect
         name={['profile', 'roleId']}
         label={t('forms.labels.role')}
@@ -317,7 +318,12 @@ export default function MemberForm() {
       <Form.Item name={['profile', 'exitDate']} label={t('members.exitDate')} rules={[{ type: 'date' }]}>
         <DatePicker style={styles.datePicker} placeholder={t('common.selectDate')} />
       </Form.Item>
-      <Form.Item name={['profile', 'hasCustomArmour']} label={t('forms.labels.hasCustomArmour')} valuePropName="checked" rules={[{ type: 'boolean' }]}>
+      <Form.Item
+        name={['profile', 'hasCustomArmour']}
+        label={t('forms.labels.hasCustomArmour')}
+        valuePropName="checked"
+        rules={[{ type: 'boolean' }]}
+      >
         <Switch />
       </Form.Item>
       <DrawerFooter>
