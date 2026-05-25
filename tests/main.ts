@@ -1,6 +1,7 @@
 import './client/config.test';
 import './client/hooks/drawerStackHooks.test';
 import './client/hooks/drawerStackStore.test';
+import './client/hooks/useMethod.test';
 import './helpers/colors/getLegibleTextColor.test';
 import './helpers/colors/getLuminance.test';
 import './helpers/colors/hexToRgb.test';
@@ -21,6 +22,7 @@ import './server/paletteScoring.test';
 import './server/paletteSearch.test';
 import './server/permissions.test';
 import './server/questionnaireInterval.test';
+import './server/runMethodCall.test';
 import './server/settingsMethods.test';
 import './server/shouldConfirmTemplateOverwrite.test';
 import './server/specializationsMethods.test';
