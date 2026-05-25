@@ -61,6 +61,23 @@ test.describe('Members', () => {
     await membersPage.expectValidationError();
   });
 
+  test('should flag a duplicate member name', async ({ page }) => {
+    // Derive a real in-use name rather than hardcoding demo data.
+    const usedNames = await page.evaluate(async () => (await window.Meteor.callAsync('members.getUsedNames')) as string[]);
+    const existingName = usedNames.find(Boolean);
+    expect(existingName, 'expected at least one existing member').toBeTruthy();
+
+    await membersPage.clickCreate();
+    await membersPage.fillFormField('profile_name', existingName as string);
+
+    // members.validateName runs async; the in-use alert should appear and submit
+    // should disable. This guards the regression where the check was dead code
+    // (wrong field paths + wrong collection) and where an available id clobbered
+    // the in-use-name result.
+    await expect(page.locator('.ant-drawer .ant-alert-error')).toBeVisible();
+    await expect(page.locator('.ant-drawer-footer button.ant-btn-primary')).toBeDisabled();
+  });
+
   test('should create and delete a member', async ({ page }) => {
     const testId = Math.floor(Math.random() * 8999) + 1000;
     const testUsername = `testuser_${testId}`;

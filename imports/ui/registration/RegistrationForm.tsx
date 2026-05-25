@@ -1,4 +1,4 @@
-import { Alert, App, Button, Col, Form, Input, InputNumber, Row, Switch, Tooltip } from 'antd';
+import { Alert, App, Button, Col, Form, Input, InputNumber, Row, Switch } from 'antd';
 import type { ValidateStatus } from 'antd/es/form/FormItem';
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
@@ -29,7 +29,15 @@ export default function RegistrationForm() {
   const { message, notification } = App.useApp();
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
-  const [disableSubmit, setDisableSubmit] = useState(false);
+  // Track name/id availability as independent signals and derive disableSubmit
+  // from them. Folding both into one state let the two async validations
+  // clobber each other (last-writer-wins), so an in-use name could be masked by
+  // an available id. Rules acceptance is enforced via a field validator below,
+  // not here, so the button stays clickable on an empty form (to surface the
+  // required-field errors).
+  const [nameAvailable, setNameAvailable] = useState(true);
+  const [idAvailable, setIdAvailable] = useState(true);
+  const disableSubmit = useMemo(() => !nameAvailable || !idAvailable, [nameAvailable, idAvailable]);
   const [nameError, setNameError] = useState<ValidateStatus | undefined>(undefined);
   const [idError, setIdError] = useState<ValidateStatus | undefined>(undefined);
 
@@ -61,7 +69,7 @@ export default function RegistrationForm() {
     Meteor.callAsync('registrations.validateName', value, (model as Registration)?._id)
       .then((result: boolean) => {
         setNameError(result ? 'success' : 'error');
-        setDisableSubmit(!result);
+        setNameAvailable(result);
       })
       .catch(() => {
         setNameError('warning');
@@ -74,7 +82,7 @@ export default function RegistrationForm() {
     Meteor.callAsync('registrations.validateId', value, (model as Registration)?._id)
       .then((result: boolean) => {
         setIdError(result ? 'success' : 'error');
-        setDisableSubmit(!result);
+        setIdAvailable(result);
       })
       .catch(() => {
         setIdError('warning');
@@ -134,9 +142,6 @@ export default function RegistrationForm() {
       }
       if ('id' in values) {
         validateId();
-      }
-      if ('rulesReadAndAccepted' in changedValues && 'rulesReadAndAccepted' in values) {
-        setDisableSubmit(!values.rulesReadAndAccepted);
       }
       if ('discoveryType' in changedValues) {
         handleDiscoveryTypeChange();
@@ -211,7 +216,16 @@ export default function RegistrationForm() {
       <Form.Item name="discordTag" label={t('forms.labels.discordTag')} rules={[{ type: 'string' }]}>
         <Input placeholder={t('forms.placeholders.enterDiscordTag')} />
       </Form.Item>
-      <Form.Item name="rulesReadAndAccepted" label={t('forms.labels.rulesAccepted')} rules={[{ required: true, type: 'boolean' }]} required>
+      <Form.Item
+        name="rulesReadAndAccepted"
+        label={t('forms.labels.rulesAccepted')}
+        rules={[
+          {
+            validator: (_, value) => (value ? Promise.resolve() : Promise.reject(new Error(t('forms.tooltips.pleaseReadAndAcceptRules')))),
+          },
+        ]}
+        required
+      >
         <Switch />
       </Form.Item>
       {Meteor.user() && (
@@ -227,11 +241,9 @@ export default function RegistrationForm() {
             </Button>
           </Col>
           <Col>
-            <Tooltip title={disableSubmit ? t('forms.tooltips.pleaseReadAndAcceptRules') : ''}>
-              <Button type="primary" onClick={() => form.submit()} loading={loading} disabled={disableSubmit}>
-                {t('common.submit')}
-              </Button>
-            </Tooltip>
+            <Button type="primary" onClick={() => form.submit()} loading={loading} disabled={disableSubmit}>
+              {t('common.submit')}
+            </Button>
           </Col>
         </Row>
       </DrawerFooter>
