@@ -66,6 +66,24 @@ Close semantics: when the user dismisses the top frame (antd `onClose` from X-cl
 
 The depth pattern that previously required a `useSubdrawer: boolean` prop drilled through every nested form, plus an `if (drawer.drawerOpen) use subdrawer else use drawer` branch at each open site, is now structurally impossible — there is no second context to choose between, and frames don't expose their depth on the seam.
 
+### MethodCall
+
+The single deep module (`imports/ui/hooks/useMethod.ts`) that owns the client side of invoking a Meteor method. Meteor's untyped `Meteor.callAsync` is wrapped exactly once so that error narrowing, failure-notification policy, success feedback, and in-flight `loading` state live behind one hook instead of being re-derived at every call site. It is the client-side counterpart to [[MutationWithAudit]]: that owns the server mutation lifecycle, this owns the client call.
+
+The seam is one hook:
+
+- **`useMethod<T>(name, opts?)`** — binds a method name (computed names like `isUpdate ? 'squads.update' : 'squads.insert'` are fine) and returns `{ call, loading, error, data }`.
+  - `call(...args)` invokes the method and resolves to a discriminated `Result<T> = { ok: true; data: T } | { ok: false; error: Meteor.Error }`. It does **not** throw for a server-side `Meteor.Error`; callers branch on `res.ok`. The discriminated shape (not a bare `T | undefined`) keeps void methods unambiguous — a `remove` that resolves to nothing is still `{ ok: true }`, distinct from a handled failure.
+  - On failure the hook narrows `unknown → Meteor.Error` once and fires `notification.error` (the persistent-panel channel) — unless `opts.notify === false`, the opt-out used by the field-availability validators (`members.validateName`, `registrations.validateId`, …) that fold a failure into a form-field state rather than a popup.
+  - On success it fires `message.success` (the toast channel) when `opts.success` is set — a string, or a `(data) => string` for create-vs-update message divergence. Reads omit `success`.
+  - `loading` / `error` / `data` are reactive (for button-disable and inline rendering); the same values are also carried by the `Result` that `call` returns, for use inside handlers.
+
+Channel convention is baked in: success → `message` (toast), failure → `notification` (panel). The hook calls `App.useApp()` internally, satisfying the provider-order rule (message/notification must resolve inside a descendant of `<App>`) — which is *why* the seam is a hook and not a free function.
+
+Internally the seam has a private core: `runMethodCall(invoke, policy, feedback)` (`imports/ui/hooks/runMethodCall.ts`) holds all the policy — narrowing, notify/success decisions, the discriminated outcome — with no React and no antd. `useMethod` is the thin adapter that wires React `loading`/`error`/`data` state and `App.useApp()` feedback onto it. That internal seam is what makes the policy testable in the server test context (`tests/server/runMethodCall.test.ts`, DOM-free), with the hook's React wiring covered by a browser-only smoke test (`tests/client/hooks/useMethod.test.tsx`) — the same split the [[DrawerStack]] uses (pure `drawerStackStore` + browser hook test).
+
+What the previous design could not express, now structural: the `error as Meteor.Error` cast (forced into every `catch` by `strict`) lives in one place; changing notification policy, adding telemetry, or adding retry is one edit instead of touching ~69 call sites; and the accidental error-extraction drift (`error.reason || error.message` at one site, a missing `as string` cast at two others) cannot recur because there is exactly one extraction — `{ message: error.error, description: error.reason || error.message }`, preferring the clean reason and dropping the `[<code>]` suffix Meteor appends to `.message`. The bespoke success *strings* stay at the call sites where they belong, so the hook is not a pass-through. The per-form create-vs-update branching of *name* and *message* is deliberately **not** absorbed here — that is the job of a future `useEntityForm` lifecycle built on top of this seam.
+
 ## Doctrines
 
 ### Rule of three
