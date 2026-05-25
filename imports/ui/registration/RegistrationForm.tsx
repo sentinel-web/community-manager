@@ -7,7 +7,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import DiscoveryTypesCollection from '../../api/collections/discoveryTypes.collection';
 import type { Registration } from '../../api/types';
 import { useTranslation } from '../../i18n/LanguageContext';
-import { useDrawerFrame } from '../drawer-stack';
+import { DrawerFooter, useDrawerFrame } from '../drawer-stack';
 import CollectionSelect, { type CollectionDoc } from '../components/CollectionSelect';
 import DiscoveryTypeForm from './discovery-types/DiscoveryTypesForm';
 
@@ -96,6 +96,11 @@ export default function RegistrationForm() {
 
   const handleSubmit = useCallback(
     async (values: RegistrationFormValues) => {
+      // Guard the submit itself, not just the footer button. The button's
+      // `disabled` blocks clicks, but Enter-to-submit fires through the form's
+      // hidden submit button — which bypasses `disableSubmit` (rules not
+      // accepted / name or id already in use) unless we re-check here.
+      if (loading || disableSubmit) return;
       setLoading(true);
       const { name, id, age, discoveryType, discoveryTypeDetails, steamProfileLink, discordTag, rulesReadAndAccepted, description } = values;
       const args = [
@@ -119,7 +124,7 @@ export default function RegistrationForm() {
         setLoading(false);
       }
     },
-    [resolve, model, message, notification, t],
+    [resolve, model, message, notification, t, loading, disableSubmit],
   );
 
   const handleValuesChange = useCallback(
@@ -214,20 +219,22 @@ export default function RegistrationForm() {
           <Input.TextArea autoSize placeholder={t('forms.placeholders.enterDescription')} />
         </Form.Item>
       )}
-      <Row gutter={[16, 16]} align="middle" justify="end">
-        <Col>
-          <Button onClick={cancel} danger>
-            {t('common.cancel')}
-          </Button>
-        </Col>
-        <Col>
-          <Tooltip title={disableSubmit ? t('forms.tooltips.pleaseReadAndAcceptRules') : ''}>
-            <Button type="primary" htmlType="submit" loading={loading} disabled={disableSubmit}>
-              {t('common.submit')}
+      <DrawerFooter>
+        <Row gutter={[16, 16]} align="middle" justify="end">
+          <Col>
+            <Button onClick={cancel} danger>
+              {t('common.cancel')}
             </Button>
-          </Tooltip>
-        </Col>
-      </Row>
+          </Col>
+          <Col>
+            <Tooltip title={disableSubmit ? t('forms.tooltips.pleaseReadAndAcceptRules') : ''}>
+              <Button type="primary" onClick={() => form.submit()} loading={loading} disabled={disableSubmit}>
+                {t('common.submit')}
+              </Button>
+            </Tooltip>
+          </Col>
+        </Row>
+      </DrawerFooter>
     </Form>
   );
 }

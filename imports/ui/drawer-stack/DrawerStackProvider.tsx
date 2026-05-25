@@ -1,5 +1,5 @@
 import { Drawer } from 'antd';
-import React, { createContext, ReactNode, useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
+import React, { createContext, ReactNode, useCallback, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { getDrawerWidth } from '../../config';
 import useViewportSize from '../hooks/useViewportSize';
 import { createDrawerStackStore, type DrawerStackStore } from './drawerStackStore';
@@ -71,6 +71,10 @@ interface FrameDrawerProps {
 
 function FrameDrawer({ frame, isTop, store, children }: FrameDrawerProps) {
   const { width } = useViewportSize();
+  // The Drawer footer slot DOM node. FormFooter portals its action buttons here
+  // so they pin to the bottom of the drawer while the body scrolls. State (not a
+  // ref) so the context value updates once the slot mounts and consumers re-render.
+  const [footerEl, setFooterEl] = useState<HTMLDivElement | null>(null);
   const handleClose = useCallback(() => {
     void store.tryClose(frame.id);
   }, [store, frame.id]);
@@ -81,8 +85,9 @@ function FrameDrawer({ frame, isTop, store, children }: FrameDrawerProps) {
       resolve: value => store.resolveFrame(frame.id, value),
       cancel: () => store.cancelFrame(frame.id),
       confirmCloseRef: frame.confirmCloseRef,
+      footerContainer: footerEl,
     }),
-    [store, frame.id, frame.model, frame.confirmCloseRef]
+    [store, frame.id, frame.model, frame.confirmCloseRef, footerEl]
   );
 
   const Component = frame.Component;
@@ -96,6 +101,9 @@ function FrameDrawer({ frame, isTop, store, children }: FrameDrawerProps) {
       extra={frame.extra}
       maskClosable={isTop}
       destroyOnHidden
+      // Always render a footer slot; it collapses to nothing (see main.css) for
+      // frames whose component never portals anything into it (e.g. viewers).
+      footer={<div ref={setFooterEl} className="frame-footer-slot" />}
     >
       <FrameContext.Provider value={frameApi}>
         <Component />

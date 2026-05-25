@@ -5,6 +5,7 @@ export interface DrawerFrame<R, M> {
   model: M;
   resolve: (value: R | undefined) => void;
   cancel: () => void;
+  footerContainer: HTMLElement | null;
 }
 
 export default function useDrawerFrame<R = unknown, M = unknown>(): DrawerFrame<R, M> {
@@ -16,5 +17,6 @@ export default function useDrawerFrame<R = unknown, M = unknown>(): DrawerFrame<
     model: frame.model as M,
     resolve: value => frame.resolve(value),
     cancel: frame.cancel,
+    footerContainer: frame.footerContainer,
   };
 }

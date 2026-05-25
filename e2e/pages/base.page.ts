@@ -101,8 +101,12 @@ export class BasePage {
    * Click submit button in form (handles Submit, Save, etc.)
    */
   async submitForm(): Promise<void> {
-    // Try different common submit button patterns
-    const submitBtn = this.page.locator('button[type="submit"], .ant-drawer button:has-text("Save"), .ant-drawer button:has-text("Submit")').first();
+    // Click the visible action button in the Drawer's footer slot. Scope to
+    // .ant-drawer-footer (not a bare button[type="submit"]) because forms now
+    // also carry a hidden off-screen submit button inside the body to preserve
+    // Enter-to-submit — a bare selector would match that hidden button first
+    // and hang on Playwright's actionability checks.
+    const submitBtn = this.page.locator('.ant-drawer-footer button:has-text("Save"), .ant-drawer-footer button:has-text("Submit")').first();
     await submitBtn.click();
   }
 

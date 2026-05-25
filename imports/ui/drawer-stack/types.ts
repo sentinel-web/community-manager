@@ -27,6 +27,10 @@ export interface FrameContextValue {
   resolve: (value: unknown) => void;
   cancel: () => void;
   confirmCloseRef: ConfirmCloseRef;
+  // DOM node of this frame's Drawer footer slot, into which FormFooter portals
+  // its action buttons so they pin to the bottom of the drawer. Null until the
+  // Drawer mounts the slot.
+  footerContainer: HTMLElement | null;
 }
 
 export interface DrawerStackApi {

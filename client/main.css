@@ -40,6 +40,13 @@ h6 {
   width: 100%;
 }
 
+/* The drawer-stack always renders a footer slot, but only forms with a
+   FormFooter portal buttons into it. Collapse the footer (border + padding)
+   when the slot is empty so viewers and footer-less forms show no empty bar. */
+.ant-drawer-footer:has(> .frame-footer-slot:empty) {
+  display: none;
+}
+
 html {
   /* dvh tracks the *visible* viewport; plain vh is the large viewport that
      ignores the mobile address bar, which pushed the app's scroll container
