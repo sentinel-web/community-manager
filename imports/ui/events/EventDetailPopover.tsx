@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import type { EventDoc } from '../../api/types/event';
 import RichTextView from '../components/RichTextView';
+import useMethod from '../hooks/useMethod';
 
 interface ResolvedMember {
   _id: string;
@@ -33,14 +34,15 @@ export default function EventDetailPopover({ event, open, setOpen, onEdit }: Eve
   const [loading, setLoading] = useState(false);
   const [rsvpLoading, setRsvpLoading] = useState(false);
   const currentUserId = useTracker(() => Meteor.userId(), []);
+  const { call: fetchDetail } = useMethod<EventDetail>('events.detail');
 
   useEffect(() => {
     if (!event?._id || !open) return;
     setLoading(true);
-    Meteor.callAsync('events.detail', event._id)
-      .then(data => setDetail(data as EventDetail))
+    fetchDetail(event._id)
+      .then(res => res.ok && setDetail(res.data))
       .finally(() => setLoading(false));
-  }, [event?._id, open]);
+  }, [event?._id, open, fetchDetail]);
 
   const handleRsvp = useCallback(() => {
     if (!event?._id) return;
@@ -69,9 +71,7 @@ export default function EventDetailPopover({ event, open, setOpen, onEdit }: Eve
       footer={
         <Space>
           <Button onClick={handleClose}>{t('common.cancel')}</Button>
-          {onEdit && (
-            <Button onClick={handleEdit}>{t('common.edit')}</Button>
-          )}
+          {onEdit && <Button onClick={handleEdit}>{t('common.edit')}</Button>}
           <Button type="primary" loading={rsvpLoading} onClick={handleRsvp} danger={isSignedUp}>
             {isSignedUp ? t('events.signOff') : t('events.signUp')}
           </Button>
@@ -96,15 +96,9 @@ export default function EventDetailPopover({ event, open, setOpen, onEdit }: Eve
               <Descriptions.Item label={t('events.startDate')}>
                 {detail.start ? dayjs(detail.start).format('YYYY-MM-DD HH:mm') : '-'}
               </Descriptions.Item>
-              <Descriptions.Item label={t('events.endDate')}>
-                {detail.end ? dayjs(detail.end).format('YYYY-MM-DD HH:mm') : '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label={t('events.hosts')}>
-                {detail.resolvedHosts?.map(h => h.name).join(', ') || '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label={t('events.attendeeCount')}>
-                {detail.resolvedAttendees?.length || 0}
-              </Descriptions.Item>
+              <Descriptions.Item label={t('events.endDate')}>{detail.end ? dayjs(detail.end).format('YYYY-MM-DD HH:mm') : '-'}</Descriptions.Item>
+              <Descriptions.Item label={t('events.hosts')}>{detail.resolvedHosts?.map(h => h.name).join(', ') || '-'}</Descriptions.Item>
+              <Descriptions.Item label={t('events.attendeeCount')}>{detail.resolvedAttendees?.length || 0}</Descriptions.Item>
               {detail.description && (
                 <Descriptions.Item label={t('common.description')}>
                   <RichTextView html={detail.description} />

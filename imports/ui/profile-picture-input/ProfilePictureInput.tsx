@@ -3,6 +3,11 @@ import type { FormInstance } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { Meteor } from 'meteor/meteor';
 import React, { useEffect, useState } from 'react';
+import useMethod from '../hooks/useMethod';
+
+interface ProfilePictureDoc {
+  value: string;
+}
 
 export async function turnImageFileToBase64(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -33,6 +38,7 @@ export default function ProfilePictureInput({ fileList, setFileList, form, profi
   const { notification } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const { call: fetchProfilePicture } = useMethod<ProfilePictureDoc[]>('profilePictures.read');
 
   async function uploadImage(file: Blob) {
     setLoading(true);
@@ -54,23 +60,15 @@ export default function ProfilePictureInput({ fileList, setFileList, form, profi
   useEffect(() => {
     if (profilePictureId && typeof profilePictureId === 'string') {
       setLoading(true);
-      Meteor.callAsync('profilePictures.read', { _id: profilePictureId })
+      fetchProfilePicture({ _id: profilePictureId })
         .then(res => {
-          if (res?.[0]) {
-            setImageSrc(res[0].value);
-          }
-        })
-        .catch((error: Meteor.Error) => {
-          notification.error({
-            message: error.error as string,
-            description: error.message,
-          });
+          if (res.ok && res.data[0]) setImageSrc(res.data[0].value);
         })
         .finally(() => setLoading(false));
     } else {
       setImageSrc(null);
     }
-  }, [profilePictureId, notification]);
+  }, [profilePictureId, fetchProfilePicture]);
 
   return (
     <Upload.Dragger

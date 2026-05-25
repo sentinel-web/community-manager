@@ -3,6 +3,7 @@ import type { DefaultOptionType } from 'antd/es/select';
 import { Meteor } from 'meteor/meteor';
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
+import useMethod from '../hooks/useMethod';
 import { useTourRef } from '../tour/TourContext';
 
 // recharts ships ~100 KB into the initial bundle even though pie charts only
@@ -65,21 +66,22 @@ export default function MemberProfile({ memberId }: MemberProfileProps) {
 
   const isOwnProfile = useMemo(() => memberId === Meteor.userId(), [memberId]);
 
+  const { call: fetchProfileStats } = useMethod<ProfileStats>('members.profileStats');
+  const { call: fetchProfileAccess } = useMethod<ProfileAccess>('members.profileAccess');
+  const { call: fetchAttendanceBreakdown } = useMethod<AttendanceBreakdown>('members.attendanceBreakdown');
+  const { call: fetchSpecOptions } = useMethod<DefaultOptionType[]>('specializations.options');
+
   useEffect(() => {
     if (!memberId) return;
     setLoading(true);
-    Promise.all([
-      Meteor.callAsync('members.profileStats', memberId),
-      Meteor.callAsync('members.profileAccess', memberId),
-      Meteor.callAsync('members.attendanceBreakdown', memberId),
-    ])
+    Promise.all([fetchProfileStats(memberId), fetchProfileAccess(memberId), fetchAttendanceBreakdown(memberId)])
       .then(([stats, accessResult, breakdownResult]) => {
-        setProfileStats(stats as ProfileStats);
-        setAccess(accessResult as ProfileAccess);
-        setBreakdown(breakdownResult as AttendanceBreakdown);
+        if (stats.ok) setProfileStats(stats.data);
+        if (accessResult.ok) setAccess(accessResult.data);
+        if (breakdownResult.ok) setBreakdown(breakdownResult.data);
       })
       .finally(() => setLoading(false));
-  }, [memberId]);
+  }, [memberId, fetchProfileStats, fetchProfileAccess, fetchAttendanceBreakdown]);
 
   const handleRequestSpec = useCallback(async () => {
     if (!selectedSpec) return;
@@ -95,15 +97,11 @@ export default function MemberProfile({ memberId }: MemberProfileProps) {
   }, [selectedSpec, message, notification, t]);
 
   const openSpecModal = useCallback(async () => {
-    try {
-      const options = await Meteor.callAsync('specializations.options');
-      setSpecOptions(options as DefaultOptionType[]);
-      setSpecModalOpen(true);
-    } catch (error) {
-      const err = error as Meteor.Error;
-      notification.error({ message: err.error as string, description: err.message });
-    }
-  }, [notification]);
+    const res = await fetchSpecOptions();
+    if (!res.ok) return;
+    setSpecOptions(res.data);
+    setSpecModalOpen(true);
+  }, [fetchSpecOptions]);
 
   if (loading) {
     return (
@@ -119,187 +117,196 @@ export default function MemberProfile({ memberId }: MemberProfileProps) {
 
   return (
     <div ref={profileRef}>
-    <Row gutter={[16, 16]}>
-      {/* Header: Profile Picture + Basic Info */}
-      <Col xs={24} md={8}>
-        <Card variant="outlined">
-          <Row justify="center">
-            <Col>
-              {profileStats['profile picture'] && profileStats['profile picture'] !== '-' ? (
-                <img
-                  style={{ borderRadius: '50%', width: '100%', maxWidth: 200, maxHeight: 200 }}
-                  src={profileStats['profile picture']}
-                  alt={profileStats.name}
-                />
-              ) : (
-                <div
-                  style={{
-                    borderRadius: '50%',
-                    width: 200,
-                    height: 200,
-                    background: profileStats.rankColor || '#ccc',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 48,
-                    color: '#fff',
-                  }}
-                >
-                  {profileStats.name?.[0] || '?'}
-                </div>
-              )}
-            </Col>
-          </Row>
-          <Row justify="center" style={{ marginTop: 12 }}>
-            <Typography.Title level={4} style={{ margin: 0 }}>
-              {`${profileStats.rank}-${profileStats.id} "${profileStats.name}"`}
-            </Typography.Title>
-          </Row>
-        </Card>
-      </Col>
+      <Row gutter={[16, 16]}>
+        {/* Header: Profile Picture + Basic Info */}
+        <Col xs={24} md={8}>
+          <Card variant="outlined">
+            <Row justify="center">
+              <Col>
+                {profileStats['profile picture'] && profileStats['profile picture'] !== '-' ? (
+                  <img
+                    style={{ borderRadius: '50%', width: '100%', maxWidth: 200, maxHeight: 200 }}
+                    src={profileStats['profile picture']}
+                    alt={profileStats.name}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      borderRadius: '50%',
+                      width: 200,
+                      height: 200,
+                      background: profileStats.rankColor || '#ccc',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 48,
+                      color: '#fff',
+                    }}
+                  >
+                    {profileStats.name?.[0] || '?'}
+                  </div>
+                )}
+              </Col>
+            </Row>
+            <Row justify="center" style={{ marginTop: 12 }}>
+              <Typography.Title level={4} style={{ margin: 0 }}>
+                {`${profileStats.rank}-${profileStats.id} "${profileStats.name}"`}
+              </Typography.Title>
+            </Row>
+          </Card>
+        </Col>
 
-      {/* Info Section */}
-      <Col xs={24} md={16}>
-        <Descriptions
-          layout="vertical"
-          size="small"
-          column={{ sm: 1, lg: 3 }}
-          bordered
-          items={[
-            { label: t('members.squad'), children: profileStats.squad },
-            { label: t('members.rank'), children: profileStats.rank },
-            { label: t('forms.labels.navyRank'), children: profileStats.navyRank },
-            { label: t('members.entryDate'), children: profileStats['entry date'] },
-            { label: t('columns.id'), children: profileStats.id },
-            { label: t('common.name'), children: profileStats.name },
-            { label: t('members.roles'), children: profileStats.role },
-            ...(profileStats.position && profileStats.position !== '-'
-              ? [{ label: t('members.position'), children: <Tag color={profileStats.positionColor}>{profileStats.position}</Tag> }]
-              : []),
-          ]}
-        />
-      </Col>
-
-      {/* Stats */}
-      <Col xs={24}>
-        <Card title={t('events.attendance')} variant="outlined" size="small">
-          <Row gutter={[16, 16]}>
-            <Col xs={12} md={6}>
-              <Statistic title={t('events.attendancePoints')} value={profileStats['attendance points']} />
-            </Col>
-            <Col xs={12} md={6}>
-              <Statistic title={t('events.inactivityPoints')} value={profileStats['inactivity points']} />
-            </Col>
-            {breakdown && (
-              <>
-                <Col xs={12} md={6}>
-                  <Statistic title={t('members.missionCount')} value={breakdown.missionCount} />
-                </Col>
-                <Col xs={24} md={12}>
-                  <Suspense fallback={<Spin size="small" />}>
-                    <AttendancePieChart data={breakdown.total} title={t('members.attendanceOverall')} />
-                  </Suspense>
-                </Col>
-                <Col xs={24} md={12}>
-                  <Suspense fallback={<Spin size="small" />}>
-                    <AttendancePieChart data={breakdown.quarterly} title={t('members.attendanceQuarterly')} />
-                  </Suspense>
-                </Col>
-              </>
-            )}
-          </Row>
-        </Card>
-      </Col>
-
-      {/* Qualifications */}
-      <Col xs={24}>
-        <Card
-          title={t('members.qualifications')}
-          variant="outlined"
-          size="small"
-          extra={isOwnProfile && <Button size="small" onClick={openSpecModal}>{t('members.requestSpecialization')}</Button>}
-        >
+        {/* Info Section */}
+        <Col xs={24} md={16}>
           <Descriptions
             layout="vertical"
             size="small"
-            column={1}
+            column={{ sm: 1, lg: 3 }}
             bordered
             items={[
-              {
-                label: t('members.specializations'),
-                children: Array.isArray(profileStats.specializations) && profileStats.specializations.length > 0
-                  ? profileStats.specializations.map(spec =>
-                      spec.linkToFile ? (
-                        <a key={spec.name} href={spec.linkToFile} target="_blank" rel="noopener noreferrer">
-                          <Tag color="blue" style={{ cursor: 'pointer' }}>{spec.name}</Tag>
-                        </a>
-                      ) : (
-                        <Tag key={spec.name}>{spec.name}</Tag>
-                      )
-                    )
-                  : '-',
-              },
-              { label: t('members.medals'), children: profileStats.medals || '-' },
+              { label: t('members.squad'), children: profileStats.squad },
+              { label: t('members.rank'), children: profileStats.rank },
+              { label: t('forms.labels.navyRank'), children: profileStats.navyRank },
+              { label: t('members.entryDate'), children: profileStats['entry date'] },
+              { label: t('columns.id'), children: profileStats.id },
+              { label: t('common.name'), children: profileStats.name },
+              { label: t('members.roles'), children: profileStats.role },
+              ...(profileStats.position && profileStats.position !== '-'
+                ? [{ label: t('members.position'), children: <Tag color={profileStats.positionColor}>{profileStats.position}</Tag> }]
+                : []),
             ]}
           />
-        </Card>
-      </Col>
+        </Col>
 
-      {/* Description */}
-      {profileStats.description && profileStats.description !== '-' && (
+        {/* Stats */}
         <Col xs={24}>
-          <Card title={t('common.description')} variant="outlined" size="small">
-            <Typography.Paragraph style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{profileStats.description}</Typography.Paragraph>
+          <Card title={t('events.attendance')} variant="outlined" size="small">
+            <Row gutter={[16, 16]}>
+              <Col xs={12} md={6}>
+                <Statistic title={t('events.attendancePoints')} value={profileStats['attendance points']} />
+              </Col>
+              <Col xs={12} md={6}>
+                <Statistic title={t('events.inactivityPoints')} value={profileStats['inactivity points']} />
+              </Col>
+              {breakdown && (
+                <>
+                  <Col xs={12} md={6}>
+                    <Statistic title={t('members.missionCount')} value={breakdown.missionCount} />
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Suspense fallback={<Spin size="small" />}>
+                      <AttendancePieChart data={breakdown.total} title={t('members.attendanceOverall')} />
+                    </Suspense>
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Suspense fallback={<Spin size="small" />}>
+                      <AttendancePieChart data={breakdown.quarterly} title={t('members.attendanceQuarterly')} />
+                    </Suspense>
+                  </Col>
+                </>
+              )}
+            </Row>
           </Card>
         </Col>
-      )}
 
-      {/* Contact Info (conditionally shown) */}
-      {access.canViewContact && (
+        {/* Qualifications */}
         <Col xs={24}>
-          <Card title={t('members.contactInfo')} variant="outlined" size="small">
+          <Card
+            title={t('members.qualifications')}
+            variant="outlined"
+            size="small"
+            extra={
+              isOwnProfile && (
+                <Button size="small" onClick={openSpecModal}>
+                  {t('members.requestSpecialization')}
+                </Button>
+              )
+            }
+          >
             <Descriptions
               layout="vertical"
               size="small"
-              column={{ sm: 1, lg: 2 }}
+              column={1}
               bordered
               items={[
                 {
-                  label: t('members.steamProfile'),
-                  children: profileStats.steamProfileLink ? (
-                    <a href={profileStats.steamProfileLink} target="_blank" rel="noopener noreferrer">
-                      {profileStats.steamProfileLink}
-                    </a>
-                  ) : (
-                    '-'
-                  ),
+                  label: t('members.specializations'),
+                  children:
+                    Array.isArray(profileStats.specializations) && profileStats.specializations.length > 0
+                      ? profileStats.specializations.map(spec =>
+                          spec.linkToFile ? (
+                            <a key={spec.name} href={spec.linkToFile} target="_blank" rel="noopener noreferrer">
+                              <Tag color="blue" style={{ cursor: 'pointer' }}>
+                                {spec.name}
+                              </Tag>
+                            </a>
+                          ) : (
+                            <Tag key={spec.name}>{spec.name}</Tag>
+                          )
+                        )
+                      : '-',
                 },
-                { label: t('members.discordTag'), children: profileStats.discordTag || '-' },
+                { label: t('members.medals'), children: profileStats.medals || '-' },
               ]}
             />
           </Card>
         </Col>
-      )}
 
-      {/* Request Specialization Modal */}
-      <Modal
-        title={t('members.requestSpecialization')}
-        open={specModalOpen}
-        onCancel={() => setSpecModalOpen(false)}
-        onOk={handleRequestSpec}
-        okButtonProps={{ disabled: !selectedSpec }}
-      >
-        <Select
-          style={{ width: '100%' }}
-          placeholder={t('common.selectSpecializations')}
-          options={specOptions}
-          value={selectedSpec}
-          onChange={setSelectedSpec}
-          optionFilterProp="label"
-          showSearch
-        />
-      </Modal>
-    </Row>
+        {/* Description */}
+        {profileStats.description && profileStats.description !== '-' && (
+          <Col xs={24}>
+            <Card title={t('common.description')} variant="outlined" size="small">
+              <Typography.Paragraph style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{profileStats.description}</Typography.Paragraph>
+            </Card>
+          </Col>
+        )}
+
+        {/* Contact Info (conditionally shown) */}
+        {access.canViewContact && (
+          <Col xs={24}>
+            <Card title={t('members.contactInfo')} variant="outlined" size="small">
+              <Descriptions
+                layout="vertical"
+                size="small"
+                column={{ sm: 1, lg: 2 }}
+                bordered
+                items={[
+                  {
+                    label: t('members.steamProfile'),
+                    children: profileStats.steamProfileLink ? (
+                      <a href={profileStats.steamProfileLink} target="_blank" rel="noopener noreferrer">
+                        {profileStats.steamProfileLink}
+                      </a>
+                    ) : (
+                      '-'
+                    ),
+                  },
+                  { label: t('members.discordTag'), children: profileStats.discordTag || '-' },
+                ]}
+              />
+            </Card>
+          </Col>
+        )}
+
+        {/* Request Specialization Modal */}
+        <Modal
+          title={t('members.requestSpecialization')}
+          open={specModalOpen}
+          onCancel={() => setSpecModalOpen(false)}
+          onOk={handleRequestSpec}
+          okButtonProps={{ disabled: !selectedSpec }}
+        >
+          <Select
+            style={{ width: '100%' }}
+            placeholder={t('common.selectSpecializations')}
+            options={specOptions}
+            value={selectedSpec}
+            onChange={setSelectedSpec}
+            optionFilterProp="label"
+            showSearch
+          />
+        </Modal>
+      </Row>
     </div>
   );
 }

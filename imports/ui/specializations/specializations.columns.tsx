@@ -1,9 +1,9 @@
 import type { ColumnsType } from 'antd/es/table';
 import { Tag } from 'antd';
-import { Meteor } from 'meteor/meteor';
 import React, { useEffect, useState } from 'react';
 import type { Specialization } from '../../api/types/misc';
 import type { LanguageContextValue } from '../../i18n/LanguageContext';
+import useMethod from '../hooks/useMethod';
 import type { SectionPermissions, RowClickEvent } from '../section/types';
 import RankTag from '../members/ranks/RankTag';
 import TableActions from '../table/body/actions/TableActions';
@@ -23,15 +23,13 @@ interface SpecializationTagsProps {
 
 const SpecializationTags = ({ specializations }: SpecializationTagsProps) => {
   const [values, setValues] = useState<OptionShape[] | string>('loading...');
+  const { call } = useMethod<OptionShape[]>('specializations.options');
   useEffect(() => {
     if (!specializations?.length) setValues([]);
-    Meteor.callAsync('specializations.options')
-      .then((res: OptionShape[]) => {
-        const data = res.filter(option => specializations!.includes(option.value));
-        setValues(data);
-      })
-      .catch(() => {});
-  }, [specializations]);
+    call().then(res => {
+      if (res.ok) setValues(res.data.filter(option => specializations!.includes(option.value)));
+    });
+  }, [specializations, call]);
 
   if (!Array.isArray(values)) return <>{values}</>;
   if (!values.length) return <>-</>;
@@ -53,7 +51,7 @@ const getSpecializationColumns = (
   handleEdit: (e: RowClickEvent, record: Specialization) => void,
   handleDelete: (e: RowClickEvent, record: Specialization) => void,
   permissions: SectionPermissions = { canCreate: true, canUpdate: true, canDelete: true },
-  t: TFn,
+  t: TFn
 ): ColumnsType<Specialization> => {
   const { canUpdate = true, canDelete = true } = permissions;
 

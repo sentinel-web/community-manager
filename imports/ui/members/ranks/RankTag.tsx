@@ -1,7 +1,7 @@
 import { Tag, Tooltip } from 'antd';
-import { Meteor } from 'meteor/meteor';
 import React, { useEffect, useState } from 'react';
 import type { Rank } from '../../../api/types/rank';
+import useMethod from '../../hooks/useMethod';
 
 interface RankTagProps {
   rankId?: string;
@@ -9,19 +9,20 @@ interface RankTagProps {
 
 export default function RankTag({ rankId }: RankTagProps) {
   const [match, setMatch] = useState<Rank | null>(null);
+  const { call } = useMethod<Rank[]>('ranks.read');
   useEffect(() => {
     if (!rankId) {
       setMatch(null);
       return;
     }
     let cancelled = false;
-    Meteor.callAsync('ranks.read', { _id: rankId }, { limit: 1 }).then(res => {
-      if (!cancelled) setMatch((res as Rank[])[0]);
+    call({ _id: rankId }, { limit: 1 }).then(res => {
+      if (!cancelled && res.ok) setMatch(res.data[0]);
     });
     return () => {
       cancelled = true;
     };
-  }, [rankId]);
+  }, [rankId, call]);
 
   if (!rankId) return <Tag>-</Tag>;
   if (!match) return <Tag>Not found</Tag>;

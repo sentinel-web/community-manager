@@ -1,7 +1,7 @@
 import { Tag, Tooltip } from 'antd';
-import { Meteor } from 'meteor/meteor';
 import React, { useEffect, useState } from 'react';
 import type { TaskStatus } from '../../../api/types/misc';
+import useMethod from '../../hooks/useMethod';
 
 interface TaskStatusTagProps {
   taskStatusId?: string;
@@ -9,14 +9,12 @@ interface TaskStatusTagProps {
 
 export default function TaskStatusTag({ taskStatusId }: TaskStatusTagProps) {
   const [match, setMatch] = useState<TaskStatus | null>(null);
+  const { call } = useMethod<TaskStatus[]>('taskStatus.read');
 
   useEffect(() => {
     if (!taskStatusId) setMatch(null);
-    else
-      Meteor.callAsync('taskStatus.read', { _id: taskStatusId }, { limit: 1 }).then((res: TaskStatus[]) =>
-        setMatch(res[0])
-      );
-  }, [taskStatusId]);
+    else call({ _id: taskStatusId }, { limit: 1 }).then(res => res.ok && setMatch(res.data[0]));
+  }, [taskStatusId, call]);
 
   if (!taskStatusId) return <Tag>-</Tag>;
   if (!match) return <Tag>Not found</Tag>;

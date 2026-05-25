@@ -5,27 +5,29 @@ import { Meteor } from 'meteor/meteor';
 import { useTracker } from 'meteor/react-meteor-data';
 import React, { useEffect, useState } from 'react';
 import useUserMenu from '../components/useUserMenu';
+import useMethod from '../hooks/useMethod';
+
+interface ProfilePictureDoc {
+  value: string;
+}
 
 export default function Footer() {
   const breakpoints = Grid.useBreakpoint();
   const user = useTracker(() => Meteor.user(), []);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const { actionItems, handleAction, profileModal } = useUserMenu();
+  const { call: fetchProfilePicture } = useMethod<ProfilePictureDoc[]>('profilePictures.read');
 
   useEffect(() => {
     const profilePictureId = user?.profile?.profilePictureId;
     if (profilePictureId && typeof profilePictureId === 'string') {
-      Meteor.callAsync('profilePictures.read', { _id: profilePictureId })
-        .then(res => {
-          if (res?.[0]) {
-            setImageSrc(res[0].value);
-          }
-        })
-        .catch(() => {});
+      fetchProfilePicture({ _id: profilePictureId }).then(res => {
+        if (res.ok && res.data[0]) setImageSrc(res.data[0].value);
+      });
     } else {
       setImageSrc(null);
     }
-  }, [user?.profile?.profilePictureId]);
+  }, [user?.profile?.profilePictureId, fetchProfilePicture]);
 
   if (!user) {
     return <></>;

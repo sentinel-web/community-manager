@@ -12,6 +12,7 @@ import RanksCollection from '../../api/collections/ranks.collection';
 import type { AttendanceStatus } from '../../api/types/shared';
 import type { EventDoc } from '../../api/types/event';
 import { useTranslation } from '../../i18n/LanguageContext';
+import useMethod from '../hooks/useMethod';
 import type { TranslateFn } from '../section/types';
 import TableContainer from '../table/body/TableContainer';
 import Table from '../table/Table';
@@ -77,23 +78,19 @@ interface AttendanceSelectProps {
 function AttendanceSelect({ value, eventId, memberId, setEditting }: AttendanceSelectProps) {
   const { t } = useTranslation();
   const { notification } = App.useApp();
-  const handleChange = (newValue: AttendanceStatus) => {
+  const { call: readAttendance } = useMethod<Array<{ _id: string }>>('attendances.read');
+  const handleChange = async (newValue: AttendanceStatus) => {
     if (value === newValue) return;
-    Meteor.callAsync('attendances.read', { eventId }, { limit: 1 })
-      .then(res => {
-        const attendanceRes = res as Array<{ _id: string }>;
-        const endpoint = attendanceRes.length ? 'attendances.update' : 'attendances.insert';
-        const args = attendanceRes.length
-          ? [attendanceRes[0]._id, { [memberId]: newValue }]
-          : [{ eventId, [memberId]: newValue }];
-        return Meteor.callAsync(endpoint, ...args);
-      })
-      .catch((error: Meteor.Error) => {
-        notification.error({
-          message: t('common.error'),
-          description: error.reason || error.message,
-        });
-      });
+    const res = await readAttendance({ eventId }, { limit: 1 });
+    if (!res.ok) return;
+    const endpoint = res.data.length ? 'attendances.update' : 'attendances.insert';
+    const args = res.data.length ? [res.data[0]._id, { [memberId]: newValue }] : [{ eventId, [memberId]: newValue }];
+    try {
+      await Meteor.callAsync(endpoint, ...args);
+    } catch (error) {
+      const err = error as Meteor.Error;
+      notification.error({ message: t('common.error'), description: err.reason || err.message });
+    }
   };
 
   const options = useMemo(
@@ -198,10 +195,7 @@ export default function EventAttendance({ datasource }: EventAttendanceProps) {
   const { t } = useTranslation();
   // Attendance grid needs all members and attendances for the selected events
   useSubscribe('attendances', { eventId: { $in: datasource.map(event => event._id) } }, { limit: 1000 });
-  const attendances = useFind(
-    () => AttendancesCollection.find({ eventId: { $in: datasource.map(event => event._id) as string[] } }),
-    [datasource]
-  );
+  const attendances = useFind(() => AttendancesCollection.find({ eventId: { $in: datasource.map(event => event._id) as string[] } }), [datasource]);
 
   // Get unique attendee IDs from datasource events to filter members subscription
   const attendeeIds = useMemo(() => {
@@ -214,7 +208,10 @@ export default function EventAttendance({ datasource }: EventAttendanceProps) {
   }, [datasource]);
   useSubscribe('members', attendeeIds.length ? { _id: { $in: attendeeIds } } : {}, {});
   const members = useFind(
-    () => MembersCollection.find(attendeeIds.length ? { _id: { $in: attendeeIds } } : {}, { sort: { 'profile.squadId': 1, 'profile.rankId': 1 } } as Mongo.Options<Meteor.User>),
+    () =>
+      MembersCollection.find(attendeeIds.length ? { _id: { $in: attendeeIds } } : {}, {
+        sort: { 'profile.squadId': 1, 'profile.rankId': 1 },
+      } as Mongo.Options<Meteor.User>),
     [attendeeIds]
   );
   useSubscribe('ranks', {}, {});
@@ -251,9 +248,7 @@ export default function EventAttendance({ datasource }: EventAttendanceProps) {
         memberId: member._id,
         ...datasource.reduce<Record<string, AttendanceStatus | null | undefined>>((acc, event) => {
           const attendanceDoc = attendances.find(a => a.eventId === event._id);
-          acc[event._id as string] = attendanceDoc
-            ? (attendanceDoc[member._id] as AttendanceStatus | undefined)
-            : undefined;
+          acc[event._id as string] = attendanceDoc ? (attendanceDoc[member._id] as AttendanceStatus | undefined) : undefined;
           return acc;
         }, {}),
       } as AttendanceRow;

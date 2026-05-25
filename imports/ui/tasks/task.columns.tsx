@@ -1,10 +1,10 @@
 import dayjs from 'dayjs';
-import { Meteor } from 'meteor/meteor';
 import React, { useEffect, useState } from 'react';
 import type { ColumnsType } from 'antd/es/table';
 import TaskStatusCollection from '../../api/collections/taskStatus.collection';
 import type { Task } from '../../api/types/task';
 import type { LanguageContextValue } from '../../i18n/LanguageContext';
+import useMethod from '../hooks/useMethod';
 import type { SectionPermissions } from '../section/types';
 import TableActions from '../table/body/actions/TableActions';
 import TaskStatusTag from './task-status/TaskStatusTag';
@@ -17,18 +17,16 @@ interface ParticipantsProps {
 
 export function Participants({ participants }: ParticipantsProps) {
   const [value, setValue] = useState<string>('loading...');
+  const { call } = useMethod<string>('members.participantNames');
 
   useEffect(() => {
     if (!participants?.length) setValue('-');
     const filter = { _id: { $in: participants } };
     const options = { fields: { 'profile.name': 1, 'profile.id': 1, 'profile.rankId': 1 } };
-    Meteor.callAsync('members.participantNames', filter, options)
-      .then((res: string) => {
-        if (!res?.length) setValue('-');
-        else setValue(res);
-      })
-      .catch(() => {});
-  }, [participants]);
+    call(filter, options).then(res => {
+      if (res.ok) setValue(res.data?.length ? res.data : '-');
+    });
+  }, [participants, call]);
 
   return <>{value}</>;
 }
@@ -37,7 +35,7 @@ export function getTaskColumns(
   handleTaskEdit: (e: React.MouseEvent<HTMLElement>, record: Task) => void,
   handleTaskDelete: (e: React.MouseEvent<HTMLElement>, record: Task) => void,
   permissions: SectionPermissions = { canCreate: true, canUpdate: true, canDelete: true },
-  t: TFn,
+  t: TFn
 ): ColumnsType<Task> {
   const { canUpdate = true, canDelete = true } = permissions;
 
