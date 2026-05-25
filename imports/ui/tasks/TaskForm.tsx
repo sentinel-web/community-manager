@@ -11,6 +11,7 @@ import { useTranslation } from '../../i18n/LanguageContext';
 import { useDrawerFrame } from '../drawer-stack';
 import CollectionSelect, { type CollectionDoc } from '../components/CollectionSelect';
 import FormFooter from '../components/FormFooter';
+import useMethod from '../hooks/useMethod';
 import MembersSelectJs from '../members/MembersSelect';
 import TaskStatusForm from './task-status/TaskStatusForm';
 
@@ -50,11 +51,10 @@ export default function TaskForm() {
   );
 
   const [participantOptions, setParticipantOptions] = useState<MemberOption[]>([]);
+  const { call: fetchMemberOptions } = useMethod<MemberOption[]>('members.options');
   useEffect(() => {
-    Meteor.callAsync('members.options')
-      .then((res: MemberOption[]) => setParticipantOptions(res))
-      .catch(() => {});
-  }, []);
+    fetchMemberOptions().then(res => res.ok && setParticipantOptions(res.data));
+  }, [fetchMemberOptions]);
 
   const [form] = Form.useForm();
 
@@ -102,7 +102,13 @@ export default function TaskForm() {
         FormComponent={TaskStatusForm}
       />
       <Form.Item label={t('tasks.participants')} name="participants" rules={[{ required: false, type: 'array' }]}>
-        <Select mode="multiple" placeholder={t('forms.placeholders.selectParticipants')} allowClear options={participantOptions} optionFilterProp="label" />
+        <Select
+          mode="multiple"
+          placeholder={t('forms.placeholders.selectParticipants')}
+          allowClear
+          options={participantOptions}
+          optionFilterProp="label"
+        />
       </Form.Item>
       <MembersSelect multiple name="completedBy" label={t('tasks.completedBy')} rules={[{ type: 'array' }]} defaultValue={model?.completedBy} />
       <Form.Item label={t('tasks.priority')} name="priority" rules={[{ required: false, type: 'string' }]}>

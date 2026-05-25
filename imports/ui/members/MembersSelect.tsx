@@ -2,13 +2,13 @@ import { Form, Select } from 'antd';
 import type { Rule } from 'antd/es/form';
 import type { NamePath } from 'antd/es/form/interface';
 import type { DefaultOptionType } from 'antd/es/select';
-import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
 import React, { useEffect, useMemo, useState } from 'react';
 import MembersCollection from '../../api/collections/members.collection';
 import type { LanguageContextValue } from '../../i18n/LanguageContext';
 import { useTranslation } from '../../i18n/LanguageContext';
 import CollectionSelect, { type CollectionDoc } from '../components/CollectionSelect';
+import useMethod from '../hooks/useMethod';
 import MemberForm from './MemberForm';
 
 interface MembersSelectProps {
@@ -54,12 +54,11 @@ interface GroupedMembersSelectProps {
 
 function GroupedMembersSelect({ multiple, name, label, rules, defaultValue, t }: GroupedMembersSelectProps) {
   const [options, setOptions] = useState<DefaultOptionType[]>([]);
+  const { call } = useMethod<DefaultOptionType[]>('members.groupedOptions');
 
   useEffect(() => {
-    Meteor.callAsync('members.groupedOptions')
-      .then((data: DefaultOptionType[]) => setOptions(data))
-      .catch(() => {});
-  }, []);
+    call().then(res => res.ok && setOptions(res.data));
+  }, [call]);
 
   const isFormItem = useMemo(() => name && label && rules, [name, label, rules]);
 

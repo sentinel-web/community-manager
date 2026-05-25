@@ -1,8 +1,8 @@
-import { App, Button, Card, Col, Collapse, Descriptions, Row, Statistic, Tag, Typography } from 'antd';
-import { Meteor } from 'meteor/meteor';
+import { Button, Card, Col, Collapse, Descriptions, Row, Statistic, Tag, Typography } from 'antd';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import type { LocaleKey } from '../../i18n';
+import useMethod from '../hooks/useMethod';
 import { useTourRef } from '../tour/TourContext';
 
 // Closed maps from server-data keys to LocaleKeys. `as const satisfies` preserves
@@ -71,23 +71,23 @@ interface DashboardStats {
 }
 
 export default function Dashboard() {
-  const { message } = App.useApp();
   const [stats, setStats] = useState<DashboardStats>({});
   const [loading, setLoading] = useState(false);
   const { t } = useTranslation();
   const statsRef = useTourRef('dashboard-stats');
-  const fetchStats = useCallback(function () {
-    setLoading(true);
-    Meteor.callAsync('dashboard.stats')
-      .then((data: DashboardStats) => setStats(data))
-      .catch(() => {
-        message.error('Failed to load dashboard stats');
-      })
-      .finally(() => setLoading(false));
-  }, [message]);
+  const { call } = useMethod<DashboardStats>('dashboard.stats');
+  const fetchStats = useCallback(
+    function () {
+      setLoading(true);
+      call()
+        .then(res => res.ok && setStats(res.data))
+        .finally(() => setLoading(false));
+    },
+    [call]
+  );
   useEffect(() => {
     fetchStats();
-  }, []);
+  }, [fetchStats]);
 
   return (
     <div ref={statsRef}>
@@ -95,59 +95,59 @@ export default function Dashboard() {
         type="inner"
         loading={loading}
         title={
-        <Row justify="space-between" align="middle">
-          <Col>
-            <Typography.Title level={3}>{t('dashboard.title')}</Typography.Title>
-          </Col>
-          <Col>
-            <Button disabled={loading} onClick={fetchStats} type="primary">
-              {t('dashboard.refresh')}
-            </Button>
-          </Col>
-        </Row>
-      }
-    >
-      <Collapse
-        defaultActiveKey={['1', '2']}
-        items={[
-          {
-            key: '1',
-            label: t('dashboard.yourProfile'),
-            children: <ProfileStats profileStats={stats.profile} />,
-          },
-          {
-            key: '2',
-            label: t('dashboard.collectionStats'),
-            children: (
-              <Row gutter={[16, 16]}>
-                {Object.entries(stats).flatMap(([key, value]) => {
-                  if (key === 'profile') return [];
-                  const translateStatKey = (k: string): string => {
-                    const labelKey = STATS_LABEL_KEYS[k as keyof typeof STATS_LABEL_KEYS];
-                    return labelKey ? t(labelKey) : k;
-                  };
-                  if (typeof value === 'object') {
-                    return Object.keys(value as Record<string, number>).map(childKey => (
-                      <Col xs={24} md={12} lg={8} xxl={6} key={childKey}>
+          <Row justify="space-between" align="middle">
+            <Col>
+              <Typography.Title level={3}>{t('dashboard.title')}</Typography.Title>
+            </Col>
+            <Col>
+              <Button disabled={loading} onClick={fetchStats} type="primary">
+                {t('dashboard.refresh')}
+              </Button>
+            </Col>
+          </Row>
+        }
+      >
+        <Collapse
+          defaultActiveKey={['1', '2']}
+          items={[
+            {
+              key: '1',
+              label: t('dashboard.yourProfile'),
+              children: <ProfileStats profileStats={stats.profile} />,
+            },
+            {
+              key: '2',
+              label: t('dashboard.collectionStats'),
+              children: (
+                <Row gutter={[16, 16]}>
+                  {Object.entries(stats).flatMap(([key, value]) => {
+                    if (key === 'profile') return [];
+                    const translateStatKey = (k: string): string => {
+                      const labelKey = STATS_LABEL_KEYS[k as keyof typeof STATS_LABEL_KEYS];
+                      return labelKey ? t(labelKey) : k;
+                    };
+                    if (typeof value === 'object') {
+                      return Object.keys(value as Record<string, number>).map(childKey => (
+                        <Col xs={24} md={12} lg={8} xxl={6} key={childKey}>
+                          <Card variant="outlined">
+                            <Statistic title={`${translateStatKey(key)}: ${childKey}`} value={(value as Record<string, number>)[childKey]} />
+                          </Card>
+                        </Col>
+                      ));
+                    }
+                    return [
+                      <Col xs={24} md={12} lg={8} xxl={6} key={key}>
                         <Card variant="outlined">
-                          <Statistic title={`${translateStatKey(key)}: ${childKey}`} value={(value as Record<string, number>)[childKey]} />
+                          <Statistic title={translateStatKey(key)} value={value as number} />
                         </Card>
-                      </Col>
-                    ));
-                  }
-                  return [
-                    <Col xs={24} md={12} lg={8} xxl={6} key={key}>
-                      <Card variant="outlined">
-                        <Statistic title={translateStatKey(key)} value={value as number} />
-                      </Card>
-                    </Col>,
-                  ];
-                })}
-              </Row>
-            ),
-          },
-        ]}
-      />
+                      </Col>,
+                    ];
+                  })}
+                </Row>
+              ),
+            },
+          ]}
+        />
       </Card>
     </div>
   );
@@ -167,7 +167,7 @@ export function ProfileStats({ profileStats }: ProfileStatsProps) {
       const labelKey = PROFILE_LABEL_KEYS[key as keyof typeof PROFILE_LABEL_KEYS];
       return labelKey ? t(labelKey) : key;
     },
-    [t],
+    [t]
   );
 
   return (
@@ -194,9 +194,7 @@ export function ProfileStats({ profileStats }: ProfileStatsProps) {
             lg: 3,
           }}
           items={Object.entries(profileStats ?? {}).flatMap(([key, value]) =>
-            oneThirdWidthKeys.includes(key)
-              ? [{ label: translateLabel(key), children: value as React.ReactNode }]
-              : []
+            oneThirdWidthKeys.includes(key) ? [{ label: translateLabel(key), children: value as React.ReactNode }] : []
           )}
           bordered
         />
@@ -216,7 +214,9 @@ export function ProfileStats({ profileStats }: ProfileStatsProps) {
                 ? (value as Specialization[]).map(spec =>
                     spec.linkToFile ? (
                       <a key={spec.name} href={spec.linkToFile} target="_blank" rel="noopener noreferrer">
-                        <Tag color="blue" style={{ cursor: 'pointer' }}>{spec.name}</Tag>
+                        <Tag color="blue" style={{ cursor: 'pointer' }}>
+                          {spec.name}
+                        </Tag>
                       </a>
                     ) : (
                       <Tag key={spec.name}>{spec.name}</Tag>

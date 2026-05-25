@@ -1,7 +1,7 @@
 import { Tag, Tooltip } from 'antd';
-import { Meteor } from 'meteor/meteor';
 import React, { useEffect, useState } from 'react';
 import type { DiscoveryType } from '../../../api/types/misc';
+import useMethod from '../../hooks/useMethod';
 
 interface DiscoveryTypeTagProps {
   discoveryTypeId?: string;
@@ -9,6 +9,7 @@ interface DiscoveryTypeTagProps {
 
 export default function DiscoveryTypeTag({ discoveryTypeId }: DiscoveryTypeTagProps) {
   const [match, setMatch] = useState<DiscoveryType | null>(null);
+  const { call } = useMethod<DiscoveryType[]>('discoveryTypes.read');
 
   useEffect(() => {
     if (!discoveryTypeId) {
@@ -16,21 +17,13 @@ export default function DiscoveryTypeTag({ discoveryTypeId }: DiscoveryTypeTagPr
       return;
     }
     let cancelled = false;
-    Meteor.callAsync('discoveryTypes.read', { _id: discoveryTypeId }, { limit: 1 })
-      .then((res: DiscoveryType[]) => {
-        if (cancelled) return;
-        setMatch(res[0]);
-      })
-      .catch(error => {
-        // Swallow rather than let the rejection bubble — unhandled rejections
-        // surface via the dev-server overlay. The Tag falls back to the
-        // "Not found" state, which is benign for a row-level decoration.
-        if (Meteor.isDevelopment) console.warn('DiscoveryTypeTag discoveryTypes.read failed', error);
-      });
+    call({ _id: discoveryTypeId }, { limit: 1 }).then(res => {
+      if (!cancelled && res.ok) setMatch(res.data[0]);
+    });
     return () => {
       cancelled = true;
     };
-  }, [discoveryTypeId]);
+  }, [discoveryTypeId, call]);
 
   if (!discoveryTypeId) return <Tag>-</Tag>;
   if (!match) return <Tag>Not found</Tag>;

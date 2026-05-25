@@ -1,9 +1,9 @@
 import { Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { Meteor } from 'meteor/meteor';
 import React, { useEffect, useState } from 'react';
 import type { Squad } from '../../api/types/squad';
 import getLegibleTextColor from '../../helpers/colors/getLegibleTextColor';
+import useMethod from '../hooks/useMethod';
 import type { ColumnsFactory, RowClickEvent, SectionPermissions, TranslateFn } from '../section/types';
 import TableActions from '../table/body/actions/TableActions';
 
@@ -19,20 +19,18 @@ interface SquadOption {
 
 export const SquadTags = ({ squadIds }: SquadTagsProps) => {
   const [squadNames, setSquadNames] = useState<SquadOption[]>([]);
+  const { call } = useMethod<SquadOption[]>('squads.options');
 
   useEffect(() => {
     let cancelled = false;
-    Meteor.callAsync('squads.options')
-      .then(options => {
-        if (cancelled) return;
-        const filtered = (options as SquadOption[]).filter(option => squadIds.includes(option.value));
-        setSquadNames(filtered);
-      })
-      .catch(() => {});
+    call().then(res => {
+      if (cancelled || !res.ok) return;
+      setSquadNames(res.data.filter(option => squadIds.includes(option.value)));
+    });
     return () => {
       cancelled = true;
     };
-  }, [squadIds]);
+  }, [squadIds, call]);
 
   return (
     <>
@@ -51,7 +49,7 @@ const getSquadsColumns: ColumnsFactory<Squad> = (
   handleEdit: (e: RowClickEvent, record: Squad) => void,
   handleDelete: (e: RowClickEvent, record: Squad) => void,
   permissions: SectionPermissions = defaultPermissions,
-  t: TranslateFn,
+  t: TranslateFn
 ) => {
   const { canUpdate = true, canDelete = true } = permissions;
 

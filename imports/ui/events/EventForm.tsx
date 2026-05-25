@@ -15,6 +15,7 @@ import { useTranslation } from '../../i18n/LanguageContext';
 import type { TranslateFn } from '../section/types';
 import { DrawerFooter, useDrawerFrame } from '../drawer-stack';
 import CollectionSelect from '../components/CollectionSelect';
+import useMethod from '../hooks/useMethod';
 import MembersSelect from '../members/MembersSelect';
 import RichTextEditor from '../components/RichTextEditor';
 import shouldConfirmTemplateOverwrite from '/imports/helpers/shouldConfirmTemplateOverwrite';
@@ -182,7 +183,7 @@ interface SquadQuickAddProps {
 const SquadQuickAdd = ({ form, t }: SquadQuickAddProps) => {
   const [selectedSquad, setSelectedSquad] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
-  const { notification } = App.useApp();
+  const { call: readMembers } = useMethod<Array<{ _id: string }>>('members.read');
   useSubscribe('squads', {}, {});
   const squads = useFind(() => SquadsCollection.find({}), []);
   const squadOptions = useMemo(() => squads.map(s => ({ label: s.name, value: s._id })), [squads]);
@@ -199,27 +200,17 @@ const SquadQuickAdd = ({ form, t }: SquadQuickAddProps) => {
   const handleAddSquad = useCallback(async () => {
     if (!selectedSquad) return;
     setLoading(true);
-    try {
-      const members = (await Meteor.callAsync('members.read', { 'profile.squadId': selectedSquad }, { fields: { _id: 1 } })) as Array<{
-        _id: string;
-      }>;
-      mergeAttendees(members.map(m => m._id));
-    } catch (error) {
-      notification.error({ message: (error as Meteor.Error).error, description: (error as Meteor.Error).message });
-    }
+    const res = await readMembers({ 'profile.squadId': selectedSquad }, { fields: { _id: 1 } });
+    if (res.ok) mergeAttendees(res.data.map(m => m._id));
     setLoading(false);
-  }, [selectedSquad, mergeAttendees, notification]);
+  }, [selectedSquad, mergeAttendees, readMembers]);
 
   const handleAddAll = useCallback(async () => {
     setLoading(true);
-    try {
-      const members = (await Meteor.callAsync('members.read', {}, { fields: { _id: 1 } })) as Array<{ _id: string }>;
-      mergeAttendees(members.map(m => m._id));
-    } catch (error) {
-      notification.error({ message: (error as Meteor.Error).error, description: (error as Meteor.Error).message });
-    }
+    const res = await readMembers({}, { fields: { _id: 1 } });
+    if (res.ok) mergeAttendees(res.data.map(m => m._id));
     setLoading(false);
-  }, [mergeAttendees, notification]);
+  }, [mergeAttendees, readMembers]);
 
   return (
     <Row gutter={[8, 8]} style={{ marginBottom: 16 }} align="middle">

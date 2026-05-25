@@ -1,11 +1,11 @@
-import { App, Card, Descriptions, Empty, Popover, Select, Space, Typography } from 'antd';
-import { Meteor } from 'meteor/meteor';
+import { Card, Descriptions, Empty, Popover, Select, Space, Typography } from 'antd';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Tree, TreeNode } from 'react-organizational-chart';
 import getLegibleTextColor from '../../helpers/colors/getLegibleTextColor';
 import { useTranslation } from '../../i18n/LanguageContext';
 import type { LanguageContextValue } from '../../i18n/LanguageContext';
 import type { Squad } from '/imports/api/types';
+import useMethod from '../hooks/useMethod';
 import { turnBase64ToImage } from '../profile-picture-input/ProfilePictureInput';
 import useTheme from '../theme/theme.hook';
 import { useTourRef } from '../tour/TourContext';
@@ -27,7 +27,6 @@ interface OrbatPopoverItem {
 }
 
 export default function Orbat() {
-  const { message } = App.useApp();
   const [ready, setReady] = useState(true);
   const [squads, setSquads] = useState<Squad[]>([]);
   const [options, setOptions] = useState<OrbatNode[]>([]);
@@ -35,19 +34,15 @@ export default function Orbat() {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const chartRef = useTourRef('orbat-chart');
+  const { call: fetchSquads } = useMethod<Squad[]>('orbat.squads');
 
   useEffect(() => {
     setReady(false);
-    Meteor.callAsync('orbat.squads')
-      .then((squads: Squad[]) => {
-        setSquads(squads);
-        setReady(true);
-      })
-      .catch(() => {
-        message.error('Failed to load ORBAT data');
-        setReady(true);
-      });
-  }, [message]);
+    fetchSquads().then(res => {
+      if (res.ok) setSquads(res.data);
+      setReady(true);
+    });
+  }, [fetchSquads]);
 
   const findParentRecursive = useCallback((options: OrbatNode[], parentId: string | undefined): OrbatNode | null => {
     if (!parentId) return null;
@@ -66,7 +61,7 @@ export default function Orbat() {
     const children: Squad[] = [];
     // Build a single Set of squad IDs that appear as someone's parent — turns
     // the inner "does anything reference me?" lookup from O(n²) into O(n).
-    const referencedParentIds = new Set(squads.flatMap(s => s.parentSquadId ? [s.parentSquadId] : []));
+    const referencedParentIds = new Set(squads.flatMap(s => (s.parentSquadId ? [s.parentSquadId] : [])));
     const seen = new Set<string>();
     for (const squad of squads) {
       if (seen.has(squad._id!)) continue;
@@ -89,7 +84,7 @@ export default function Orbat() {
       orderedSquads.map(async squad => ({
         squad,
         src: squad.image ? (await turnBase64ToImage(squad.image)).src : null,
-      })),
+      }))
     );
     for (const { squad, src } of decoded) {
       const data: OrbatNode = {
@@ -176,18 +171,17 @@ interface ORBAT_LabelProps {
 
 const ORBAT_Label = ({ option, viewType }: ORBAT_LabelProps) => {
   const [items, setItems] = useState<OrbatPopoverItem[]>([]);
+  const { call: fetchPopoverItems } = useMethod<OrbatPopoverItem[]>('orbat.popover.items');
 
   useEffect(() => {
     let isMounted = true;
-    Meteor.callAsync('orbat.popover.items', option.id)
-      .then((data: OrbatPopoverItem[]) => {
-        if (isMounted) setItems(data);
-      })
-      .catch(() => {});
+    fetchPopoverItems(option.id).then(res => {
+      if (isMounted && res.ok) setItems(res.data);
+    });
     return () => {
       isMounted = false;
     };
-  }, [option.id]);
+  }, [option.id, fetchPopoverItems]);
 
   if (viewType === 'advanced') {
     return <ORBAT_AdvancedLabel option={option} items={items} />;
@@ -257,8 +251,7 @@ const ORBAT_AdvancedLabel = ({ option, items }: ORBAT_AdvancedLabelProps) => {
         {items?.length > 0 ? (
           items.map(item => (
             <div key={item.label}>
-              <Typography.Text strong>{item.label}</Typography.Text>{' '}
-              <Typography.Text>{item.children}</Typography.Text>
+              <Typography.Text strong>{item.label}</Typography.Text> <Typography.Text>{item.children}</Typography.Text>
             </div>
           ))
         ) : (

@@ -3,6 +3,7 @@ import { Meteor } from 'meteor/meteor';
 import React, { useCallback, useEffect, useState } from 'react';
 import type { Registration } from '../../api/types';
 import type { Member } from '../../api/types/member';
+import useMethod from '../hooks/useMethod';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 
 interface ConfirmModalProps {
@@ -84,24 +85,18 @@ export default function RegistrationExtra({ record }: RegistrationExtraProps) {
   const [open, setOpen] = useState(false);
 
   const [createdAlready, setCreatedAlready] = useState(true);
+  const { call: findMember } = useMethod<Member | undefined>('members.findOne');
 
   useEffect(() => {
     let cancelled = false;
-    Meteor.callAsync('members.findOne', { 'profile.registrationId': record._id }, { fields: { services: 0 } })
-      .then((res: Member | undefined) => {
-        if (cancelled) return;
-        setCreatedAlready(Boolean(res));
-      })
-      .catch(error => {
-        // Swallow rather than let the rejection bubble — the dev-server overlay
-        // turns unhandled rejections into a full-page "Unexpected error" that
-        // intercepts pointer events on every row in the table.
-        if (Meteor.isDevelopment) console.warn('RegistrationExtra members.findOne failed', error);
-      });
+    findMember({ 'profile.registrationId': record._id }, { fields: { services: 0 } }).then(res => {
+      if (cancelled || !res.ok) return;
+      setCreatedAlready(Boolean(res.data));
+    });
     return () => {
       cancelled = true;
     };
-  }, [record]);
+  }, [record, findMember]);
 
   return (
     <Space>
