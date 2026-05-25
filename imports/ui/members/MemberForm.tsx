@@ -67,7 +67,14 @@ export default function MemberForm() {
   const { message, notification } = App.useApp();
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
-  const [disableSubmit, setDisableSubmit] = useState(false);
+  // Independent availability signals derived into disableSubmit — see the same
+  // pattern in RegistrationForm. Previously a single disableSubmit was written
+  // by two async validations that clobbered each other; here they also never
+  // fired at all, because the checks below used the wrong (top-level) field
+  // paths and the registrations collection instead of members.
+  const [nameAvailable, setNameAvailable] = useState(true);
+  const [idAvailable, setIdAvailable] = useState(true);
+  const disableSubmit = useMemo(() => !nameAvailable || !idAvailable, [nameAvailable, idAvailable]);
   const [nameError, setNameError] = useState<ValidationStatus>(undefined);
   const [idError, setIdError] = useState<ValidationStatus>(undefined);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
@@ -110,12 +117,12 @@ export default function MemberForm() {
   }, [model, form.setFieldsValue]);
 
   const validateName = useCallback(() => {
-    const value = form.getFieldValue('name');
+    const value = form.getFieldValue(['profile', 'name']);
     setNameError('validating');
-    Meteor.callAsync('registrations.validateName', value, model?._id)
+    Meteor.callAsync('members.validateName', value, model?._id || false)
       .then((result: boolean) => {
         setNameError(result ? 'success' : 'error');
-        setDisableSubmit(!result);
+        setNameAvailable(result);
       })
       .catch(() => {
         setNameError('warning');
@@ -123,12 +130,12 @@ export default function MemberForm() {
   }, [form, model?._id]);
 
   const validateId = useCallback(() => {
-    const value = form.getFieldValue('id');
+    const value = form.getFieldValue(['profile', 'id']);
     setIdError('validating');
-    Meteor.callAsync('registrations.validateId', value, model?._id)
+    Meteor.callAsync('members.validateId', value, model?._id || false)
       .then((result: boolean) => {
         setIdError(result ? 'success' : 'error');
-        setDisableSubmit(!result);
+        setIdAvailable(result);
       })
       .catch(() => {
         setIdError('warning');
@@ -173,15 +180,14 @@ export default function MemberForm() {
   );
 
   const handleValuesChange = useCallback(
-    (changedValues: MemberFormValues, values: MemberFormValues) => {
-      if ('name' in values) {
+    (changedValues: MemberFormValues) => {
+      // name/id live under `profile`, so inspect the changed nested keys.
+      const changedProfile = (changedValues as { profile?: Record<string, unknown> }).profile;
+      if (changedProfile && 'name' in changedProfile) {
         validateName();
       }
-      if ('id' in values) {
+      if (changedProfile && 'id' in changedProfile) {
         validateId();
-      }
-      if ('rulesReadAndAccepted' in changedValues && 'rulesReadAndAccepted' in values) {
-        setDisableSubmit(!(values as Record<string, unknown>).rulesReadAndAccepted as boolean);
       }
     },
     [validateName, validateId]
@@ -192,7 +198,7 @@ export default function MemberForm() {
   }, [cancel]);
 
   useEffect(() => {
-    handleValuesChange({} as MemberFormValues, {} as MemberFormValues);
+    handleValuesChange({} as MemberFormValues);
   }, [model, handleValuesChange]);
 
   return (

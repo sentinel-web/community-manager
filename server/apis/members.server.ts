@@ -11,7 +11,7 @@ import RanksCollection from '../../imports/api/collections/ranks.collection';
 import RolesCollection from '../../imports/api/collections/roles.collection';
 import SpecializationsCollection from '../../imports/api/collections/specializations.collection';
 import SquadsCollection from '../../imports/api/collections/squads.collection';
-import { validateObject, validatePublish, validateString, validateUserId, checkPermission, checkSpecialPermission, getSquadScope, isOfficerOrAdmin, getUserRole } from '../main';
+import { validateObject, validatePublish, validateString, validateNumber, validateUserId, checkPermission, checkSpecialPermission, getSquadScope, isOfficerOrAdmin, getUserRole } from '../main';
 import { createLog } from './logs.server';
 import { runMutation, snapshotTouchedFields } from '../mutation-pipeline';
 import { COLLECTION_REGISTRY } from '../collection-registry';
@@ -256,6 +256,32 @@ if (Meteor.isServer) {
       const members = await MembersCollection.find({}, { fields: { 'profile.name': 1 } }).mapAsync(m => m.profile?.name);
 
       return members;
+    },
+    // Returns true when `name` is free among members (excluding the member being
+    // edited). An empty name is treated as available — the required-field rule
+    // handles emptiness; this only checks uniqueness.
+    'members.validateName': async function (name: string = '', excludeId: string | false = false): Promise<boolean> {
+      validateUserId(this.userId);
+      validateString(name, true);
+      if (!name) return true;
+
+      const filter: Record<string, unknown> = { 'profile.name': name };
+      if (excludeId) {
+        filter._id = { $ne: excludeId };
+      }
+      return !(await MembersCollection.findOneAsync(filter));
+    },
+    // Returns true when `id` is free among members (excluding the member being edited).
+    'members.validateId': async function (id: number = 0, excludeId: string | false = false): Promise<boolean> {
+      validateUserId(this.userId);
+      validateNumber(id, true);
+      if (!id) return true;
+
+      const filter: Record<string, unknown> = { 'profile.id': id };
+      if (excludeId) {
+        filter._id = { $ne: excludeId };
+      }
+      return !(await MembersCollection.findOneAsync(filter));
     },
     'members.all': async function () {
       if (!this.userId) {
