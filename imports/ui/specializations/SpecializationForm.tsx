@@ -1,9 +1,9 @@
-import { App, Col, ColorPicker, Form, Input, Row } from 'antd';
+import { Col, ColorPicker, Form, Input, Row } from 'antd';
 import type { Rule } from 'antd/es/form';
-import { Meteor } from 'meteor/meteor';
 import React, { ComponentType, useCallback, useMemo } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import { useDrawerFrame } from '../drawer-stack';
+import useMethod from '../hooks/useMethod';
 import FormFooter from '../components/FormFooter';
 import MembersSelect from '../members/MembersSelect';
 import RanksSelect from '../members/ranks/RanksSelect';
@@ -39,37 +39,32 @@ interface SpecializationFormValues {
 const SpecializationForm = () => {
   const { t } = useTranslation();
   const { model: rawModel, resolve, cancel } = useDrawerFrame<string, Partial<Specialization> & { _id?: string }>();
-  const { message, notification } = App.useApp();
 
   const { model, endpoint } = useMemo(() => {
     const newModel = (rawModel || {}) as unknown as Specialization;
     return { model: newModel, endpoint: newModel?._id ? 'specializations.update' : 'specializations.insert' };
   }, [rawModel]);
 
+  const { call, loading } = useMethod<string | undefined>(endpoint, {
+    success: model?._id ? t('messages.specializationUpdated') : t('messages.specializationCreated'),
+  });
+
   const handleFinish = useCallback(
     async (values: SpecializationFormValues) => {
       const color = getColorFromValues(values);
       values.color = color;
       const args = [...(model?._id ? [model._id] : []), values];
-      try {
-        const result = (await Meteor.callAsync(endpoint, ...args)) as string | undefined;
-        message.success(model?._id ? t('messages.specializationUpdated') : t('messages.specializationCreated'));
-        resolve(model?._id ?? result);
-      } catch (error) {
-        const err = error as Meteor.Error;
-        notification.error({
-          message: err.error as string,
-          description: err.message,
-        });
-      }
+      const res = await call(...args);
+      if (!res.ok) return;
+      resolve(model?._id ?? res.data);
     },
-    [resolve, notification, message, model?._id, endpoint, t]
+    [resolve, model?._id, call]
   );
 
   const [form] = Form.useForm<SpecializationFormValues>();
 
   return (
-    <Form layout="vertical" form={form} onFinish={handleFinish} initialValues={model}>
+    <Form layout="vertical" form={form} onFinish={handleFinish} initialValues={model} disabled={loading}>
       <Form.Item name="name" label={t('common.name')} rules={[{ required: true, type: 'string' }]}>
         <Input placeholder={t('forms.placeholders.enterName')} />
       </Form.Item>
@@ -85,7 +80,13 @@ const SpecializationForm = () => {
           </Form.Item>
         </Col>
       </Row>
-      <MembersSelectTyped multiple name="instructors" label={t('specializations.instructors')} rules={[{ required: false, type: 'array' }]} defaultValue={model?.instructors} />
+      <MembersSelectTyped
+        multiple
+        name="instructors"
+        label={t('specializations.instructors')}
+        rules={[{ required: false, type: 'array' }]}
+        defaultValue={model?.instructors}
+      />
       <SpecializationsSelect
         multiple
         name="requiredSpecializations"
@@ -93,11 +94,16 @@ const SpecializationForm = () => {
         rules={[{ required: false, type: 'array' }]}
         defaultValue={model?.requiredSpecializations}
       />
-      <RanksSelectTyped name="requiredRankId" label={t('specializations.requiredRank')} rules={[{ required: false, type: 'string' }]} defaultValue={model?.requiredRankId} />
+      <RanksSelectTyped
+        name="requiredRankId"
+        label={t('specializations.requiredRank')}
+        rules={[{ required: false, type: 'string' }]}
+        defaultValue={model?.requiredRankId}
+      />
       <Form.Item name="description" label={t('common.description')} rules={[{ required: false, type: 'string' }]}>
         <Input.TextArea autoSize placeholder={t('forms.placeholders.enterDescription')} />
       </Form.Item>
-      <FormFooter onCancel={cancel} />
+      <FormFooter onCancel={cancel} loading={loading} />
     </Form>
   );
 };

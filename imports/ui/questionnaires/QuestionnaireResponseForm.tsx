@@ -1,9 +1,9 @@
-import { App, Form, Input, InputNumber, Rate, Select, Typography } from 'antd';
-import { Meteor } from 'meteor/meteor';
+import { Form, Input, InputNumber, Rate, Select, Typography } from 'antd';
 import React, { useCallback } from 'react';
 import type { Question, Questionnaire } from '../../api/types/questionnaire';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useDrawerFrame } from '../drawer-stack';
+import useMethod from '../hooks/useMethod';
 import FormFooter from '../components/FormFooter';
 
 const { Text } = Typography;
@@ -13,31 +13,27 @@ type ResponseFormValues = Record<string, string | number | string[] | undefined>
 const QuestionnaireResponseForm = () => {
   const { model, resolve, cancel } = useDrawerFrame<true, Questionnaire>();
   const questionnaire = (model || {}) as unknown as Questionnaire;
-  const { message, notification } = App.useApp();
   const { t } = useTranslation();
   const [form] = Form.useForm<ResponseFormValues>();
 
+  const { call, loading } = useMethod('questionnaireResponses.submit', {
+    success: t('questionnaires.submitSuccess'),
+  });
+
   const handleFinish = useCallback(
     async (values: ResponseFormValues) => {
-      try {
-        const answers = (questionnaire.questions || []).map((question, index) => ({
-          questionIndex: index,
-          value: values[`question_${index}`],
-        }));
+      const answers = (questionnaire.questions || []).map((question, index) => ({
+        questionIndex: index,
+        value: values[`question_${index}`],
+      }));
 
-        await Meteor.callAsync('questionnaireResponses.submit', questionnaire._id, answers);
-        message.success(t('questionnaires.submitSuccess'));
-        // Resolve with a truthy sentinel so the opener can detect "submitted"
-        // and refresh its list — undefined would mean "cancelled".
-        resolve(true);
-      } catch (error) {
-        notification.error({
-          message: (error as Meteor.Error).error,
-          description: (error as Meteor.Error).message,
-        });
-      }
+      const res = await call(questionnaire._id, answers);
+      if (!res.ok) return;
+      // Resolve with a truthy sentinel so the opener can detect "submitted"
+      // and refresh its list — undefined would mean "cancelled".
+      resolve(true);
     },
-    [resolve, questionnaire, message, notification, t]
+    [resolve, questionnaire, call]
   );
 
   const renderQuestionField = (question: Question, index: number) => {
@@ -67,10 +63,7 @@ const QuestionnaireResponseForm = () => {
       case 'select':
         return (
           <Form.Item key={key} label={question.text} name={fieldName} rules={rules}>
-            <Select
-              placeholder={t('questionnaires.selectOption')}
-              options={(question.options || []).map(opt => ({ value: opt, label: opt }))}
-            />
+            <Select placeholder={t('questionnaires.selectOption')} options={(question.options || []).map(opt => ({ value: opt, label: opt }))} />
           </Form.Item>
         );
       case 'multiselect':
@@ -103,14 +96,14 @@ const QuestionnaireResponseForm = () => {
   }
 
   return (
-    <Form layout="vertical" form={form} onFinish={handleFinish}>
+    <Form layout="vertical" form={form} onFinish={handleFinish} disabled={loading}>
       {questionnaire.description && (
         <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
           {questionnaire.description}
         </Text>
       )}
       {questionnaire.questions.map((question, index) => renderQuestionField(question, index))}
-      <FormFooter onCancel={cancel} submitText={t('questionnaires.submitResponse')} />
+      <FormFooter onCancel={cancel} submitText={t('questionnaires.submitResponse')} loading={loading} />
     </Form>
   );
 };
