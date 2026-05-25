@@ -96,6 +96,11 @@ export default function RegistrationForm() {
 
   const handleSubmit = useCallback(
     async (values: RegistrationFormValues) => {
+      // Guard the submit itself, not just the footer button. The button's
+      // `disabled` blocks clicks, but Enter-to-submit fires through the form's
+      // hidden submit button — which bypasses `disableSubmit` (rules not
+      // accepted / name or id already in use) unless we re-check here.
+      if (loading || disableSubmit) return;
       setLoading(true);
       const { name, id, age, discoveryType, discoveryTypeDetails, steamProfileLink, discordTag, rulesReadAndAccepted, description } = values;
       const args = [
@@ -119,7 +124,7 @@ export default function RegistrationForm() {
         setLoading(false);
       }
     },
-    [resolve, model, message, notification, t],
+    [resolve, model, message, notification, t, loading, disableSubmit],
   );
 
   const handleValuesChange = useCallback(

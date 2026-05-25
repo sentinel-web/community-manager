@@ -137,6 +137,11 @@ export default function MemberForm() {
 
   const handleSubmit = useCallback(
     async (values: MemberFormValues) => {
+      // Guard the submit itself, not just the footer button. The button's
+      // `disabled` blocks clicks, but Enter-to-submit fires through the form's
+      // hidden submit button — which bypasses `disableSubmit` (name or id
+      // already in use / rules not accepted) unless we re-check here.
+      if (loading || disableSubmit) return;
       setLoading(true);
       const payload = {
         ...values,
@@ -164,7 +169,7 @@ export default function MemberForm() {
         setLoading(false);
       }
     },
-    [model?._id, resolve, message, notification, t]
+    [model?._id, resolve, message, notification, t, loading, disableSubmit]
   );
 
   const handleValuesChange = useCallback(
