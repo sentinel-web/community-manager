@@ -1,4 +1,4 @@
-import { Alert, App, Button, Col, Form, Input, InputNumber, Row, Switch } from 'antd';
+import { Alert, Button, Col, Form, Input, InputNumber, Row, Switch } from 'antd';
 import type { ValidateStatus } from 'antd/es/form/FormItem';
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
@@ -9,6 +9,7 @@ import type { Registration } from '../../api/types';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { DrawerFooter, useDrawerFrame } from '../drawer-stack';
 import CollectionSelect, { type CollectionDoc } from '../components/CollectionSelect';
+import useMethod from '../hooks/useMethod';
 import DiscoveryTypeForm from './discovery-types/DiscoveryTypesForm';
 
 interface RegistrationFormValues {
@@ -26,9 +27,7 @@ interface RegistrationFormValues {
 export default function RegistrationForm() {
   const [form] = Form.useForm<RegistrationFormValues>();
   const { model: rawModel, resolve, cancel } = useDrawerFrame<string, Partial<Registration>>();
-  const { message, notification } = App.useApp();
   const { t } = useTranslation();
-  const [loading, setLoading] = useState(false);
   // Track name/id availability as independent signals and derive disableSubmit
   // from them. Folding both into one state let the two async validations
   // clobber each other (last-writer-wins), so an in-use name could be masked by
@@ -45,6 +44,11 @@ export default function RegistrationForm() {
     if (!Meteor.user()) return {};
     return (rawModel as unknown as Registration) || {};
   }, [rawModel]);
+
+  const { call, loading } = useMethod<string | undefined>(
+    Meteor.user() && (model as Registration)?._id ? 'registrations.update' : 'registrations.insert',
+    { success: t('messages.registrationSuccessful') }
+  );
 
   useEffect(() => {
     if (Object.keys(model).length > 0) {
@@ -109,30 +113,16 @@ export default function RegistrationForm() {
       // hidden submit button — which bypasses `disableSubmit` (rules not
       // accepted / name or id already in use) unless we re-check here.
       if (loading || disableSubmit) return;
-      setLoading(true);
       const { name, id, age, discoveryType, discoveryTypeDetails, steamProfileLink, discordTag, rulesReadAndAccepted, description } = values;
       const args = [
         ...((model as Registration)?._id ? [(model as Registration)._id] : []),
         { name, id, age, discoveryType, discoveryTypeDetails, steamProfileLink, discordTag, rulesReadAndAccepted, description },
       ];
-      try {
-        const result = (await Meteor.callAsync(
-          Meteor.user() && (model as Registration)?._id ? 'registrations.update' : 'registrations.insert',
-          ...args
-        )) as string | undefined;
-        message.success(t('messages.registrationSuccessful'));
-        resolve((model as Registration)?._id ?? result);
-      } catch (error) {
-        const err = error as Meteor.Error;
-        notification.error({
-          message: err.error as string,
-          description: err.message,
-        });
-      } finally {
-        setLoading(false);
-      }
+      const res = await call(...args);
+      if (!res.ok) return;
+      resolve((model as Registration)?._id ?? res.data);
     },
-    [resolve, model, message, notification, t, loading, disableSubmit],
+    [resolve, model, call, loading, disableSubmit]
   );
 
   const handleValuesChange = useCallback(
@@ -147,7 +137,7 @@ export default function RegistrationForm() {
         handleDiscoveryTypeChange();
       }
     },
-    [validateId, validateName, handleDiscoveryTypeChange],
+    [validateId, validateName, handleDiscoveryTypeChange]
   );
 
   useEffect(() => {

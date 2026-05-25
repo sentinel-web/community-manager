@@ -1,9 +1,10 @@
-import { App, ColorPicker, Form, Input, InputNumber } from 'antd';
+import { ColorPicker, Form, Input, InputNumber } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import { getColorFromValues } from '/imports/helpers/colors/getColorFromValues';
 import { useDrawerFrame } from '../../drawer-stack';
+import useMethod from '../../hooks/useMethod';
 import FormFooter from '../../components/FormFooter';
 import type { Position } from '../../../api/types/misc';
 
@@ -17,9 +18,11 @@ interface PositionFormValues {
 export default function PositionsForm() {
   const { t } = useTranslation();
   const [form] = Form.useForm<PositionFormValues>();
-  const { message, notification } = App.useApp();
-  const [loading, setLoading] = useState(false);
   const { model, resolve, cancel } = useDrawerFrame<string, Partial<Position> & { _id?: string }>();
+
+  const { call, loading } = useMethod<string | undefined>(Meteor.user() && model?._id ? 'positions.update' : 'positions.insert', {
+    success: model?._id ? t('messages.positionUpdated') : t('messages.positionCreated'),
+  });
 
   useEffect(() => {
     if (model && Object.keys(model).length > 0) {
@@ -36,30 +39,16 @@ export default function PositionsForm() {
 
   const handleSubmit = useCallback(
     async (values: PositionFormValues) => {
-      setLoading(true);
       const { name, description, order } = values;
       const args = [
         ...(model?._id ? [model._id] : []),
         { name, color: getColorFromValues(values as unknown as Record<string, unknown>), description, order },
       ];
-      try {
-        const result = (await Meteor.callAsync(
-          Meteor.user() && model?._id ? 'positions.update' : 'positions.insert',
-          ...args
-        )) as string | undefined;
-        message.success(model?._id ? t('messages.positionUpdated') : t('messages.positionCreated'));
-        resolve(model?._id ?? result);
-      } catch (error) {
-        const err = error as Meteor.Error;
-        notification.error({
-          message: err.error as string,
-          description: err.message,
-        });
-      } finally {
-        setLoading(false);
-      }
+      const res = await call(...args);
+      if (!res.ok) return;
+      resolve(model?._id ?? res.data);
     },
-    [model, resolve, message, notification, t]
+    [model, resolve, call]
   );
 
   return (
@@ -76,7 +65,7 @@ export default function PositionsForm() {
       <Form.Item name="color" label={t('common.color')}>
         <ColorPicker format="hex" />
       </Form.Item>
-      <FormFooter onCancel={cancel} />
+      <FormFooter onCancel={cancel} loading={loading} />
     </Form>
   );
 }

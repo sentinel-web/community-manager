@@ -1,6 +1,5 @@
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
-import { App, Card, Checkbox, ColorPicker, Form, Input, Space, Switch, Typography } from 'antd';
-import { Meteor } from 'meteor/meteor';
+import { Card, Checkbox, ColorPicker, Form, Input, Space, Switch, Typography } from 'antd';
 import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import { getColorFromValues } from '/imports/helpers/colors/getColorFromValues';
@@ -8,6 +7,7 @@ import type { TranslateFn } from '../../section/types';
 import type { LocaleKey } from '/imports/i18n';
 import type { CrudPermission, Role } from '../../../api/types/role';
 import { useDrawerFrame } from '../../drawer-stack';
+import useMethod from '../../hooks/useMethod';
 import FormFooter from '../../components/FormFooter';
 
 interface RuleInputProps {
@@ -73,34 +73,30 @@ const RolesForm = () => {
   const { t } = useTranslation();
   const { model: rawModel, resolve, cancel } = useDrawerFrame<string, Partial<Role> & { _id?: string }>();
   const model = (rawModel || {}) as Role & { _id?: string };
-  const { message, notification } = App.useApp();
   const { isUpdate, endpoint } = useMemo(
     () => (model?._id ? { isUpdate: true, endpoint: 'roles.update' } : { isUpdate: false, endpoint: 'roles.insert' }),
     [model?._id]
   );
 
+  const { call, loading } = useMethod<string | undefined>(endpoint, {
+    success: isUpdate ? t('messages.roleUpdated') : t('messages.roleCreated'),
+  });
+
   const handleFinish = useCallback(
     async (values: Record<string, unknown>) => {
-      try {
-        const args = [...(model?._id ? [model._id] : []), { ...values, color: getColorFromValues(values) }];
-        const result = (await Meteor.callAsync(endpoint, ...args)) as string | undefined;
-        message.success(isUpdate ? t('messages.roleUpdated') : t('messages.roleCreated'));
-        resolve(model?._id ?? result);
-      } catch (error) {
-        notification.error({
-          message: (error as Meteor.Error).error as string,
-          description: (error as Meteor.Error).message,
-        });
-      }
+      const args = [...(model?._id ? [model._id] : []), { ...values, color: getColorFromValues(values) }];
+      const res = await call(...args);
+      if (!res.ok) return;
+      resolve(model?._id ?? res.data);
     },
-    [endpoint, model?._id, resolve, isUpdate, message, notification, t]
+    [model?._id, resolve, call]
   );
 
   const [form] = Form.useForm<Record<string, unknown>>();
   const initialValues = useMemo(() => prepareModelForForm(model), [model]);
 
   return (
-    <Form layout="vertical" form={form} onFinish={handleFinish} initialValues={initialValues}>
+    <Form layout="vertical" form={form} onFinish={handleFinish} initialValues={initialValues} disabled={loading}>
       <Form.Item name="name" label={t('common.name')} rules={[{ required: true, type: 'string' }]} required>
         <Input placeholder={t('forms.placeholders.enterName')} />
       </Form.Item>
@@ -134,7 +130,7 @@ const RolesForm = () => {
       <RuleInput name="canCreateEvents" label={t('members.canCreateEvents')} />
       <RuleInput name="canManageTasks" label={t('members.canManageTasks')} />
 
-      <FormFooter onCancel={cancel} />
+      <FormFooter onCancel={cancel} loading={loading} />
     </Form>
   );
 };

@@ -49,7 +49,7 @@ export const getDateFromValues = (values: Record<string, unknown>, key = 'date')
 };
 
 const EventForm = () => {
-  const { message, notification, modal } = App.useApp();
+  const { modal } = App.useApp();
   const { t } = useTranslation();
   const { model: rawModel, resolve, cancel } = useDrawerFrame<string, Partial<EventDoc>>();
 
@@ -63,6 +63,11 @@ const EventForm = () => {
     } as EventFormValues & { _id?: string };
   }, [rawModel]);
 
+  const { call: save, loading } = useMethod<string | undefined>(model?._id ? 'events.update' : 'events.insert', {
+    success: model?._id ? t('messages.eventUpdated') : t('messages.eventCreated'),
+  });
+  const { call: remove } = useMethod('events.remove', { success: t('messages.eventDeleted') });
+
   const handleFinish = useCallback(
     async (values: EventFormValues) => {
       const wireValues = {
@@ -72,20 +77,11 @@ const EventForm = () => {
         end: getDateFromValues(values as unknown as Record<string, unknown>, 'end'),
       };
       const args = [...(model?._id ? [model._id] : []), wireValues];
-      const endpoint = model?._id ? 'events.update' : 'events.insert';
-      try {
-        const result = (await Meteor.callAsync(endpoint, ...args)) as string | undefined;
-        message.success(model?._id ? t('messages.eventUpdated') : t('messages.eventCreated'));
-        resolve(model?._id ?? result);
-      } catch (error) {
-        const err = error as Meteor.Error;
-        notification.error({
-          message: err.error as string,
-          description: err.message,
-        });
-      }
+      const res = await save(...args);
+      if (!res.ok) return;
+      resolve(model?._id ?? res.data);
     },
-    [model?._id, message, notification, resolve, t]
+    [model?._id, save, resolve]
   );
 
   const handleDelete = useCallback(() => {
@@ -95,25 +91,17 @@ const EventForm = () => {
       cancelText: t('common.cancel'),
       okType: 'danger',
       onOk: async () => {
-        try {
-          await Meteor.callAsync('events.remove', model._id);
-          message.success(t('messages.eventDeleted'));
-          cancel();
-        } catch (error) {
-          const err = error as Meteor.Error;
-          notification.error({
-            message: err.error as string,
-            description: err.message,
-          });
-        }
+        const res = await remove(model._id);
+        if (!res.ok) return;
+        cancel();
       },
     });
-  }, [modal, message, cancel, model, notification, t]);
+  }, [modal, cancel, model, remove, t]);
 
   const [form] = Form.useForm<EventFormValues>();
 
   return (
-    <Form form={form} layout="vertical" initialValues={model} onFinish={handleFinish}>
+    <Form form={form} layout="vertical" initialValues={model} onFinish={handleFinish} disabled={loading}>
       <Form.Item name="start" label={t('events.startDate')} rules={[{ required: true, type: 'date' }]}>
         <DatePicker style={styles.datePicker} showTime />
       </Form.Item>
@@ -165,7 +153,7 @@ const EventForm = () => {
             </Col>
           )}
           <Col>
-            <Button type="primary" onClick={() => form.submit()} icon={<SaveOutlined />}>
+            <Button type="primary" onClick={() => form.submit()} icon={<SaveOutlined />} loading={loading}>
               {t('common.save')}
             </Button>
           </Col>

@@ -8,9 +8,10 @@ interface FormFooterProps {
   onCancel?: () => void;
   cancelText?: string;
   submitText?: string;
+  loading?: boolean;
 }
 
-const FormFooter = ({ setOpen, onCancel, cancelText, submitText }: FormFooterProps) => {
+const FormFooter = ({ setOpen, onCancel, cancelText, submitText, loading = false }: FormFooterProps) => {
   const { t } = useTranslation();
   // Anchor stays in the form's DOM so we can reach the owning <form> for submit.
   const anchorRef = useRef<HTMLSpanElement>(null);
@@ -37,7 +38,7 @@ const FormFooter = ({ setOpen, onCancel, cancelText, submitText }: FormFooterPro
             </Button>
           </Col>
           <Col>
-            <Button type="primary" onClick={handleSubmit}>
+            <Button type="primary" onClick={handleSubmit} loading={loading}>
               {submitText || t('common.submit')}
             </Button>
           </Col>

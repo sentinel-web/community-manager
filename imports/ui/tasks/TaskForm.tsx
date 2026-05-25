@@ -32,22 +32,18 @@ export default function TaskForm() {
     [model?._id]
   );
 
+  const { call, loading } = useMethod<string | undefined>(endpoint, {
+    success: isUpdate ? t('messages.taskUpdated') : t('messages.taskCreated'),
+  });
+
   const handleFinish = useCallback(
     async (values: Partial<Task>) => {
-      try {
-        const args = isUpdate ? [model._id as string, values] : [values];
-        const result = (await Meteor.callAsync(endpoint, ...args)) as string | undefined;
-        message.success(isUpdate ? t('messages.taskUpdated') : t('messages.taskCreated'));
-        resolve(model?._id ?? result);
-      } catch (error) {
-        const err = error as Meteor.Error;
-        notification.error({
-          message: err.error as string,
-          description: err.message,
-        });
-      }
+      const args = isUpdate ? [model._id as string, values] : [values];
+      const res = await call(...args);
+      if (!res.ok) return;
+      resolve(model?._id ?? res.data);
     },
-    [resolve, endpoint, model?._id, isUpdate, message, notification, t]
+    [resolve, model?._id, isUpdate, call]
   );
 
   const [participantOptions, setParticipantOptions] = useState<MemberOption[]>([]);
@@ -87,7 +83,7 @@ export default function TaskForm() {
   }, [commentText, model?._id, message, notification, t]);
 
   return (
-    <Form layout="vertical" form={form} onFinish={handleFinish} initialValues={model}>
+    <Form layout="vertical" form={form} onFinish={handleFinish} initialValues={model} disabled={loading}>
       <Form.Item label={t('common.name')} name="name" rules={[{ required: true, type: 'string' }]} required>
         <Input placeholder={t('forms.placeholders.enterName')} />
       </Form.Item>
@@ -138,7 +134,7 @@ export default function TaskForm() {
         subscription="tasks"
         FormComponent={TaskForm}
       />
-      <FormFooter onCancel={cancel} />
+      <FormFooter onCancel={cancel} loading={loading} />
 
       {/* Comments Section */}
       {isUpdate && (

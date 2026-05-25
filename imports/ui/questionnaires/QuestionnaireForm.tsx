@@ -1,11 +1,11 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { App, Button, Card, Form, Input, Select, Space, Switch } from 'antd';
-import { Meteor } from 'meteor/meteor';
+import { Button, Card, Form, Input, Select, Space, Switch } from 'antd';
 import React, { useCallback, useMemo } from 'react';
 import type { Questionnaire, QuestionnaireInterval, QuestionnaireStatus, QuestionType } from '../../api/types/questionnaire';
 import { useTranslation } from '../../i18n/LanguageContext';
 import type { TranslateFn } from '../section/types';
 import { useDrawerFrame } from '../drawer-stack';
+import useMethod from '../hooks/useMethod';
 import FormFooter from '../components/FormFooter';
 
 interface QuestionTypeOption {
@@ -42,13 +42,16 @@ interface QuestionItemProps {
 
 const QuestionnaireForm = () => {
   const { model, resolve, cancel } = useDrawerFrame<string, Partial<Questionnaire>>();
-  const { message, notification } = App.useApp();
   const { t } = useTranslation();
   const questionnaire = (model || {}) as unknown as Questionnaire;
   const { isUpdate, endpoint } = useMemo(
     () => (questionnaire?._id ? { isUpdate: true, endpoint: 'questionnaires.update' } : { isUpdate: false, endpoint: 'questionnaires.insert' }),
     [questionnaire?._id]
   );
+
+  const { call, loading } = useMethod<string | undefined>(endpoint, {
+    success: isUpdate ? t('questionnaires.updated') : t('questionnaires.created'),
+  });
 
   const questionTypes: QuestionTypeOption[] = useMemo(
     () => [
@@ -75,31 +78,29 @@ const QuestionnaireForm = () => {
 
   const handleFinish = useCallback(
     async (values: QuestionnaireFormValues) => {
-      try {
-        const payload = {
-          ...values,
-          createdAt: questionnaire?.createdAt || new Date(),
-          updatedAt: new Date(),
-        };
-        const args = isUpdate ? [questionnaire._id, payload] : [payload];
-        const result = (await Meteor.callAsync(endpoint, ...args)) as string | undefined;
-        message.success(isUpdate ? t('questionnaires.updated') : t('questionnaires.created'));
-        resolve(questionnaire?._id ?? result);
-      } catch (error) {
-        notification.error({
-          message: (error as Meteor.Error).error,
-          description: (error as Meteor.Error).message,
-        });
-      }
+      const payload = {
+        ...values,
+        createdAt: questionnaire?.createdAt || new Date(),
+        updatedAt: new Date(),
+      };
+      const args = isUpdate ? [questionnaire._id, payload] : [payload];
+      const res = await call(...args);
+      if (!res.ok) return;
+      resolve(questionnaire?._id ?? res.data);
     },
-    [resolve, endpoint, questionnaire?._id, questionnaire?.createdAt, isUpdate, message, notification, t]
+    [resolve, questionnaire?._id, questionnaire?.createdAt, isUpdate, call]
   );
 
   const [form] = Form.useForm<QuestionnaireFormValues>();
 
   return (
-    <Form layout="vertical" form={form} onFinish={handleFinish} initialValues={questionnaire}>
-      <Form.Item label={t('common.name')} name="name" rules={[{ required: true, type: 'string', message: t('questionnaires.pleaseEnterName') }]} required>
+    <Form layout="vertical" form={form} onFinish={handleFinish} initialValues={questionnaire} disabled={loading}>
+      <Form.Item
+        label={t('common.name')}
+        name="name"
+        rules={[{ required: true, type: 'string', message: t('questionnaires.pleaseEnterName') }]}
+        required
+      >
         <Input placeholder={t('questionnaires.enterQuestionnaireName')} />
       </Form.Item>
       <Form.Item label={t('common.description')} name="description" rules={[{ required: false, type: 'string' }]}>
@@ -147,7 +148,7 @@ const QuestionnaireForm = () => {
         </Form.List>
       </Card>
 
-      <FormFooter onCancel={cancel} />
+      <FormFooter onCancel={cancel} loading={loading} />
     </Form>
   );
 };
@@ -171,7 +172,12 @@ const QuestionItem = ({ name, restField, remove, t, questionTypes }: QuestionIte
           <Button type="text" danger icon={<DeleteOutlined />} onClick={() => remove(name)} />
         </Space>
         <Space wrap>
-          <Form.Item {...restField} name={[name, 'type']} rules={[{ required: true, message: t('questionnaires.selectAType') }]} style={{ marginBottom: 8 }}>
+          <Form.Item
+            {...restField}
+            name={[name, 'type']}
+            rules={[{ required: true, message: t('questionnaires.selectAType') }]}
+            style={{ marginBottom: 8 }}
+          >
             <Select placeholder={t('questionnaires.questionType')} options={questionTypes} style={{ width: 150 }} />
           </Form.Item>
           <Form.Item {...restField} name={[name, 'required']} style={{ marginBottom: 8 }}>

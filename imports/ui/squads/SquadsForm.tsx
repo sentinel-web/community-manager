@@ -1,10 +1,11 @@
-import { App, Col, ColorPicker, Form, Input, Row, Switch, Upload } from 'antd';
+import { Col, ColorPicker, Form, Input, Row, Switch, Upload } from 'antd';
 import type { RcFile } from 'antd/es/upload';
 import { Meteor } from 'meteor/meteor';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import type { Squad } from '../../api/types/squad';
 import { useDrawerFrame } from '../drawer-stack';
+import useMethod from '../hooks/useMethod';
 import FormFooter from '../components/FormFooter';
 import { turnBase64ToImage, turnImageFileToBase64 } from '../profile-picture-input/ProfilePictureInput';
 import { getColorFromValues } from '../specializations/SpecializationForm';
@@ -23,10 +24,13 @@ interface SquadsFormValues {
 
 const SquadsForm = () => {
   const { t } = useTranslation();
-  const { message, notification } = App.useApp();
   const { model, resolve, cancel } = useDrawerFrame<string, Partial<Squad> & { _id?: string }>();
 
   const squad = (model || {}) as unknown as Squad;
+
+  const { call, loading } = useMethod<string | undefined>(Meteor.user() && squad?._id ? 'squads.update' : 'squads.insert', {
+    success: squad?._id ? t('messages.squadUpdated') : t('messages.squadCreated'),
+  });
 
   const [file, setFile] = useState<RcFile | null>(null);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
@@ -56,24 +60,13 @@ const SquadsForm = () => {
     const image = imageSrc;
     values.image = image;
     const args = [...(squad?._id ? [squad._id] : []), values];
-    try {
-      const result = (await Meteor.callAsync(
-        Meteor.user() && squad?._id ? 'squads.update' : 'squads.insert',
-        ...args
-      )) as string | undefined;
-      message.success(squad?._id ? t('messages.squadUpdated') : t('messages.squadCreated'));
-      resolve(squad?._id ?? result);
-    } catch (error) {
-      const err = error as Meteor.Error;
-      notification.error({
-        message: err.error as string,
-        description: err.message,
-      });
-    }
+    const res = await call(...args);
+    if (!res.ok) return;
+    resolve(squad?._id ?? res.data);
   };
 
   return (
-    <Form layout="vertical" initialValues={squad} onFinish={handleFinish}>
+    <Form layout="vertical" initialValues={squad} onFinish={handleFinish} disabled={loading}>
       <Form.Item label={t('squads.logo')} name="image" rules={[{ required: false }]}>
         <Upload.Dragger
           fileList={file ? [file] : []}
@@ -97,7 +90,12 @@ const SquadsForm = () => {
           </Form.Item>
         </Col>
       </Row>
-      <SquadsSelect label={t('squads.parentSquad')} name="parentSquadId" rules={[{ required: false, type: 'string' }]} defaultValue={squad.parentSquadId} />
+      <SquadsSelect
+        label={t('squads.parentSquad')}
+        name="parentSquadId"
+        rules={[{ required: false, type: 'string' }]}
+        defaultValue={squad.parentSquadId}
+      />
       <Form.Item label={t('squads.shortRangeFrequency')} name="shortRangeFrequency" rules={[{ required: false, type: 'string' }]}>
         <Input placeholder={t('forms.placeholders.enterShortRangeFrequency')} />
       </Form.Item>
@@ -110,7 +108,7 @@ const SquadsForm = () => {
       <Form.Item label={t('squads.excludeFromOrbat')} name="excludeFromOrbat" valuePropName="checked">
         <Switch />
       </Form.Item>
-      <FormFooter onCancel={cancel} />
+      <FormFooter onCancel={cancel} loading={loading} />
     </Form>
   );
 };

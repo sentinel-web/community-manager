@@ -8,6 +8,7 @@ import RolesCollection from '../../api/collections/roles.collection';
 import type { Role, CrudPermission } from '../../api/types';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useDrawerStack } from '../drawer-stack';
+import useMethod from '../hooks/useMethod';
 import TableContainer from '../table/body/TableContainer';
 import TableFooter from '../table/footer/TableFooter';
 import GroupActionsBar from '../table/header/GroupActionsBar';
@@ -104,6 +105,15 @@ export default function Section<T extends { _id?: string }>({
   const { notification, message, modal } = App.useApp();
   const { t } = useTranslation();
 
+  // Delete-flow seams. Reads (preview/previewBulk) notify on failure (seam
+  // default) and carry no success toast; the remove mutation owns the success
+  // message, while bulkRemove handles its own partial-vs-full messaging on the
+  // resolved result, so it opts out of the success option.
+  const { call: previewDelete } = useMethod<DeleteImpactPreviewData>('integrity.preview');
+  const { call: previewBulkDelete } = useMethod<{ aggregate: DeleteImpactPreviewData; blockedIds: string[] }>('integrity.previewBulk');
+  const { call: removeEntry } = useMethod(`${collectionName}.remove`, { success: t('messages.deleteSuccess') });
+  const { call: bulkRemoveEntries } = useMethod<{ removed: number; errors: unknown[] }>(`${collectionName}.bulkRemove`);
+
   const user = useTracker(() => Meteor.user(), []);
   useSubscribe('roles', { _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 });
   const roles = useFind(
@@ -168,14 +178,9 @@ export default function Section<T extends { _id?: string }>({
       const recordId = record._id;
       if (!recordId) return;
 
-      let preview: DeleteImpactPreviewData | null = null;
-      try {
-        preview = (await Meteor.callAsync('integrity.preview', collectionName, recordId)) as DeleteImpactPreviewData;
-      } catch (error) {
-        const err = error as Meteor.Error;
-        notification.error({ message: err.error as string, description: err.message });
-        return;
-      }
+      const previewRes = await previewDelete(collectionName, recordId);
+      if (!previewRes.ok) return;
+      const preview = previewRes.data;
 
       const isBlocked = preview != null && preview.blockedBy.length > 0;
 
@@ -191,17 +196,11 @@ export default function Section<T extends { _id?: string }>({
         okText: t('common.delete'),
         cancelText: t('common.cancel'),
         onOk: async () => {
-          try {
-            await Meteor.callAsync(`${collectionName}.remove`, recordId);
-            message.success(t('messages.deleteSuccess'));
-          } catch (error) {
-            const err = error as Meteor.Error;
-            notification.error({ message: err.error as string, description: err.message });
-          }
+          await removeEntry(recordId);
         },
       });
     },
-    [notification, message, modal, collectionName, t]
+    [previewDelete, removeEntry, modal, collectionName, t]
   );
 
   const handleBulkDelete = useCallback(async () => {
@@ -212,17 +211,9 @@ export default function Section<T extends { _id?: string }>({
     // structured block panel and disable confirm — matches the single-delete
     // pre-flight pattern. Side-effect counts (pull/setNull/cascade) ride
     // along so admins see "this will affect 23 events" before committing.
-    let preview: { aggregate: DeleteImpactPreviewData; blockedIds: string[] } | null = null;
-    try {
-      preview = (await Meteor.callAsync('integrity.previewBulk', collectionName, ids)) as {
-        aggregate: DeleteImpactPreviewData;
-        blockedIds: string[];
-      };
-    } catch (error) {
-      const err = error as Meteor.Error;
-      notification.error({ message: err.error as string, description: err.message });
-      return;
-    }
+    const previewRes = await previewBulkDelete(collectionName, ids);
+    if (!previewRes.ok) return;
+    const preview = previewRes.data;
 
     const isBlocked = preview != null && preview.blockedIds.length > 0;
 
@@ -237,26 +228,21 @@ export default function Section<T extends { _id?: string }>({
       okButtonProps: { danger: true, disabled: isBlocked },
       onOk: async () => {
         setBulkActionLoading(true);
-        try {
-          const result = (await Meteor.callAsync(`${collectionName}.bulkRemove`, selectedRowKeys)) as {
-            removed: number;
-            errors: unknown[];
-          };
-          if (result.errors.length > 0) {
-            message.warning(t('messages.bulkDeletePartial', { removed: result.removed, errors: result.errors.length }));
+        // bulkRemove reports partial vs full success itself, so it skips the
+        // seam success option; the seam still notifies on outright failure.
+        const res = await bulkRemoveEntries(selectedRowKeys);
+        if (res.ok) {
+          if (res.data.errors.length > 0) {
+            message.warning(t('messages.bulkDeletePartial', { removed: res.data.removed, errors: res.data.errors.length }));
           } else {
-            message.success(t('messages.bulkDeleteSuccess', { count: result.removed }));
+            message.success(t('messages.bulkDeleteSuccess', { count: res.data.removed }));
           }
           setSelectedRowKeys([]);
-        } catch (error) {
-          const err = error as Meteor.Error;
-          notification.error({ message: err.error as string, description: err.message });
-        } finally {
-          setBulkActionLoading(false);
         }
+        setBulkActionLoading(false);
       },
     });
-  }, [selectedRowKeys, collectionName, modal, message, notification, t]);
+  }, [selectedRowKeys, collectionName, modal, message, previewBulkDelete, bulkRemoveEntries, t]);
 
   const handleClearSelection = useCallback(() => {
     setSelectedRowKeys([]);
