@@ -212,16 +212,81 @@ Suggested values:
   offset for your local TZ at `/schedule create` time)
 - **Prompt:** the prompt block above
 
-## Future candidates
+## Dependency hygiene
 
-Other bookkeeping that could move to a routine once volume justifies it.
-Not built yet — order is rough priority.
+Catches new npm vulnerabilities and creeping package drift so the manual
+`npm run update` runs don't bring back a year's worth of changes at
+once. CLAUDE.md lists `npm run update` as the human counterpart — this
+routine surfaces *what* would change so the human knows *when* to run
+it.
 
-### Dependency hygiene
+**What it does** — once a week, against `main`:
 
-Weekly `npm audit` + `npm outdated`, comment on a single rolling tracking
-issue when something new shows up. The repo already has `npm run update`
-as the human-initiated counterpart.
+- Run `npm audit --json` and report new findings since last run
+  (severity, package, fix availability, whether `npm audit fix` would
+  resolve without a major bump)
+- Run `npm outdated --json` and report packages that crossed a minor or
+  major boundary since last run
+- Flag the Meteor-pinned packages separately — those can't be bumped
+  without a Meteor compatibility check (see CLAUDE.md → Deployment for
+  the Node 22 / Meteor 3.4+ baseline)
+- Suggest a triage: *patch / minor*, *major (needs review)*, *Meteor
+  pinned (skip)*
+
+**What it does not do** — no `npm install`, no `npm audit fix`, no
+package.json edits, no PR creation. The routine produces a digest; the
+human decides what to bump and runs `npm run update` (or targeted
+`npm install <pkg>@<version>`) on a focused branch.
+
+**Cadence** — weekly, Monday morning. Pair with the docs-drift check so
+both weekly digests land at the same sitting — schedule it an hour after
+docs-drift to avoid concurrent runs.
+
+**Prompt to schedule:**
+
+```
+For sentinel-web/community-manager on the main branch, run:
+
+1. npm audit --json — list new findings since last run. Per finding:
+   severity, package, fix availability (yes / yes-major / no), whether
+   it's a direct dep or transitive.
+2. npm outdated --json — list packages crossing a minor or major
+   boundary since last run. Flag Meteor-pinned packages separately.
+
+Bucket the output: (a) patch / minor — safe to bump, (b) major — needs
+review, (c) Meteor pinned — skip, see CLAUDE.md → Deployment. Do not
+run npm install, npm audit fix, or edit package.json — surface only.
+```
+
+### Try it locally first
+
+Dry-run both data sources before scheduling. The `jq` filter just makes
+the audit output easier to skim — drop it if `jq` isn't installed and
+read the raw JSON instead, or run `npm audit` without `--json` for the
+default human-readable view.
+
+```
+npm audit --json | jq '{vulnerabilities: .metadata.vulnerabilities, findings: [.vulnerabilities | to_entries[] | {pkg: .key, severity: .value.severity, fixAvailable: .value.fixAvailable}]}'
+npm outdated --json
+```
+
+Eyeball the JSON. If it covers the fields you'd want bucketed in the
+weekly digest, schedule it. If you'd rather see specific extras (e.g.
+`peerDependencies` conflicts), add them to the prompt before scheduling.
+
+### Schedule it
+
+```
+/schedule create
+```
+
+Suggested values:
+
+- **Name:** `weekly-dependency-hygiene`
+- **Cron:** `0 9 * * 1` (09:00 every Monday in the scheduler's timezone —
+  one hour after the docs-drift check, so both weekly digests are ready
+  together; adjust for your local TZ at `/schedule create` time)
+- **Prompt:** the prompt block above
 
 ## Open questions
 
