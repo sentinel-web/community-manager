@@ -94,10 +94,11 @@ dismissals, no comments on the PRs themselves. Surface only, same
 principle as the triage routine. The digest goes to the routine's session
 transcript; the human still drives the next action.
 
-**Cadence** — 2–3× per workday. Suggested: 09:30, 13:30, 17:30 in your
-local TZ, Mon–Fri. Skip weekends. If the repo is averaging fewer than 2
-open PRs at a time, this is overkill — drop to once a day, or just
-eyeball the GitHub UI directly.
+**Cadence** — 3× per workday. Suggested: 09:30, 13:30, 17:30 Mon–Fri in
+the scheduler's timezone — adjust the cron for your local TZ at
+`/schedule create` time. Skip weekends. If the repo is averaging fewer
+than 2 open PRs at a time, this is overkill — drop to once a day, or
+just eyeball the GitHub UI directly.
 
 **Prompt to schedule:**
 
@@ -131,7 +132,9 @@ routine should not paper over a missing field by guessing.
 Suggested values:
 
 - **Name:** `pr-babysitter-digest`
-- **Cron:** `30 9,13,17 * * 1-5` (09:30 / 13:30 / 17:30 Mon–Fri)
+- **Cron:** `30 9,13,17 * * 1-5` — 09:30 / 13:30 / 17:30 Mon–Fri *in the
+  scheduler's timezone*; offset for your local TZ when `/schedule create`
+  shows you which one it'll use
 - **Prompt:** the prompt block above
 
 ## Future candidates
