@@ -224,9 +224,15 @@ Issue → plan → branch → implement → test → review → PR. Full step li
 ## Claude Code Skills
 
 Custom skills in `.claude/skills/` automate common tasks (available skills are also surfaced each session):
-- **Workflow:** `/issue`, `/plan`, `/branch`, `/commit`, `/pr`, `/review`, `/validate`, `/test`
+- **Workflow:** `/issue`, `/plan`, `/branch`, `/commit`, `/pr`, `/review`, `/validate`, `/test`, `/verify`
 - **Scaffolding:** `/collection`, `/component`, `/form`, `/section`
 - **Debugging:** `/logs`, `/permissions`
+
+`/verify` (`.claude/skills/verify.md`) is the project-specific browser-driven
+verification loop — closes the gap CLAUDE.md flags between code correctness
+(types + tests) and feature correctness. Drives the UI as the dev admin
+(`admin` / `admin`), uses `demoData.generate` as the state-reset hatch, and
+self-documents new blockers as they come up.
 
 ## Common Gotchas
 
