@@ -82,7 +82,34 @@ Channel convention is baked in: success → `message` (toast), failure → `noti
 
 Internally the seam has a private core: `runMethodCall(invoke, policy, feedback)` (`imports/ui/hooks/runMethodCall.ts`) holds all the policy — narrowing, notify/success decisions, the discriminated outcome — with no React and no antd. `useMethod` is the thin adapter that wires React `loading`/`error`/`data` state and `App.useApp()` feedback onto it. That internal seam is what makes the policy testable in the server test context (`tests/server/runMethodCall.test.ts`, DOM-free), with the hook's React wiring covered by a browser-only smoke test (`tests/client/hooks/useMethod.test.tsx`) — the same split the [[DrawerStack]] uses (pure `drawerStackStore` + browser hook test).
 
-What the previous design could not express, now structural: the `error as Meteor.Error` cast (forced into every `catch` by `strict`) lives in one place; changing notification policy, adding telemetry, or adding retry is one edit instead of touching ~69 call sites; and the accidental error-extraction drift (`error.reason || error.message` at one site, a missing `as string` cast at two others) cannot recur because there is exactly one extraction — `{ message: error.error, description: error.reason || error.message }`, preferring the clean reason and dropping the `[<code>]` suffix Meteor appends to `.message`. The bespoke success *strings* stay at the call sites where they belong, so the hook is not a pass-through. The per-form create-vs-update branching of *name* and *message* is deliberately **not** absorbed here — that is the job of a future `useEntityForm` lifecycle built on top of this seam.
+What the previous design could not express, now structural: the `error as Meteor.Error` cast (forced into every `catch` by `strict`) lives in one place; changing notification policy, adding telemetry, or adding retry is one edit instead of touching ~69 call sites; and the accidental error-extraction drift (`error.reason || error.message` at one site, a missing `as string` cast at two others) cannot recur because there is exactly one extraction — `{ message: error.error, description: error.reason || error.message }`, preferring the clean reason and dropping the `[<code>]` suffix Meteor appends to `.message`. The bespoke success *strings* stay at the call sites where they belong, so the hook is not a pass-through. The per-form create-vs-update branching of *name* and *message* is deliberately **not** absorbed here — that is the job of the [[EntityForm]] lifecycle (`useEntityForm`) built on top of this seam.
+
+### EntityForm
+
+The deep module (`imports/ui/hooks/useEntityForm.ts`) that owns the create-vs-update submit lifecycle of a drawer entity form. Built on top of [[MethodCall]]: where `useMethod` owns one client method call, `useEntityForm` owns the whole "save this entity" flow — choosing insert vs update, computing the success message, shaping the call arguments, and resolving the drawer frame on success.
+
+The seam is one hook:
+
+- **`useEntityForm<V, M>({ collection, created, updated, toPayload? })`** — self-sources the drawer frame (`useDrawerFrame`) and returns `{ onFinish, loading, model, cancel }`. `V` is the antd form-values shape; `M` is the model type read from the frame.
+  - `collection` is a `CrudCollectionName`; the method name is derived mechanically as `${collection}.update` / `${collection}.insert`.
+  - `created` / `updated` are `ParameterlessLocaleKey`s (a success toast carries no interpolation params); the hook picks between them, so the call site no longer writes the `model?._id ? t(a) : t(b)` ternary.
+  - `toPayload(values: V) => unknown` (optional, defaults to identity) is the one genuinely form-specific step — which fields, color extraction, date parsing — and closes over component state (`imageSrc`, …). The payload is sent untyped through `useMethod`/`callAsync`, so it is intentionally not constrained to a payload generic (TS cannot infer it alongside the explicit `<V, M>`).
+  - `onFinish(values)` is the ready-to-use antd `<Form onFinish>` handler: it shapes args as `[...(isUpdate ? [model._id] : []), toPayload(values)]`, calls the method through `useMethod`, and on success resolves the frame with `model?._id ?? data`. On failure it does nothing (the seam already notified).
+  - `model` / `cancel` are re-exposed from the self-sourced frame, so the form needs no separate `useDrawerFrame` call (`initialValues={model}`, `<FormFooter onCancel={cancel} loading={loading} />`).
+
+The create-vs-update axis is a single derived predicate: `isUpdate = !!Meteor.user() && !!model?._id`, used for **both** the method name and the success message. The `Meteor.user() &&` clause means an anonymous caller always inserts (load-bearing for the anonymous RegistrationForm; a no-op for forms only reachable while authenticated). This unifies a latent inconsistency in the hand-rolled forms, where the name used the user-guarded predicate but the message used only `model?._id`.
+
+Escape hatches are **composition, not configuration**. The interface stays tiny; forms that deviate compose around it rather than feeding it flags:
+
+- a pre-submit guard (Member/Registration `disableSubmit`) wraps `onFinish`;
+- an extra mutation (Event's in-form delete, Task's add-comment) is a separate `useMethod` alongside;
+- a form that is not create-vs-update at all (QuestionnaireResponseForm — a single `questionnaireResponses.submit` resolving `true`) keeps using `useMethod` directly and does not adopt the hook.
+
+There is deliberately no `canSubmit` / `resolveWith` / `extraActions` / `method`-override config — that path is the DSL drift the [[Rule of three]] guards against.
+
+Internally the seam splits like [[MethodCall]] and [[DrawerStack]]: a pure DOM-free core (the `isUpdate` rule, method-name derivation, arg shaping, resolve-value computation) tested under server-mode `npm test`, with the hook as the thin adapter wiring `useDrawerFrame` + `useMethod`, covered by a browser-only smoke test.
+
+What becomes structurally impossible: the ~10× duplicated insert/update plumbing (name ternary, `[...(id?[id]:[]), payload]` arg shaping, `if (!res.ok) return; resolve(id ?? data)`) collapses to one implementation; the name/message create-vs-update inconsistency cannot recur; and a new entity form declares only its `collection`, its two message keys, and its `toPayload`.
 
 ## Doctrines
 

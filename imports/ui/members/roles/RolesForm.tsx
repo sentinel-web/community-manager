@@ -1,13 +1,12 @@
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { Card, Checkbox, ColorPicker, Form, Input, Space, Switch, Typography } from 'antd';
-import React, { useCallback, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import { getColorFromValues } from '/imports/helpers/colors/getColorFromValues';
 import type { TranslateFn } from '../../section/types';
 import type { LocaleKey } from '/imports/i18n';
 import type { CrudPermission, Role } from '../../../api/types/role';
-import { useDrawerFrame } from '../../drawer-stack';
-import useMethod from '../../hooks/useMethod';
+import useEntityForm from '../../hooks/useEntityForm';
 import FormFooter from '../../components/FormFooter';
 
 interface RuleInputProps {
@@ -71,32 +70,24 @@ function prepareModelForForm(model: Role | null | undefined): Record<string, unk
 
 const RolesForm = () => {
   const { t } = useTranslation();
-  const { model: rawModel, resolve, cancel } = useDrawerFrame<string, Partial<Role> & { _id?: string }>();
-  const model = (rawModel || {}) as Role & { _id?: string };
-  const { isUpdate, endpoint } = useMemo(
-    () => (model?._id ? { isUpdate: true, endpoint: 'roles.update' } : { isUpdate: false, endpoint: 'roles.insert' }),
-    [model?._id]
-  );
-
-  const { call, loading } = useMethod<string | undefined>(endpoint, {
-    success: isUpdate ? t('messages.roleUpdated') : t('messages.roleCreated'),
+  const {
+    onFinish,
+    loading,
+    model: rawModel,
+    cancel,
+  } = useEntityForm<Record<string, unknown>, Partial<Role> & { _id?: string }>({
+    collection: 'roles',
+    created: 'messages.roleCreated',
+    updated: 'messages.roleUpdated',
+    toPayload: values => ({ ...values, color: getColorFromValues(values) }),
   });
-
-  const handleFinish = useCallback(
-    async (values: Record<string, unknown>) => {
-      const args = [...(model?._id ? [model._id] : []), { ...values, color: getColorFromValues(values) }];
-      const res = await call(...args);
-      if (!res.ok) return;
-      resolve(model?._id ?? res.data);
-    },
-    [model?._id, resolve, call]
-  );
+  const model = (rawModel || {}) as Role & { _id?: string };
 
   const [form] = Form.useForm<Record<string, unknown>>();
   const initialValues = useMemo(() => prepareModelForForm(model), [model]);
 
   return (
-    <Form layout="vertical" form={form} onFinish={handleFinish} initialValues={initialValues} disabled={loading}>
+    <Form layout="vertical" form={form} onFinish={onFinish} initialValues={initialValues} disabled={loading}>
       <Form.Item name="name" label={t('common.name')} rules={[{ required: true, type: 'string' }]} required>
         <Input placeholder={t('forms.placeholders.enterName')} />
       </Form.Item>

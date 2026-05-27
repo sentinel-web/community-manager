@@ -7,9 +7,10 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import DiscoveryTypesCollection from '../../api/collections/discoveryTypes.collection';
 import type { Registration } from '../../api/types';
 import { useTranslation } from '../../i18n/LanguageContext';
-import { DrawerFooter, useDrawerFrame } from '../drawer-stack';
+import { DrawerFooter } from '../drawer-stack';
 import CollectionSelect, { type CollectionDoc } from '../components/CollectionSelect';
 import useMethod from '../hooks/useMethod';
+import useEntityForm from '../hooks/useEntityForm';
 import DiscoveryTypeForm from './discovery-types/DiscoveryTypesForm';
 
 interface RegistrationFormValues {
@@ -26,8 +27,28 @@ interface RegistrationFormValues {
 
 export default function RegistrationForm() {
   const [form] = Form.useForm<RegistrationFormValues>();
-  const { model: rawModel, resolve, cancel } = useDrawerFrame<string, Partial<Registration>>();
   const { t } = useTranslation();
+  const {
+    onFinish,
+    loading,
+    model: rawModel,
+    cancel,
+  } = useEntityForm<RegistrationFormValues, Partial<Registration>>({
+    collection: 'registrations',
+    created: 'messages.registrationSuccessful',
+    updated: 'messages.registrationSuccessful',
+    toPayload: ({ name, id, age, discoveryType, discoveryTypeDetails, steamProfileLink, discordTag, rulesReadAndAccepted, description }) => ({
+      name,
+      id,
+      age,
+      discoveryType,
+      discoveryTypeDetails,
+      steamProfileLink,
+      discordTag,
+      rulesReadAndAccepted,
+      description,
+    }),
+  });
   // Track name/id availability as independent signals and derive disableSubmit
   // from them. Folding both into one state let the two async validations
   // clobber each other (last-writer-wins), so an in-use name could be masked by
@@ -44,11 +65,6 @@ export default function RegistrationForm() {
     if (!Meteor.user()) return {};
     return (rawModel as unknown as Registration) || {};
   }, [rawModel]);
-
-  const { call, loading } = useMethod<string | undefined>(
-    Meteor.user() && (model as Registration)?._id ? 'registrations.update' : 'registrations.insert',
-    { success: t('messages.registrationSuccessful') }
-  );
 
   const { call: validateNameCall } = useMethod<boolean>('registrations.validateName', { notify: false });
   const { call: validateIdCall } = useMethod<boolean>('registrations.validateId', { notify: false });
@@ -108,22 +124,16 @@ export default function RegistrationForm() {
   }, [form, discoveryTypes]);
 
   const handleSubmit = useCallback(
-    async (values: RegistrationFormValues) => {
+    (values: RegistrationFormValues) => {
       // Guard the submit itself, not just the footer button. The button's
       // `disabled` blocks clicks, but Enter-to-submit fires through the form's
       // hidden submit button — which bypasses `disableSubmit` (rules not
-      // accepted / name or id already in use) unless we re-check here.
+      // accepted / name or id already in use) unless we re-check here. The
+      // insert-vs-update plumbing (anonymous always inserts) lives in useEntityForm.
       if (loading || disableSubmit) return;
-      const { name, id, age, discoveryType, discoveryTypeDetails, steamProfileLink, discordTag, rulesReadAndAccepted, description } = values;
-      const args = [
-        ...((model as Registration)?._id ? [(model as Registration)._id] : []),
-        { name, id, age, discoveryType, discoveryTypeDetails, steamProfileLink, discordTag, rulesReadAndAccepted, description },
-      ];
-      const res = await call(...args);
-      if (!res.ok) return;
-      resolve((model as Registration)?._id ?? res.data);
+      onFinish(values);
     },
-    [resolve, model, call, loading, disableSubmit]
+    [onFinish, loading, disableSubmit]
   );
 
   const handleValuesChange = useCallback(

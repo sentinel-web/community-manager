@@ -1,9 +1,8 @@
 import { ColorPicker, Form, Input } from 'antd';
-import React, { useCallback, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import { getColorFromValues } from '/imports/helpers/colors/getColorFromValues';
-import { useDrawerFrame } from '../drawer-stack';
-import useMethod from '../hooks/useMethod';
+import useEntityForm from '../hooks/useEntityForm';
 import FormFooter from '../components/FormFooter';
 import RichTextEditor from '../components/RichTextEditor';
 import type { BriefingTemplate } from '../../api/types';
@@ -11,10 +10,19 @@ import type { BriefingTemplate } from '../../api/types';
 export default function BriefingTemplatesForm() {
   const { t } = useTranslation();
   const [form] = Form.useForm();
-  const { model: rawModel, resolve, cancel } = useDrawerFrame<string, Partial<BriefingTemplate>>();
-
-  const { call, loading } = useMethod<string | undefined>(rawModel?._id ? 'briefingTemplates.update' : 'briefingTemplates.insert', {
-    success: rawModel?._id ? t('messages.briefingTemplateUpdated') : t('messages.briefingTemplateCreated'),
+  const {
+    onFinish,
+    loading,
+    model: rawModel,
+    cancel,
+  } = useEntityForm<Record<string, unknown>, Partial<BriefingTemplate>>({
+    collection: 'briefingTemplates',
+    created: 'messages.briefingTemplateCreated',
+    updated: 'messages.briefingTemplateUpdated',
+    toPayload: values => {
+      const { name, description, content } = values as { name: string; description?: string; content?: string };
+      return { name, color: getColorFromValues(values), description, content };
+    },
   });
 
   // Provide values synchronously via initialValues (not a setFieldsValue effect):
@@ -30,19 +38,8 @@ export default function BriefingTemplatesForm() {
     [rawModel]
   );
 
-  const handleSubmit = useCallback(
-    async (values: Record<string, unknown>) => {
-      const { name, description, content } = values as { name: string; description?: string; content?: string };
-      const args = [...(rawModel?._id ? [rawModel._id] : []), { name, color: getColorFromValues(values), description, content }];
-      const res = await call(...args);
-      if (!res.ok) return;
-      resolve(rawModel?._id ?? res.data);
-    },
-    [rawModel, resolve, call]
-  );
-
   return (
-    <Form form={form} layout="vertical" initialValues={model} onFinish={handleSubmit} disabled={loading}>
+    <Form form={form} layout="vertical" initialValues={model} onFinish={onFinish} disabled={loading}>
       <Form.Item name="name" label={t('common.name')} rules={[{ required: true, type: 'string' }]} required>
         <Input placeholder={t('forms.placeholders.enterName')} />
       </Form.Item>

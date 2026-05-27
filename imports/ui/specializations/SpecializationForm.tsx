@@ -1,9 +1,8 @@
 import { Col, ColorPicker, Form, Input, Row } from 'antd';
 import type { Rule } from 'antd/es/form';
-import React, { ComponentType, useCallback, useMemo } from 'react';
+import React, { ComponentType, useMemo } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
-import { useDrawerFrame } from '../drawer-stack';
-import useMethod from '../hooks/useMethod';
+import useEntityForm from '../hooks/useEntityForm';
 import FormFooter from '../components/FormFooter';
 import MembersSelect from '../members/MembersSelect';
 import RanksSelect from '../members/ranks/RanksSelect';
@@ -38,33 +37,24 @@ interface SpecializationFormValues {
 
 const SpecializationForm = () => {
   const { t } = useTranslation();
-  const { model: rawModel, resolve, cancel } = useDrawerFrame<string, Partial<Specialization> & { _id?: string }>();
-
-  const { model, endpoint } = useMemo(() => {
-    const newModel = (rawModel || {}) as unknown as Specialization;
-    return { model: newModel, endpoint: newModel?._id ? 'specializations.update' : 'specializations.insert' };
-  }, [rawModel]);
-
-  const { call, loading } = useMethod<string | undefined>(endpoint, {
-    success: model?._id ? t('messages.specializationUpdated') : t('messages.specializationCreated'),
+  const {
+    onFinish,
+    loading,
+    model: rawModel,
+    cancel,
+  } = useEntityForm<SpecializationFormValues, Partial<Specialization> & { _id?: string }>({
+    collection: 'specializations',
+    created: 'messages.specializationCreated',
+    updated: 'messages.specializationUpdated',
+    toPayload: values => ({ ...values, color: getColorFromValues(values) }),
   });
 
-  const handleFinish = useCallback(
-    async (values: SpecializationFormValues) => {
-      const color = getColorFromValues(values);
-      values.color = color;
-      const args = [...(model?._id ? [model._id] : []), values];
-      const res = await call(...args);
-      if (!res.ok) return;
-      resolve(model?._id ?? res.data);
-    },
-    [resolve, model?._id, call]
-  );
+  const model = useMemo(() => (rawModel || {}) as unknown as Specialization, [rawModel]);
 
   const [form] = Form.useForm<SpecializationFormValues>();
 
   return (
-    <Form layout="vertical" form={form} onFinish={handleFinish} initialValues={model} disabled={loading}>
+    <Form layout="vertical" form={form} onFinish={onFinish} initialValues={model} disabled={loading}>
       <Form.Item name="name" label={t('common.name')} rules={[{ required: true, type: 'string' }]}>
         <Input placeholder={t('forms.placeholders.enterName')} />
       </Form.Item>
