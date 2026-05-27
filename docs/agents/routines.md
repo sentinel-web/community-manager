@@ -73,6 +73,76 @@ descriptive name. Suggested values:
 
 Manage existing routines with `/schedule list` and `/schedule update`.
 
+## Docs-drift check
+
+Catches the lag between code and the three reference docs the agent flow
+relies on. The repo's `/validate` skill checks staged changes on demand;
+this routine runs the same idea over the entire repo on a weekly cadence
+so drift doesn't accumulate silently between commits.
+
+**What it does** — cross-checks three code/doc pairs and reports
+mismatches:
+
+| Code | Doc | Expected invariant |
+|------|-----|--------------------|
+| `imports/api/collections/*.collection.ts` | `docs/collections.md` | Every collection is documented with its field-level schema |
+| `imports/ui/**/*Form.tsx` + the nav switch in `imports/ui/main/Main.tsx` | `docs/views-and-forms.md` | Every drawer form and every navigable view appears in the index |
+| new `server/apis/*.server.ts` files | `CLAUDE.md` ("Directory Structure" + "Adding New Collections") | New APIs are mentioned where the doc lists APIs / wiring steps |
+
+For each pair, output: collections / views / APIs present in code but
+missing from docs, present in docs but no longer in code, and any name /
+path mismatches. Reference each finding with the offending code path and
+the doc line that would need to change.
+
+**What it does not do** — no auto-edits to docs, no PR creation. Drift
+fixes are still human-driven (or `/validate --update`-driven on a
+focused branch). The routine produces a punch list, not a patch.
+
+**Cadence** — weekly, Monday morning. Repo-wide doc drift moves on the
+timescale of merged PRs, not hours.
+
+**Prompt to schedule:**
+
+```
+For sentinel-web/community-manager, run a docs-drift check across these
+pairs:
+
+1. imports/api/collections/*.collection.ts vs docs/collections.md
+2. imports/ui/**/*Form.tsx + the navigationValue switch in
+   imports/ui/main/Main.tsx vs docs/views-and-forms.md
+3. server/apis/*.server.ts vs the API directory list and "Adding New
+   Collections" steps in CLAUDE.md
+
+For each pair, report: (a) present in code, missing from doc, (b)
+present in doc, missing from code, (c) name or path mismatches. Cite
+the code path and the doc line. Do not edit any files — punch list only.
+```
+
+### Try it locally first
+
+Before scheduling, do a one-off run against the current main to see what
+the punch list looks like:
+
+```
+/validate
+```
+
+`/validate` today only reads staged changes; for a full repo scan, run
+the docs-drift prompt above as a regular Claude Code message. If the
+output is the right shape, schedule it.
+
+### Schedule it
+
+```
+/schedule create
+```
+
+Suggested values:
+
+- **Name:** `weekly-docs-drift`
+- **Cron:** `0 8 * * 1` (08:00 every Monday)
+- **Prompt:** the prompt block above
+
 ## Future candidates
 
 Other bookkeeping that could move to a routine once volume justifies it.
@@ -87,17 +157,6 @@ volume is consistently >2/day; for now, eyeballing the GitHub UI is
 faster.
 
 Sketch prompt: `gh pr list --state open --json number,title,headRefName,mergeable,statusCheckRollup,reviewDecision` plus a per-PR summary.
-
-### Docs-drift check
-
-Weekly diff between code and docs:
-
-- `imports/api/collections/*.collection.ts` vs `docs/collections.md`
-- `imports/ui/**/*Form.tsx` + nav switch vs `docs/views-and-forms.md`
-- new `*.server.ts` files vs the API list in `CLAUDE.md`
-
-A natural background extension of `/validate` (which today only runs on
-demand against staged changes).
 
 ### Dependency hygiene
 
