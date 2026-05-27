@@ -86,7 +86,7 @@ mismatches:
 | Code | Doc | Expected invariant |
 |------|-----|--------------------|
 | `imports/api/collections/*.collection.ts` | `docs/collections.md` | Every collection is documented with its field-level schema |
-| `imports/ui/**/*Form.tsx` + the nav switch in `imports/ui/main/Main.tsx` | `docs/views-and-forms.md` | Every drawer form and every navigable view appears in the index |
+| `imports/ui/**/*Form.tsx` + the `navigationValue` dispatch in `imports/ui/main/Main.tsx` | `docs/views-and-forms.md` | Every drawer form and every navigable view appears in the index |
 | new `server/apis/*.server.ts` files | `CLAUDE.md` ("Directory Structure" + "Adding New Collections") | New APIs are mentioned where the doc lists APIs / wiring steps |
 
 For each pair, output: collections / views / APIs present in code but
@@ -95,8 +95,8 @@ path mismatches. Reference each finding with the offending code path and
 the doc line that would need to change.
 
 **What it does not do** — no auto-edits to docs, no PR creation. Drift
-fixes are still human-driven (or `/validate --update`-driven on a
-focused branch). The routine produces a punch list, not a patch.
+fixes are still human-driven, typically through a focused `/validate`
+follow-up on a branch. The routine produces a punch list, not a patch.
 
 **Cadence** — weekly, Monday morning. Repo-wide doc drift moves on the
 timescale of merged PRs, not hours.
