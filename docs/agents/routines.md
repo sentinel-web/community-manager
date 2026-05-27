@@ -73,20 +73,71 @@ descriptive name. Suggested values:
 
 Manage existing routines with `/schedule list` and `/schedule update`.
 
+## PR babysitter
+
+Surfaces the state of every open PR a few times a workday — CI status,
+mergeability with `main`, reviewer status — so nothing rots in the queue
+while you're heads-down on something else.
+
+**What it does** — for each open, non-draft PR at
+`sentinel-web/community-manager`:
+
+- CI: pass / fail / pending (which check failed, if known)
+- Mergeable: clean / dirty / unknown vs current `main`
+- Review: approved / changes requested / waiting >24h on a requested
+  reviewer
+- A one-line "next action" hint per PR (e.g. *rebase against main*, *ping
+  reviewer*, *fix lint*) — **suggestion only**
+
+**What it does not do** — no auto-rebase, no auto-merge, no review
+dismissals, no comments on the PRs themselves. Surface only, same
+principle as the triage routine. The digest goes to the routine's session
+transcript; the human still drives the next action.
+
+**Cadence** — 2–3× per workday. Suggested: 09:30, 13:30, 17:30 in your
+local TZ, Mon–Fri. Skip weekends. If the repo is averaging fewer than 2
+open PRs at a time, this is overkill — drop to once a day, or just
+eyeball the GitHub UI directly.
+
+**Prompt to schedule:**
+
+```
+For sentinel-web/community-manager, list every open non-draft PR. For each:
+status check rollup, mergeable state vs main, review decision, age, and
+"requested reviewer" wait time. One line per PR with a suggested next
+action (rebase / ping reviewer / fix CI / nothing). Do not push, comment,
+merge, or dismiss reviews — surface only.
+
+Use: gh pr list --state open --draft=false --json number,title,headRefName,mergeable,statusCheckRollup,reviewDecision,reviewRequests,updatedAt,isDraft
+Followed by per-PR enrichment as needed via gh pr checks <n> and gh pr view <n>.
+```
+
+### Try it locally first
+
+```
+gh pr list --state open --draft=false --json number,title,headRefName,mergeable,statusCheckRollup,reviewDecision,reviewRequests,updatedAt
+```
+
+Eyeball the JSON. If the fields cover what you want to see in a digest,
+schedule it. If not, add fields to the query before scheduling — the
+routine should not paper over a missing field by guessing.
+
+### Schedule it
+
+```
+/schedule create
+```
+
+Suggested values:
+
+- **Name:** `pr-babysitter-digest`
+- **Cron:** `30 9,13,17 * * 1-5` (09:30 / 13:30 / 17:30 Mon–Fri)
+- **Prompt:** the prompt block above
+
 ## Future candidates
 
 Other bookkeeping that could move to a routine once volume justifies it.
 Not built yet — order is rough priority.
-
-### PR babysitter
-
-Scan open PRs for: red CI, merge conflicts with `main`, reviewer-requested
-changes sitting more than 24h. One-line status per PR. **No auto-rebase,
-no auto-merge** — same surface-only principle as triage. Useful once PR
-volume is consistently >2/day; for now, eyeballing the GitHub UI is
-faster.
-
-Sketch prompt: `gh pr list --state open --json number,title,headRefName,mergeable,statusCheckRollup,reviewDecision` plus a per-PR summary.
 
 ### Docs-drift check
 
