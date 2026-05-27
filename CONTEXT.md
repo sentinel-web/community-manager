@@ -90,10 +90,10 @@ The deep module (`imports/ui/hooks/useEntityForm.ts`) that owns the create-vs-up
 
 The seam is one hook:
 
-- **`useEntityForm<V, P>({ collection, created, updated, toPayload? })`** — self-sources the drawer frame (`useDrawerFrame`) and returns `{ onFinish, loading, model, cancel }`.
+- **`useEntityForm<V, M>({ collection, created, updated, toPayload? })`** — self-sources the drawer frame (`useDrawerFrame`) and returns `{ onFinish, loading, model, cancel }`. `V` is the antd form-values shape; `M` is the model type read from the frame.
   - `collection` is a `CrudCollectionName`; the method name is derived mechanically as `${collection}.update` / `${collection}.insert`.
-  - `created` / `updated` are `LocaleKey`s; the hook picks between them, so the call site no longer writes the `model?._id ? t(a) : t(b)` ternary.
-  - `toPayload(values: V) => P` (optional, defaults to identity) is the one genuinely form-specific step — which fields, color extraction, date parsing — and closes over component state (`imageSrc`, …).
+  - `created` / `updated` are `ParameterlessLocaleKey`s (a success toast carries no interpolation params); the hook picks between them, so the call site no longer writes the `model?._id ? t(a) : t(b)` ternary.
+  - `toPayload(values: V) => unknown` (optional, defaults to identity) is the one genuinely form-specific step — which fields, color extraction, date parsing — and closes over component state (`imageSrc`, …). The payload is sent untyped through `useMethod`/`callAsync`, so it is intentionally not constrained to a payload generic (TS cannot infer it alongside the explicit `<V, M>`).
   - `onFinish(values)` is the ready-to-use antd `<Form onFinish>` handler: it shapes args as `[...(isUpdate ? [model._id] : []), toPayload(values)]`, calls the method through `useMethod`, and on success resolves the frame with `model?._id ?? data`. On failure it does nothing (the seam already notified).
   - `model` / `cancel` are re-exposed from the self-sourced frame, so the form needs no separate `useDrawerFrame` call (`initialValues={model}`, `<FormFooter onCancel={cancel} loading={loading} />`).
 
