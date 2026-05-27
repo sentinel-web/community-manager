@@ -75,11 +75,11 @@ Manage existing routines with `/schedule list` and `/schedule update`.
 
 ## Dependency hygiene
 
-Catches new npm vulnerabilities and creeping package drift so the
-`npm run update` runs the maintainer does manually don't bring back a
-year's worth of changes at once. CLAUDE.md lists `npm run update` as the
-human counterpart — this routine surfaces *what* would change so the
-human knows *when* to run it.
+Catches new npm vulnerabilities and creeping package drift so the manual
+`npm run update` runs don't bring back a year's worth of changes at
+once. CLAUDE.md lists `npm run update` as the human counterpart — this
+routine surfaces *what* would change so the human knows *when* to run
+it.
 
 **What it does** — once a week, against `main`:
 
@@ -120,6 +120,11 @@ run npm install, npm audit fix, or edit package.json — surface only.
 ```
 
 ### Try it locally first
+
+Dry-run both data sources before scheduling. The `jq` filter just makes
+the audit output easier to skim — drop it if `jq` isn't installed and
+read the raw JSON instead, or run `npm audit` without `--json` for the
+default human-readable view.
 
 ```
 npm audit --json | jq '{vulnerabilities: .metadata.vulnerabilities, findings: [.vulnerabilities | to_entries[] | {pkg: .key, severity: .value.severity, fixAvailable: .value.fixAvailable}]}'
