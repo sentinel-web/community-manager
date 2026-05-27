@@ -31,8 +31,10 @@ not apply labels, close issues, or post comments on its own** — `/triage`
 state transitions stay human-initiated. The routine's job is to surface,
 not act.
 
-**Cadence** — daily, weekday mornings (e.g. 07:30 in your local TZ). Skip
-weekends to avoid noise on a low-traffic repo.
+**Cadence** — daily, weekday mornings. Skip weekends to avoid noise on a
+low-traffic repo. Cron runs in the scheduler's timezone (typically UTC),
+not yours — confirm the timezone in `/schedule create` and offset the
+expression accordingly.
 
 **Prompt to schedule:**
 
@@ -68,7 +70,9 @@ Follow the prompts. The skill will ask for cron expression, prompt, and a
 descriptive name. Suggested values:
 
 - **Name:** `daily-triage-digest`
-- **Cron:** `30 7 * * 1-5` (07:30 Mon–Fri)
+- **Cron:** `30 7 * * 1-5` — that's 07:30 Mon–Fri *in the scheduler's
+  timezone*; adjust for your local TZ when `/schedule create` shows you
+  which one it'll use
 - **Prompt:** the prompt block above
 
 Manage existing routines with `/schedule list` and `/schedule update`.
