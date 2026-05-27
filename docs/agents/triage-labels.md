@@ -13,3 +13,6 @@ The skills speak in terms of five canonical triage roles. This file maps those r
 When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding label string from this table.
 
 The labels are not pre-created in GitHub — the `triage` skill will create them on first use via `gh label create`. Edit the right-hand column if you later standardise on different vocabulary.
+
+For surfacing the triage backlog on a schedule instead of on demand, see the
+daily-triage routine in [`routines.md`](routines.md).

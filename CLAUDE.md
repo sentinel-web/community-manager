@@ -258,3 +258,4 @@ Non-obvious traps only; the coding rules above aren't repeated here.
 - **Issue tracker** — GitHub Issues at `sentinel-web/community-manager` via the `gh` CLI. See `docs/agents/issue-tracker.md`
 - **Triage labels** — five canonical: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`
 - **Domain docs** — single-context repo: `CONTEXT.md` + `docs/adr/` at the repo root (created lazily by `/grill-with-docs`). See `docs/agents/domain.md`
+- **Routines** — recurring agent work via `/loop` (local interval) or `/schedule` (remote cron). Daily-triage digest recipe + future candidates in `docs/agents/routines.md`
