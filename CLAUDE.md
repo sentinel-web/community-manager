@@ -249,7 +249,7 @@ Non-obvious traps only; the coding rules above aren't repeated here.
 - Not passing `permissionModule` prop to Section when collection name differs from the permission module
 
 **Windows/WSL**
-- `setup.sh` may appear permanently modified (mode `100755` → `100644`) when the repo is opened from Windows over the WSL UNC mount (`\\wsl.localhost\...`) — that mount can't preserve the POSIX executable bit. The script is correctly stored as `100755` in the index and must stay that way (`README.md` invokes `./setup.sh` directly on Linux/macOS, and CI/Docker rely on it). Fix it locally with `git config core.fileMode false` so git ignores client-side mode flips; if a `100644` demotion was already committed, restore with `git update-index --chmod=+x setup.sh && git commit -m "Restore setup.sh executable bit"`. Do **not** set `core.fileMode false` globally or check in a `.gitattributes` workaround — git has no attribute for POSIX mode, and disabling the check globally would hide real `chmod` changes on other projects.
+- `setup.sh` shows as modified (`100755` → `100644`) on Windows-via-WSL checkouts because the UNC mount strips POSIX exec bits. The file stays `100755` in the index (`README.md` invokes `./setup.sh`; CI/Docker rely on it). Hide the noise locally with `git config core.fileMode false`; if a `100644` was already committed, restore via `git update-index --chmod=+x setup.sh`. Don't set `core.fileMode false` globally or check in a `.gitattributes` workaround — git tracks mode in the tree object, not via attributes.
 
 ## Code Style
 
