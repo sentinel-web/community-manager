@@ -1,11 +1,10 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { Button, Card, Form, Input, Select, Space, Switch } from 'antd';
-import React, { useCallback, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import type { Questionnaire, QuestionnaireInterval, QuestionnaireStatus, QuestionType } from '../../api/types/questionnaire';
 import { useTranslation } from '../../i18n/LanguageContext';
 import type { TranslateFn } from '../section/types';
-import { useDrawerFrame } from '../drawer-stack';
-import useMethod from '../hooks/useMethod';
+import useEntityForm from '../hooks/useEntityForm';
 import FormFooter from '../components/FormFooter';
 
 interface QuestionTypeOption {
@@ -41,17 +40,18 @@ interface QuestionItemProps {
 }
 
 const QuestionnaireForm = () => {
-  const { model, resolve, cancel } = useDrawerFrame<string, Partial<Questionnaire>>();
   const { t } = useTranslation();
-  const questionnaire = (model || {}) as unknown as Questionnaire;
-  const { isUpdate, endpoint } = useMemo(
-    () => (questionnaire?._id ? { isUpdate: true, endpoint: 'questionnaires.update' } : { isUpdate: false, endpoint: 'questionnaires.insert' }),
-    [questionnaire?._id]
-  );
-
-  const { call, loading } = useMethod<string | undefined>(endpoint, {
-    success: isUpdate ? t('questionnaires.updated') : t('questionnaires.created'),
+  const { onFinish, loading, model, cancel } = useEntityForm<QuestionnaireFormValues, Partial<Questionnaire>>({
+    collection: 'questionnaires',
+    created: 'questionnaires.created',
+    updated: 'questionnaires.updated',
+    toPayload: values => ({
+      ...values,
+      createdAt: questionnaire?.createdAt || new Date(),
+      updatedAt: new Date(),
+    }),
   });
+  const questionnaire = (model || {}) as unknown as Questionnaire;
 
   const questionTypes: QuestionTypeOption[] = useMemo(
     () => [
@@ -76,25 +76,10 @@ const QuestionnaireForm = () => {
     [t]
   );
 
-  const handleFinish = useCallback(
-    async (values: QuestionnaireFormValues) => {
-      const payload = {
-        ...values,
-        createdAt: questionnaire?.createdAt || new Date(),
-        updatedAt: new Date(),
-      };
-      const args = isUpdate ? [questionnaire._id, payload] : [payload];
-      const res = await call(...args);
-      if (!res.ok) return;
-      resolve(questionnaire?._id ?? res.data);
-    },
-    [resolve, questionnaire?._id, questionnaire?.createdAt, isUpdate, call]
-  );
-
   const [form] = Form.useForm<QuestionnaireFormValues>();
 
   return (
-    <Form layout="vertical" form={form} onFinish={handleFinish} initialValues={questionnaire} disabled={loading}>
+    <Form layout="vertical" form={form} onFinish={onFinish} initialValues={questionnaire} disabled={loading}>
       <Form.Item
         label={t('common.name')}
         name="name"

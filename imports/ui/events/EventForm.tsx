@@ -13,9 +13,10 @@ import type { EventDoc, BriefingTemplate } from '../../api/types';
 import type { CollectionDoc } from '../components/CollectionSelect';
 import { useTranslation } from '../../i18n/LanguageContext';
 import type { TranslateFn } from '../section/types';
-import { DrawerFooter, useDrawerFrame } from '../drawer-stack';
+import { DrawerFooter } from '../drawer-stack';
 import CollectionSelect from '../components/CollectionSelect';
 import useMethod from '../hooks/useMethod';
+import useEntityForm from '../hooks/useEntityForm';
 import MembersSelect from '../members/MembersSelect';
 import RichTextEditor from '../components/RichTextEditor';
 import shouldConfirmTemplateOverwrite from '/imports/helpers/shouldConfirmTemplateOverwrite';
@@ -51,7 +52,22 @@ export const getDateFromValues = (values: Record<string, unknown>, key = 'date')
 const EventForm = () => {
   const { modal } = App.useApp();
   const { t } = useTranslation();
-  const { model: rawModel, resolve, cancel } = useDrawerFrame<string, Partial<EventDoc>>();
+  const {
+    onFinish,
+    loading,
+    model: rawModel,
+    cancel,
+  } = useEntityForm<EventFormValues, Partial<EventDoc>>({
+    collection: 'events',
+    created: 'messages.eventCreated',
+    updated: 'messages.eventUpdated',
+    toPayload: values => ({
+      ...values,
+      color: getColorFromValues(values as unknown as Record<string, unknown>),
+      start: getDateFromValues(values as unknown as Record<string, unknown>, 'start'),
+      end: getDateFromValues(values as unknown as Record<string, unknown>, 'end'),
+    }),
+  });
 
   const model = useMemo(() => {
     const data = (rawModel || {}) as unknown as EventDoc;
@@ -63,26 +79,7 @@ const EventForm = () => {
     } as EventFormValues & { _id?: string };
   }, [rawModel]);
 
-  const { call: save, loading } = useMethod<string | undefined>(model?._id ? 'events.update' : 'events.insert', {
-    success: model?._id ? t('messages.eventUpdated') : t('messages.eventCreated'),
-  });
   const { call: remove } = useMethod('events.remove', { success: t('messages.eventDeleted') });
-
-  const handleFinish = useCallback(
-    async (values: EventFormValues) => {
-      const wireValues = {
-        ...values,
-        color: getColorFromValues(values as unknown as Record<string, unknown>),
-        start: getDateFromValues(values as unknown as Record<string, unknown>, 'start'),
-        end: getDateFromValues(values as unknown as Record<string, unknown>, 'end'),
-      };
-      const args = [...(model?._id ? [model._id] : []), wireValues];
-      const res = await save(...args);
-      if (!res.ok) return;
-      resolve(model?._id ?? res.data);
-    },
-    [model?._id, save, resolve]
-  );
 
   const handleDelete = useCallback(() => {
     modal.confirm({
@@ -101,7 +98,7 @@ const EventForm = () => {
   const [form] = Form.useForm<EventFormValues>();
 
   return (
-    <Form form={form} layout="vertical" initialValues={model} onFinish={handleFinish} disabled={loading}>
+    <Form form={form} layout="vertical" initialValues={model} onFinish={onFinish} disabled={loading}>
       <Form.Item name="start" label={t('events.startDate')} rules={[{ required: true, type: 'date' }]}>
         <DatePicker style={styles.datePicker} showTime />
       </Form.Item>

@@ -9,8 +9,9 @@ import RanksCollection from '../../api/collections/ranks.collection';
 import RolesCollection from '../../api/collections/roles.collection';
 import type { Member } from '../../api/types/member';
 import { useTranslation } from '../../i18n/LanguageContext';
-import { DrawerFooter, useDrawerFrame } from '../drawer-stack';
+import { DrawerFooter } from '../drawer-stack';
 import useMethod from '../hooks/useMethod';
+import useEntityForm from '../hooks/useEntityForm';
 import CollectionSelect, { type CollectionDoc } from '../components/CollectionSelect';
 import { getDateFromValues } from '../events/EventForm';
 import ProfilePictureInput from '../profile-picture-input/ProfilePictureInput';
@@ -76,12 +77,25 @@ export default function MemberForm() {
   const [nameError, setNameError] = useState<ValidationStatus>(undefined);
   const [idError, setIdError] = useState<ValidationStatus>(undefined);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const { model: rawModel, resolve, cancel } = useDrawerFrame<string, Partial<Member>>();
-  const model = useMemo(() => (rawModel || {}) as Member, [rawModel]);
-
-  const { call, loading } = useMethod<string | undefined>(Meteor.user() && model?._id ? 'members.update' : 'members.insert', {
-    success: t('messages.saveSuccessful'),
+  const {
+    onFinish,
+    loading,
+    model: rawModel,
+    cancel,
+  } = useEntityForm<MemberFormValues, Partial<Member>>({
+    collection: 'members',
+    created: 'messages.saveSuccessful',
+    updated: 'messages.saveSuccessful',
+    toPayload: values => ({
+      ...values,
+      profile: {
+        ...values.profile,
+        entryDate: getDateFromValues(values.profile as unknown as Record<string, unknown>, 'entryDate'),
+        exitDate: getDateFromValues(values.profile as unknown as Record<string, unknown>, 'exitDate'),
+      },
+    }),
   });
+  const model = useMemo(() => (rawModel || {}) as Member, [rawModel]);
 
   const { call: validateNameCall } = useMethod<boolean>('members.validateName', { notify: false });
   const { call: validateIdCall } = useMethod<boolean>('members.validateId', { notify: false });
@@ -147,26 +161,16 @@ export default function MemberForm() {
   }, [form, model?._id, validateIdCall]);
 
   const handleSubmit = useCallback(
-    async (values: MemberFormValues) => {
+    (values: MemberFormValues) => {
       // Guard the submit itself, not just the footer button. The button's
       // `disabled` blocks clicks, but Enter-to-submit fires through the form's
       // hidden submit button — which bypasses `disableSubmit` (name or id
-      // already in use / rules not accepted) unless we re-check here.
+      // already in use / rules not accepted) unless we re-check here. The
+      // create-vs-update plumbing lives in useEntityForm; this only adds the guard.
       if (loading || disableSubmit) return;
-      const payload = {
-        ...values,
-        profile: {
-          ...values.profile,
-          entryDate: getDateFromValues(values.profile as unknown as Record<string, unknown>, 'entryDate'),
-          exitDate: getDateFromValues(values.profile as unknown as Record<string, unknown>, 'exitDate'),
-        },
-      };
-      const args = model?._id ? [model._id, payload] : [payload];
-      const res = await call(...args);
-      if (!res.ok) return;
-      resolve(model?._id ?? res.data);
+      onFinish(values);
     },
-    [model?._id, resolve, call, loading, disableSubmit]
+    [onFinish, loading, disableSubmit]
   );
 
   const handleValuesChange = useCallback(

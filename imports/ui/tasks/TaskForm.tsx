@@ -8,10 +8,10 @@ import TasksCollection from '../../api/collections/tasks.collection';
 import TaskStatusCollection from '../../api/collections/taskStatus.collection';
 import type { Task, TaskComment } from '../../api/types/task';
 import { useTranslation } from '../../i18n/LanguageContext';
-import { useDrawerFrame } from '../drawer-stack';
 import CollectionSelect, { type CollectionDoc } from '../components/CollectionSelect';
 import FormFooter from '../components/FormFooter';
 import useMethod from '../hooks/useMethod';
+import useEntityForm from '../hooks/useEntityForm';
 import MembersSelectJs from '../members/MembersSelect';
 import TaskStatusForm from './task-status/TaskStatusForm';
 
@@ -24,27 +24,16 @@ interface MemberOption {
 }
 
 export default function TaskForm() {
-  const { model, resolve, cancel } = useDrawerFrame<string, Partial<Task>>();
   const { message, notification } = App.useApp();
   const { t } = useTranslation();
-  const { isUpdate, endpoint } = useMemo(
-    () => (model?._id ? { isUpdate: true, endpoint: 'tasks.update' } : { isUpdate: false, endpoint: 'tasks.insert' }),
-    [model?._id]
-  );
-
-  const { call, loading } = useMethod<string | undefined>(endpoint, {
-    success: isUpdate ? t('messages.taskUpdated') : t('messages.taskCreated'),
+  const { onFinish, loading, model, cancel } = useEntityForm<Partial<Task>, Partial<Task>>({
+    collection: 'tasks',
+    created: 'messages.taskCreated',
+    updated: 'messages.taskUpdated',
   });
-
-  const handleFinish = useCallback(
-    async (values: Partial<Task>) => {
-      const args = isUpdate ? [model._id as string, values] : [values];
-      const res = await call(...args);
-      if (!res.ok) return;
-      resolve(model?._id ?? res.data);
-    },
-    [resolve, model?._id, isUpdate, call]
-  );
+  // Drives the comments section visibility (existing task only) — separate from
+  // useEntityForm's internal create-vs-update predicate.
+  const isUpdate = !!model?._id;
 
   const [participantOptions, setParticipantOptions] = useState<MemberOption[]>([]);
   const { call: fetchMemberOptions } = useMethod<MemberOption[]>('members.options');
@@ -83,7 +72,7 @@ export default function TaskForm() {
   }, [commentText, model?._id, message, notification, t]);
 
   return (
-    <Form layout="vertical" form={form} onFinish={handleFinish} initialValues={model} disabled={loading}>
+    <Form layout="vertical" form={form} onFinish={onFinish} initialValues={model} disabled={loading}>
       <Form.Item label={t('common.name')} name="name" rules={[{ required: true, type: 'string' }]} required>
         <Input placeholder={t('forms.placeholders.enterName')} />
       </Form.Item>
