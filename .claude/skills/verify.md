@@ -16,7 +16,8 @@ asking the user to click around.
 
 ## Prerequisites
 
-- Chrome MCP enabled (`/chrome`); if missing, follow the setup prompt and stop
+- Chrome MCP enabled (the global `/chrome` Claude-in-Chrome integration —
+  not a project skill); if missing, follow the setup prompt and stop
 - `NODE_ENV !== 'production'` — the dev admin user and demo-data method only
   exist in development mode
 - Working directory is the repo root (Meteor needs `.meteor/` adjacent)
@@ -49,7 +50,7 @@ curl -sf http://localhost:3000 > /dev/null && echo "already up" || npm start
 
 ## 2. Authenticate
 
-Dev-only auto-user from `server/main.ts:194`:
+Dev-only auto-user seeded by `createTestData()` in `server/main.ts`:
 
 - username: `admin`
 - password: `admin`
