@@ -254,6 +254,9 @@ Non-obvious traps only; the coding rules above aren't repeated here.
 **Permissions**
 - Not passing `permissionModule` prop to Section when collection name differs from the permission module
 
+**Windows/WSL**
+- `setup.sh` shows as modified (`100755` → `100644`) on Windows-via-WSL checkouts because the UNC mount strips POSIX exec bits. The file stays `100755` in the index (`README.md` invokes `./setup.sh`; CI/Docker rely on it). Hide the noise locally with `git config core.fileMode false`; if a `100644` was already committed, restore via `git update-index --chmod=+x setup.sh`. Don't set `core.fileMode false` globally or check in a `.gitattributes` workaround — git tracks mode in the tree object, not via attributes.
+
 ## Code Style
 
 - Prettier: 2-space indent, single quotes, trailing commas (es5), 150 char width, `arrowParens: "avoid"`
