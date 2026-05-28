@@ -5,6 +5,8 @@ import {
   validateString,
   validateArrayOfStrings,
   clearRoleCache,
+  assertSafeSelector,
+  checkPermission,
 } from './main';
 import { createLog } from './apis/logs.server';
 import { runMutation, snapshotTouchedFields } from './mutation-pipeline';
@@ -106,11 +108,26 @@ const MAX_PUBLISH_LIMIT = 1000;
 function createCollectionPublish(collection: CrudCollectionName): void {
   if (Meteor.isServer) {
     const Collection = getCollection(collection);
-    const allowsAnonymousRead = COLLECTION_REGISTRY[collection].allowsAnonymous?.read === true;
-    Meteor.publish(collection, function (filter: Record<string, unknown> = {}, options: Record<string, unknown> = {}) {
+    const registryEntry = COLLECTION_REGISTRY[collection];
+    const allowsAnonymousRead = registryEntry.allowsAnonymous?.read === true;
+    // Async publish body so the permission check can await getUserRole.
+    // Meteor 3 supports async publish handlers (see members.server.ts).
+    Meteor.publish(collection, async function (filter: Record<string, unknown> = {}, options: Record<string, unknown> = {}) {
       if (!this.userId && !allowsAnonymousRead) return this.ready();
       validateObject(filter, false);
       validateObject(options, false);
+      assertSafeSelector(filter);
+
+      // Authorize the subscription unless the collection is explicitly anonymous-
+      // readable. Previously any authenticated user could subscribe to any
+      // collection regardless of their role's read permission (SEC-003).
+      if (!allowsAnonymousRead) {
+        const hasPermission = await checkPermission(this.userId, registryEntry.module, 'read');
+        if (!hasPermission) {
+          this.ready();
+          throw new Meteor.Error(403, 'Permission denied');
+        }
+      }
 
       const limitedOptions: Record<string, unknown> = { ...options };
       if (!limitedOptions.limit) {
@@ -145,6 +162,7 @@ function createCollectionMethods(collection: CrudCollectionName): void {
               validate: ([f, o]) => {
                 validateObject(f, false);
                 validateObject(o, false);
+                assertSafeSelector(f);
               },
             },
             [filter, options] as const,
@@ -293,7 +311,10 @@ function createCollectionMethods(collection: CrudCollectionName): void {
               collection,
               operation: 'read',
               permissionModule,
-              validate: ([f]) => validateObject(f, false),
+              validate: ([f]) => {
+                validateObject(f, false);
+                assertSafeSelector(f);
+              },
             },
             [filter] as const,
             async ([f]) => Collection.countDocuments(f),
@@ -309,6 +330,7 @@ function createCollectionMethods(collection: CrudCollectionName): void {
               validate: ([f, o]) => {
                 validateObject(f, false);
                 validateObject(o, false);
+                assertSafeSelector(f);
               },
             },
             [filter, options] as const,

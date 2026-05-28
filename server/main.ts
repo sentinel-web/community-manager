@@ -406,3 +406,31 @@ export function validatePublish(userId: unknown, filter: unknown, options: unkno
   validateObject(filter, false);
   validateObject(options, false);
 }
+
+// Mongo query operators that allow arbitrary server-side code execution or
+// expression evaluation. Permitting these in a client-supplied selector lets a
+// caller bypass field-level access controls and run unbounded scans (SEC-002/
+// 005/012). They have no legitimate use in this app's read paths.
+const DISALLOWED_QUERY_OPERATORS: readonly string[] = ['$where', '$expr', '$function', '$accumulator'];
+
+// Recursively asserts that a client-supplied Mongo selector contains none of
+// the code-execution operators above. Throws Meteor.Error(400) on the first
+// offending key. Wire this into every path that forwards an untrusted filter
+// to Mongo (generic .read, publications, members.findOne, persisted filters).
+export function assertSafeSelector(filter: unknown): void {
+  validateObject(filter, false);
+  const walk = (node: unknown): void => {
+    if (Array.isArray(node)) {
+      for (const item of node) walk(item);
+      return;
+    }
+    if (!node || typeof node !== 'object') return;
+    for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+      if (DISALLOWED_QUERY_OPERATORS.includes(key)) {
+        throw new Meteor.Error(400, `Disallowed query operator: ${key}`);
+      }
+      walk(value);
+    }
+  };
+  walk(filter);
+}

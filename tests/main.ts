@@ -26,6 +26,7 @@ import './server/paletteScoring.test';
 import './server/paletteSearch.test';
 import './server/permissions.test';
 import './server/questionnaireInterval.test';
+import './server/readSecurityHardening.test';
 import './server/runMethodCall.test';
 import './server/settingsMethods.test';
 import './server/shouldConfirmTemplateOverwrite.test';
