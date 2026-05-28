@@ -52,6 +52,22 @@ describe('assertSafeSelector — rejects code-execution operators (#259)', () =>
   });
 });
 
+// A bcrypt-shaped services block mirroring what Accounts stores on a real
+// member doc — present so the no-leak assertions are non-trivial (a user with
+// no `services` would pass the assertion vacuously).
+const FIXTURE_SERVICES = {
+  password: { bcrypt: '$2b$10$abcdefghijklmnopqrstuv' },
+  resume: { loginTokens: [{ when: new Date(), hashedToken: 'secrethashedtoken' }] },
+  // Reset tokens are equally sensitive — assert the whole block is gone.
+  password_reset: { token: 'reset-secret', email: 'x@example.com', when: new Date() },
+};
+
+// Writes a realistic `services` block onto a fixture user. createTestUser does
+// not set one, so the strip assertions would otherwise pass vacuously.
+async function attachServices(userId: string): Promise<void> {
+  await Meteor.users.updateAsync({ _id: userId }, { $set: { services: FIXTURE_SERVICES } });
+}
+
 describe('members.findOne — authz + no password-hash leak (#257)', () => {
   let adminUserId: string;
   let noPermUserId: string;
@@ -65,6 +81,7 @@ describe('members.findOne — authz + no password-hash leak (#257)', () => {
       createTestUser({ roleId: adminRoleId }),
       createTestUser({ roleId: noPermRoleId }),
     ]);
+    await Promise.all([attachServices(adminUserId), attachServices(noPermUserId)]);
   });
 
   after(async () => {
@@ -90,9 +107,103 @@ describe('members.findOne — authz + no password-hash leak (#257)', () => {
     assert.strictEqual(result.services, undefined, 'members.findOne must never expose services (password hash)');
   });
 
+  it('never returns services when the caller explicitly requests fields:{services:1}', async () => {
+    // An inclusion projection would normally make a `{ services: 0 }` merge
+    // throw — the post-fetch strip is immune and still drops the block.
+    const result = (await callAs(adminUserId, 'members.findOne', { _id: adminUserId }, { fields: { services: 1 } })) as
+      | Record<string, unknown>
+      | undefined;
+    assert.ok(result, 'Expected the admin user to be returned');
+    assert.strictEqual(result.services, undefined, 'members.findOne must strip services even when explicitly requested');
+  });
+
+  it('never returns services.password when the caller requests {"services.password":1}', async () => {
+    const result = (await callAs(adminUserId, 'members.findOne', { _id: adminUserId }, { fields: { 'services.password': 1 } })) as
+      | Record<string, unknown>
+      | undefined;
+    assert.ok(result, 'Expected the admin user to be returned');
+    assert.strictEqual(result.services, undefined, 'members.findOne must strip the whole services block');
+  });
+
   it('still returns undefined on a miss (existence-check behavior preserved)', async () => {
     const result = await callAs(adminUserId, 'members.findOne', { 'profile.registrationId': 'nonexistent' });
     assert.strictEqual(result, undefined);
+  });
+});
+
+describe('members.read — never leaks the password hash (SEC-001)', () => {
+  let adminUserId: string;
+  let noPermUserId: string;
+
+  before(async () => {
+    const [adminRoleId, noPermRoleId] = await Promise.all([
+      createTestRole({ roles: true }),
+      createTestRole({ members: { read: false, create: false, update: false, delete: false } }),
+    ]);
+    [adminUserId, noPermUserId] = await Promise.all([
+      createTestUser({ roleId: adminRoleId }),
+      createTestUser({ roleId: noPermRoleId }),
+    ]);
+    await Promise.all([attachServices(adminUserId), attachServices(noPermUserId)]);
+  });
+
+  after(async () => {
+    await cleanupFixtures();
+  });
+
+  it('denies a caller lacking members read permission — 403', async () => {
+    await assertRejectsWithCode(() => callAs(noPermUserId, 'members.read', {}, {}), 403);
+  });
+
+  it('strips services even when the caller requests fields:{services:1}', async () => {
+    const result = (await callAs(adminUserId, 'members.read', { _id: adminUserId }, { fields: { services: 1 } })) as
+      | Record<string, unknown>[];
+    assert.ok(Array.isArray(result) && result.length > 0, 'Expected at least the admin user');
+    for (const member of result) {
+      assert.strictEqual(member.services, undefined, 'members.read must never expose services (password hash)');
+    }
+  });
+
+  it('strips services when the caller requests {"services.password":1}', async () => {
+    const result = (await callAs(adminUserId, 'members.read', {}, { fields: { 'services.password': 1 } })) as
+      | Record<string, unknown>[];
+    assert.ok(Array.isArray(result) && result.length > 0, 'Expected members to be returned');
+    for (const member of result) {
+      assert.strictEqual(member.services, undefined, 'members.read must strip the whole services block');
+    }
+  });
+});
+
+describe('members.all — never leaks the password hash (SEC-001)', () => {
+  let adminUserId: string;
+  let noPermUserId: string;
+
+  before(async () => {
+    const [adminRoleId, noPermRoleId] = await Promise.all([
+      createTestRole({ roles: true }),
+      createTestRole({ members: { read: false, create: false, update: false, delete: false } }),
+    ]);
+    [adminUserId, noPermUserId] = await Promise.all([
+      createTestUser({ roleId: adminRoleId }),
+      createTestUser({ roleId: noPermRoleId }),
+    ]);
+    await Promise.all([attachServices(adminUserId), attachServices(noPermUserId)]);
+  });
+
+  after(async () => {
+    await cleanupFixtures();
+  });
+
+  it('denies a caller lacking members read permission — 403', async () => {
+    await assertRejectsWithCode(() => callAs(noPermUserId, 'members.all'), 403);
+  });
+
+  it('returns full member docs with the services block stripped', async () => {
+    const result = (await callAs(adminUserId, 'members.all')) as Record<string, unknown>[];
+    assert.ok(Array.isArray(result) && result.length > 0, 'Expected members to be returned');
+    for (const member of result) {
+      assert.strictEqual(member.services, undefined, 'members.all must never expose services (password hash)');
+    }
   });
 });
 

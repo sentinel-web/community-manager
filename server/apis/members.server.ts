@@ -25,6 +25,23 @@ async function getMemberById(memberId: string): Promise<Meteor.User> {
   return member as Meteor.User;
 }
 
+// Post-fetch removal of the `services` block (bcrypt password hashes + reset
+// tokens). Used on every client-reachable path that returns raw member docs.
+// A strip-after-fetch is projection-safe: merging `{ services: 0 }` onto a
+// caller-supplied INCLUSION projection (e.g. `{ name: 1 }`) makes MongoDB throw,
+// and omitting the projection leaks the hash. Deleting the field post-fetch is
+// immune to the projection type and can never leak (SEC-001, Critical).
+function stripServices<T extends object>(member: T): T {
+  if (member && 'services' in member) {
+    delete (member as { services?: unknown }).services;
+  }
+  return member;
+}
+
+function stripServicesFromAll<T extends object>(members: T[]): T[] {
+  return members.map(stripServices);
+}
+
 const getRankName = async (rankId: string | null | undefined): Promise<string | undefined> => {
   const rank = await RanksCollection.findOneAsync({ _id: rankId || null } as never);
   return rank?.name;
@@ -58,7 +75,12 @@ if (Meteor.isServer) {
 
       const squadScope = await getSquadScope(this.userId);
       const scopedFilter = { ...filter, ...squadScope };
-      return await MembersCollection.find(scopedFilter, options).fetchAsync();
+      // Strip the password-hash off every returned doc post-fetch. The caller's
+      // `options` (incl. `fields`) are forwarded verbatim, so a projection merge
+      // would either throw (inclusion projection) or be omittable — the strip is
+      // projection-safe and never leaks (SEC-001, Critical).
+      const members = await MembersCollection.find(scopedFilter, options).fetchAsync();
+      return stripServicesFromAll(members);
     },
     'members.findOne': async function (filter: Record<string, unknown> = {}, options: Record<string, unknown> = {}) {
       validateUserId(this.userId);
@@ -74,17 +96,17 @@ if (Meteor.isServer) {
       const squadScope = await getSquadScope(this.userId);
       const scopedFilter = { ...filter, ...squadScope };
 
-      // Force the password-hash off the projection regardless of the caller's
-      // requested fields — merge, don't replace, so explicit projections still
-      // apply. Previously a caller could omit `{ services: 0 }` and read the
-      // bcrypt hash (SEC-001, Critical).
-      const callerFields = (options.fields as Record<string, unknown> | undefined) ?? {};
-      const safeOptions = { ...options, fields: { ...callerFields, services: 0 } };
-
+      // Strip the password-hash off the returned doc post-fetch. A projection
+      // merge of `{ services: 0 }` onto a caller-supplied INCLUSION projection
+      // (e.g. `{ name: 1 }`) makes MongoDB throw; omitting it leaks the hash.
+      // The post-fetch strip is immune to the projection type and never leaks
+      // (SEC-001, Critical).
+      //
       // Returns undefined on miss (mirrors Mongo findOneAsync) — callers like
       // RegistrationExtra use this as an existence check and would otherwise
       // unhandled-reject on every miss, surfacing as the dev-server overlay.
-      return MembersCollection.findOneAsync(scopedFilter, safeOptions);
+      const member = await MembersCollection.findOneAsync(scopedFilter, options);
+      return member ? stripServices(member) : member;
     },
     'members.insert': async function (payload: Record<string, unknown> = {}): Promise<string> {
       return runMutation(
@@ -323,8 +345,10 @@ if (Meteor.isServer) {
       if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
 
       const squadScope = await getSquadScope(this.userId);
+      // Strip the password-hash off every returned doc post-fetch — this path
+      // fetched full member docs with no field projection (SEC-001, Critical).
       const members = await MembersCollection.find(squadScope).fetchAsync();
-      return members;
+      return stripServicesFromAll(members);
     },
     'members.groupedOptions': async function () {
       validateUserId(this.userId);
