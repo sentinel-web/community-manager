@@ -14,6 +14,7 @@ import SquadsCollection from '../../imports/api/collections/squads.collection';
 import { validateObject, validatePublish, validateString, validateNumber, validateUserId, checkPermission, checkSpecialPermission, getSquadScope, isOfficerOrAdmin, getUserRole, assertSafeSelector } from '../main';
 import { createLog } from './logs.server';
 import { runMutation, snapshotTouchedFields } from '../mutation-pipeline';
+import { instrument } from '../telemetry';
 import { COLLECTION_REGISTRY } from '../collection-registry';
 import { enforceIntegrityOnDelete, buildRemoveAuditPayload, validateForeignKeys } from '../integrity';
 import type { Role } from '/imports/api/types';
@@ -66,47 +67,65 @@ if (Meteor.isServer) {
 
   Meteor.methods({
     'members.read': async function (filter: Record<string, unknown> = {}, options: Record<string, unknown> = {}) {
-      validateUserId(this.userId);
-      validateObject(filter, false);
-      validateObject(options, false);
+      // Telemetry is additive: a permission denial maps to 'denied', any later
+      // throw to 'error'. `passedGate` flips once the read is authorized.
+      let passedGate = false;
+      return instrument(
+        'members.read',
+        async () => {
+          validateUserId(this.userId);
+          validateObject(filter, false);
+          validateObject(options, false);
 
-      const hasPermission = await checkPermission(this.userId, 'members', 'read');
-      if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+          const hasPermission = await checkPermission(this.userId, 'members', 'read');
+          if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+          passedGate = true;
 
-      const squadScope = await getSquadScope(this.userId);
-      const scopedFilter = { ...filter, ...squadScope };
-      // Strip the password-hash off every returned doc post-fetch. The caller's
-      // `options` (incl. `fields`) are forwarded verbatim, so a projection merge
-      // would either throw (inclusion projection) or be omittable — the strip is
-      // projection-safe and never leaks (SEC-001, Critical).
-      const members = await MembersCollection.find(scopedFilter, options).fetchAsync();
-      return stripServicesFromAll(members);
+          const squadScope = await getSquadScope(this.userId);
+          const scopedFilter = { ...filter, ...squadScope };
+          // Strip the password-hash off every returned doc post-fetch. The caller's
+          // `options` (incl. `fields`) are forwarded verbatim, so a projection merge
+          // would either throw (inclusion projection) or be omittable — the strip is
+          // projection-safe and never leaks (SEC-001, Critical).
+          const members = await MembersCollection.find(scopedFilter, options).fetchAsync();
+          return stripServicesFromAll(members);
+        },
+        () => (passedGate ? 'error' : 'denied'),
+      );
     },
     'members.findOne': async function (filter: Record<string, unknown> = {}, options: Record<string, unknown> = {}) {
-      validateUserId(this.userId);
-      validateObject(filter, false);
-      validateObject(options, false);
-      assertSafeSelector(filter);
+      let passedGate = false;
+      return instrument(
+        'members.findOne',
+        async () => {
+          validateUserId(this.userId);
+          validateObject(filter, false);
+          validateObject(options, false);
+          assertSafeSelector(filter);
 
-      const hasPermission = await checkPermission(this.userId, 'members', 'read');
-      if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+          const hasPermission = await checkPermission(this.userId, 'members', 'read');
+          if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+          passedGate = true;
 
-      // Squad-scope the lookup so a scoped caller cannot read members outside
-      // their own squad by crafting an arbitrary selector (SEC-001).
-      const squadScope = await getSquadScope(this.userId);
-      const scopedFilter = { ...filter, ...squadScope };
+          // Squad-scope the lookup so a scoped caller cannot read members outside
+          // their own squad by crafting an arbitrary selector (SEC-001).
+          const squadScope = await getSquadScope(this.userId);
+          const scopedFilter = { ...filter, ...squadScope };
 
-      // Strip the password-hash off the returned doc post-fetch. A projection
-      // merge of `{ services: 0 }` onto a caller-supplied INCLUSION projection
-      // (e.g. `{ name: 1 }`) makes MongoDB throw; omitting it leaks the hash.
-      // The post-fetch strip is immune to the projection type and never leaks
-      // (SEC-001, Critical).
-      //
-      // Returns undefined on miss (mirrors Mongo findOneAsync) — callers like
-      // RegistrationExtra use this as an existence check and would otherwise
-      // unhandled-reject on every miss, surfacing as the dev-server overlay.
-      const member = await MembersCollection.findOneAsync(scopedFilter, options);
-      return member ? stripServices(member) : member;
+          // Strip the password-hash off the returned doc post-fetch. A projection
+          // merge of `{ services: 0 }` onto a caller-supplied INCLUSION projection
+          // (e.g. `{ name: 1 }`) makes MongoDB throw; omitting it leaks the hash.
+          // The post-fetch strip is immune to the projection type and never leaks
+          // (SEC-001, Critical).
+          //
+          // Returns undefined on miss (mirrors Mongo findOneAsync) — callers like
+          // RegistrationExtra use this as an existence check and would otherwise
+          // unhandled-reject on every miss, surfacing as the dev-server overlay.
+          const member = await MembersCollection.findOneAsync(scopedFilter, options);
+          return member ? stripServices(member) : member;
+        },
+        () => (passedGate ? 'error' : 'denied'),
+      );
     },
     'members.insert': async function (payload: Record<string, unknown> = {}): Promise<string> {
       return runMutation(

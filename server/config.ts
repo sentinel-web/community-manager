@@ -17,6 +17,17 @@ interface Defaults {
     roleTtlMs: number;
   };
   squadScopedPermissions: boolean;
+  telemetry: {
+    enabled: boolean;
+    // OTLP/HTTP endpoint for the self-hosted collector (decision O-3). Empty
+    // string => use the default console exporter (no network).
+    otlpEndpoint: string;
+  };
+  logs: {
+    // Retention window for audit logs in seconds. Drives a MongoDB TTL index on
+    // the log timestamp field. 0 disables expiry (keep forever).
+    retentionSeconds: number;
+  };
 }
 
 const DEFAULTS: Defaults = {
@@ -31,6 +42,14 @@ const DEFAULTS: Defaults = {
     roleTtlMs: 60000,
   },
   squadScopedPermissions: true,
+  telemetry: {
+    enabled: true,
+    otlpEndpoint: '',
+  },
+  logs: {
+    // 90 days. Configurable via Meteor.settings; set to 0 to retain forever.
+    retentionSeconds: 90 * 24 * 60 * 60,
+  },
 };
 
 function getNestedValue(obj: unknown, path: string[]): unknown {
@@ -97,5 +116,20 @@ export const CACHE: { readonly roleTtlMs: number } = {
 export const SQUAD_SCOPED_PERMISSIONS: { readonly enabled: boolean } = {
   get enabled() {
     return getConfig(['squadScopedPermissions'], true);
+  },
+};
+
+export const TELEMETRY: { readonly enabled: boolean; readonly otlpEndpoint: string } = {
+  get enabled() {
+    return getConfig(['telemetry', 'enabled'], true);
+  },
+  get otlpEndpoint() {
+    return getConfig(['telemetry', 'otlpEndpoint'], '');
+  },
+};
+
+export const LOGS: { readonly retentionSeconds: number } = {
+  get retentionSeconds() {
+    return getConfig(['logs', 'retentionSeconds'], 90 * 24 * 60 * 60);
   },
 };

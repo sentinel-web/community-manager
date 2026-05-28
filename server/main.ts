@@ -27,7 +27,7 @@ import './apis/squads.server';
 import './apis/tasks.server';
 import { COLLECTION_REGISTRY } from './collection-registry';
 import { createCollectionMethods, createCollectionPublish } from './crud.lib';
-import { CACHE, SQUAD_SCOPED_PERMISSIONS } from './config';
+import { CACHE, LOGS, SQUAD_SCOPED_PERMISSIONS } from './config';
 
 // === Permission System ===
 
@@ -277,6 +277,35 @@ async function dedupeAttendancesByEventId(): Promise<void> {
   }
 }
 
+// Audit-log retention: a MongoDB TTL index expires log documents
+// `LOGS.retentionSeconds` after their `createdAt`. Kept on its own ascending
+// field (`logRetentionAt`) — distinct from the descending `{ createdAt: -1 }`
+// query index — so the retention window can change without colliding with that
+// index's options (Mongo rejects `collMod` direction changes, and reuses a
+// matching key spec for TTL). A retention of 0 disables expiry; we drop the TTL
+// index in that case so logs are kept forever.
+export const LOG_TTL_INDEX_NAME = 'logRetentionTtl';
+
+export async function ensureLogRetentionIndex(): Promise<void> {
+  const raw = LogsCollection.rawCollection();
+  const retentionSeconds = LOGS.retentionSeconds;
+
+  if (retentionSeconds <= 0) {
+    // Retention disabled — remove any previously-created TTL index. Ignore the
+    // "index not found" error so a fresh DB (no index yet) is a no-op.
+    try {
+      await raw.dropIndex(LOG_TTL_INDEX_NAME);
+    } catch {
+      // No TTL index to drop.
+    }
+    return;
+  }
+
+  // createIndex is idempotent on an identical spec; if only expireAfterSeconds
+  // changed, Mongo updates it in place via the same index name.
+  await raw.createIndex({ createdAt: 1 }, { name: LOG_TTL_INDEX_NAME, expireAfterSeconds: retentionSeconds });
+}
+
 async function createDatabaseIndexes(): Promise<void> {
   // Every createIndex call is independent — race them on startup instead of
   // running sequential round-trips. Mongo will dedupe if any already exist.
@@ -291,6 +320,7 @@ async function createDatabaseIndexes(): Promise<void> {
     EventsCollection.rawCollection().createIndex({ eventType: 1 }),
     TasksCollection.rawCollection().createIndex({ status: 1 }),
     RegistrationsCollection.rawCollection().createIndex({ discoveryType: 1 }),
+    ensureLogRetentionIndex(),
   ]);
 }
 
