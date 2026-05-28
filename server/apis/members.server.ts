@@ -11,7 +11,7 @@ import RanksCollection from '../../imports/api/collections/ranks.collection';
 import RolesCollection from '../../imports/api/collections/roles.collection';
 import SpecializationsCollection from '../../imports/api/collections/specializations.collection';
 import SquadsCollection from '../../imports/api/collections/squads.collection';
-import { validateObject, validatePublish, validateString, validateNumber, validateUserId, checkPermission, checkSpecialPermission, getSquadScope, isOfficerOrAdmin, getUserRole } from '../main';
+import { validateObject, validatePublish, validateString, validateNumber, validateUserId, checkPermission, checkSpecialPermission, getSquadScope, isOfficerOrAdmin, getUserRole, assertSafeSelector } from '../main';
 import { createLog } from './logs.server';
 import { runMutation, snapshotTouchedFields } from '../mutation-pipeline';
 import { COLLECTION_REGISTRY } from '../collection-registry';
@@ -64,10 +64,27 @@ if (Meteor.isServer) {
       validateUserId(this.userId);
       validateObject(filter, false);
       validateObject(options, false);
+      assertSafeSelector(filter);
+
+      const hasPermission = await checkPermission(this.userId, 'members', 'read');
+      if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+
+      // Squad-scope the lookup so a scoped caller cannot read members outside
+      // their own squad by crafting an arbitrary selector (SEC-001).
+      const squadScope = await getSquadScope(this.userId);
+      const scopedFilter = { ...filter, ...squadScope };
+
+      // Force the password-hash off the projection regardless of the caller's
+      // requested fields — merge, don't replace, so explicit projections still
+      // apply. Previously a caller could omit `{ services: 0 }` and read the
+      // bcrypt hash (SEC-001, Critical).
+      const callerFields = (options.fields as Record<string, unknown> | undefined) ?? {};
+      const safeOptions = { ...options, fields: { ...callerFields, services: 0 } };
+
       // Returns undefined on miss (mirrors Mongo findOneAsync) — callers like
       // RegistrationExtra use this as an existence check and would otherwise
       // unhandled-reject on every miss, surfacing as the dev-server overlay.
-      return MembersCollection.findOneAsync(filter, options);
+      return MembersCollection.findOneAsync(scopedFilter, safeOptions);
     },
     'members.insert': async function (payload: Record<string, unknown> = {}): Promise<string> {
       return runMutation(
@@ -203,6 +220,10 @@ if (Meteor.isServer) {
     'members.saveTaskFilter': async function (filter: Record<string, unknown> = {}) {
       if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
       validateObject(filter, false);
+      // The persisted taskFilter is later read back and forwarded verbatim into
+      // the tasks publication's selector. Reject code-execution operators here
+      // so a hostile filter can't be smuggled in via the persistence path.
+      assertSafeSelector(filter);
       const user = await MembersCollection.findOneAsync(this.userId);
       if (!user) throw new Meteor.Error(404, 'User not found');
       const profile = { ...user.profile, taskFilter: filter };
@@ -211,7 +232,11 @@ if (Meteor.isServer) {
     'members.options': async function () {
       validateUserId(this.userId);
 
-      const members = await MembersCollection.find({}, { fields: { 'profile.rankId': 1, 'profile.id': 1, 'profile.name': 1 } }).fetchAsync();
+      const hasPermission = await checkPermission(this.userId, 'members', 'read');
+      if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+
+      const squadScope = await getSquadScope(this.userId);
+      const members = await MembersCollection.find(squadScope, { fields: { 'profile.rankId': 1, 'profile.id': 1, 'profile.name': 1 } }).fetchAsync();
 
       const rankIds = [...new Set(members.flatMap(m => m.profile?.rankId ? [m.profile.rankId] : []))];
       const ranks = await RanksCollection.find({ _id: { $in: rankIds } }).fetchAsync();
@@ -228,7 +253,14 @@ if (Meteor.isServer) {
       validateUserId(this.userId);
       validateObject(filter, false);
       validateObject(options, false);
-      const members = await MembersCollection.find(filter, options).fetchAsync();
+      assertSafeSelector(filter);
+
+      const hasPermission = await checkPermission(this.userId, 'members', 'read');
+      if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+
+      const squadScope = await getSquadScope(this.userId);
+      const scopedFilter = { ...filter, ...squadScope };
+      const members = await MembersCollection.find(scopedFilter, options).fetchAsync();
 
       const rankIds = [...new Set(members.flatMap(m => m.profile?.rankId ? [m.profile.rankId] : []))];
       const ranks = await RanksCollection.find({ _id: { $in: rankIds } }).fetchAsync();
@@ -287,7 +319,11 @@ if (Meteor.isServer) {
       if (!this.userId) {
         throw new Meteor.Error('not-authorized');
       }
-      const members = await MembersCollection.find({}).fetchAsync();
+      const hasPermission = await checkPermission(this.userId, 'members', 'read');
+      if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+
+      const squadScope = await getSquadScope(this.userId);
+      const members = await MembersCollection.find(squadScope).fetchAsync();
       return members;
     },
     'members.groupedOptions': async function () {
