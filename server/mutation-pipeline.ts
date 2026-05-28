@@ -1,6 +1,7 @@
 import { Meteor } from 'meteor/meteor';
 import { checkPermission, checkSpecialPermission } from './main';
 import { createLog } from './apis/logs.server';
+import { instrument } from './telemetry';
 
 export type MutationOp = 'read' | 'create' | 'update' | 'delete';
 export type AuditShape = 'insert' | 'update' | 'remove';
@@ -148,53 +149,71 @@ export async function runMutation<TArgs extends readonly unknown[], TResult>(
   args: TArgs,
   body: (args: TArgs) => Promise<TResult>,
 ): Promise<TResult> {
-  const requireAuth = descriptor.requireAuth ?? true;
-  const isAnonymous = !ctx.userId;
+  // Telemetry is purely additive: it times the call and classifies the
+  // outcome, then re-throws any error untouched so return values and error
+  // propagation are unchanged. `bodyStarted` flips once we get past every
+  // pre-body gate (auth / permission / validation), letting us distinguish a
+  // pre-body denial from a body error in the error path. The emit itself is
+  // sync + fire-and-forget inside `instrument`, so the hot path isn't blocked.
+  let bodyStarted = false;
+  const method = `${descriptor.collection}.${OP_TO_DENIAL_SEGMENT[descriptor.operation]}`;
 
-  if (isAnonymous && requireAuth && !descriptor.allowAnonymous) {
-    await emitDenial(ctx, descriptor, args);
-    throw new Meteor.Error(401, 'Unauthorized');
-  }
+  return instrument(
+    method,
+    async () => {
+      const requireAuth = descriptor.requireAuth ?? true;
+      const isAnonymous = !ctx.userId;
 
-  if (!isAnonymous && descriptor.permissionModule) {
-    const hasPermission = await checkPermission(ctx.userId, descriptor.permissionModule, descriptor.operation);
-    if (!hasPermission) {
-      const flag = descriptor.fallbackFlag;
-      const hasSpecial = flag ? await checkSpecialPermission(ctx.userId, flag) : false;
-      if (!hasSpecial) {
-        const overrideAllowed = descriptor.permissionOverride
-          ? await descriptor.permissionOverride(ctx, args)
-          : false;
-        if (!overrideAllowed) {
-          await emitDenial(ctx, descriptor, args);
-          throw new Meteor.Error(403, 'Permission denied');
+      if (isAnonymous && requireAuth && !descriptor.allowAnonymous) {
+        await emitDenial(ctx, descriptor, args);
+        throw new Meteor.Error(401, 'Unauthorized');
+      }
+
+      if (!isAnonymous && descriptor.permissionModule) {
+        const hasPermission = await checkPermission(ctx.userId, descriptor.permissionModule, descriptor.operation);
+        if (!hasPermission) {
+          const flag = descriptor.fallbackFlag;
+          const hasSpecial = flag ? await checkSpecialPermission(ctx.userId, flag) : false;
+          if (!hasSpecial) {
+            const overrideAllowed = descriptor.permissionOverride
+              ? await descriptor.permissionOverride(ctx, args)
+              : false;
+            if (!overrideAllowed) {
+              await emitDenial(ctx, descriptor, args);
+              throw new Meteor.Error(403, 'Permission denied');
+            }
+          }
         }
       }
-    }
-  }
 
-  if (descriptor.validate) {
-    try {
-      descriptor.validate(args);
-    } catch (error) {
-      await emitDenial(ctx, descriptor, args);
-      throw error;
-    }
-  }
+      if (descriptor.validate) {
+        try {
+          descriptor.validate(args);
+        } catch (error) {
+          await emitDenial(ctx, descriptor, args);
+          throw error;
+        }
+      }
 
-  // Snapshot the pre-mutation state before the body mutates the document.
-  const before = descriptor.captureBefore ? await descriptor.captureBefore(args) : undefined;
+      // Snapshot the pre-mutation state before the body mutates the document.
+      const before = descriptor.captureBefore ? await descriptor.captureBefore(args) : undefined;
 
-  const result = await body(args);
+      // Past every gate — anything that throws from here on is a body error,
+      // not a denial.
+      bodyStarted = true;
+      const result = await body(args);
 
-  if (descriptor.action) {
-    if (descriptor.audit) {
-      await createLog(descriptor.action, descriptor.audit(args, result));
-    } else if (descriptor.auditShape) {
-      const payload = buildStandardPayload(descriptor.auditShape, args, result, before, descriptor.redact);
-      await createLog(descriptor.action, payload);
-    }
-  }
+      if (descriptor.action) {
+        if (descriptor.audit) {
+          await createLog(descriptor.action, descriptor.audit(args, result));
+        } else if (descriptor.auditShape) {
+          const payload = buildStandardPayload(descriptor.auditShape, args, result, before, descriptor.redact);
+          await createLog(descriptor.action, payload);
+        }
+      }
 
-  return result;
+      return result;
+    },
+    () => (bodyStarted ? 'error' : 'denied'),
+  );
 }
