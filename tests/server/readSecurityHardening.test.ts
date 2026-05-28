@@ -54,18 +54,23 @@ describe('assertSafeSelector — rejects code-execution operators (#259)', () =>
 
 // A bcrypt-shaped services block mirroring what Accounts stores on a real
 // member doc — present so the no-leak assertions are non-trivial (a user with
-// no `services` would pass the assertion vacuously).
-const FIXTURE_SERVICES = {
-  password: { bcrypt: '$2b$10$abcdefghijklmnopqrstuv' },
-  resume: { loginTokens: [{ when: new Date(), hashedToken: 'secrethashedtoken' }] },
-  // Reset tokens are equally sensitive — assert the whole block is gone.
-  password_reset: { token: 'reset-secret', email: 'x@example.com', when: new Date() },
-};
+// no `services` would pass the assertion vacuously). The login-token hash is
+// derived per user because Meteor.users carries a UNIQUE index on
+// services.resume.loginTokens.hashedToken — a shared literal would collide
+// (E11000) on the second fixture insert.
+function fixtureServices(userId: string) {
+  return {
+    password: { bcrypt: '$2b$10$abcdefghijklmnopqrstuv' },
+    resume: { loginTokens: [{ when: new Date(), hashedToken: `secrethashedtoken-${userId}` }] },
+    // Reset tokens are equally sensitive — assert the whole block is gone.
+    password_reset: { token: 'reset-secret', email: 'x@example.com', when: new Date() },
+  };
+}
 
 // Writes a realistic `services` block onto a fixture user. createTestUser does
 // not set one, so the strip assertions would otherwise pass vacuously.
 async function attachServices(userId: string): Promise<void> {
-  await Meteor.users.updateAsync({ _id: userId }, { $set: { services: FIXTURE_SERVICES } });
+  await Meteor.users.updateAsync({ _id: userId }, { $set: { services: fixtureServices(userId) } });
 }
 
 describe('members.findOne — authz + no password-hash leak (#257)', () => {
