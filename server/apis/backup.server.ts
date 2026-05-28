@@ -1,6 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 import { DDPRateLimiter } from 'meteor/ddp-rate-limiter';
-import { checkPermission, validateUserId } from '../main';
+import { checkPermission, getUserRole, isOfficerOrAdmin, validateUserId } from '../main';
 import { getCollection } from '../crud.lib';
 import { createLog } from './logs.server';
 import { RATE_LIMITS } from '../config';
@@ -45,6 +45,105 @@ interface RestoreResult {
   restored: Record<string, number>;
   errors: Array<{ collection: string; error: string }>;
   safetyBackup: BackupData | null;
+}
+
+// SEC-004 hardening: restore is the single most privilege-sensitive operation
+// in the app — it can rewrite the `users` and `roles` collections wholesale.
+// Before SEC-004 it inserted attacker-controlled documents verbatim, so a
+// `settings`-read user could upload a backup whose own user doc carried
+// `roles: true` (or arbitrary `services`) and self-promote to admin
+// (CWE-502/915/284). The hardening below:
+//   1. Requires full admin to restore (see method body). `settings` is a
+//      *boolean* module (server/main.ts BOOLEAN_MODULES), so checkPermission
+//      with operation 'update' is identical to 'read' and would NOT have
+//      strengthened anything — hence an explicit admin gate instead.
+//   2. Validates every document of every collection up front, refusing any
+//      `users` doc that carries credential/privilege fields (`services`,
+//      `roles`) or unexpected top-level keys.
+//   3. Validates the whole payload before touching the DB, so a malformed
+//      backup aborts with zero mutations.
+
+// Top-level keys we accept on a restored user document. `services`
+// (credentials) and `roles` (embedded permission grant) are deliberately
+// absent: the app assigns roles via `profile.roleId`, never an embedded
+// `roles` field, and credentials are never carried in a backup.
+const ALLOWED_USER_KEYS: readonly string[] = ['_id', 'username', 'profile', 'createdAt', 'emails'];
+const FORBIDDEN_USER_KEYS: readonly string[] = ['services', 'roles'];
+
+class RestoreValidationError extends Meteor.Error {
+  constructor(collection: string, index: number, reason: string) {
+    super(400, `Invalid backup: ${collection}[${index}] ${reason}`);
+  }
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+// Validates a single restored user document. Throws RestoreValidationError on
+// any credential/privilege field or unexpected top-level key. This is the core
+// privilege-escalation guard for SEC-004.
+function validateRestoreUser(doc: unknown, index: number): void {
+  if (!isPlainObject(doc)) {
+    throw new RestoreValidationError('users', index, 'is not an object');
+  }
+  if (typeof doc._id !== 'string' || doc._id.length === 0) {
+    throw new RestoreValidationError('users', index, 'has a missing or non-string _id');
+  }
+  for (const forbidden of FORBIDDEN_USER_KEYS) {
+    if (forbidden in doc) {
+      throw new RestoreValidationError('users', index, `carries forbidden privilege/credential field "${forbidden}"`);
+    }
+  }
+  for (const key of Object.keys(doc)) {
+    if (!ALLOWED_USER_KEYS.includes(key)) {
+      throw new RestoreValidationError('users', index, `carries unexpected field "${key}"`);
+    }
+  }
+  if ('username' in doc && typeof doc.username !== 'string') {
+    throw new RestoreValidationError('users', index, 'has a non-string username');
+  }
+  if ('profile' in doc && !isPlainObject(doc.profile)) {
+    throw new RestoreValidationError('users', index, 'has a non-object profile');
+  }
+  // A `roles: true` grant cannot ride in via profile either.
+  if (isPlainObject(doc.profile) && 'roles' in doc.profile) {
+    throw new RestoreValidationError('users', index, 'carries forbidden privilege field "profile.roles"');
+  }
+}
+
+// Structural validation for every other collection: each document must be a
+// plain object with a string _id so wipe-then-insert is deterministic. The
+// `roles` collection is intentionally NOT specially guarded here because
+// restore now requires full admin (an admin can already mint any role); the
+// _id/object check still rejects malformed payloads.
+function validateRestoreDocument(collectionName: string, doc: unknown, index: number): void {
+  if (collectionName === 'users') {
+    validateRestoreUser(doc, index);
+    return;
+  }
+  if (!isPlainObject(doc)) {
+    throw new RestoreValidationError(collectionName, index, 'is not an object');
+  }
+  if (typeof doc._id !== 'string' || doc._id.length === 0) {
+    throw new RestoreValidationError(collectionName, index, 'has a missing or non-string _id');
+  }
+}
+
+// Validates the entire backup payload before any DB mutation. Throwing here
+// leaves the database untouched (the safety-backup, created earlier, is the
+// belt-and-braces recovery path). `collections` may carry collection names we
+// don't restore — those are ignored, mirroring the restore loop below.
+function validateRestorePayload(collections: Record<string, unknown[]>): void {
+  const restorable = [...BACKUP_COLLECTIONS, 'settings', 'users'];
+  for (const collectionName of restorable) {
+    const documents = collections[collectionName];
+    if (!documents) continue;
+    if (!Array.isArray(documents)) {
+      throw new Meteor.Error(400, `Invalid backup: "${collectionName}" is not an array of documents.`);
+    }
+    documents.forEach((doc, index) => validateRestoreDocument(collectionName, doc, index));
+  }
 }
 
 if (Meteor.isServer) {
@@ -182,9 +281,14 @@ if (Meteor.isServer) {
       validateUserId(this.userId);
       const { createSafetyBackup = true } = options;
 
-      const hasPermission = await checkPermission(this.userId, 'settings', 'read');
-      if (!hasPermission) {
-        throw new Meteor.Error(403, 'Permission denied. Settings access required for restore.');
+      // SEC-004: restore can rewrite users/roles wholesale, so it requires full
+      // admin — not merely `settings` access. `settings` is a boolean module,
+      // so checkPermission(..., 'update') would be identical to 'read' and would
+      // not have closed the privilege-escalation hole. Gate on admin instead.
+      const role = await getUserRole(this.userId);
+      if (!isOfficerOrAdmin(role)) {
+        await createLog('backup.restore.denied', { userId: this.userId });
+        throw new Meteor.Error(403, 'Permission denied. Administrator access is required to restore a backup.');
       }
 
       if (!backupData || typeof backupData !== 'object') {
@@ -198,6 +302,11 @@ if (Meteor.isServer) {
       if (backupData.appName !== 'community-manager') {
         throw new Meteor.Error(400, 'Invalid backup. This backup is not from community-manager.');
       }
+
+      // Validate the entire payload BEFORE wiping anything. A malformed backup —
+      // or one attempting to smuggle credential/privilege fields into `users` —
+      // aborts here with zero DB mutations (fail-before-write).
+      validateRestorePayload(backupData.collections);
 
       let safetyBackup: BackupData | null = null;
       if (createSafetyBackup) {
