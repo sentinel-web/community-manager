@@ -28,8 +28,8 @@ if (Meteor.isServer) {
      * raced: two concurrent writers could both observe "no row yet" and each
      * insert a fresh per-event document. A single `upsertAsync` keyed on
      * `eventId` collapses that into one atomic operation, and the unique
-     * `{ eventId }` index (see server/main.ts) guarantees a single row even
-     * under concurrency.
+     * `{ eventId }` index (built by ensureAttendancesUniqueIndex in
+     * server/main.ts) guarantees a single row even under concurrency.
      */
     'attendances.upsert': async function (eventId: string = '', memberId: string = '', status: number = 0): Promise<boolean> {
       if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');

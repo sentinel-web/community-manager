@@ -7,6 +7,7 @@ import './helpers/colors/getLegibleTextColor.test';
 import './helpers/colors/getLuminance.test';
 import './helpers/colors/hexToRgb.test';
 import './helpers/colors/parseColor.test';
+import './server/attendancesDedupeIndex.test';
 import './server/attendancesUpsert.test';
 import './server/backupRestore.test';
 import './server/briefingTemplatesMethods.test';
