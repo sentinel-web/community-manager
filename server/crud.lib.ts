@@ -102,6 +102,32 @@ function sanitizeHtmlFields(collection: CrudCollectionName, payload: Record<stri
   }
 }
 
+// Registration id/age bounds — see imports/ui/registration/RegistrationForm.tsx,
+// where these were previously enforced client-side only (#260). Kept as a
+// constant so the rule reads the same on the server as on the form.
+const REGISTRATION_ID_MIN = 1000;
+const REGISTRATION_ID_MAX = 9999;
+const REGISTRATION_MIN_AGE = 16;
+
+// Per-collection insert-only validators, run inside the generic `.insert`
+// validate hook after the shared shape check. Insert-only by design (#260): a
+// crafted DDP insert must respect the same bounds as the form, but pre-existing
+// out-of-range rows stay editable (update is intentionally not gated here).
+// Registrations are the lone case today, so this stays a single inline entry
+// rather than a registry field (Rule of Three).
+const INSERT_VALIDATORS: Partial<Record<CrudCollectionName, (payload: Record<string, unknown>) => void>> = {
+  registrations: payload => {
+    const id = payload.id;
+    if (typeof id !== 'number' || !Number.isInteger(id) || id < REGISTRATION_ID_MIN || id > REGISTRATION_ID_MAX) {
+      throw new Meteor.Error('invalid-id', `Registration id must be an integer between ${REGISTRATION_ID_MIN} and ${REGISTRATION_ID_MAX}`);
+    }
+    const age = payload.age;
+    if (typeof age !== 'number' || age < REGISTRATION_MIN_AGE) {
+      throw new Meteor.Error('invalid-age', `Registration age must be at least ${REGISTRATION_MIN_AGE}`);
+    }
+  },
+};
+
 const DEFAULT_PUBLISH_LIMIT = 100;
 const MAX_PUBLISH_LIMIT = 1000;
 
@@ -180,7 +206,10 @@ function createCollectionMethods(collection: CrudCollectionName): void {
               permissionModule,
               fallbackFlag: fallback?.create,
               allowAnonymous: allowsAnonymousInsert,
-              validate: ([p]) => validateObject(p, false),
+              validate: ([p]) => {
+                validateObject(p, false);
+                INSERT_VALIDATORS[collection]?.(p);
+              },
             },
             [payload] as const,
             async ([p]) => {

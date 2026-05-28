@@ -8,11 +8,11 @@ if (Meteor.isServer) {
     'registrations.validateId': async function (id: number = 0, excludeId: string | false = false): Promise<boolean> {
       validateNumber(id, false);
 
-      const filter: Record<string, unknown> = { $and: [{ 'profile.id': id }] };
-      if (this.userId && excludeId) {
-        (filter.$and as Record<string, unknown>[]).push({ 'profile.id': { $ne: id } });
-      }
-      const matchingMembers = await MembersCollection.findOneAsync(filter);
+      // Members are never the edit target on this path, so a member sharing the
+      // id is always a real collision — no self-exclusion clause (the old
+      // `{ 'profile.id': { $ne: id } }` push contradicted `{ 'profile.id': id }`
+      // and silently masked member collisions on the edit path, #265).
+      const matchingMembers = await MembersCollection.findOneAsync({ 'profile.id': id });
 
       const registrationFilter: Record<string, unknown> = {
         $and: [{ id: id }],
@@ -28,13 +28,10 @@ if (Meteor.isServer) {
         throw new Meteor.Error('invalid-name', 'Invalid name', name);
       }
 
-      const filter: Record<string, unknown> = {
-        $and: [{ 'profile.name': name }],
-      };
-      if (this.userId && excludeId) {
-        (filter.$and as Record<string, unknown>[]).push({ 'profile.name': { $ne: name } });
-      }
-      const matchingMembers = await MembersCollection.findOneAsync(filter);
+      // See validateId: members are never the edit target here, so a member
+      // sharing the name is always a real collision. The old self-exclusion
+      // push contradicted the match clause and masked member collisions (#265).
+      const matchingMembers = await MembersCollection.findOneAsync({ 'profile.name': name });
 
       const registrationFilter: Record<string, unknown> = {
         $and: [{ name: name }],
