@@ -8,6 +8,7 @@ import RegistrationsCollection from '../imports/api/collections/registrations.co
 import RolesCollection from '../imports/api/collections/roles.collection';
 import TasksCollection from '../imports/api/collections/tasks.collection';
 import type { CrudCollectionName, Role } from '/imports/api/types';
+import './apis/attendances.server';
 import './apis/backup.server';
 import './apis/dashboard.server';
 import './apis/demoData.server';
@@ -194,13 +195,97 @@ async function createTestData(): Promise<void> {
   await Accounts.createUserAsync({ username: 'admin', password: 'admin', profile: { name: 'Admin', roleId: 'admin' } });
 }
 
+// Merge duplicate per-event Attendance docs into a single canonical row, then
+// (re)build the unique { eventId } index. Idempotent and startup-safe.
+//
+// Context: the grid stores exactly ONE document per event, with each member's
+// status held under a dynamic [memberId] key. The unique { eventId } index
+// (#261) closes the read-then-write race in attendances.upsert. But promoting
+// the old non-unique index to `unique: true` on an EXISTING deployment fails
+// two ways with no protection:
+//   1. IndexOptionsConflict (code 85) — a non-unique { eventId } index already
+//      exists, so createIndex with different options is rejected.
+//   2. Duplicate-key build error — pre-existing duplicate per-event docs make
+//      the unique index unbuildable.
+// Both crash startup if unhandled. So: dedupe first, drop any conflicting
+// non-unique index, then create the unique one. The race protection must
+// remain — if the unique index genuinely cannot be created we log loudly
+// rather than swallow it.
+export async function ensureAttendancesUniqueIndex(): Promise<void> {
+  const raw = AttendancesCollection.rawCollection();
+
+  // 1. Dedupe: collapse any groups of docs sharing an eventId into one doc,
+  //    merging their per-member status keys. No-op when there are no dupes.
+  await dedupeAttendancesByEventId();
+
+  // 2. Resolve a pre-existing non-unique { eventId } index that would otherwise
+  //    trigger IndexOptionsConflict. Drop it so the unique index can be created.
+  try {
+    const existing = (await raw.indexes()) as Array<{ name?: string; key?: Record<string, number>; unique?: boolean }>;
+    const conflicting = existing.find(idx => idx.key && idx.key.eventId === 1 && Object.keys(idx.key).length === 1 && !idx.unique);
+    if (conflicting?.name) {
+      await raw.dropIndex(conflicting.name);
+    }
+  } catch (error) {
+    // indexes()/dropIndex can fail on a missing collection (never created yet)
+    // — that's fine, createIndex below will materialise it. Log and continue.
+    console.warn('[attendances] could not inspect/drop existing { eventId } index:', error);
+  }
+
+  // 3. Create the unique index. This is the race protection from #261 and must
+  //    succeed — if it cannot (e.g. dedupe somehow left dupes), log loudly.
+  try {
+    await raw.createIndex({ eventId: 1 }, { unique: true });
+  } catch (error) {
+    console.error(
+      '[attendances] FAILED to create the unique { eventId } index — the attendances.upsert race protection (#261) is NOT active. Investigate duplicate per-event documents:',
+      error,
+    );
+  }
+}
+
+// Find Attendance docs sharing an eventId and merge each group into a single
+// canonical doc (combine per-member status keys; keep the oldest doc, remove
+// the rest). Later docs win on key conflicts. Idempotent: a no-op once every
+// eventId maps to exactly one doc.
+async function dedupeAttendancesByEventId(): Promise<void> {
+  const raw = AttendancesCollection.rawCollection();
+  const duplicateGroups = (await raw
+    .aggregate([
+      { $match: { eventId: { $exists: true } } },
+      { $group: { _id: '$eventId', count: { $sum: 1 } } },
+      { $match: { count: { $gt: 1 } } },
+    ])
+    .toArray()) as Array<{ _id: string }>;
+
+  for (const group of duplicateGroups) {
+    const docs = await AttendancesCollection.find({ eventId: group._id }).fetchAsync();
+    if (docs.length <= 1) continue;
+    // Keep the lexicographically-first _id as canonical; merge all member-status
+    // keys from the rest onto it (later docs override earlier on key collisions).
+    const sorted = [...docs].sort((a, b) => String(a._id).localeCompare(String(b._id)));
+    const [canonical, ...extras] = sorted;
+    const merged: Record<string, unknown> = {};
+    for (const doc of sorted) {
+      for (const [key, value] of Object.entries(doc)) {
+        if (key === '_id' || key === 'eventId') continue;
+        merged[key] = value;
+      }
+    }
+    await AttendancesCollection.updateAsync(canonical._id as string, { $set: merged } as never);
+    await AttendancesCollection.removeAsync({ _id: { $in: extras.map(doc => doc._id as string) } });
+  }
+}
+
 async function createDatabaseIndexes(): Promise<void> {
   // Every createIndex call is independent — race them on startup instead of
-  // running 8 sequential round-trips. Mongo will dedupe if any already exist.
+  // running sequential round-trips. Mongo will dedupe if any already exist.
+  // The Attendances unique { eventId } index needs a dedupe + conflict-resolve
+  // preamble (see ensureAttendancesUniqueIndex), so it runs through that helper.
   await Promise.all([
     MembersCollection.rawCollection().createIndex({ 'profile.squadId': 1 }),
     MembersCollection.rawCollection().createIndex({ 'profile.rankId': 1 }),
-    AttendancesCollection.rawCollection().createIndex({ eventId: 1 }),
+    ensureAttendancesUniqueIndex(),
     LogsCollection.rawCollection().createIndex({ createdAt: -1 }),
     LogsCollection.rawCollection().createIndex({ action: 1 }),
     EventsCollection.rawCollection().createIndex({ eventType: 1 }),
