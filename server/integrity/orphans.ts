@@ -109,14 +109,16 @@ export async function resolveOrphans(options: { dryRun?: boolean } = {}): Promis
   const orphans = await scanForOrphans();
 
   // Index the declared on-delete primitive per (source, field) so we know how
-  // to resolve each orphan.
+  // to resolve each orphan. Keyed by source AND field because a field name is
+  // only unique within a collection (e.g. members.profile.rankId is `block`
+  // while a same-named field elsewhere could differ).
   const onDeleteByEdge = new Map<string, ForeignKeyEdge['onDelete']>();
-  const kindByEdge = new Map<string, ForeignKeyEdge['kind']>();
-  for (const entry of Object.values(COLLECTION_REGISTRY)) {
+  for (const [source, entry] of Object.entries(COLLECTION_REGISTRY) as Array<
+    [CrudCollectionName, (typeof COLLECTION_REGISTRY)[CrudCollectionName]]
+  >) {
     if (!entry.foreignKeys) continue;
     for (const edge of entry.foreignKeys) {
-      onDeleteByEdge.set(`${edge.field}`, edge.onDelete);
-      kindByEdge.set(`${edge.field}`, edge.kind);
+      onDeleteByEdge.set(`${source}:${edge.field}`, edge.onDelete);
     }
   }
 
@@ -125,7 +127,7 @@ export async function resolveOrphans(options: { dryRun?: boolean } = {}): Promis
   const skipped: OrphanRecord[] = [];
 
   for (const orphan of orphans) {
-    const onDelete = onDeleteByEdge.get(orphan.field);
+    const onDelete = onDeleteByEdge.get(`${orphan.source}:${orphan.field}`);
     const Source = getCollection(orphan.source);
 
     if (onDelete === 'pull') {

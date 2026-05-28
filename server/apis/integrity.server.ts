@@ -1,8 +1,15 @@
 import { Meteor } from 'meteor/meteor';
 import { runMutation } from '../mutation-pipeline';
 import { COLLECTION_REGISTRY } from '../collection-registry';
-import { previewIntegrity, previewIntegrityBulk, scanForOrphans, type OrphanRecord } from '../integrity';
-import { validateArrayOfStrings, validateString } from '../main';
+import {
+  previewIntegrity,
+  previewIntegrityBulk,
+  resolveOrphans,
+  scanForOrphans,
+  type OrphanRecord,
+  type OrphanResolution,
+} from '../integrity';
+import { validateArrayOfStrings, validateBoolean, validateString } from '../main';
 import type { CrudCollectionName } from '/imports/api/types';
 
 if (Meteor.isServer) {
@@ -90,6 +97,36 @@ if (Meteor.isServer) {
         },
         [] as const,
         async () => scanForOrphans(),
+      );
+    },
+
+    // One-off ORPHAN MIGRATION (decision O-6). Resolves pre-existing orphaned
+    // references by applying each edge's declared on-delete primitive
+    // (pull / setNull); block/cascade orphans are reported as `skipped` for
+    // manual operator reconciliation. MUST be run before full-document FK
+    // enforcement is enabled on a populated database, or edits to already-
+    // orphaned rows will start failing.
+    //
+    // Pass `dryRun: true` to count what WOULD be resolved without mutating —
+    // run that first, review the `skipped` list, then run with dryRun:false.
+    // Same strict admin-only gate as integrity.scan: the synthetic
+    // `__admin_only__` module admits only role.roles === true.
+    'integrity.scanResolve': async function (dryRun: boolean = false) {
+      return runMutation(
+        { userId: this.userId },
+        {
+          collection: 'logs',
+          operation: 'read',
+          action: 'integrity.scanResolve',
+          permissionModule: '__admin_only__',
+          validate: ([d]) => validateBoolean(d, true),
+          audit: (args, result) => {
+            const r = result as OrphanResolution;
+            return { dryRun: args[0], pulled: r.pulled, setNull: r.setNull, skipped: r.skipped.length };
+          },
+        },
+        [dryRun] as const,
+        async ([d]) => resolveOrphans({ dryRun: d }),
       );
     },
   });

@@ -248,10 +248,15 @@ function createCollectionMethods(collection: CrudCollectionName): void {
             [id, data] as const,
             async ([targetId, changes]) => {
               sanitizeHtmlFields(collection, changes as Record<string, unknown>);
-              // The generic CRUD .update wraps changes in $set, so validation
-              // runs against the same modifier Mongo will see — touched-fields
-              // semantics fall out naturally.
-              await validateForeignKeys(collection, { $set: changes });
+              // Full-document FK enforcement (O-6): validate EVERY foreign key
+              // on the document as it will exist after this `$set`, not only the
+              // fields this write touches. We merge the modifier onto the stored
+              // doc and validate the result, so an unrelated edit can't leave a
+              // now-orphaned FK in place. Pre-existing orphans must be cleared by
+              // the orphan migration (integrity.scanResolve) before this is
+              // enabled in production. Supersedes the touched-fields-only path.
+              const stored = (await Collection.findOneAsync(targetId)) as Record<string, unknown> | undefined;
+              await validateForeignKeysForUpdate(collection, stored, { $set: changes });
               const result = await Collection.updateAsync({ _id: targetId } as never, { $set: changes } as never);
               if (collection === 'roles') {
                 clearRoleCache(targetId);

@@ -1,6 +1,5 @@
 import assert from 'node:assert';
 import { Meteor } from 'meteor/meteor';
-import { Random } from 'meteor/random';
 import EventsCollection from '../../imports/api/collections/events.collection';
 import EventTypesCollection from '../../imports/api/collections/eventTypes.collection';
 import MedalsCollection from '../../imports/api/collections/medals.collection';
@@ -20,7 +19,6 @@ import {
   createTestDoc,
   createTestRole,
   createTestUser,
-  TEST_PREFIX,
 } from './fixtures';
 
 // ────────────────────────────────────────────────────────────
@@ -300,41 +298,8 @@ describe('integrity characterization — RULE-026 write-time FK existence', () =
   });
 });
 
-// ────────────────────────────────────────────────────────────
-// RULE-027 (touched-fields-only) — CURRENT behaviour, pre-O-6.
-//
-// This block documents the state-of-the-world the refactor inherits. The
-// SAME scenarios appear (inverted) in integrityFullDocEnforcement.test.ts,
-// which pins the post-O-6 behaviour. Keeping both makes the semantic flip
-// auditable in the diff.
-// ────────────────────────────────────────────────────────────
-describe('integrity characterization — RULE-027 touched-fields tolerance (PRE-O-6 baseline)', () => {
-  let adminUserId: string;
-
-  before(async () => {
-    const adminRoleId = await createTestRole({ roles: true });
-    adminUserId = await createTestUser({ roleId: adminRoleId });
-  });
-
-  after(async () => {
-    await cleanupFixtures([SpecializationsCollection]);
-  });
-
-  it('editing an unrelated field on a doc with a pre-existing orphan FK is tolerated', async () => {
-    // Direct-write a stale FK (bypassing insert validation) to simulate a
-    // pre-existing orphan, then rename via the method. Under touched-fields
-    // semantics the untouched orphan FK does not block the edit.
-    const specId = `${TEST_PREFIX}${Random.id()}`;
-    await SpecializationsCollection.insertAsync({
-      _id: specId,
-      name: '__char_orphan_holder',
-      requiredRankId: 'rank-that-was-deleted',
-    });
-
-    await callAs(adminUserId, 'specializations.update', specId, { name: '__char_orphan_renamed' });
-
-    const doc = await SpecializationsCollection.findOneAsync(specId);
-    assert.strictEqual(doc?.name, '__char_orphan_renamed');
-    assert.strictEqual(doc?.requiredRankId, 'rank-that-was-deleted', 'untouched orphan FK preserved');
-  });
-});
+// NOTE: RULE-027 (touched-fields-only update tolerance) is SUPERSEDED by
+// decision O-6 (full-document enforcement). The pre-O-6 tolerance is no
+// longer pinned here; the post-O-6 inversion — editing an unrelated field on
+// a doc with a pre-existing orphan FK is now REJECTED — lives in
+// integrityFullDocEnforcement.test.ts.

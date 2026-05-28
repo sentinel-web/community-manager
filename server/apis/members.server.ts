@@ -16,7 +16,12 @@ import { createLog } from './logs.server';
 import { runMutation, snapshotTouchedFields } from '../mutation-pipeline';
 import { instrument } from '../telemetry';
 import { COLLECTION_REGISTRY } from '../collection-registry';
-import { enforceIntegrityOnDelete, buildRemoveAuditPayload, validateForeignKeys } from '../integrity';
+import {
+  enforceIntegrityOnDelete,
+  buildRemoveAuditPayload,
+  validateForeignKeys,
+  validateForeignKeysForUpdate,
+} from '../integrity';
 import type { Role } from '/imports/api/types';
 
 async function getMemberById(memberId: string): Promise<Meteor.User> {
@@ -199,10 +204,15 @@ if (Meteor.isServer) {
               throw new Meteor.Error(403, 'Cannot update members outside your squad');
             }
           }
-          // Touched-fields validation — same modifier shape generic CRUD
-          // produces so pre-existing orphans on members.profile don't block
-          // unrelated edits.
-          await validateForeignKeys('members', { $set: changes });
+          // Full-document FK enforcement (O-6): validate EVERY foreign key on
+          // the member as it will exist after this `$set`, not only the touched
+          // fields. Reuses the targetMember we already fetched above. Pre-
+          // existing orphans on members.profile must be cleared by the orphan
+          // migration before this is enabled in production. Supersedes the
+          // touched-fields-only path.
+          await validateForeignKeysForUpdate('members', targetMember as unknown as Record<string, unknown>, {
+            $set: changes,
+          });
           return MembersCollection.updateAsync({ _id: targetId } as never, { $set: changes } as never);
         },
       );
