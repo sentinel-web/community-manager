@@ -20,6 +20,7 @@ import './server/htmlSanitizer.test';
 import './server/i18n.extractParams.test';
 import './server/i18n.invariants.test';
 import './server/integrity.test';
+import './server/integrityCharacterization.test';
 import './server/integrityCoverage.test';
 import './server/logsRetention.test';
 import './server/membersMethods.test';
