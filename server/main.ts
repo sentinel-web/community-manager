@@ -8,6 +8,7 @@ import RegistrationsCollection from '../imports/api/collections/registrations.co
 import RolesCollection from '../imports/api/collections/roles.collection';
 import TasksCollection from '../imports/api/collections/tasks.collection';
 import type { CrudCollectionName, Role } from '/imports/api/types';
+import './apis/attendances.server';
 import './apis/backup.server';
 import './apis/dashboard.server';
 import './apis/demoData.server';
@@ -200,7 +201,12 @@ async function createDatabaseIndexes(): Promise<void> {
   await Promise.all([
     MembersCollection.rawCollection().createIndex({ 'profile.squadId': 1 }),
     MembersCollection.rawCollection().createIndex({ 'profile.rankId': 1 }),
-    AttendancesCollection.rawCollection().createIndex({ eventId: 1 }),
+    // One attendance document per event (member statuses are stored as dynamic
+    // keys on that single doc, not as separate rows). The unique index closes
+    // the read-then-write race in attendances.upsert that could otherwise let
+    // concurrent writers create duplicate per-event docs (#261). Supersedes the
+    // former non-unique { eventId: 1 } index.
+    AttendancesCollection.rawCollection().createIndex({ eventId: 1 }, { unique: true }),
     LogsCollection.rawCollection().createIndex({ createdAt: -1 }),
     LogsCollection.rawCollection().createIndex({ action: 1 }),
     EventsCollection.rawCollection().createIndex({ eventType: 1 }),

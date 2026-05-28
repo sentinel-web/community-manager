@@ -12,7 +12,6 @@ import RanksCollection from '../../api/collections/ranks.collection';
 import type { AttendanceStatus } from '../../api/types/shared';
 import type { EventDoc } from '../../api/types/event';
 import { useTranslation } from '../../i18n/LanguageContext';
-import useMethod from '../hooks/useMethod';
 import type { TranslateFn } from '../section/types';
 import TableContainer from '../table/body/TableContainer';
 import Table from '../table/Table';
@@ -78,15 +77,12 @@ interface AttendanceSelectProps {
 function AttendanceSelect({ value, eventId, memberId, setEditting }: AttendanceSelectProps) {
   const { t } = useTranslation();
   const { notification } = App.useApp();
-  const { call: readAttendance } = useMethod<Array<{ _id: string }>>('attendances.read');
   const handleChange = async (newValue: AttendanceStatus) => {
     if (value === newValue) return;
-    const res = await readAttendance({ eventId }, { limit: 1 });
-    if (!res.ok) return;
-    const endpoint = res.data.length ? 'attendances.update' : 'attendances.insert';
-    const args = res.data.length ? [res.data[0]._id, { [memberId]: newValue }] : [{ eventId, [memberId]: newValue }];
+    // Atomic server-side upsert keyed on { eventId } — replaces the former
+    // read-then-write that raced into duplicate per-event rows (#261).
     try {
-      await Meteor.callAsync(endpoint, ...args);
+      await Meteor.callAsync('attendances.upsert', eventId, memberId, newValue);
     } catch (error) {
       const err = error as Meteor.Error;
       notification.error({ message: t('common.error'), description: err.reason || err.message });
