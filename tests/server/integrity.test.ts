@@ -893,20 +893,25 @@ describe('integrity layer — write-time foreign-key validation (#166)', () => {
     });
   });
 
-  describe('CRUD .update validation — touched-fields only', () => {
-    it('update of an unrelated field on a doc with a pre-existing orphan succeeds', async () => {
+  describe('CRUD .update validation — full-document enforcement (O-6)', () => {
+    it('update of an unrelated field on a doc with a pre-existing orphan is now rejected (O-6)', async () => {
       // Manually create a Specialization with a stale requiredRankId (bypass
-      // insert validation by writing directly to the collection). Then
-      // update an unrelated field via the method — should NOT fail.
+      // insert validation by writing directly to the collection). Under O-6,
+      // updating ANY field validates the whole resulting document, so the
+      // still-orphaned requiredRankId rejects the otherwise-unrelated edit.
+      // (Pre-O-6 this succeeded — see RULE-027; the orphan migration must run
+      // before full-doc enforcement is enabled to avoid blocking such edits.)
       const specId = await createTestDoc(SpecializationsCollection, {
         name: '__test_wv_orphan_holder',
         requiredRankId: 'stale-rank-that-never-existed',
       });
-      await callAs(adminUserId, 'specializations.update', specId, { name: '__test_wv_orphan_renamed' });
+      await assertRejectsWithCode(
+        () => callAs(adminUserId, 'specializations.update', specId, { name: '__test_wv_orphan_renamed' }),
+        'foreign_key_invalid',
+      );
 
       const doc = await SpecializationsCollection.findOneAsync(specId);
-      assert.strictEqual(doc?.name, '__test_wv_orphan_renamed');
-      assert.strictEqual(doc?.requiredRankId, 'stale-rank-that-never-existed', 'orphan field preserved');
+      assert.strictEqual(doc?.name, '__test_wv_orphan_holder', 'rejected update leaves the doc unchanged');
     });
 
     it('update that rewrites a scalar FK to a stale value throws foreign_key_invalid', async () => {
@@ -1345,9 +1350,12 @@ describe('integrity layer — write validation on members custom paths', () => {
     await assertRejectsWithCode(() => callAs(adminUserId, 'integrity.previewBulk', 'ranks', oversized), 400);
   });
 
-  it('members.update of an unrelated field on a member with a stale rankId succeeds', async () => {
+  it('members.update of an unrelated field on a member with a stale rankId is now rejected (O-6)', async () => {
     // Direct-write a stale rankId via the collection (bypassing validation)
-    // to simulate the pre-existing-orphan condition.
+    // to simulate the pre-existing-orphan condition. Under O-6, members.update
+    // validates the whole resulting member, so the orphaned rankId rejects the
+    // otherwise-unrelated description edit. (Pre-O-6 this succeeded; the orphan
+    // migration must run before full-doc enforcement is enabled.)
     const memberId = `${TEST_PREFIX}${Random.id()}`;
     await MembersCollection.insertAsync({
       _id: memberId,
@@ -1355,10 +1363,13 @@ describe('integrity layer — write validation on members custom paths', () => {
       profile: { name: 'StaleRankHolder', rankId: 'orphan-rank-from-past' },
     });
 
-    await callAs(adminUserId, 'members.update', memberId, { 'profile.description': 'updated description' });
+    await assertRejectsWithCode(
+      () => callAs(adminUserId, 'members.update', memberId, { 'profile.description': 'updated description' }),
+      'foreign_key_invalid',
+    );
 
     const m = await MembersCollection.findOneAsync(memberId);
-    assert.strictEqual(m?.profile?.description, 'updated description');
-    assert.strictEqual(m?.profile?.rankId, 'orphan-rank-from-past', 'stale rankId preserved');
+    assert.strictEqual(m?.profile?.description, undefined, 'rejected update wrote nothing');
+    assert.strictEqual(m?.profile?.rankId, 'orphan-rank-from-past', 'stale rankId preserved (unchanged)');
   });
 });

@@ -11,7 +11,12 @@ import {
 import { createLog } from './apis/logs.server';
 import { runMutation, snapshotTouchedFields } from './mutation-pipeline';
 import { COLLECTION_REGISTRY } from './collection-registry';
-import { enforceIntegrityOnDelete, buildRemoveAuditPayload, validateForeignKeys } from './integrity';
+import {
+  enforceIntegrityOnDelete,
+  buildRemoveAuditPayload,
+  validateForeignKeys,
+  validateForeignKeysForUpdate,
+} from './integrity';
 import { sanitizeHtml } from './htmlSanitizer';
 import type { CrudCollectionMap, CrudCollectionName } from '/imports/api/types';
 
@@ -35,52 +40,46 @@ import SquadsCollection from '../imports/api/collections/squads.collection';
 import TasksCollection from '../imports/api/collections/tasks.collection';
 import TaskStatusCollection from '../imports/api/collections/taskStatus.collection';
 
+// Typed registry of every CRUD collection, keyed by CrudCollectionName.
+//
+// The mapped type `{ [K in CrudCollectionName]: Mongo.Collection<CrudCollectionMap[K]> }`
+// makes each value's element type follow its key, so the object literal is
+// checked per-collection at compile time and `getCollection` can index it
+// with zero `as unknown as` casts. Adding a collection to CrudCollectionName
+// without registering it here is a compile error (the mapped type demands a
+// key for every union member). Keep alphabetical to match the registry +
+// crud method/publish registration order.
+type CollectionMap = { readonly [K in CrudCollectionName]: Mongo.Collection<CrudCollectionMap[K]> };
+
+const COLLECTIONS: CollectionMap = {
+  attendances: AttendancesCollection,
+  briefingTemplates: BriefingTemplatesCollection,
+  discoveryTypes: DiscoveryTypesCollection,
+  events: EventsCollection,
+  eventTypes: EventTypesCollection,
+  logs: LogsCollection,
+  medals: MedalsCollection,
+  members: MembersCollection,
+  positions: PositionsCollection,
+  profilePictures: ProfilePicturesCollection,
+  questionnaireResponses: QuestionnaireResponsesCollection,
+  questionnaires: QuestionnairesCollection,
+  ranks: RanksCollection,
+  registrations: RegistrationsCollection,
+  roles: RolesCollection,
+  specializations: SpecializationsCollection,
+  squads: SquadsCollection,
+  taskStatus: TaskStatusCollection,
+  tasks: TasksCollection,
+};
+
 export function getCollection<K extends CrudCollectionName>(
   collection: K,
 ): Mongo.Collection<CrudCollectionMap[K]> {
   if (!collection) throw new Meteor.Error(400, 'No collection name');
-  switch (collection) {
-    case 'attendances':
-      return AttendancesCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
-    case 'briefingTemplates':
-      return BriefingTemplatesCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
-    case 'discoveryTypes':
-      return DiscoveryTypesCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
-    case 'events':
-      return EventsCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
-    case 'eventTypes':
-      return EventTypesCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
-    case 'logs':
-      return LogsCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
-    case 'medals':
-      return MedalsCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
-    case 'members':
-      return MembersCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
-    case 'positions':
-      return PositionsCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
-    case 'profilePictures':
-      return ProfilePicturesCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
-    case 'questionnaires':
-      return QuestionnairesCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
-    case 'questionnaireResponses':
-      return QuestionnaireResponsesCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
-    case 'ranks':
-      return RanksCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
-    case 'registrations':
-      return RegistrationsCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
-    case 'roles':
-      return RolesCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
-    case 'specializations':
-      return SpecializationsCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
-    case 'squads':
-      return SquadsCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
-    case 'tasks':
-      return TasksCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
-    case 'taskStatus':
-      return TaskStatusCollection as unknown as Mongo.Collection<CrudCollectionMap[K]>;
-    default:
-      throw new Meteor.Error(404, `Collection "${collection}" not found`);
-  }
+  const found = COLLECTIONS[collection];
+  if (!found) throw new Meteor.Error(404, `Collection "${collection}" not found`);
+  return found;
 }
 
 // Rich-text HTML fields, sanitized on every write so MongoDB never stores
@@ -249,10 +248,15 @@ function createCollectionMethods(collection: CrudCollectionName): void {
             [id, data] as const,
             async ([targetId, changes]) => {
               sanitizeHtmlFields(collection, changes as Record<string, unknown>);
-              // The generic CRUD .update wraps changes in $set, so validation
-              // runs against the same modifier Mongo will see — touched-fields
-              // semantics fall out naturally.
-              await validateForeignKeys(collection, { $set: changes });
+              // Full-document FK enforcement (O-6): validate EVERY foreign key
+              // on the document as it will exist after this `$set`, not only the
+              // fields this write touches. We merge the modifier onto the stored
+              // doc and validate the result, so an unrelated edit can't leave a
+              // now-orphaned FK in place. Pre-existing orphans must be cleared by
+              // the orphan migration (integrity.scanResolve) before this is
+              // enabled in production. Supersedes the touched-fields-only path.
+              const stored = (await Collection.findOneAsync(targetId)) as Record<string, unknown> | undefined;
+              await validateForeignKeysForUpdate(collection, stored, { $set: changes });
               const result = await Collection.updateAsync({ _id: targetId } as never, { $set: changes } as never);
               if (collection === 'roles') {
                 clearRoleCache(targetId);
