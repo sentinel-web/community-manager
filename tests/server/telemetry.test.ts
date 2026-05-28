@@ -152,3 +152,58 @@ describe('telemetry — runMutation emits exactly one record per call', () => {
     assert.strictEqual(records[0].outcome, 'denied');
   });
 });
+
+// Safety invariant of additive instrumentation: a THROWING exporter (e.g. a
+// flaky OTLP endpoint) must be fully transparent to the mutation. The throw is
+// swallowed at the telemetry boundary (recordTelemetry's try/catch) and must
+// never surface as a return value, nor mask/replace a real body error.
+describe('telemetry — a throwing exporter must not break the mutation', () => {
+  let adminUserId: string;
+  let restoreExporter: TelemetryExporter;
+
+  before(async () => {
+    const adminRoleId = await createTestRole({ roles: true });
+    adminUserId = await createTestUser({ roleId: adminRoleId });
+  });
+
+  beforeEach(() => {
+    restoreExporter = setTelemetryExporter(() => {
+      throw new Error('exporter down');
+    });
+  });
+
+  afterEach(async () => {
+    setTelemetryExporter(restoreExporter);
+    await cleanTelemetryLogs();
+  });
+
+  after(async () => {
+    await cleanupFixtures([MedalsCollection]);
+  });
+
+  it('ok — successful mutation still returns its normal result (exporter throw swallowed)', async () => {
+    const result = await runMutation(
+      { userId: adminUserId },
+      { collection: FAKE_COLLECTION, operation: 'create', permissionModule: 'medals' },
+      [],
+      async () => 'sentinel',
+    );
+
+    assert.strictEqual(result, 'sentinel', 'exporter throw must not propagate; result passes through unchanged');
+  });
+
+  it('body-error — original Meteor.Error code still propagates (exporter throw does not mask it)', async () => {
+    await assertRejectsWithCode(
+      () =>
+        runMutation(
+          { userId: adminUserId },
+          { collection: FAKE_COLLECTION, operation: 'create', permissionModule: 'medals' },
+          [],
+          async () => {
+            throw new Meteor.Error('original-code', 'body failed');
+          },
+        ),
+      'original-code',
+    );
+  });
+});
