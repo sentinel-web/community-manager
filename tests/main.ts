@@ -9,6 +9,7 @@ import './helpers/colors/hexToRgb.test';
 import './helpers/colors/parseColor.test';
 import './server/briefingTemplatesMethods.test';
 import './server/crudMethods.test';
+import './server/dashboardEventTypeStats.test';
 import './server/entityFormSubmit.test';
 import './server/eventsDescriptionSanitize.test';
 import './server/getCollection.test';
