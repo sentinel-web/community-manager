@@ -118,7 +118,7 @@ if (Meteor.isServer) {
       if (role.eventTypes) {
         const eventTypes = await EventTypesCollection.find().fetchAsync();
         const eventTypeNameByIdMap = new Map(eventTypes.map(et => [et._id, et.name]));
-        result['event count by event type'] = await aggregateCountByField(EventsCollection as AnyCollection, 'eventTypeId', eventTypeNameByIdMap);
+        result['event count by event type'] = await aggregateCountByField(EventsCollection as AnyCollection, 'eventType', eventTypeNameByIdMap);
       }
 
       if (role.tasks) result['task count'] = await TasksCollection.countDocuments();
