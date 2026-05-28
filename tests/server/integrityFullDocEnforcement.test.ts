@@ -205,6 +205,54 @@ describe('integrity O-6 — full-doc enforcement on the members.update custom pa
     assert.strictEqual(m?.profile?.description, 'desc');
     assert.strictEqual(m?.profile?.rankId, validRankId);
   });
+
+  // The real UI path (MemberForm → useEntityForm → members.update) sends the
+  // WHOLE `profile` object as a single value, not dotted keys. members.update
+  // wraps it as `{ $set: { profile: { …entire object… } } }`, so the merged
+  // doc is produced by a whole-key overwrite of `profile` — a different
+  // applyModifierToDoc branch than the dotted `'profile.rankId'` updates above.
+  // These mirror that exact payload shape.
+  it('a WHOLE-profile-object update is REJECTED when the object carries a stale FK', async () => {
+    const memberId = `${TEST_PREFIX}${Random.id()}`;
+    await MembersCollection.insertAsync({
+      _id: memberId,
+      username: memberId,
+      profile: { name: 'O6WholeProfileStale', rankId: validRankId },
+    });
+
+    // Same shape MemberForm.toPayload emits: a complete `profile` object whose
+    // rankId now points at a deleted rank.
+    await assertRejectsWithCode(
+      () =>
+        callAs(adminUserId, 'members.update', memberId, {
+          profile: { name: 'O6WholeProfileStale', description: 'edited', rankId: 'deleted-rank-id' },
+        }),
+      'foreign_key_invalid',
+    );
+
+    const m = await MembersCollection.findOneAsync(memberId);
+    assert.strictEqual(m?.profile?.rankId, validRankId, 'rejected whole-profile update wrote nothing');
+    assert.strictEqual(m?.profile?.description, undefined, 'rejected whole-profile update wrote nothing');
+  });
+
+  it('the SAME whole-profile-object update SUCCEEDS when every FK in the object is valid', async () => {
+    const memberId = `${TEST_PREFIX}${Random.id()}`;
+    await MembersCollection.insertAsync({
+      _id: memberId,
+      username: memberId,
+      profile: { name: 'O6WholeProfileValid', rankId: 'orphan-rank-from-past' },
+    });
+
+    // A whole-profile overwrite that repoints rankId at a real rank passes:
+    // full-doc validation runs against the merged (repaired) result.
+    await callAs(adminUserId, 'members.update', memberId, {
+      profile: { name: 'O6WholeProfileValid', description: 'edited', rankId: validRankId },
+    });
+
+    const m = await MembersCollection.findOneAsync(memberId);
+    assert.strictEqual(m?.profile?.rankId, validRankId);
+    assert.strictEqual(m?.profile?.description, 'edited');
+  });
 });
 
 describe('integrity O-6 — orphan migration (resolveOrphans + integrity.scanResolve)', () => {

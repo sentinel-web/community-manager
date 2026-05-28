@@ -135,9 +135,17 @@ export function collectForeignKeyValues(source: CrudCollectionName, doc: unknown
 // ────────────────────────────────────────────────────────────
 // Modifier application: produce the post-write document shape from a stored
 // doc + the `$set`-style modifier the CRUD layer issues, so the full-doc
-// validator can inspect the resulting state. Mirrors the subset of Mongo
-// update semantics the CRUD layer actually uses ($set with dotted paths,
-// $unset, $push/$addToSet/$pull on array FKs).
+// validator can inspect the resulting state.
+//
+// Every caller of validateForeignKeysForUpdate (the only thing that reaches
+// here) issues `{ $set: changes }` — the generic CRUD update path
+// (crud.lib.ts) and the custom members.update path both do. The array
+// operators that events.server.ts ($pull/$addToSet on attendees) and
+// tasks.server.ts ($push on comments) issue go through a DIRECT
+// Collection.updateAsync and never touch this function. So $set is the only
+// operator we support; anything else FAILS LOUD rather than silently
+// returning a wrongly-merged doc that could bypass FK validation. A future
+// caller that wants $push/$pull/etc. must extend this deliberately.
 // ────────────────────────────────────────────────────────────
 
 function deepClone<T>(value: T): T {
@@ -158,22 +166,6 @@ function setDottedPath(doc: Record<string, unknown>, path: string, value: unknow
   cursor[keys[keys.length - 1]] = value;
 }
 
-function unsetDottedPath(doc: Record<string, unknown>, path: string): void {
-  const keys = path.split('.');
-  let cursor: Record<string, unknown> | undefined = doc;
-  for (let i = 0; i < keys.length - 1; i++) {
-    const next: unknown = cursor?.[keys[i]];
-    if (next == null || typeof next !== 'object') return;
-    cursor = next as Record<string, unknown>;
-  }
-  if (cursor) delete cursor[keys[keys.length - 1]];
-}
-
-function arrayAt(doc: Record<string, unknown>, path: string): unknown[] {
-  const raw = readDottedPath(doc, path);
-  return Array.isArray(raw) ? (raw as unknown[]) : [];
-}
-
 export function applyModifierToDoc(
   stored: Record<string, unknown>,
   modifier: unknown,
@@ -185,36 +177,28 @@ export function applyModifierToDoc(
   }
 
   const mod = modifier as Record<string, unknown>;
-  const hasOperator = Object.keys(mod).some(k => k.startsWith('$'));
-  if (!hasOperator) {
+  const operators = Object.keys(mod).filter(k => k.startsWith('$'));
+  if (operators.length === 0) {
     // Whole-doc replacement passed without operators.
     return deepClone(mod);
   }
 
+  // Fail loud on any operator other than $set. Silently merging an
+  // unrecognised operator (or ignoring it) would let a future caller slip a
+  // write past full-document FK validation unnoticed — see the note above.
+  const unsupported = operators.filter(op => op !== '$set');
+  if (unsupported.length > 0) {
+    throw new Meteor.Error(
+      'unsupported_modifier',
+      `applyModifierToDoc only supports $set; got unsupported operator(s): ${unsupported.join(', ')}`,
+    );
+  }
+
+  // $set with dotted paths AND whole-object keys both flow through here:
+  // a single key like `profile` replaces the whole subtree, a dotted key
+  // like `profile.rankId` writes one leaf.
   const set = (mod.$set ?? {}) as Record<string, unknown>;
   for (const [path, value] of Object.entries(set)) setDottedPath(result, path, value);
-
-  const unset = (mod.$unset ?? {}) as Record<string, unknown>;
-  for (const path of Object.keys(unset)) unsetDottedPath(result, path);
-
-  for (const opName of ['$push', '$addToSet'] as const) {
-    const op = (mod[opName] ?? {}) as Record<string, unknown>;
-    for (const [path, raw] of Object.entries(op)) {
-      const additions =
-        (raw as { $each?: unknown })?.$each !== undefined
-          ? ((raw as { $each: unknown[] }).$each as unknown[])
-          : [raw];
-      const current = arrayAt(result, path);
-      const next = opName === '$addToSet' ? current.concat(additions.filter(a => !current.includes(a))) : current.concat(additions);
-      setDottedPath(result, path, next);
-    }
-  }
-
-  const pull = (mod.$pull ?? {}) as Record<string, unknown>;
-  for (const [path, value] of Object.entries(pull)) {
-    const current = arrayAt(result, path);
-    setDottedPath(result, path, current.filter(v => v !== value));
-  }
 
   return result;
 }
