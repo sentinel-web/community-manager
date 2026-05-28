@@ -1,5 +1,6 @@
 import assert from 'node:assert';
 import { Meteor } from 'meteor/meteor';
+import { Random } from 'meteor/random';
 import AttendancesCollection from '../../imports/api/collections/attendances.collection';
 import { assertRejectsWithCode, callAs, cleanupFixtures, createTestRole, createTestUser, TEST_PREFIX } from './fixtures';
 
@@ -15,8 +16,12 @@ describe('attendances.upsert — atomic write, no duplicate per-event rows (#261
   let adminUserId: string;
   let unauthorizedUserId: string;
   const eventId = `${TEST_PREFIX}event_261`;
-  const memberA = `${TEST_PREFIX}member_a`;
-  const memberB = `${TEST_PREFIX}member_b`;
+  // The member id is written as a dynamic document key and validated against a
+  // strict Mongo-shaped pattern (/^[A-Za-z0-9]{17,24}$/), so these must be
+  // prefix-free alphanumeric ids AND back real member docs. We clean them up
+  // explicitly in `after` since they fall outside the `test_` prefix range.
+  const memberA = Random.id();
+  const memberB = Random.id();
 
   before(async () => {
     const [adminRoleId, noPermRoleId] = await Promise.all([
@@ -26,6 +31,8 @@ describe('attendances.upsert — atomic write, no duplicate per-event rows (#261
     [adminUserId, unauthorizedUserId] = await Promise.all([
       createTestUser({ roleId: adminRoleId }),
       createTestUser({ roleId: noPermRoleId }),
+      createTestUser({ _id: memberA }),
+      createTestUser({ _id: memberB }),
     ]);
     // Mirror the production unique index (server/main.ts) so the concurrency
     // assertion holds in the test DB regardless of startup ordering. createIndex
@@ -39,6 +46,7 @@ describe('attendances.upsert — atomic write, no duplicate per-event rows (#261
 
   after(async () => {
     await AttendancesCollection.removeAsync({ eventId });
+    await Meteor.users.removeAsync({ _id: { $in: [memberA, memberB] } });
     await cleanupFixtures();
   });
 
@@ -52,6 +60,23 @@ describe('attendances.upsert — atomic write, no duplicate per-event rows (#261
 
   it('rejects an out-of-range attendance status with 400', async () => {
     await assertRejectsWithCode(() => callAs(adminUserId, 'attendances.upsert', eventId, memberA, 7), 400);
+  });
+
+  it('rejects a memberId containing a dot with 400', async () => {
+    await assertRejectsWithCode(() => callAs(adminUserId, 'attendances.upsert', eventId, 'profile.roleId', 1), 400);
+  });
+
+  it('rejects a memberId containing a Mongo operator char ($) with 400', async () => {
+    await assertRejectsWithCode(() => callAs(adminUserId, 'attendances.upsert', eventId, '$where', 1), 400);
+  });
+
+  it('rejects a memberId equal to the eventId with 400', async () => {
+    await assertRejectsWithCode(() => callAs(adminUserId, 'attendances.upsert', eventId, eventId, 1), 400);
+  });
+
+  it('rejects a structurally valid memberId for a non-existent member with 404', async () => {
+    // Passes the strict id pattern but no such member doc exists.
+    await assertRejectsWithCode(() => callAs(adminUserId, 'attendances.upsert', eventId, Random.id(), 1), 404);
   });
 
   it('first write creates exactly one per-event row', async () => {

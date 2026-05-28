@@ -26,16 +26,21 @@ export async function createTestRole(permissions: Partial<Role> & Record<string,
 export interface CreateTestUserOptions {
   roleId?: string;
   profile?: Partial<MemberProfile>;
+  // Override the generated `_id`. Callers that need a Mongo-shaped (pure
+  // alphanumeric, prefix-free) id — e.g. to satisfy strict id validation —
+  // pass it here and take responsibility for their own cleanup, since such
+  // ids fall outside the `test_` prefix range cleanupFixtures scopes to.
+  _id?: string;
 }
 
-export async function createTestUser({ roleId, profile = {} }: CreateTestUserOptions = {}): Promise<string> {
-  const _id = prefixedId();
+export async function createTestUser({ roleId, profile = {}, _id }: CreateTestUserOptions = {}): Promise<string> {
+  const id = _id ?? prefixedId();
   await Meteor.users.insertAsync({
-    _id,
-    username: _id,
-    profile: { name: `Test ${_id}`, roleId, ...profile },
+    _id: id,
+    username: id,
+    profile: { name: `Test ${id}`, roleId, ...profile },
   });
-  return _id;
+  return id;
 }
 
 // Loose generic so tests can pass any project collection without per-call casting.
