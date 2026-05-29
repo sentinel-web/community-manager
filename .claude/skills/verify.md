@@ -19,10 +19,14 @@ against a pre-agreed contract**, not a self-review:
    `.claude/verify-contract.md` — plain-language "given/when/then" criteria
    describing observable behavior, with no reference to functions, files, or
    how it's built. `/verify` is scored **only** against those criteria.
-2. **Evaluate in a fresh context.** Run the browser drive as a sub-agent (the
-   `Agent`/Task tool) given **only** the contract and app access — *not* the
-   implementation transcript. It cannot "know what was meant"; it can only
-   observe what the app does. Emit an explicit **PASS / FAIL per criterion**.
+2. **Evaluate with fresh eyes.** Grade against the contract **only** — read it,
+   not the implementation transcript, so you judge what the app *does*, not what
+   you *meant*. Best: hand the evaluation to a fresh sub-agent (the Task tool)
+   whose prompt is the contract plus how to reach the app, so it literally has no
+   memory of the implementation. (The browser access here is Chrome MCP, driven
+   from the session — see *Prerequisites*; a sub-agent that lacks it should report
+   what it cannot reach rather than guess.) Emit an explicit **PASS / FAIL per
+   criterion**.
 3. **Keep the code-correctness gates in the main thread.** Run
    `npm run typecheck`, `npm test`, and `npm run e2e` in the main session — do
    **not** delegate them to the evaluator sub-agent, or a failure's output gets
@@ -37,8 +41,9 @@ unwritten standard is how confirmation bias creeps back in.
 
 Assert against `data-verify-*` attributes, not localized DOM text or Ant Design
 class names — text changes with i18n and markup changes with antd upgrades, both
-of which would make a passing check silently rot. Add a stable attribute to each
-load-bearing widget the first time you instrument its path, e.g.:
+of which would make a passing check silently rot. **None exist yet** — this is the
+convention to introduce, adding a stable attribute to each load-bearing widget the
+first time you instrument its path, e.g.:
 
 - attendance tally → `data-verify="attendance-tally" data-verify-count={n}`
 - ORBAT node count → `data-verify="orbat-count" data-verify-count={n}`
