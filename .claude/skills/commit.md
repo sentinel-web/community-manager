@@ -8,10 +8,13 @@ Create a commit with a clean, descriptive message.
 
 ## Instructions
 
-1. **Review changes** using `git status` and `git diff`
-2. **Stage relevant files** - Be selective, don't use `git add -A`
-3. **Write commit message** following conventions
-4. **Create commit**
+1. **Verify branch context** — run `scripts/check-branch.sh <issue-number>` first. In a
+   shared checkout used by parallel/autonomous sessions a task can drift onto the wrong
+   branch; this refuses to proceed on a mismatch (or on `main`). See `docs/agents/worktrees.md`.
+2. **Review changes** using `git status` and `git diff`
+3. **Stage relevant files** - Be selective, don't use `git add -A`
+4. **Write commit message** following conventions
+5. **Create commit**
 
 ## Commit Message Format
 
