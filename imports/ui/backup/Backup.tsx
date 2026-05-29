@@ -224,7 +224,7 @@ export default function Backup() {
       a.click();
       URL.revokeObjectURL(url);
       message.success(t('backup.safetyBackupDownloaded'));
-    } catch (error) {
+    } catch {
       message.error(t('backup.safetyBackupFailed'));
     }
   }, [safetyBackupData, t]);

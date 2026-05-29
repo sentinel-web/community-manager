@@ -21,7 +21,7 @@ test.describe('Members', () => {
     expect(headerCount).toBeGreaterThan(0);
   });
 
-  test('should search members by name', async ({ page }) => {
+  test('should search members by name', async () => {
     // Search for admin
     await membersPage.search('admin');
 

@@ -26,12 +26,12 @@ async function orbatPopoverItems(squadId: string = ''): Promise<OrbatPopoverItem
   const rankLabelById = new Map(ranks.map(r => [r.value, r.label]));
   const positionLabelById = new Map(positions.map(p => [p.value, p.label]));
   for (const member of members) {
-    const rankName = (member.profile?.rankId ? rankLabelById.get(member.profile.rankId) : undefined) || '-';
-    const positionName = member.profile?.positionId ? positionLabelById.get(member.profile.positionId) : null;
+    const rankName = (member.profile!.rankId ? rankLabelById.get(member.profile!.rankId) : undefined) || '-';
+    const positionName = member.profile!.positionId ? positionLabelById.get(member.profile!.positionId) : null;
     const label = positionName ? `${positionName} - ${rankName}` : rankName;
     items.push({
       label,
-      children: `${member.profile?.id} "${member.profile?.name}"`,
+      children: `${member.profile!.id} "${member.profile!.name}"`,
     });
   }
   return items;

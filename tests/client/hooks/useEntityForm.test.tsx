@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import { Meteor } from 'meteor/meteor';
-import React, { type ReactNode } from 'react';
+import React from 'react';
 
 // React-wiring smoke test for the EntityForm seam: proves the hook self-sources
 // the drawer frame, derives the method name via the pure core, shapes args, and

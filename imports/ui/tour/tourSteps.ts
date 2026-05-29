@@ -17,7 +17,7 @@ export interface TourStep {
 
 const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
 
-export default function getTourSteps(t: TranslateFn, refs: RefsRef, actions: ActionsRef): TourStep[] {
+export default function getTourSteps(t: TranslateFn, refs: RefsRef, _actions: ActionsRef): TourStep[] {
   return [
     {
       title: t('tour.step1Title'),

@@ -32,7 +32,7 @@ test.describe('Navigation', () => {
     await expect(page).toHaveURL(/.*members/);
   });
 
-  test('should update URL on navigation', async ({ page }) => {
+  test('should update URL on navigation', async () => {
     await navPage.navigateTo('Members');
 
     const path = navPage.getCurrentPath();

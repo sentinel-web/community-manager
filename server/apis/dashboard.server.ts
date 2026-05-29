@@ -14,6 +14,8 @@ import TasksCollection from '../../imports/api/collections/tasks.collection';
 import TaskStatusCollection from '../../imports/api/collections/taskStatus.collection';
 import type { Role } from '/imports/api/types';
 
+// Loose generic so a single helper can aggregate over any project collection.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyCollection = Mongo.Collection<any>;
 
 async function aggregateCountByField(

@@ -203,7 +203,7 @@ if (Meteor.isServer) {
           let respondentName = 'Anonymous';
           if (response.respondentId) {
             const member = await MembersCollection.findOneAsync(response.respondentId);
-            respondentName = member?.profile?.name || member?.username || 'Unknown';
+            respondentName = member?.profile!.name || member?.username || 'Unknown';
           }
           return {
             ...response,

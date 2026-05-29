@@ -368,6 +368,7 @@ function createCollectionMethods(collection: CrudCollectionName): void {
             },
             [filter, options] as const,
             async ([f, o]) =>
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic CRUD factory operates over arbitrary collection shapes
               Collection.find(f, o).mapAsync((item: any) => {
                 const profile = item.profile as { name?: string } | undefined;
                 const name = profile?.name || (item.name as string | undefined);

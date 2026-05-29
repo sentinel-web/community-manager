@@ -321,7 +321,7 @@ describe('integrity layer — pull primitive on array foreign keys (#163)', () =
     await callAs(adminUserId, 'integrity.preview', 'medals', medalId);
 
     const member = await MembersCollection.findOneAsync(memberId);
-    assert.deepStrictEqual(member?.profile?.medalIds, [medalId], 'preview must not mutate state');
+    assert.deepStrictEqual(member?.profile!.medalIds, [medalId], 'preview must not mutate state');
   });
 
   it('idempotent execute — calling enforce twice produces no double-pull errors', async () => {
@@ -447,7 +447,7 @@ describe('integrity layer — setNull primitive on scalar foreign keys (#164)', 
 
     for (const id of holderIds) {
       const member = await MembersCollection.findOneAsync(id);
-      assert.strictEqual(member?.profile?.positionId, null);
+      assert.strictEqual(member?.profile!.positionId, null);
     }
   });
 
