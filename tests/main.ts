@@ -37,6 +37,7 @@ import './server/runMethodCall.test';
 import './server/scaffolderSkills.test';
 import './server/settingsMethods.test';
 import './server/shouldConfirmTemplateOverwrite.test';
+import './server/skillLoader.test';
 import './server/specializationsMethods.test';
 import './server/telemetry.test';
 import './server/validation.test';
