@@ -16,3 +16,6 @@ _build
 */build-assets
 */build-chunks
 .rsdoctor
+
+# Claude Code verification-gate marker (local state)
+.claude/.verify-state
