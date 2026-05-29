@@ -8,6 +8,7 @@ Create a pull request with summary and testing steps.
 ## Instructions
 
 1. **Check branch status**
+   - Verify branch context: `scripts/check-branch.sh <issue-number>` (refuses the wrong branch or `main` — see `docs/agents/worktrees.md`)
    - Ensure all changes are committed
    - Verify branch is pushed to remote
    - Check tests pass (`npm test`)

@@ -36,3 +36,22 @@ git checkout -b <branch-name>
 ```
 
 After creating the branch, suggest running `/plan` if no implementation plan exists.
+
+## Isolation for parallel / autonomous work
+
+Concurrent or AFK sessions share one working directory and can land commits on the
+wrong branch (see `docs/agents/worktrees.md`). When a task may run alongside another,
+create an **isolated git worktree** instead of switching the primary checkout:
+
+```bash
+scripts/new-worktree.sh <branch-name>   # off main; cd into the printed path
+```
+
+This shares `node_modules` with the primary checkout (no reinstall) and gives the
+worktree its own `.meteor/local` so concurrent Meteor processes don't collide.
+
+- **Default autonomous runs to serial feature execution** — run one feature task at a
+  time. Reserve parallel worktree sessions for read-only work (review, research) or
+  genuinely independent features.
+- Before committing, `/commit` and `/pr` run `scripts/check-branch.sh <issue#>` to refuse
+  acting on the wrong branch.
