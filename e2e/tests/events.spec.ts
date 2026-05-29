@@ -55,7 +55,7 @@ test.describe('Events', () => {
     await expect(page.locator('input[id="name"]')).toBeVisible();
   });
 
-  test('should create and delete an event', async ({ page }) => {
+  test('should create and delete an event', async () => {
     const eventName = `Test Event ${Date.now()}`;
 
     // Create event with required start and end dates

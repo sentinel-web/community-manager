@@ -10,6 +10,7 @@
     "test-app": "TEST_WATCH=1 meteor test --full-app --driver-package meteortesting:mocha",
     "visualize": "meteor --production --extra-packages bundle-visualizer",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint .",
     "integrity-scan": "echo 'await (await import(\"/scripts/integrity-scan\")).runScan(); process.exit(0)' | meteor shell",
     "doctor": "react-doctor --no-dead-code --offline -y .",
     "doctor:full": "react-doctor --offline -y .",
@@ -67,9 +68,11 @@
     "eslint": "^9.28.0",
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^16.2.0",
     "react-doctor": "^0.1.6",
     "react-refresh": "^0.17.0",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.60.0"
   }
 }

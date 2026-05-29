@@ -24,7 +24,7 @@ export default function MembersSquadView({ datasource, handleEdit }: MembersSqua
   const grouped = useMemo(() => {
     const groups: Record<string, Member[]> = {};
     for (const member of datasource) {
-      const squadId = member.profile?.squadId || '__none__';
+      const squadId = member.profile!.squadId || '__none__';
       if (!groups[squadId]) groups[squadId] = [];
       groups[squadId].push(member);
     }
@@ -72,9 +72,9 @@ export default function MembersSquadView({ datasource, handleEdit }: MembersSqua
                 renderItem={member => (
                   <List.Item>
                     <a href="#" onClick={e => handleClick(e, member)} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <RankTag rankId={member.profile?.rankId} />
+                      <RankTag rankId={member.profile!.rankId} />
                       <span>
-                        {member.profile?.id || '----'} {member.profile?.name || member.username}
+                        {member.profile!.id || '----'} {member.profile!.name || member.username}
                       </span>
                     </a>
                   </List.Item>

@@ -42,6 +42,29 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
+  # Pure-Node ESLint — no Meteor binary needed. Enforces the repo's coding
+  # conventions (CLAUDE.md) as machine-checked rules. Runs in parallel with the
+  # slow test job.
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
   test:
     name: mocha + e2e
     runs-on: ubuntu-latest

@@ -1,6 +1,5 @@
 import assert from 'node:assert';
 import { Meteor } from 'meteor/meteor';
-import MembersCollection from '../../imports/api/collections/members.collection';
 import { assertSafeSelector } from '../../server/main';
 import {
   assertRejectsWithCode,

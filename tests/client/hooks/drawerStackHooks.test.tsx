@@ -30,6 +30,9 @@ if (Meteor.isClient) {
 
     function Probe() {
       try {
+        // Test harness: the hook-under-test is invoked here to capture its
+        // result/throw; the try/catch is intentional.
+        // eslint-disable-next-line react-hooks/rules-of-hooks
         captured.current = useHook();
       } catch (error) {
         captured.error = error as Error;

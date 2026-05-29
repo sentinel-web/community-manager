@@ -56,7 +56,6 @@ import { resolveOrphans, scanForOrphans, type OrphanResolution } from '/server/i
 export async function runScan(): Promise<void> {
   const orphans = await scanForOrphans();
   for (const record of orphans) {
-    // eslint-disable-next-line no-console
     console.log(JSON.stringify(record));
   }
 }

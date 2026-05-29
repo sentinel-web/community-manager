@@ -1,5 +1,8 @@
 declare module 'meteor/mongo' {
   namespace Mongo {
+    // U mirrors Meteor's own Collection<T, U = T> arity so this interface merges
+    // with the upstream declaration; it is intentionally unreferenced here.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     interface Collection<T, U = T> {
       countDocuments(selector?: Selector<T> | Record<string, unknown>): Promise<number>;
     }

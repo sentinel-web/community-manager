@@ -12,7 +12,6 @@ import RolesCollection from '../../imports/api/collections/roles.collection';
 import SpecializationsCollection from '../../imports/api/collections/specializations.collection';
 import SquadsCollection from '../../imports/api/collections/squads.collection';
 import { validateObject, validatePublish, validateString, validateNumber, validateUserId, checkPermission, checkSpecialPermission, getSquadScope, isOfficerOrAdmin, getUserRole, assertSafeSelector } from '../main';
-import { createLog } from './logs.server';
 import { runMutation, snapshotTouchedFields } from '../mutation-pipeline';
 import { instrument } from '../telemetry';
 import { COLLECTION_REGISTRY } from '../collection-registry';
@@ -257,7 +256,7 @@ if (Meteor.isServer) {
           // The only owned-target relationship in the registry; per the
           // rule of three (one instance), kept here as code rather than
           // promoted to a registry primitive. See server/integrity.ts.
-          const profilePictureId = member.profile?.profilePictureId;
+          const profilePictureId = member.profile!.profilePictureId;
           if (profilePictureId) {
             await ProfilePicturesCollection.removeAsync({ _id: profilePictureId } as never);
             effects.cascaded.profilePictures = (effects.cascaded.profilePictures ?? 0) + 1;
@@ -294,7 +293,7 @@ if (Meteor.isServer) {
       const rankNameById = new Map(ranks.map(r => [r._id, r.name]));
 
       const options = members.map(member => ({
-        label: getFullName(rankNameById.get(member.profile?.rankId as string), member.profile?.id, member.profile?.name),
+        label: getFullName(rankNameById.get(member.profile!.rankId as string), member.profile!.id, member.profile!.name),
         value: member._id,
       }));
 
@@ -318,7 +317,7 @@ if (Meteor.isServer) {
       const rankNameById = new Map(ranks.map(r => [r._id, r.name]));
 
       const names = members.map(member =>
-        getFullName(rankNameById.get(member.profile?.rankId as string), member.profile?.id, member.profile?.name)
+        getFullName(rankNameById.get(member.profile!.rankId as string), member.profile!.id, member.profile!.name)
       );
       return names.join(', ');
     },
@@ -397,10 +396,10 @@ if (Meteor.isServer) {
 
       const groups: Record<string, { label: string; value: string }[]> = {};
       for (const member of members) {
-        const squadName = member.profile?.squadId ? squadNameById.get(member.profile.squadId) || '-' : 'Unassigned';
+        const squadName = member.profile!.squadId ? squadNameById.get(member.profile!.squadId) || '-' : 'Unassigned';
         if (!groups[squadName]) groups[squadName] = [];
         groups[squadName].push({
-          label: getFullName(rankNameById.get(member.profile?.rankId as string), member.profile?.id, member.profile?.name),
+          label: getFullName(rankNameById.get(member.profile!.rankId as string), member.profile!.id, member.profile!.name),
           value: member._id,
         });
       }

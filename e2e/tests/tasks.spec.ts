@@ -47,7 +47,7 @@ test.describe('Tasks', () => {
     await tasksPage.cancelForm();
   });
 
-  test('should create and delete a task', async ({ page }) => {
+  test('should create and delete a task', async () => {
     // Skip if no task statuses are configured (status is required)
     const columns = await tasksPage.getColumnIds();
     if (columns.length === 0) {

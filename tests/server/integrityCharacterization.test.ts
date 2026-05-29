@@ -232,7 +232,7 @@ describe('integrity characterization — RULE-051 block primacy + preview/execut
     await previewIntegrity('ranks', rankId, { userId: adminUserId });
 
     const member = await MembersCollection.findOneAsync(memberId);
-    assert.strictEqual(member?.profile?.navyRankId, rankId, 'preview must not setNull');
+    assert.strictEqual(member?.profile!.navyRankId, rankId, 'preview must not setNull');
   });
 });
 
