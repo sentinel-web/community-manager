@@ -46,6 +46,13 @@ Closes #<issue-number>
 
 Before creating the PR, verify:
 - [ ] All tests pass (`npm test`)
+- [ ] **Fail-then-pass for bug fixes / new behavior:** a test exists that
+      **fails on the base commit and passes on the branch**. Prove it, don't
+      assert it — e.g. `git stash` the fix (or check out the base), run the new
+      test and watch it fail, restore, run it green. A test that passes both
+      before and after the change proves nothing; this is what stops a "fix" that
+      never exercises the bug. (Pure refactors with no behavior change are exempt
+      — note that in the PR.)
 - [ ] Code follows CLAUDE.md guidelines
 - [ ] No console.log or debug code left
 - [ ] Permissions checked for new features
