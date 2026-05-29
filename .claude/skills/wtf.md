@@ -9,8 +9,8 @@ be clustered into a fix later. The name is the feeling; the purpose is signal.
 
 ## When to fire it
 
-At the end of `/implement` or `/verify`, or any time you had to **deviate from
-what a skill or doc told you**, or hit a contradiction. Concretely:
+After implementing a change or running `/verify`, or any time you had to
+**deviate from what a skill or doc told you**, or hit a contradiction. Concretely:
 
 - a scaffolder / skill emitted output you had to rewrite (e.g. wrong file type, stale API)
 - `CLAUDE.md` said one thing and the code did another
@@ -46,10 +46,12 @@ session transcripts). Cluster them by root cause (stale skill, contradicting
 CLAUDE.md rule, rotted doc, false-positive gate). For each recurring cluster
 (>= 2 entries), open ONE GitHub issue describing the root cause and the fix,
 and cite the entries. Single one-off entries: list, don't file.
-Then pipe the digest to: scripts/post-digest.sh friction-clustering
+Then deliver the digest (once #280 lands, pipe it to
+`scripts/post-digest.sh friction-clustering`).
 ```
 
 Feed each cluster into `/validate` (which proposes `CLAUDE.md` updates) or the
-GC cadence (`docs/agents/gc.md`) so the recurring ones get promoted into an
-ESLint rule / hook / guard test rather than just re-noted. Clear or archive
-entries once their cluster has an issue, so the log reflects *open* friction.
+GC cadence (`docs/agents/gc.md`, proposed in #283) so the recurring ones get
+promoted into an ESLint rule / hook / guard test rather than just re-noted. Clear
+or archive entries once their cluster has an issue, so the log reflects *open*
+friction.

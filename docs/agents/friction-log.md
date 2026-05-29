@@ -3,8 +3,8 @@
 Raw, dated entries recording where the agent workflow fought a contributor —
 appended by the [`/wtf`](../../.claude/skills/wtf.md) skill. Each entry is signal,
 not a fix. A weekly clustering routine (see `/wtf`) groups recurring entries into
-GitHub issues and feeds them to `/validate` and the GC cadence
-([`gc.md`](gc.md)) for promotion into an enforced rule.
+GitHub issues and feeds them to `/validate` and the GC cadence (`gc.md`, proposed
+in #283) for promotion into an enforced rule.
 
 Entry format:
 
