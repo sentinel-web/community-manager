@@ -1,143 +1,124 @@
 # /section
 
-Scaffold a full Section page with collection, form, columns, and page component.
+Scaffold a full Section page: collection, form, typed columns, and the page component.
 
 ## Usage
-`/section <name>` - Create full section (e.g., `/section announcements`)
+`/section <name>` — create a full CRUD section (e.g., `/section announcements`)
 
-## Instructions
+> Fully TypeScript, `strict: true`. The generic `Section<T>` component drives the table,
+> search, and drawer. Read the live contract and a real example before writing:
+> - `imports/ui/section/types.ts` — `ColumnsFactory`, `SectionPermissions`, `RowClickEvent`, `TranslateFn`
+> - `imports/ui/squads/Squads.tsx` (page), `imports/ui/squads/squads.columns.tsx` (columns)
 
-This creates a complete CRUD section with:
-1. Collection (if not exists)
-2. Form component
-3. Section page with columns
+## Steps
 
-### 1. Create Folder Structure
+### 1. Collection — `/collection <name>`
+If the collection doesn't exist yet, scaffold it first.
 
+### 2. Folder structure
 ```
 imports/ui/<name>/
-  ├── <Name>Form.jsx
-  ├── <Name>Page.jsx
-  └── <Name>Select.jsx (optional)
+  ├── <Name>.tsx           # the page (renders <Section<T>>)
+  ├── <Name>Form.tsx       # /form <name>
+  ├── <name>.columns.tsx   # ColumnsFactory<T>
+  └── <Name>Select.tsx     # optional, for FK selection elsewhere
 ```
 
-### 2. Create Page Component
+### 3. Columns — `imports/ui/<name>/<name>.columns.tsx`
 
-`imports/ui/<name>/<Name>Page.jsx`:
+```tsx
+import type { ColumnsType } from 'antd/es/table';
+import React from 'react';
+import type { <Type> } from '../../api/types';
+import type { ColumnsFactory, RowClickEvent, SectionPermissions, TranslateFn } from '../section/types';
+import TableActions from '../table/body/actions/TableActions';
 
-```javascript
-import React, { useCallback } from 'react';
-import <Name>Collection from '../../api/collections/<name>.collection';
-import Section from '../section/Section';
-import <Name>Form from './<Name>Form';
+const defaultPermissions: SectionPermissions = { canCreate: true, canUpdate: true, canDelete: true };
 
-function filterFactory(searchString) {
-  return { name: { $regex: searchString, $options: 'i' } };
-}
+const get<Name>Columns: ColumnsFactory<<Type>> = (
+  handleEdit: (e: RowClickEvent, record: <Type>) => void,
+  handleDelete: (e: RowClickEvent, record: <Type>) => void,
+  permissions: SectionPermissions = defaultPermissions,
+  t: TranslateFn
+) => {
+  const { canUpdate = true, canDelete = true } = permissions;
 
-function columnsFactory(handleEdit, handleDelete, permissions) {
-  return [
+  const columns: ColumnsType<<Type>> = [
     {
-      title: 'Name',
+      title: t('common.name'),
       dataIndex: 'name',
       key: 'name',
-    },
-    // Add more columns as needed
-    {
-      title: 'Actions',
-      dataIndex: 'actions',
-      key: 'actions',
-      render: (_, record) => (
-        <Space>
-          {permissions.canUpdate && (
-            <Button type="link" onClick={e => handleEdit(e, record)}>
-              Edit
-            </Button>
-          )}
-          {permissions.canDelete && (
-            <Popconfirm
-              title="Delete this entry?"
-              onConfirm={e => handleDelete(e, record)}
-            >
-              <Button type="link" danger>Delete</Button>
-            </Popconfirm>
-          )}
-        </Space>
-      ),
+      sorter: (a: <Type>, b: <Type>) => String(a.name).localeCompare(String(b.name)),
+      render: (name: string | undefined) => name || '-',
     },
   ];
-}
 
-export default function <Name>Page() {
+  if (canUpdate || canDelete) {
+    columns.push({
+      title: t('common.actions'),
+      dataIndex: 'actions',
+      key: 'actions',
+      render: (_id: unknown, record: <Type>) => (
+        <TableActions record={record} handleEdit={handleEdit} handleDelete={handleDelete} canUpdate={canUpdate} canDelete={canDelete} />
+      ),
+    });
+  }
+
+  return columns;
+};
+
+export default get<Name>Columns;
+```
+
+### 4. Page — `imports/ui/<name>/<Name>.tsx`
+
+```tsx
+import React from 'react';
+import type { <Type> } from '../../api/types';
+import <Name>Collection from '../../api/collections/<name>.collection';
+import { useTranslation } from '../../i18n/LanguageContext';
+import Section from '../section/Section';
+import <Name>Form from './<Name>Form';
+import get<Name>Columns from './<name>.columns';
+
+export default function <Name>() {
+  const { t } = useTranslation();
   return (
-    <Section
-      title="<Display Name>"
+    <Section<<Type>>
+      title={t('<name>.title')}
       collectionName="<name>"
       Collection={<Name>Collection}
       FormComponent={<Name>Form}
-      filterFactory={filterFactory}
-      columnsFactory={columnsFactory}
-      permissionModule="<name>"
+      columnsFactory={get<Name>Columns}
     />
   );
 }
 ```
 
-### 3. Create Form Component
+If the permission module differs from the collection name, pass `permissionModule="<module>"`.
 
-Use `/form <name>` to generate the form.
+### 5. Form — `/form <name>`
 
-### 4. Register Collection
+### 6. Navigation
+Register the page in `imports/ui/navigation/` so it's reachable, and add its i18n keys to `imports/i18n/translations.ts`.
 
-Use `/collection <name>` if collection doesn't exist.
+## Column examples
 
-### 5. Add Navigation
-
-Add to navigation in `imports/ui/navigation/` to make the page accessible.
-
-## Column Examples
-
-### Text Column
-```javascript
-{ title: 'Name', dataIndex: 'name', key: 'name' }
+### Date
+```tsx
+{ title: t('columns.date'), dataIndex: 'date', key: 'date',
+  render: (date: Date | undefined) => (date ? new Date(date).toLocaleDateString() : '-') }
 ```
 
-### Date Column
-```javascript
-{
-  title: 'Date',
-  dataIndex: 'date',
-  key: 'date',
-  render: date => date ? new Date(date).toLocaleDateString() : '-',
-}
-```
-
-### Boolean Column
-```javascript
-{
-  title: 'Active',
-  dataIndex: 'active',
-  key: 'active',
-  render: active => active ? 'Yes' : 'No',
-}
-```
-
-### Reference Column
-```javascript
-{
-  title: 'Member',
-  dataIndex: 'memberId',
-  key: 'memberId',
-  render: memberId => {
-    const member = useTracker(() => MembersCollection.findOne(memberId), [memberId]);
-    return member?.profile?.name || '-';
-  },
-}
+### Color tag — preserve the color render (`color || 'transparent'`, never `?? undefined`)
+```tsx
+{ title: t('common.color'), dataIndex: 'color', key: 'color',
+  render: (color: string | undefined) => <Tag color={color || 'transparent'}>{color || '-'}</Tag> }
 ```
 
 ## Guidelines
 
-- Use Section component for standard CRUD pages
-- Define filterFactory for search functionality
-- Define columnsFactory with permission-aware actions
-- Set permissionModule to control access
+- Use the `Section<T>` generic for standard CRUD pages.
+- Columns live in a `ColumnsFactory<T>` whose signature is `(handleEdit, handleDelete, permissions, t)`.
+- Use `TableActions` for the permission-aware edit/delete buttons.
+- Plain function components — **no `React.FC`, no PropTypes** (lint-enforced).
