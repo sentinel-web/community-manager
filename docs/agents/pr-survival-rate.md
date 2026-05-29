@@ -47,4 +47,5 @@ fine — this is a trend signal, not an accounting figure.
   reverted-PR streak erodes confidence in the whole loop.
 
 The metric is **surfaced, not enforced** — same principle as the rest of the
-pr-babysitter routine. Deliver it via `scripts/post-digest.sh pr-babysitter` (#280).
+pr-babysitter routine. Once #280 lands, deliver it via
+`scripts/post-digest.sh pr-babysitter`.
