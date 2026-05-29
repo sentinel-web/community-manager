@@ -13,10 +13,12 @@ change touches the load-bearing security invariants.
 
 A single reviewer pass blurs concerns and rubber-stamps. A single maintainer also
 can't supply multiple human reviewers. So `/review` runs the diff through three
-**fresh-context sub-agents** (the `Agent`/Task tool), one per concern, in the
-repo's priority order **Security > Performance > Correctness**. Each is **read-only**
-— give them Read/Grep/Glob and read-only `git`, never Edit/Write — so a reviewer
-can never "fix and pass" its own finding.
+**fresh-context passes**, one per concern, following the repo's priority order
+**Security > Performance > Usability** (CLAUDE.md). Prefer to run each pass as a
+separate sub-agent via the Task tool — ideally a read-only agent type (e.g.
+`Explore`) so it physically can't edit — but the load-bearing rule is simpler and
+always holds: **a review pass never applies fixes.** It reports; fixing is a
+separate step. That's what stops a reviewer "fix-and-passing" its own finding.
 
 ### 1. Security pass
 - Every new/changed Meteor method routes through `runMutation` (or explicitly
