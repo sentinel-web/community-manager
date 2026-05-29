@@ -41,7 +41,7 @@ export interface CollectionRegistryEntry {
 export const COLLECTION_REGISTRY: Record<CrudCollectionName, CollectionRegistryEntry> = {
   attendances: {
     module: 'events',
-    aiContext: 'Status is an int -2..2 (declined…attending), not a boolean. One doc per (eventId, memberId) — enforced by a unique index + upsert, never read-then-write.',
+    aiContext: 'Status is an int -2..2 (-2 cancelled, -1 absent, 0 excused, 1 present, 2 zeus), not a boolean. Stored as ONE document per eventId with each member status under a dynamic [memberId] key; unique index on { eventId } + upsert (never read-then-write).',
   },
   briefingTemplates: { module: 'briefingTemplates', displayField: 'name' },
   // Discovery types are surfaced on the public (pre-auth) registration form,
