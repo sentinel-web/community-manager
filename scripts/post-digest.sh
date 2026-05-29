@@ -24,6 +24,13 @@ NAME="${1:?usage: post-digest.sh <routine-name> [--dry-run]}"
 MODE="${2:-}"
 BODY=$(cat)
 
+# Routine name is interpolated into a jq title filter and an issue title; keep it
+# to a safe slug so it can't break the filter or produce a surprise title.
+if ! printf '%s' "$NAME" | grep -qE '^[a-z0-9][a-z0-9-]*$'; then
+  echo "post-digest: invalid routine name '$NAME' (expected a lowercase slug, e.g. pr-babysitter)." >&2
+  exit 1
+fi
+
 # Empty / whitespace-only digest => nothing actionable => stay silent.
 if ! printf '%s' "$BODY" | grep -q '[^[:space:]]'; then
   echo "post-digest: digest for '$NAME' is empty — nothing to deliver." >&2

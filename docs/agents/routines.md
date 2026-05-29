@@ -23,7 +23,7 @@ dedicated GitHub issue per routine** (`[routine] <name>`, label
 <command that prints the digest> | scripts/post-digest.sh <routine-name>
 ```
 
-- **Idempotent** — re-runs append a timestamped comment to the same issue
+- **Idempotent** — re-runs append a comment to the same issue (GitHub timestamps it)
   instead of opening a new one, so the tracker doesn't fill with duplicates.
 - **Actionable-only** — an empty / whitespace digest produces nothing, so the
   maintainer is pinged (via GitHub's own issue notifications — the "push" with
