@@ -10,8 +10,8 @@ the thing it's judging. Give review and research sub-agents only **Read, Grep,
 Glob** (and read-only `git`) — never **Edit / Write / Bash-that-mutates**:
 
 - A reviewer that can edit will "fix and pass" its own finding, defeating the
-  point of an independent pass (this is why `/review`'s persona passes are
-  read-only — see `.claude/skills/review.md`).
+  point of an independent pass (the same reason the `/review` persona passes
+  proposed in #281 never apply fixes — see `.claude/skills/review.md`).
 - A research/scout sub-agent only needs to read and report; write access is
   attack surface and a footgun, nothing more.
 
