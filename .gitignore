@@ -19,3 +19,6 @@ _build
 
 # Claude Code verification-gate marker (local state)
 .claude/.verify-state
+
+# Per-task acceptance contract written by /plan, read by /verify (transient)
+.claude/verify-contract.md

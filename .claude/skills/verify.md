@@ -8,6 +8,45 @@ CLAUDE.md is explicit: **type checking and test suites verify code correctness,
 not feature correctness**. This skill is how Claude closes that gap without
 asking the user to click around.
 
+## Evaluate against a contract, with fresh eyes
+
+The agent that wrote the code is the worst judge of whether it works — it grades
+toward the behavior it intended. So `/verify` is an **adversarial evaluation
+against a pre-agreed contract**, not a self-review:
+
+1. **The contract comes from `/plan`.** Before any code is written, `/plan`
+   writes an implementation-*independent* acceptance contract to
+   `.claude/verify-contract.md` — plain-language "given/when/then" criteria
+   describing observable behavior, with no reference to functions, files, or
+   how it's built. `/verify` is scored **only** against those criteria.
+2. **Evaluate in a fresh context.** Run the browser drive as a sub-agent (the
+   `Agent`/Task tool) given **only** the contract and app access — *not* the
+   implementation transcript. It cannot "know what was meant"; it can only
+   observe what the app does. Emit an explicit **PASS / FAIL per criterion**.
+3. **Keep the code-correctness gates in the main thread.** Run
+   `npm run typecheck`, `npm test`, and `npm run e2e` in the main session — do
+   **not** delegate them to the evaluator sub-agent, or a failure's output gets
+   summarized away instead of stopping you. Feature evaluation and code gates
+   are separate passes.
+
+If there is no `.claude/verify-contract.md` (older flow), derive the criteria
+from the issue first and write them down before driving — grading against an
+unwritten standard is how confirmation bias creeps back in.
+
+## Stable selectors: `data-verify-*`
+
+Assert against `data-verify-*` attributes, not localized DOM text or Ant Design
+class names — text changes with i18n and markup changes with antd upgrades, both
+of which would make a passing check silently rot. Add a stable attribute to each
+load-bearing widget the first time you instrument its path, e.g.:
+
+- attendance tally → `data-verify="attendance-tally" data-verify-count={n}`
+- ORBAT node count → `data-verify="orbat-count" data-verify-count={n}`
+- kanban column total → `data-verify="kanban-column-total" data-verify-count={n}`
+
+Instrument incrementally — add the attribute when a criterion needs it, so the
+attribute set grows with the contracts that depend on it rather than all at once.
+
 ## Usage
 
 `/verify` — verify recent uncommitted changes against the relevant golden path(s)
