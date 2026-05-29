@@ -9,8 +9,9 @@ gets repaired instead of silently retried-until-green.
 
 1. **Planner** — given a `/verify` golden path (or a `verify-contract.md` from
    #278), state the spec's steps as observable assertions, preferring
-   `data-verify-*` / stable attributes over localized text or antd class names
-   (see `.claude/skills/verify.md` → *Stable selectors*).
+   `data-verify-*` / stable attributes over localized text or antd class names.
+   (`data-verify-*` is a convention to introduce — none exist yet; #278 adds the
+   `verify.md` *Stable selectors* guidance.)
 2. **Generator** — write the spec against `e2e/playwright.config.ts`, reusing the
    existing auth/setup fixtures rather than re-implementing login.
 3. **Healer** — when a spec fails, **diagnose before re-deriving**:
