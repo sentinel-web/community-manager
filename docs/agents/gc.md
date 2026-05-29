@@ -7,8 +7,8 @@ spread across six spots). The repo's memory need is **freshness and promotion**,
 not more notes — so this cadence *promotes* recurring prose into mechanical
 checks and *prunes* what no longer earns its place.
 
-Pairs with the weekly routines in [`routines.md`](routines.md); deliver its
-output via `scripts/post-digest.sh gc` (added in #280).
+Pairs with the weekly routines in [`routines.md`](routines.md); once #280 lands,
+deliver its output via `scripts/post-digest.sh gc`.
 
 ## The three moves
 
