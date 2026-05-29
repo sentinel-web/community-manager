@@ -34,6 +34,7 @@ import './server/questionnaireInterval.test';
 import './server/readSecurityHardening.test';
 import './server/registrationsMethods.test';
 import './server/runMethodCall.test';
+import './server/scaffolderSkills.test';
 import './server/settingsMethods.test';
 import './server/shouldConfirmTemplateOverwrite.test';
 import './server/specializationsMethods.test';

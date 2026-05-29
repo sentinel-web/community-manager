@@ -3,70 +3,89 @@
 Scaffold a new MongoDB collection with all required files and registrations.
 
 ## Usage
-`/collection <name>` - Create collection (e.g., `/collection announcements`)
+`/collection <name>` — create collection (e.g., `/collection announcements`)
 
-## Instructions
+> This codebase is **fully TypeScript (`strict: true`)**. Every file below is `.ts`/`.tsx`.
+> Before writing, read the live shapes you must extend — do not trust a frozen template:
+> - `imports/api/types/crud.ts` — the `CrudCollectionMap` interface (source of the `CrudCollectionName` union)
+> - `server/collection-registry.ts` — `CollectionRegistryEntry` and the `COLLECTION_REGISTRY` map
+> - `server/crud.lib.ts` — the `COLLECTIONS` map and `getCollection()`
+> - `server/main.ts` — the `collectionNames` array (drives method/publish registration)
+> - an existing collection, e.g. `imports/api/collections/squads.collection.ts`
 
-Follow these steps to create a complete collection:
+## Steps
 
-### 1. Create Collection File
+### 1. Define the document type
 
-Create `imports/api/collections/<name>.collection.js`:
+Add an interface in `imports/api/types/` (e.g. `imports/api/types/<name>.ts`) and re-export it from `imports/api/types/index.ts`. Mirror an existing type such as `squad.ts`.
 
-```javascript
+### 2. Create the collection file
+
+`imports/api/collections/<name>.collection.ts`:
+
+```typescript
 import { Mongo } from 'meteor/mongo';
+import type { <Type> } from '/imports/api/types';
 
-const <Name>Collection = new Mongo.Collection('<name>');
+const <Name>Collection = new Mongo.Collection<<Type>>('<name>');
 
 export default <Name>Collection;
 ```
 
-### 2. Register in crud.lib.js
+### 3. Add to the `CrudCollectionMap`
 
-Add import at top of `server/crud.lib.js`:
-```javascript
+In `imports/api/types/crud.ts`, add the entry **alphabetically** (this extends the `CrudCollectionName` union and makes a `COLLECTION_REGISTRY` entry compile-mandatory):
+
+```typescript
+export interface CrudCollectionMap {
+  // ...
+  <name>: <Type>;
+}
+```
+
+### 4. Register in `server/crud.lib.ts`
+
+Import the collection and add it to the `COLLECTIONS` map **alphabetically**:
+
+```typescript
 import <Name>Collection from '../imports/api/collections/<name>.collection';
+// ...
+const COLLECTIONS: CollectionMap = {
+  // ...
+  <name>: <Name>Collection,
+};
 ```
 
-Add case to `getCollection()` switch:
-```javascript
-case '<name>':
-  return <Name>Collection;
+### 5. Register methods + publication in `server/main.ts`
+
+Add `'<name>'` to the `collectionNames` array **alphabetically**. The boot loop calls `createCollectionPublish()` + `createCollectionMethods()` for every entry. (Use `methodOnlyCollections` instead if the collection should expose methods but no reactive publication.)
+
+### 6. Add the `COLLECTION_REGISTRY` entry
+
+In `server/collection-registry.ts`, add **alphabetically** (minimum `{ module }`; add `foreignKeys`, `displayField`, `redact`, `allowsAnonymous` as needed — see `CollectionRegistryEntry`):
+
+```typescript
+<name>: { module: '<module>' },
 ```
 
-Add at bottom with other registrations:
-```javascript
-createCollectionMethods('<name>');
-createCollectionPublish('<name>');
-```
+If `<module>` is a new permission module, also add it to the CRUD-modules list in `server/main.ts`.
 
-### 3. Add Permission Mapping
+### 7. Update docs
 
-In `server/main.js`, add to `COLLECTION_TO_MODULE`:
-```javascript
-<name>: '<name>',  // or map to existing module
-```
+Add the collection to the Collections list in `CLAUDE.md` and to `docs/collections.md`.
 
-If new permission module, add to `CRUD_MODULES` array:
-```javascript
-const CRUD_MODULES = [
-  // ... existing modules
-  '<name>',
-];
-```
+## Naming conventions
 
-### 4. Update CLAUDE.md
+- Collection name (DDP + map keys): camelCase (e.g. `announcements`, `taskStatus`)
+- Variable: PascalCase + `Collection` (e.g. `AnnouncementsCollection`)
+- File: `<name>.collection.ts`
 
-Add the new collection to the Collections list.
+## Verify
 
-## Naming Conventions
+- `npm run typecheck` (the `Record<CrudCollectionName, _>` registry will fail to compile if step 6 is skipped)
+- `npm run lint`
 
-- Collection name: camelCase singular or plural as appropriate (e.g., `announcements`)
-- Collection variable: PascalCase + "Collection" (e.g., `AnnouncementsCollection`)
-- File name: camelCase + `.collection.js` (e.g., `announcements.collection.js`)
+## Next
 
-## Output
-
-After scaffolding, suggest creating:
-- Form component with `/form <name>`
-- Section page with `/section <name>`
+- `/form <name>` — drawer form
+- `/section <name>` — full CRUD page
