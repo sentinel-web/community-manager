@@ -1,64 +1,91 @@
 # /review
 
-Run code review on staged or changed files against coding guidelines.
+Review staged or changed files against the coding guidelines, as **independent
+persona passes** rather than one undifferentiated read — and stop hard when a
+change touches the load-bearing security invariants.
 
 ## Usage
 `/review` - Review all uncommitted changes
 `/review staged` - Review only staged changes
-`/review <file>` - Review specific file
+`/review <file>` - Review a specific file
 
-## Instructions
+## Why personas
 
-1. **Identify files to review** using `git status` and `git diff`
-2. **Read each changed file**
-3. **Check against CLAUDE.md guidelines**
-4. **Report findings**
+A single reviewer pass blurs concerns and rubber-stamps. A single maintainer also
+can't supply multiple human reviewers. So `/review` runs the diff through three
+**fresh-context passes**, one per concern, following the repo's priority order
+**Security > Performance > Usability** (CLAUDE.md). Prefer to run each pass as a
+separate sub-agent via the Task tool — ideally a read-only agent type (e.g.
+`Explore`) so it physically can't edit — but the load-bearing rule is simpler and
+always holds: **a review pass never applies fixes.** It reports; fixing is a
+separate step. That's what stops a reviewer "fix-and-passing" its own finding.
 
-## Review Checklist
+### 1. Security pass
+- Every new/changed Meteor method routes through `runMutation` (or explicitly
+  justifies why not) and has a `COLLECTION_REGISTRY` entry.
+- `this.userId` checked; `checkPermission(userId, module, op)` enforced before the operation.
+- Mutations emit an audit log (`createLog` / the pipeline's audit step).
+- Inputs validated with the `validate*` helpers; no `assertSafeSelector` bypass.
+- No `services`/password-hash leakage; rich-text written through the sanitizer.
+- `Meteor.Error(code, message)` (not generic `Error`); no stack traces to the client.
 
-### Security
-- [ ] Input validation on all user inputs
-- [ ] Permission checks before operations
-- [ ] No sensitive data exposure
-- [ ] Proper error messages (no stack traces to client)
-- [ ] Authentication verified (`this.userId` check)
+### 2. Performance pass
+- Subscriptions filtered + limited; queries use indexes/`$in`, not N+1 loops.
+- `useCallback`/`useMemo` with **narrowed** dependency arrays (specific fields, not whole objects).
+- No `useEffect` used for derived state (use `useMemo`).
+- No unnecessary re-renders / unstable inline literals in deps.
 
-### Performance
-- [ ] Efficient database queries (proper filters, limits)
-- [ ] Appropriate use of `useCallback` and `useMemo`
-- [ ] No unnecessary re-renders
-- [ ] Subscriptions have proper filters
+### 3. Correctness pass
+- Handles both create (no `_id`) and update (has `_id`) paths.
+- `valuePropName="checked"` on Switch/Checkbox `Form.Item`s.
+- Nullable wire fields mirror `string | null`; `?? undefined` only at the antd DOM boundary.
+- Color render preserved (`color || 'transparent'`).
+- Function components only — **no `React.FC`, no PropTypes** (also lint-enforced).
+- `!` (not `?.`) on `member.profile.X`.
 
-### Code Quality
-- [ ] Follows existing patterns in codebase
-- [ ] DRY - no code duplication
-- [ ] KISS - simple, readable solutions
-- [ ] YAGNI - no unused code or over-engineering
-- [ ] PropTypes defined for all components
-- [ ] Proper error handling
+## Judgment gate — never auto-approve these
 
-### Meteor Specific
-- [ ] Using `*Async` collection methods on server
-- [ ] Using `Meteor.Error(code, message)` not generic Error
-- [ ] Audit logging with `createLog()` for mutations
-- [ ] Proper use of `useFind`, `useSubscribe`, `useTracker`
+Mechanical findings (formatting, naming, narrow deps) the personas can clear on
+their own. But if the diff touches any of the **load-bearing security
+invariants**, the review MUST emit a blocking **HUMAN JUDGMENT REQUIRED** section
+and withhold an auto-merge recommendation until a human signs off:
 
-## Output Format
+- `server/collection-registry.ts` — permission/FK/audit metadata
+- `checkPermission` / the CRUD-module list / role logic in `server/main.ts`
+- `server/mutation-pipeline.ts` — the shared auth→perm→validate→audit lifecycle
+- `imports/api/htmlSanitizer/sanitizePolicy.ts` — the sanitizer allow-list
+- any foreign-key change in an `imports/api/collections/*.collection.ts` or its registry entry
+
+These are exactly the categories where a wrong "looks fine" is a security
+regression, so they are out of scope for an autonomous pass.
+
+## Output format
 
 ```
 ## Code Review: <files reviewed>
 
-### Issues Found
+### 🔒 Security   — <PASS / FINDINGS>
+- <finding: file:line — issue — fix>
 
-#### Critical
-- <Security or major issues>
+### ⚡ Performance — <PASS / FINDINGS>
+- ...
 
-#### Improvements
-- <Suggested improvements>
+### ✅ Correctness — <PASS / FINDINGS>
+- ...
 
-#### Minor
-- <Style or minor issues>
+### ⚖️ HUMAN JUDGMENT REQUIRED   (only if a gate path was touched)
+- <path> — <what changed> — <why a human must confirm>
 
 ### Summary
-<Overall assessment and recommendations>
+<Critical / Improvements / Minor>, and an explicit merge recommendation:
+auto-mergeable | needs-fixes | needs-human-judgment
 ```
+
+## Wiring into CI (optional follow-up)
+
+To make autonomous/AFK PRs always get reviewed, this can run as a GitHub Action
+(an agent step on `pull_request`) that posts the persona summary and, when a gate
+path is in the diff, applies a blocking `needs-human-judgment` label. That needs
+an agent-in-CI runner + careful handling of untrusted PR text (never interpolate
+PR/issue fields into shell — see GitHub's workflow-injection guidance), so it is
+left as a separate change; the skill above is usable interactively today.
