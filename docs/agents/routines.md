@@ -12,6 +12,30 @@ Recurring agent work that doesn't need a human in the loop. Two shapes:
 Both invoke regular slash commands and skills — they're just delivery
 mechanisms. Recipes for this repo live below.
 
+## Delivery
+
+A routine's digest is no longer trapped in the session transcript. Pipe it
+through `scripts/post-digest.sh <routine-name>`, which **upserts a single
+dedicated GitHub issue per routine** (`[routine] <name>`, label
+`routine-digest`):
+
+```
+<command that prints the digest> | scripts/post-digest.sh <routine-name>
+```
+
+- **Idempotent** — re-runs append a comment to the same issue (GitHub timestamps it)
+  instead of opening a new one, so the tracker doesn't fill with duplicates.
+- **Actionable-only** — an empty / whitespace digest produces nothing, so the
+  maintainer is pinged (via GitHub's own issue notifications — the "push" with
+  no extra connector) only when there is something to act on.
+- **Read-only elsewhere** — the script touches *only* its own digest issue. It
+  never labels, closes, comments on, or merges any other issue or PR. Routines
+  ingest untrusted issue/PR text (lethal trifecta), so they must not act on
+  arbitrary objects; surfacing stays the whole job.
+
+Dry-run a routine's delivery with `… | scripts/post-digest.sh <name> --dry-run`
+before scheduling.
+
 ## Daily triage routine
 
 Keeps the GitHub Issues inbox at `sentinel-web/community-manager` visible
@@ -45,9 +69,13 @@ activity). Counts + one-line per issue, oldest first. Do not edit labels,
 close issues, or post comments — surface only.
 ```
 
-**Output** — read the routine's session transcript from the Claude Code
-desktop / web app when you sit down. No notifications wired up yet (see
-*Open questions* below).
+**Output** — pipe the digest to `scripts/post-digest.sh daily-triage` so it
+lands on the `[routine] daily-triage` issue (only when non-empty). See
+**Delivery** above. Append to the scheduled prompt:
+
+```
+Then pipe the digest to: scripts/post-digest.sh daily-triage
+```
 
 ### Try it locally first
 
@@ -95,8 +123,9 @@ while you're heads-down on something else.
 
 **What it does not do** — no auto-rebase, no auto-merge, no review
 dismissals, no comments on the PRs themselves. Surface only, same
-principle as the triage routine. The digest goes to the routine's session
-transcript; the human still drives the next action.
+principle as the triage routine. Pipe the digest to
+`scripts/post-digest.sh pr-babysitter` (see **Delivery**); the human still
+drives the next action.
 
 **Cadence** — 3× per workday. Suggested: 09:30, 13:30, 17:30 Mon–Fri in
 the scheduler's timezone — adjust the cron for your local TZ at
@@ -290,10 +319,10 @@ Suggested values:
 
 ## Open questions
 
-- **Where does the digest land?** Today the routine's transcript lives in
-  the Claude Code session list. Options for active delivery (email, Slack,
-  GitHub issue comment) need a connector that isn't wired up yet — pick
-  one before the routine becomes load-bearing.
+- **Where does the digest land?** *Resolved (#280)* — digests are delivered to
+  a per-routine GitHub issue via `scripts/post-digest.sh` (see **Delivery**
+  above), with no external connector. If email/Slack is wanted later, add it as
+  a second hop after the issue upsert rather than replacing it.
 - **Quota / cost** — remote routines burn tokens on a schedule. Re-evaluate
   the cadence once we see real usage. Daily is a sane starting point;
   hourly is almost certainly too much for this repo's traffic.
