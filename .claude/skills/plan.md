@@ -13,6 +13,10 @@ Create or refine an implementation plan for the current issue.
 3. **Design approach** - Follow existing patterns from CLAUDE.md
 4. **Break down tasks** - Create specific, actionable steps
 5. **Identify risks** - Note potential issues or edge cases
+6. **Write the acceptance contract** - Before any code, write
+   `.claude/verify-contract.md`: implementation-*independent* "given/when/then"
+   criteria describing observable behavior (no file/function references). This is
+   what `/verify` grades against in a fresh context — see `.claude/skills/verify.md`.
 
 ## Plan Structure
 
