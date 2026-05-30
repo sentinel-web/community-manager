@@ -25,6 +25,12 @@ export interface CollectionRegistryEntry {
   // Dotted path on the source doc whose value is used as a human-readable
   // sample when this collection appears in a `block` error's `details.blockedBy`.
   readonly displayField?: string;
+  // Optional one-line hint for agents working on this collection — a non-obvious
+  // gotcha that isn't derivable from the schema (nested-field structure, rich-text
+  // handling, a uniqueness rule). Co-located here so it travels with the
+  // collection's other metadata instead of living only in scattered docs. Purely
+  // informational: nothing in the mutation/CRUD path reads it.
+  readonly aiContext?: string;
 }
 
 // Per-collection metadata. The Record<CrudCollectionName, _> type forces
@@ -33,7 +39,10 @@ export interface CollectionRegistryEntry {
 // error. The runtime shape-conformance test in permissions.test.ts catches
 // the same omission under loosened type checks.
 export const COLLECTION_REGISTRY: Record<CrudCollectionName, CollectionRegistryEntry> = {
-  attendances: { module: 'events' },
+  attendances: {
+    module: 'events',
+    aiContext: 'Status is an int -2..2 (-2 cancelled, -1 absent, 0 excused, 1 present, 2 zeus), not a boolean. Stored as ONE document per eventId with each member status under a dynamic [memberId] key; unique index on { eventId } + upsert (never read-then-write).',
+  },
   briefingTemplates: { module: 'briefingTemplates', displayField: 'name' },
   // Discovery types are surfaced on the public (pre-auth) registration form,
   // so guests must be able to read them. The docs carry nothing sensitive.
@@ -42,6 +51,7 @@ export const COLLECTION_REGISTRY: Record<CrudCollectionName, CollectionRegistryE
     module: 'events',
     fallback: { create: 'canCreateEvents' },
     displayField: 'name',
+    aiContext: "`description` is rich-text HTML, sanitized on every write against the allow-list in imports/api/htmlSanitizer/sanitizePolicy.ts — it's one of only two rich-text fields in the app.",
     foreignKeys: [
       { field: 'eventType', target: 'eventTypes', kind: 'scalar', onDelete: 'block' },
       { field: 'hosts', target: 'members', kind: 'array', onDelete: 'pull' },
@@ -55,6 +65,7 @@ export const COLLECTION_REGISTRY: Record<CrudCollectionName, CollectionRegistryE
     module: 'members',
     redact: { insert: ['password'], update: ['password'] },
     displayField: 'profile.name',
+    aiContext: 'Members are Meteor.users; domain fields live under nested `profile.X` (typed optional). Access with a non-null assertion (member.profile.X), never optional chaining. The `services` block (password hash) must be stripped from any client-reachable read.',
     foreignKeys: [
       { field: 'profile.roleId', target: 'roles', kind: 'scalar', onDelete: 'block' },
       { field: 'profile.rankId', target: 'ranks', kind: 'scalar', onDelete: 'block' },
