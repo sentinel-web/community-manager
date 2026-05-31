@@ -1,0 +1,89 @@
+name: teardown
+
+# Tear down a preview stack — manually (pick a branch) or automatically when a
+# branch is deleted. Keeps RAM/disk in check on the single host (each stack runs
+# its own app + mongo). mongodump backups on the host are always preserved.
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch whose preview stack to tear down
+        required: true
+        type: string
+      purge:
+        description: Also delete the stack's MongoDB volume (data is lost)
+        type: boolean
+        default: false
+  delete:
+
+permissions: {}
+
+jobs:
+  teardown:
+    name: teardown stack
+    runs-on: ubuntu-latest
+    # `delete` also fires for tags; only act on branch deletes.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.ref_type == 'branch' }}
+    permissions:
+      contents: read
+    steps:
+      - name: Validate branch name
+        id: pre
+        env:
+          INPUT_BRANCH: ${{ github.event.inputs.branch }}
+          DELETED_REF: ${{ github.event.ref }}
+        run: |
+          BRANCH="${INPUT_BRANCH:-$DELETED_REF}"
+          if ! printf '%s' "$BRANCH" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9._/-]*$' \
+             || printf '%s' "$BRANCH" | grep -q '\.\.'; then
+            echo "Rejected branch name: '$BRANCH'" >&2
+            exit 1
+          fi
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      # Checks out the default branch (where this workflow runs from) for the
+      # slug helper + teardown script — the target branch itself may be gone.
+      - uses: actions/checkout@v6
+
+      - name: Resolve slug
+        id: r
+        env:
+          BRANCH: ${{ steps.pre.outputs.branch }}
+        run: |
+          # shellcheck source=scripts/lib-slug.sh
+          . scripts/lib-slug.sh
+          echo "slug=$(slugify "$BRANCH")" >> "$GITHUB_OUTPUT"
+
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Tear down on host
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          SLUG: ${{ steps.r.outputs.slug }}
+          # Branch-delete purges the volume (data is disposable then); a manual
+          # teardown purges only if the dispatcher opted in.
+          PURGE: ${{ (github.event_name == 'delete' || github.event.inputs.purge == 'true') && '--purge' || '' }}
+        run: |
+          set -euo pipefail
+          STACK_DIR="/opt/cm/$SLUG"
+          SSH="ssh -i $HOME/.ssh/id_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes $DEPLOY_USER@$DEPLOY_HOST"
+
+          echo "Tearing down stack cm-$SLUG (purge: ${PURGE:-no})"
+
+          # Ship a fresh teardown script (the stack dir may predate it or be
+          # absent if the branch was never deployed), then run it. The script
+          # no-ops cleanly when the stack isn't running.
+          $SSH "mkdir -p '$STACK_DIR'"
+          scp -i "$HOME/.ssh/id_deploy" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            scripts/teardown.sh "$DEPLOY_USER@$DEPLOY_HOST:$STACK_DIR/teardown.sh"
+          $SSH "bash '$STACK_DIR/teardown.sh' --slug '$SLUG' --dir '$STACK_DIR' $PURGE"

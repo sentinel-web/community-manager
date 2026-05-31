@@ -1,0 +1,173 @@
+name: deploy
+
+# Per-branch preview deploy. A developer dispatches this with a branch name (or
+# a push to main fires it automatically); it builds + publishes the image, then
+# deploys it as an isolated stack at <slug>.<base-domain> on the single Docker +
+# Traefik host. main is just another stack (main.<base-domain>) — no gate.
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch to deploy as a preview environment
+        required: true
+        default: main
+        type: string
+  push:
+    branches: [main]
+
+permissions: {}
+
+# Serialize repeat deploys of the same branch so two `compose up`s never race on
+# the host; a newer dispatch supersedes an in-flight one.
+concurrency:
+  group: deploy-${{ github.event.inputs.branch || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  # Validate the (possibly user-supplied) branch name, then resolve it to a slug
+  # + commit SHA. Everything downstream uses these sanitized values, never the
+  # raw input.
+  resolve:
+    name: resolve target
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      sha: ${{ steps.r.outputs.sha }}
+      short_sha: ${{ steps.r.outputs.short_sha }}
+      slug: ${{ steps.r.outputs.slug }}
+    steps:
+      - name: Validate branch name
+        id: pre
+        env:
+          INPUT_BRANCH: ${{ github.event.inputs.branch }}
+          PUSH_BRANCH: ${{ github.ref_name }}
+        run: |
+          BRANCH="${INPUT_BRANCH:-$PUSH_BRANCH}"
+          # Plausible git branch only: no shell metacharacters, no leading dash,
+          # no '..'. Rejected before it can reach checkout or a shell.
+          if ! printf '%s' "$BRANCH" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9._/-]*$' \
+             || printf '%s' "$BRANCH" | grep -q '\.\.'; then
+            echo "Rejected branch name: '$BRANCH'" >&2
+            exit 1
+          fi
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.pre.outputs.branch }}
+
+      - name: Resolve slug & SHA
+        id: r
+        env:
+          BRANCH: ${{ steps.pre.outputs.branch }}
+        run: |
+          SHA="$(git rev-parse HEAD)"
+          SHORT="$(git rev-parse --short HEAD)"
+          # shellcheck source=scripts/lib-slug.sh
+          . scripts/lib-slug.sh
+          SLUG="$(slugify "$BRANCH" "b-$SHORT")"
+          {
+            echo "sha=$SHA"
+            echo "short_sha=$SHORT"
+            echo "slug=$SLUG"
+          } >> "$GITHUB_OUTPUT"
+          echo "Resolved '$BRANCH' -> slug=$SLUG sha=$SHORT"
+
+  # Build the resolved commit and publish to GHCR with explicit slug + sha tags
+  # (the reusable workflow is context-agnostic — see build-publish.yml).
+  build:
+    name: build & publish
+    needs: resolve
+    uses: ./.github/workflows/build-publish.yml
+    with:
+      ref: ${{ needs.resolve.outputs.sha }}
+      push: true
+      tags: |
+        type=raw,value=${{ needs.resolve.outputs.slug }}
+        type=raw,value=sha-${{ needs.resolve.outputs.short_sha }}
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+      id-token: write
+      attestations: write
+    secrets: inherit
+
+  deploy:
+    name: deploy to host
+    needs: [resolve, build]
+    runs-on: ubuntu-latest
+    # No GitHub write scopes needed — the SSH secrets do the work.
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Deploy preview stack
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE: ${{ needs.build.outputs.image }}
+          SLUG: ${{ needs.resolve.outputs.slug }}
+          BASE_DOMAIN: ${{ vars.BASE_DOMAIN }}
+          TRAEFIK_ENTRYPOINT: ${{ vars.TRAEFIK_ENTRYPOINT }}
+          TRAEFIK_CERTRESOLVER: ${{ vars.TRAEFIK_CERTRESOLVER }}
+          MONGO_USER: ${{ secrets.MONGO_INITDB_ROOT_USERNAME }}
+          MONGO_PASS: ${{ secrets.MONGO_INITDB_ROOT_PASSWORD }}
+          METEOR_SETTINGS: ${{ secrets.METEOR_SETTINGS }}
+          MAX_STACKS: ${{ vars.MAX_PREVIEW_STACKS }}
+        run: |
+          set -euo pipefail
+          : "${BASE_DOMAIN:?BASE_DOMAIN repository variable is not set}"
+          CM_ROOT="/opt/cm"
+          STACK_DIR="$CM_ROOT/$SLUG"
+          STACK_HOST="$SLUG.$BASE_DOMAIN"
+          SSH="ssh -i $HOME/.ssh/id_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes $DEPLOY_USER@$DEPLOY_HOST"
+
+          echo "Deploying $SLUG -> https://$STACK_HOST"
+
+          # Render the per-stack .env locally (secrets come from env, not argv).
+          umask 077
+          {
+            echo "STACK=$SLUG"
+            echo "STACK_HOST=$STACK_HOST"
+            echo "DOMAIN=$STACK_HOST"
+            echo "ROOT_URL=https://$STACK_HOST"
+            echo "IMAGE=$IMAGE"
+            echo "MONGO_INITDB_ROOT_USERNAME=$MONGO_USER"
+            echo "MONGO_INITDB_ROOT_PASSWORD=$MONGO_PASS"
+            echo "METEOR_SETTINGS=$METEOR_SETTINGS"
+            echo "TRAEFIK_ENTRYPOINT=${TRAEFIK_ENTRYPOINT:-websecure}"
+            echo "TRAEFIK_CERTRESOLVER=${TRAEFIK_CERTRESOLVER:-letsencrypt}"
+          } > stack.env
+
+          # Ship the stack files, then the secret-bearing .env (mode 600).
+          $SSH "mkdir -p '$STACK_DIR/backups'"
+          scp -i "$HOME/.ssh/id_deploy" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            docker-compose.yml scripts/deploy.sh scripts/teardown.sh \
+            "$DEPLOY_USER@$DEPLOY_HOST:$STACK_DIR/"
+          scp -i "$HOME/.ssh/id_deploy" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            stack.env "$DEPLOY_USER@$DEPLOY_HOST:$STACK_DIR/.env"
+          rm -f stack.env
+
+          # Log the host into GHCR — token over stdin, never in argv/process list.
+          printf '%s' "$GHCR_TOKEN" | $SSH "docker login ghcr.io -u '$GHCR_USER' --password-stdin"
+
+          # Run the deploy (backup -> pull -> up -> health) on the host.
+          $SSH "MAX_STACKS='${MAX_STACKS:-6}' bash '$STACK_DIR/deploy.sh' --slug '$SLUG' --dir '$STACK_DIR' --backup"

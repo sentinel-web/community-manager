@@ -12,7 +12,9 @@ services:
       context: .
       dockerfile: Dockerfile
       target: production
-    image: community-manager:latest
+    # Deploys set IMAGE to a digest-pinned GHCR reference and `pull` it; local
+    # dev leaves IMAGE unset and builds via the `build:` block above.
+    image: ${IMAGE:-community-manager:latest}
     environment:
       ROOT_URL: ${ROOT_URL}
       MONGO_URL: ${MONGO_URL:-mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/community-manager?authSource=admin}
@@ -45,14 +47,19 @@ services:
       timeout: 5s
       retries: 3
       start_period: 60s
+    # Router/service name (STACK) and host (STACK_HOST) are per-stack so many
+    # branch deploys can share one Traefik without router-name collisions. The
+    # defaults reproduce the original single-host behaviour
+    # (STACK=community-manager, host=$DOMAIN), so an existing prod deploy that
+    # sets neither variable is unaffected.
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.community-manager.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.community-manager.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
-      - "traefik.http.routers.community-manager.tls=true"
-      - "traefik.http.routers.community-manager.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}"
-      - "traefik.http.services.community-manager.loadbalancer.server.port=3000"
+      - "traefik.http.routers.${STACK:-community-manager}.rule=Host(`${STACK_HOST:-${DOMAIN}}`)"
+      - "traefik.http.routers.${STACK:-community-manager}.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.${STACK:-community-manager}.tls=true"
+      - "traefik.http.routers.${STACK:-community-manager}.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.services.${STACK:-community-manager}.loadbalancer.server.port=3000"
 
   mongo:
     image: mongo:7.0
