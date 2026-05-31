@@ -98,9 +98,12 @@ jobs:
     name: deploy to host
     needs: [resolve, build]
     runs-on: ubuntu-latest
-    # No GitHub write scopes needed — the SSH secrets do the work.
+    # The job's GITHUB_TOKEN is relayed to the host to `docker login`/`pull` the
+    # private image, so it needs packages: read; contents: read covers checkout.
+    # No write scopes — the SSH secrets do the deploy itself.
     permissions:
       contents: read
+      packages: read
     steps:
       - uses: actions/checkout@v6
         with:
