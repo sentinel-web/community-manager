@@ -1,0 +1,55 @@
+version: 2
+
+updates:
+  # --- Application dependencies (root package.json) ---
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # Families that should move together so a single PR keeps them in sync and
+      # cuts review noise. Most-specific patterns first — Dependabot assigns each
+      # dependency to the first matching group.
+      react:
+        patterns: ["react", "react-dom", "@types/react-dom", "react-refresh"]
+      tiptap:
+        patterns: ["@tiptap/*"]
+      rspack:
+        patterns: ["@rspack/*", "@rsdoctor/*", "@meteorjs/rspack"]
+      eslint:
+        patterns: ["eslint", "eslint-*", "@eslint/*", "typescript-eslint", "globals"]
+      types:
+        patterns: ["@types/*"]
+      # Everything else: bundle minor/patch bumps so they don't each open a PR.
+      # Majors still come through individually for deliberate review.
+      misc-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      # engines.node is pinned to 22.x to match Meteor 3.4.1's bundled node.
+      - dependency-name: "node"
+      # @types/node is deliberately held at v20 to match Meteor's bundled node
+      # typings, not the v22 runtime — never auto-bump its major.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+
+  # --- GitHub Actions (keeps the SHA/major pins in the workflows current) ---
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # --- Dockerfile base images ---
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+    ignore:
+      # Both base images are hand-coupled to METEOR@3.4.1 and must only move as
+      # part of a deliberate Meteor upgrade (see CLAUDE.md node-version pinning).
+      - dependency-name: "node"
+      - dependency-name: "geoffreybooth/meteor-base"

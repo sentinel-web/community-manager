@@ -1,0 +1,11 @@
+# Trivy CVE allowlist for the build-publish image scan.
+#
+# This file is intentionally empty. Add a CVE ID ONLY with a documented
+# justification and a review-by date, so every suppression stays auditable and
+# nothing lingers silently. Format (one finding per line):
+#
+#   CVE-2024-12345  # transitive via <pkg>; no upstream fix yet, reassess 2026-09-01
+#
+# The scan currently runs report-only (build-publish input trivy-exit-code: '0').
+# Once this list is curated for the base image's known noise, flip callers to
+# '1' so CRITICAL/HIGH findings fail the build.
