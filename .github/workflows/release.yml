@@ -1,0 +1,52 @@
+name: release
+
+# Cutting a release is deliberately decoupled from deploying. Pushing a `v*`
+# tag (1) publishes a version-tagged + `latest` image via build-publish, and
+# (2) creates a GitHub Release with auto-generated notes. It does NOT deploy —
+# shipping a release to a host is a separate, explicit action (deploy.yml).
+on:
+  push:
+    tags: ['v*']
+
+permissions: {}
+
+jobs:
+  # The tag IS the trigger here, so github.ref / github.sha already point at the
+  # tagged commit — metadata-action's semver derivation is correct, unlike the
+  # cross-branch deploy case.
+  build:
+    uses: ./.github/workflows/build-publish.yml
+    with:
+      ref: ${{ github.ref }}
+      push: true
+      tags: |
+        type=semver,pattern={{version}}
+        type=semver,pattern={{major}}.{{minor}}
+        type=sha,prefix=sha-,format=short
+        type=raw,value=latest
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+      id-token: write
+      attestations: write
+    secrets: inherit
+
+  release:
+    name: github release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the GitHub Release
+    steps:
+      # Checkout is needed so `gh release create` can read .github/release.yml
+      # for note categorisation.
+      - uses: actions/checkout@v6
+
+      # --generate-notes buckets merged PRs per .github/release.yml; --verify-tag
+      # confirms the pushed tag exists on the remote before publishing.
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" --generate-notes --verify-tag

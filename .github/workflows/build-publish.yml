@@ -1,0 +1,139 @@
+name: build-publish
+
+# Reusable workflow: build the Meteor app image, publish it to GHCR, scan it
+# with Trivy, and attach an SBOM + provenance attestation. Every workflow that
+# needs an image (deploy, release) calls THIS one, so the privileged surface —
+# the only place that logs into the registry and runs the scanner — lives in a
+# single auditable file.
+#
+# It is deliberately tag-agnostic: the CALLER passes the exact docker/metadata
+# tag directives. metadata-action otherwise derives tags from the trigger
+# context (github.ref / github.sha), which is wrong when we build a branch other
+# than the one that triggered the run (deploy builds a feature branch while the
+# workflow itself is read from the default branch). See deploy.yml / release.yml.
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref or SHA to check out and build.
+        required: true
+        type: string
+      tags:
+        description: >-
+          docker/metadata-action `tags:` directives (newline-separated). The
+          caller owns tagging so context-derived tags can never mislabel a
+          cross-branch build.
+        required: true
+        type: string
+      push:
+        description: Push to GHCR (false = build-only validation, no scan/attest).
+        type: boolean
+        default: true
+      trivy-exit-code:
+        description: >-
+          '1' fails the build on CRITICAL/HIGH findings; '0' is report-only
+          (SARIF still uploads). Start at '0', flip to '1' once .trivyignore is
+          curated.
+        type: string
+        default: '0'
+    outputs:
+      image:
+        description: Digest-pinned image reference (name@sha256:...) for downstream deploy.
+        value: ${{ jobs.build.outputs.image }}
+
+# Defence in depth: grant nothing at the top level, scope per job.
+permissions: {}
+
+jobs:
+  build:
+    name: build & publish
+    runs-on: ubuntu-latest
+    # The geoffreybooth/meteor-base builder image is large and `meteor build`
+    # is slow on a cold gha cache; give the first run plenty of headroom.
+    timeout-minutes: 60
+    permissions:
+      contents: read # checkout
+      packages: write # push to GHCR
+      security-events: write # upload Trivy SARIF to the Security tab
+      id-token: write # sign SBOM / provenance attestations
+      attestations: write # attach attestations to the pushed image
+    outputs:
+      image: ${{ steps.image.outputs.ref }}
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      # GHCR rejects uppercase path segments and github.repository casing is not
+      # guaranteed, so lowercase it before anything consumes it.
+      - name: Compute lowercase image name
+        id: name
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        if: ${{ inputs.push }}
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive image tags & labels
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ steps.name.outputs.image }}
+          tags: ${{ inputs.tags }}
+
+      - name: Build & push
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          target: production
+          push: ${{ inputs.push }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Reuse Meteor builder layers across runs; mode=max also caches the
+          # heavy intermediate builder stage, not just the final image.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # Attestations need the id-token/attestations permissions above; when
+          # push is false there is no registry to attach them to.
+          provenance: ${{ inputs.push }}
+          sbom: ${{ inputs.push }}
+
+      # Pin downstream deploys to the immutable digest so the artifact that gets
+      # scanned is byte-for-byte the artifact that gets deployed — a moving
+      # branch tag can never cause drift between scan and run.
+      - name: Resolve digest-pinned reference
+        id: image
+        if: ${{ inputs.push }}
+        run: echo "ref=${{ steps.name.outputs.image }}@${{ steps.build.outputs.digest }}" >> "$GITHUB_OUTPUT"
+
+      # Trivy pulls the just-pushed image using the docker login credentials
+      # established above. Findings go to the Security tab regardless of whether
+      # they fail the build (exit-code is caller-controlled).
+      - name: Scan image with Trivy
+        if: ${{ inputs.push }}
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ steps.image.outputs.ref }}
+          format: sarif
+          output: trivy.sarif
+          severity: CRITICAL,HIGH
+          exit-code: ${{ inputs.trivy-exit-code }}
+          ignore-unfixed: true
+
+      - name: Upload Trivy SARIF
+        if: ${{ always() && inputs.push }}
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy.sarif
+          category: trivy

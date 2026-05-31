@@ -1,0 +1,25 @@
+# Categorises the notes that `gh release create --generate-notes` produces
+# (release.yml workflow) by each merged PR's labels. First matching category
+# wins, so the "*" catch-all must stay last.
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+  categories:
+    - title: 🚀 Features
+      labels:
+        - enhancement
+        - feature
+    - title: 🐛 Fixes
+      labels:
+        - bug
+        - fix
+    - title: 📝 Documentation
+      labels:
+        - documentation
+    - title: 📦 Dependencies
+      labels:
+        - dependencies
+    - title: 🔧 Other Changes
+      labels:
+        - "*"
