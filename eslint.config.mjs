@@ -116,7 +116,14 @@ export default defineConfig([
     plugins: { css },
     language: 'css/css',
     extends: ['css/recommended'],
-    // !important is used deliberately to override Ant Design styles.
-    rules: { 'css/no-important': 'off' },
+    rules: {
+      // !important is used deliberately to override Ant Design styles.
+      'css/no-important': 'off',
+      // Target "newly available" Baseline rather than the stricter "widely"
+      // default: modern selectors like :has() (used to collapse empty drawer
+      // footers) are supported across current browsers but not yet 30 months
+      // old, which the default would flag as an error.
+      'css/use-baseline': ['error', { available: 'newly' }],
+    },
   },
 ]);
