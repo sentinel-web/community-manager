@@ -195,6 +195,22 @@ async function createTestData(): Promise<void> {
   await Accounts.createUserAsync({ username: 'admin', password: 'admin', profile: { name: 'Admin', roleId: 'admin' } });
 }
 
+// Production-safe initial admin. When the users collection is empty AND
+// credentials are supplied via Meteor.settings.bootstrapAdmin, create the admin
+// role + user through Accounts (so password hashing is correct). It is a no-op
+// the moment any user exists, so it never mutates an established database. This
+// is how a fresh production / preview stack gets its first login, since
+// createTestData() is dev-only.
+async function bootstrapAdminFromSettings(): Promise<void> {
+  const admin = (Meteor.settings as { bootstrapAdmin?: { username?: string; password?: string } }).bootstrapAdmin;
+  if (!admin?.username || !admin?.password) return;
+  const existingUsers = await MembersCollection.find().countAsync();
+  if (existingUsers > 0) return;
+  await RolesCollection.upsertAsync({ _id: 'admin' }, { $set: { name: 'admin', roles: true } });
+  console.warn('[BOOTSTRAP] Empty users collection — creating initial admin from Meteor.settings.bootstrapAdmin');
+  await Accounts.createUserAsync({ username: admin.username, password: admin.password, profile: { name: 'Admin', roleId: 'admin' } });
+}
+
 // Merge duplicate per-event Attendance docs into a single canonical row, then
 // (re)build the unique { eventId } index. Idempotent and startup-safe.
 //
@@ -329,6 +345,9 @@ if (Meteor.isServer) {
     if (process.env.NODE_ENV !== 'production') {
       await createTestData();
     }
+    // Seeds the first admin from settings on an empty DB (prod/preview). No-op
+    // in dev once createTestData has run, and whenever any user already exists.
+    await bootstrapAdminFromSettings();
     await createDatabaseIndexes();
   });
 }

@@ -1,4 +1,8 @@
 {
+  "bootstrapAdmin": {
+    "username": "admin",
+    "password": "set-a-strong-password"
+  },
   "rateLimits": {
     "backup": {
       "create": { "count": 5, "intervalMs": 60000 },
