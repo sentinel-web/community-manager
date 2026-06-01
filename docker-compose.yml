@@ -109,10 +109,12 @@ volumes:
   mongo-data:
   mongo-config:
 
-# File-based secret (non-swarm bind mount). scripts/deploy.sh writes
-# ./encryption.key (mode 644 so the in-container non-root user can read the
-# bind-mounted file) in each stack dir before `compose up`. For a local
-# `docker compose up`, create it first: `openssl rand -hex 16 > encryption.key`.
+# File-based secret (non-swarm bind mount preserves the host file's owner/mode;
+# the long-syntax uid/mode fields are swarm-only). scripts/deploy.sh writes
+# ./encryption.key in each stack dir before `compose up`, owned by the image's
+# runtime user (uid 1001) at mode 600 so the non-root container can read it. For
+# a local `docker compose up`, create one first — make it readable by the
+# container user, e.g.: `openssl rand -hex 16 > encryption.key && chmod 644 encryption.key`.
 secrets:
   encryption_key:
     file: ./encryption.key
