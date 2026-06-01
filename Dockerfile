@@ -8,7 +8,12 @@ WORKDIR /app
 COPY package*.json ./
 COPY .meteor .meteor
 
-RUN meteor npm ci
+# --include=dev is required: the rspack bundler (@meteorjs/rspack, @rspack/*)
+# lives in devDependencies but is needed at build time by `meteor build`. The
+# meteor-base image runs with NODE_ENV=production, which npm treats as
+# --omit=dev — without this flag the build fails with a misleading
+# "Could not find rspack.config.js" (it means node_modules/@meteorjs/rspack).
+RUN meteor npm ci --include=dev
 
 COPY . .
 
