@@ -34,7 +34,7 @@
     "meteor-node-stubs": "^1.2.7",
     "react": "^18.3.1",
     "react-beautiful-dnd": "^13.1.1",
-    "react-big-calendar": "^1.17.1",
+    "react-big-calendar": "^1.20.0",
     "react-dom": "^18.3.1",
     "react-organizational-chart": "^2.2.1",
     "recharts": "^3.7.0",
@@ -70,7 +70,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^16.2.0",
-    "react-doctor": "^0.1.6",
+    "react-doctor": "^0.2.16",
     "react-refresh": "^0.18.0",
     "typescript": "5.9.3",
     "typescript-eslint": "^8.60.0"
