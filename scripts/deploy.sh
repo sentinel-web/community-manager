@@ -40,6 +40,22 @@ cd "$DIR"
 [ -f .env ]               || { echo "missing $DIR/.env" >&2; exit 1; }
 chmod 600 .env 2>/dev/null || true
 
+# --- Encryption key (per-stack, generated once, mounted as a compose secret) -
+# discord.js token encryption needs a stable 32-char key. It lives in a host
+# file mounted read-only into the app at /run/secrets/encryption_key (see the
+# `secrets:` block in docker-compose.yml) — never in the environment. Generated
+# once per stack and reused on every redeploy, so existing encrypted tokens stay
+# decryptable. Mode 644 so the in-container non-root user can read the bind mount.
+if [ ! -f encryption.key ]; then
+  log "Generating encryption key for $PROJECT"
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -hex 16 > encryption.key
+  else
+    head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n' > encryption.key
+  fi
+fi
+chmod 644 encryption.key 2>/dev/null || true
+
 # Explicit -f suppresses auto-loading of any docker-compose.override.yml (the
 # dev override that disables Traefik); --env-file feeds per-stack variables.
 COMPOSE=(docker compose -p "$PROJECT" -f docker-compose.yml --env-file .env)

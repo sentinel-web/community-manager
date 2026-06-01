@@ -20,6 +20,11 @@ services:
       MONGO_URL: ${MONGO_URL:-mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/community-manager?authSource=admin}
       METEOR_SETTINGS: ${METEOR_SETTINGS:-}
       PORT: 3000
+    # The discord.js token-encryption key is mounted as a file at
+    # /run/secrets/encryption_key (never an env var). scripts/deploy.sh
+    # generates it per-stack; server/encryption.ts reads it lazily.
+    secrets:
+      - encryption_key
     depends_on:
       mongo:
         condition: service_healthy
@@ -103,6 +108,14 @@ services:
 volumes:
   mongo-data:
   mongo-config:
+
+# File-based secret (non-swarm bind mount). scripts/deploy.sh writes
+# ./encryption.key (mode 644 so the in-container non-root user can read the
+# bind-mounted file) in each stack dir before `compose up`. For a local
+# `docker compose up`, create it first: `openssl rand -hex 16 > encryption.key`.
+secrets:
+  encryption_key:
+    file: ./encryption.key
 
 networks:
   traefik:
