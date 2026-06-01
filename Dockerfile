@@ -48,9 +48,18 @@ COPY --from=builder --chown=meteor:meteor /built-app/bundle ./
 WORKDIR /app/programs/server
 # Meteor's server bundle ships only package.json (no lockfile), so `npm ci`
 # cannot be used here — install resolves deps from package.json directly.
-RUN npm install --omit=dev --no-audit --no-fund \
-    && npm install --no-audit --no-fund underscore@1.13.8 \
-    && npm cache clean --force
+#
+# discord.js's native add-ons (zlib-sync, bufferutil, utf-8-validate) are
+# node-gyp modules, so the install needs a C/C++ toolchain + Python to compile
+# them. Install the toolchain, build, then purge it in the same layer so the
+# slim runtime image keeps only the compiled .node artifacts, not the compilers.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3 make g++ \
+    && npm install --omit=dev --no-audit --no-fund \
+    && npm cache clean --force \
+    && apt-get purge -y python3 make g++ \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
