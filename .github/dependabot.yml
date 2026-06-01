@@ -29,9 +29,11 @@ updates:
     ignore:
       # engines.node is pinned to 22.x to match Meteor 3.4.1's bundled node.
       - dependency-name: "node"
-      # @types/node is deliberately held at v20 to match Meteor's bundled node
-      # typings, not the v22 runtime — never auto-bump its major.
-      - dependency-name: "@types/node"
+      # Major bumps are opt-in across the board: they need a deliberate migration
+      # (react 18->19, rspack 1->2, eslint 9->10 all break the build/tests).
+      # Minor/patch still flow via the groups above. This also keeps @types/node
+      # on its current major (v20), matching Meteor's bundled node typings.
+      - dependency-name: "*"
         update-types: ["version-update:semver-major"]
 
   # --- GitHub Actions (keeps the SHA/major pins in the workflows current) ---
