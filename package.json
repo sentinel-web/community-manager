@@ -71,7 +71,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^16.2.0",
     "react-doctor": "^0.1.6",
-    "react-refresh": "^0.17.0",
+    "react-refresh": "^0.18.0",
     "typescript": "5.9.3",
     "typescript-eslint": "^8.60.0"
   }
