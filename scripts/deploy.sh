@@ -45,16 +45,26 @@ chmod 600 .env 2>/dev/null || true
 # file mounted read-only into the app at /run/secrets/encryption_key (see the
 # `secrets:` block in docker-compose.yml) — never in the environment. Generated
 # once per stack and reused on every redeploy, so existing encrypted tokens stay
-# decryptable. Mode 644 so the in-container non-root user can read the bind mount.
+# decryptable.
 if [ ! -f encryption.key ]; then
   log "Generating encryption key for $PROJECT"
-  if command -v openssl >/dev/null 2>&1; then
-    openssl rand -hex 16 > encryption.key
-  else
-    head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n' > encryption.key
-  fi
+  ( umask 077
+    if command -v openssl >/dev/null 2>&1; then
+      openssl rand -hex 16 > encryption.key
+    else
+      head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n' > encryption.key
+    fi )
 fi
-chmod 644 encryption.key 2>/dev/null || true
+# Lock the key to the image's runtime user (uid/gid 1001 = the `meteor` user in
+# the Dockerfile) and keep it owner-only. chown needs root; if the deploy user
+# can't chown, fall back to a group/other-readable mode so the bind-mounted
+# secret is still loadable by the non-root container process (the host is
+# single-tenant, so this is an acceptable degradation).
+if chown 1001:1001 encryption.key 2>/dev/null; then
+  chmod 600 encryption.key
+else
+  chmod 644 encryption.key
+fi
 
 # Explicit -f suppresses auto-loading of any docker-compose.override.yml (the
 # dev override that disables Traefik); --env-file feeds per-stack variables.
