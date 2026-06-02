@@ -185,7 +185,7 @@ Registration has two entry points and is the main **anonymous** surface:
 - **`RegistrationForm`** live-validates desired **name** and **id** against
   `registrations.validateName` / `registrations.validateId` (cross-checking both
   members and registrations) as independent signals — folding them into one state
-  let a valid id mask an in-use name (`RegistrationForm.tsx:52-60`). `id` is a
+  let a valid id mask an in-use name (`RegistrationForm.tsx:69-111`). `id` is a
   1000–9999 number, age ≥ 16, rules-accepted is enforced by a field validator
   **and** re-checked in `handleSubmit` so Enter-to-submit can't bypass it. The
   `description` field only renders for logged-in (admin) users. Insert-vs-update

@@ -181,7 +181,7 @@ Two distinct paths seed the first login (`server/main.ts`, in `Meteor.startup`):
 - **`meteor build` needs `--include=dev`.** The rspack bundler is a devDependency; the meteor-base image's `NODE_ENV=production` otherwise omits it and the build dies with a misleading "Could not find rspack.config.js". (`Dockerfile:11-16`)
 - **Node 22 is pinned in ~6 uncoupled spots** (`engines.node`, Dockerfile, CI, setup scripts, README, deployment docs) with nothing enforcing agreement. Don't trust `*-LTS` (now Node 24). Keep `@types/node` on v20.
 - **`ROOT_URL` must equal `https://$STACK_HOST` exactly** — Meteor requirement; the deploy workflow renders it that way, but a manual `.env` that mismatches breaks the app silently.
-- **`tests/` is intentionally not in `.dockerignore`** — `package.json` references `tests/main.js` as `meteor.testModule` and Meteor resolves the path even in production builds. Removing it breaks `meteor build`.
+- **`tests/` is intentionally not in `.dockerignore`** — `package.json` references `tests/main.ts` as `meteor.testModule` and Meteor resolves the path even in production builds. Removing it breaks `meteor build`.
 - **`.meteorignore` must exclude *all* of `e2e/`** — partial excludes leave Playwright's transient writes visible to Meteor HMR, triggering a mid-test `forceBrowserReload` that wipes form state and notifications.
 - **Don't run `npm test` while `meteor run` is up** — both share `.meteor/local`; the test run desyncs the dev server's method registry. Recover by restarting the dev server.
 - **The runtime stage uses `npm install`, not `npm ci`** — the Meteor server bundle ships no lockfile, so `npm ci` would fail.

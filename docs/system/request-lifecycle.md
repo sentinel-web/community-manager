@@ -69,7 +69,7 @@ const datasource = useFind(() => Collection.find(filter, options), [Collection, 
 3. **Cursor** — returns `Collection.find(filter, limitedOptions)`. Meteor's livedata streams the matching docs and pushes incremental `added`/`changed`/`removed` updates into the client's minimongo.
 4. **Reactive query** — `useFind` runs `Collection.find(...)` against minimongo and reruns whenever the cursor's results change, re-rendering the table. The dep array `[Collection, filter, options]` controls when the *query* is re-created.
 
-Reactive reads go through the publication, **not** through a method, so they never hit `runMutation` and emit no audit log. The generated `.read`/`.count`/`.options` *methods* exist for one-shot, non-reactive reads (e.g. `squads.options` in a `CollectionSelect`) and *do* run through `runMutation` with `operation: 'read'` (permission-checked, but no audit `action`). `events` has no publication, so all event reads go through these read methods.
+Reactive reads go through the publication, **not** through a method, so they never hit `runMutation` and emit no audit log. The generated `.read`/`.count`/`.options` *methods* exist for one-shot, non-reactive reads (e.g. `squads.options` in a `CollectionSelect`) and *do* run through `runMutation` with `operation: 'read'` (permission-checked, but no audit `action`). `events` has no *generic factory* publication (it is listed in `methodOnlyCollections`), but a hand-rolled `events` publication in `server/apis/events.server.ts` serves its reactive reads — the Events table subscribes to it via `Section`/`useSubscribe`.
 
 ### Permission resolution (shared by both paths)
 
@@ -112,7 +112,7 @@ On `Meteor.startup`: in non-production `createTestData()` seeds the `admin`/`adm
 - **`permissionModule` prop on `Section`.** When the collection name differs from its permission module, pass `permissionModule` or the permission check resolves the wrong module.
 - **FK validation is whole-document on update.** `validateForeignKeysForUpdate` validates every FK on the *merged post-`$set`* doc, not just touched fields — an unrelated edit can fail on a pre-existing orphaned FK.
 - **Selector safety is opt-in per path.** Only paths that call `assertSafeSelector` reject `$where`/`$expr`/`$function`/`$accumulator`; a new read path that forwards a client filter must call it explicitly.
-- **`events` has no publication.** Adding a method-only collection to `collectionNames` instead of `methodOnlyCollections` (or vice versa) silently breaks its read path.
+- **`events` uses a custom publication, not the generic factory.** Adding a method-only collection to `collectionNames` instead of `methodOnlyCollections` (or vice versa) silently breaks its read path.
 
 ## See also
 

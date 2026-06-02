@@ -151,9 +151,9 @@ Fixture helpers (`tests/server/fixtures.ts`):
 ## See also
 
 - [crud-engine.md](./crud-engine.md) — the generated methods/pipeline that `crudMethods.test.ts` and `mutationPipeline.test.ts` exercise via `callAs`.
-- [permissions-rbac.md](./permissions-rbac.md) / [permissions-security.md](./permissions-security.md) — `checkPermission` + role cache; `permissions.test.ts` and `clearRoleCache()` in fixtures.
+- [permissions-rbac.md](./permissions-rbac.md) — `checkPermission` + role cache; `permissions.test.ts` and `clearRoleCache()` in fixtures.
 - [referential-integrity.md](./referential-integrity.md) — the FK subsystem behind `integrity*.test.ts`.
-- [validation-and-audit.md](./validation-and-audit.md) — validators and audit logging exercised by `validation.test.ts` and `findLatestAuditLog`.
+- [crud-engine.md](./crud-engine.md) — validators and audit logging exercised by `validation.test.ts` and `findLatestAuditLog`.
 - [request-lifecycle.md](./request-lifecycle.md) — the client-call → method path the MethodCall seam tests cover.
 - [ui-architecture.md](./ui-architecture.md) — DrawerStack / `useMethod` / `useEntityForm`, mirrored by the browser-mode tests and the page-object model.
 - `TESTING.md` (repo root) — philosophy, assertion table, naming, pitfalls (prose companion to this doc).

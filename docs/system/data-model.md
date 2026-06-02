@@ -93,7 +93,7 @@ FK edges are authored **per source collection** in
 these into incoming edges keyed by target (`server/integrity/edges.ts`), so a
 delete of a target can find every source pointing at it.
 
-**Outgoing edges (who references whom) — 24 declared in the registry:**
+**Outgoing edges (who references whom) — 23 declared in the registry:**
 
 | Source.field | → Target | Kind | onDelete |
 |--------------|----------|------|----------|
