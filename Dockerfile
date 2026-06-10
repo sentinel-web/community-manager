@@ -25,6 +25,16 @@ FROM node:22-slim AS production
 RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends tini curl ca-certificates \
+    # Security floor: fail the build if apt-get upgrade did not reach the
+    # bookworm release fixing CVE-2026-45447 et al. in openssl/libssl3. The CI
+    # layer cache (cache-from: type=gha) replays this RUN's old result until
+    # its text changes, so apt-get upgrade alone can silently keep shipping
+    # stale packages — bump the floor version here to force a fresh layer.
+    && for pkg in openssl libssl3; do \
+        v="$(dpkg-query -W -f='${Version}' "$pkg")"; \
+        dpkg --compare-versions "$v" ge "3.0.20-1~deb12u2" \
+            || { echo "$pkg $v is older than required 3.0.20-1~deb12u2" >&2; exit 1; }; \
+    done \
     && rm -rf /var/lib/apt/lists/* \
     && npm install -g npm@latest \
     && npm cache clean --force \
