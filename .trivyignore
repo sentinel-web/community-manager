@@ -1,11 +1,58 @@
-# Trivy CVE allowlist for the build-publish image scan.
+# Vulnerabilities vendored inside the Meteor server bundle (app/programs/server/...).
+# These ship with Meteor's core packages and bundled deps (meteor-node-stubs deps are
+# inBundle), so they cannot be fixed from this repo's package.json/lockfile and npm
+# overrides do not reach them. Re-audit this list on every Meteor release upgrade:
+# remove entries that the new release has fixed.
 #
-# This file is intentionally empty. Add a CVE ID ONLY with a documented
-# justification and a review-by date, so every suppression stays auditable and
-# nothing lingers silently. Format (one finding per line):
-#
-#   CVE-2024-12345  # transitive via <pkg>; no upstream fix yet, reassess 2026-09-01
-#
-# The scan currently runs report-only (build-publish input trivy-exit-code: '0').
-# Once this list is curated for the base image's known noise, flip callers to
-# '1' so CRITICAL/HIGH findings fail the build.
+# NOTE: trivyignore suppresses each CVE globally (any path), not just the vendored
+# location. Matching code-scanning alerts were dismissed as won't-fix on 2026-06-10.
+
+# nodemailer@6.9.10 (Meteor-vendored; HIGH/MEDIUM/LOW)
+CVE-2025-13033
+CVE-2025-14874
+GHSA-c7w3-x93f-qmm8
+GHSA-vvjj-xcjg-gr5g
+
+# openpgp@5.11.1 (Meteor-vendored; HIGH)
+CVE-2025-47934
+
+# svgo@2.8.0 (Meteor-vendored; HIGH)
+CVE-2026-29074
+
+# tar@6.2.1 (Meteor-vendored; HIGH)
+CVE-2026-23745
+CVE-2026-23950
+CVE-2026-24842
+CVE-2026-26960
+CVE-2026-29786
+CVE-2026-31802
+
+# tmp@0.2.3 (Meteor-vendored; HIGH/LOW)
+CVE-2025-54798
+CVE-2026-44705
+
+# @babel/runtime@7.20.7 (Meteor-vendored; MEDIUM)
+CVE-2025-27789
+
+# bn.js@4.12.1 (Meteor-vendored; MEDIUM)
+CVE-2026-2739
+
+# postcss@8.5.1 (Meteor-vendored; MEDIUM)
+CVE-2026-41305
+
+# qs@6.13.0/6.14.2/6.15.1 (Meteor-vendored; MEDIUM/LOW)
+CVE-2025-15284
+CVE-2026-2391
+CVE-2026-8723
+
+# uuid@3.3.2/8.3.2 (Meteor-vendored; MEDIUM)
+CVE-2026-41907
+
+# yaml@1.10.2 (Meteor-vendored; MEDIUM)
+CVE-2026-33532
+
+# cookie@0.4.1 (Meteor-vendored; LOW)
+CVE-2024-47764
+
+# on-headers@1.0.2 (Meteor-vendored; LOW)
+CVE-2025-7339

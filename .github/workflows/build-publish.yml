@@ -32,10 +32,10 @@ on:
       trivy-exit-code:
         description: >-
           '1' fails the build on CRITICAL/HIGH findings; '0' is report-only
-          (SARIF still uploads). Start at '0', flip to '1' once .trivyignore is
-          curated.
+          (SARIF still uploads). Blocking since the .trivyignore baseline was
+          curated (Meteor-vendored CVEs); pass '0' to debug a red scan.
         type: string
-        default: '0'
+        default: '1'
     outputs:
       image:
         description: Digest-pinned image reference (name@sha256:...) for downstream deploy.
@@ -130,6 +130,10 @@ jobs:
           severity: CRITICAL,HIGH
           exit-code: ${{ inputs.trivy-exit-code }}
           ignore-unfixed: true
+          # Meteor-vendored CVEs we cannot fix from this repo — see the file's
+          # header. Trivy would pick the file up implicitly from the workspace
+          # root; pass it explicitly so the suppression is visible here.
+          trivyignores: .trivyignore
 
       - name: Upload Trivy SARIF
         if: ${{ always() && inputs.push }}
