@@ -41,7 +41,7 @@ jobs:
     steps:
       # Checkout is needed so `gh release create` can read .github/release.yml
       # for note categorisation.
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       # --generate-notes buckets merged PRs per .github/release.yml; --verify-tag
       # confirms the pushed tag exists on the remote before publishing.
