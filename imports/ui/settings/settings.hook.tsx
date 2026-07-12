@@ -14,6 +14,7 @@ export interface UseSettingsResult {
   discordServerId?: string;
   discordRecruitmentChannelId?: string;
   discordEventsChannelId?: string;
+  discordSpamProtectionEnabled: boolean;
   discordErrorMessage?: string;
 }
 
@@ -24,7 +25,8 @@ export default function useSettings(): UseSettingsResult {
     ready, communityTitle, communityLogo, communityColor, 
     communityNameBlackList, communityIdBlackList, 
     discordEnabled, discordBotToken, discordServerId,
-    discordRecruitmentChannelId, discordEventsChannelId, // 👈 1. SCHRITT: Hier destrukturieren!
+    discordRecruitmentChannelId, discordEventsChannelId,
+    discordSpamProtectionEnabled,
     discordErrorMessage 
   } = useTracker(() => {
     const publicSub = Meteor.subscribe('settings.public');
@@ -43,6 +45,7 @@ export default function useSettings(): UseSettingsResult {
       discordServerId: SettingsCollection.findOne({ key: 'discord-server-id' })?.value as string | undefined,
       discordRecruitmentChannelId: SettingsCollection.findOne({ key: 'discord-recruitment-channel-id' })?.value as string | undefined,
       discordEventsChannelId: SettingsCollection.findOne({ key: 'discord-events-channel-id' })?.value as string | undefined,
+      discordSpamProtectionEnabled: (SettingsCollection.findOne({ key: 'discord-spam-protection-enabled' })?.value as boolean | undefined) ?? false,
       discordErrorMessage: SettingsCollection.findOne({ key: 'discord-error-message' })?.value as string | undefined,
     };
   }, []);
@@ -51,7 +54,8 @@ export default function useSettings(): UseSettingsResult {
     ready, communityTitle, communityLogo, communityColor, 
     communityNameBlackList, communityIdBlackList, 
     discordEnabled, discordBotToken, discordServerId,
-    discordRecruitmentChannelId, discordEventsChannelId, // 👈 2. SCHRITT: Hier im Hook-Return zurückgeben!
+    discordRecruitmentChannelId, discordEventsChannelId,
+    discordSpamProtectionEnabled,
     discordErrorMessage 
   };
 }

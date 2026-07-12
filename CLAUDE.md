@@ -5,7 +5,7 @@ Guidance for Claude Code working in this repository.
 ## Development Commands
 
 ```bash
-npm start              # Start dev server (meteor run) - http://localhost:3000
+npm start              # Start dev server (meteor run --settings settings.json) - http://localhost:3000
 npm test               # Run Mocha tests once
 npm run test-app       # Run tests in watch mode with full app
 npm run update         # Update all Meteor/npm packages and fix vulnerabilities

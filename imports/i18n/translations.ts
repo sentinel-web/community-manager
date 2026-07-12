@@ -618,6 +618,11 @@ export const translations = {
   'settings.discord.botToken': {en: 'Discord Bot Token', de: 'Discord Bot-Token',fr: 'Jeton de bot Discord'},
   'settings.discord.enabled': {en: 'Enable Discord Integration', de: 'Discord-Integration aktivieren', fr: 'Activer l\'intégration Discord'},
   'settings.discord.serverId': { en: 'Discord Server ID', de: 'Discord Server-ID', fr: 'ID du serveur Discord'},
+  'settings.discord.spamProtectionEnabled': {
+    en: 'Enable Spam Protection',
+    de: 'Spamschutz aktivieren',
+    fr: 'Activer la protection contre le spam',
+  },
   'settings.discordIntegration': { en: 'Discord Integration', de: 'Discord Integration', fr: 'Intégration Discord'},
   'forms.placeholders.enterDiscordRoleId': {
     en: 'Enter Discord Role ID (optional)',
