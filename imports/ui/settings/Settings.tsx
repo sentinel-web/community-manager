@@ -27,6 +27,7 @@ async function getEventValue(key: string, e: unknown): Promise<string | string[]
         case 'discord-events-channel-id': // 👈 NEU
         return (e as React.ChangeEvent<HTMLInputElement>).target.value;
       case 'discord-enabled': 
+      case 'discord-spam-protection-enabled': 
         return (e as { target: { checked: boolean } }).target.checked;
     case 'community-logo':
       return await transformFileToBase64(e as File);
@@ -74,7 +75,7 @@ async function turnImageFileIntoWebp(file: File): Promise<Blob> {
 
 export default function Settings() {
   const settingsRef = useTourRef('settings-section');
-  const { ready, communityTitle, communityLogo, communityColor, communityNameBlackList, communityIdBlackList, discordEnabled, discordBotToken, discordServerId, discordRecruitmentChannelId, discordEventsChannelId, discordErrorMessage } = useSettings();
+  const { ready, communityTitle, communityLogo, communityColor, communityNameBlackList, communityIdBlackList, discordEnabled, discordBotToken, discordServerId, discordRecruitmentChannelId, discordEventsChannelId, discordSpamProtectionEnabled, discordErrorMessage } = useSettings();
   const { t } = useTranslation();
 
   const handleChange: HandleChangeFn = useCallback(async (e: unknown, key: string) => {
@@ -114,6 +115,7 @@ export default function Settings() {
                       discordServerId={discordServerId}
                       discordRecruitmentChannelId={discordRecruitmentChannelId}
                       discordEventsChannelId={discordEventsChannelId}
+                      discordSpamProtectionEnabled={discordSpamProtectionEnabled}
                       discordErrorMessage={discordErrorMessage}
                       handleChange={handleChange}
                       t={t}
@@ -382,12 +384,13 @@ interface DiscordSettingsProps {
   discordServerId?: string;
   discordRecruitmentChannelId?: string;
   discordEventsChannelId?: string;
+  discordSpamProtectionEnabled: boolean;
   discordErrorMessage?: string;
   handleChange: HandleChangeFn;
   t: TFn;
 }
 
-function DiscordSettings({ discordEnabled, discordBotToken, discordServerId, discordRecruitmentChannelId, handleChange, discordErrorMessage,discordEventsChannelId, t }: DiscordSettingsProps) {
+function DiscordSettings({ discordEnabled, discordBotToken, discordServerId, discordRecruitmentChannelId, handleChange, discordErrorMessage, discordEventsChannelId, discordSpamProtectionEnabled, t }: DiscordSettingsProps) {
   return (
     <Row gutter={[16, 16]}>
       <SettingTitle title={t('settings.discordIntegration')} />
@@ -431,6 +434,14 @@ function DiscordSettings({ discordEnabled, discordBotToken, discordServerId, dis
               value={discordEventsChannelId} 
               onChange={e => handleChange(e, 'discord-events-channel-id')} 
             />
+          </Col>
+          <Col span={24}>
+            <Checkbox 
+              checked={discordSpamProtectionEnabled} 
+              onChange={e => handleChange(e, 'discord-spam-protection-enabled')}
+            >
+              {t('settings.discord.spamProtectionEnabled')}
+            </Checkbox>
           </Col>
         </>
       )}

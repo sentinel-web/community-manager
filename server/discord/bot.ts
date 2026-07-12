@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Partials } from 'discord.js';
+import { Client, GatewayIntentBits, Partials, PermissionFlagsBits } from 'discord.js';
 import { Meteor } from 'meteor/meteor';
 import dayjs from 'dayjs'; 
 import SettingsCollection from '../../imports/api/collections/settings.collection';
@@ -14,6 +14,7 @@ let client: Client | null = null;
 let registrationObserverHandle: any = null;
 let userObserverHandle: any = null;
 let eventObserverHandle: any = null; 
+const userMessageHistory = new Map<string, { timestamp: number; content: string; message: any }[]>();
 
 export const initializeDiscordBot = async () => {
   const tokenSetting = await SettingsCollection.findOneAsync({ key: 'discord-bot-token' });
@@ -33,7 +34,8 @@ export const initializeDiscordBot = async () => {
         GatewayIntentBits.Guilds, 
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildScheduledEvents // Aktiviert für Event-Interaktionen
+        GatewayIntentBits.GuildScheduledEvents, // Aktiviert für Event-Interaktionen
+        GatewayIntentBits.MessageContent
       ],
       partials: [
         Partials.User, 
@@ -337,15 +339,22 @@ export const initializeDiscordBot = async () => {
         initializingRegs = false; 
 
         // ==========================================
-        // AUTOMATIC EVENT ANNOUNCEMENTS (Erweitert)
+        // AUTOMATIC EVENT ANNOUNCEMENTS (Einmalig geschützt)
         // ==========================================
         let initializingEvents = true;
         eventObserverHandle = EventsCollection.find().observe({
           added: (doc: any) => {
             if (initializingEvents) return;
+            
+            // 👈 SCHUTZ-WALL 1: Wenn das Event in der DB bereits als angekündigt markiert ist, ignorieren!
+            if (doc.isAnnounced === true) return;
 
             Meteor.defer(async () => {
               try {
+                // Zur Sicherheit: Frisch aus der DB holen, falls parallel ein anderer Prozess schreibt
+                const freshDoc = await EventsCollection.findOneAsync(doc._id);
+                if (!freshDoc || freshDoc.isAnnounced === true) return;
+
                 const eventTypeDoc = await EventTypesCollection.findOneAsync(doc.eventType);
                 if (!eventTypeDoc?.createDiscordEvent) return;
 
@@ -358,6 +367,9 @@ export const initializeDiscordBot = async () => {
 
                 const channel = guild.channels.cache.get(channelId) || await guild.channels.fetch(channelId).catch(() => null);
 
+                // ------------------------------------------
+                // 1. SCHRITT: Echtes Discord-Event anlegen
+                // ------------------------------------------
                 let discordEventUrl = '';
                 try {
                   const startTime = doc.start ? new Date(doc.start) : null;
@@ -376,7 +388,6 @@ export const initializeDiscordBot = async () => {
                       privacyLevel: 2, 
                       entityType: 3,   
                       entityMetadata: {
-                        // 👈 KORREKTUR: Wenn es eine Datei ist, senden wir nur den reinen Dateinamen an die Location (Limit: 100 Zeichen!)
                         location: doc.preset && doc.preset.startsWith('file:') 
                           ? doc.preset.split(':::')[0].replace('file:', '').substring(0, 90)
                           : (doc.preset || 'Webpanel / Arma Server').substring(0, 90)
@@ -386,8 +397,7 @@ export const initializeDiscordBot = async () => {
                     discordEventUrl = scheduledEvent.url;
                     console.log(`[Discord Events] Echtes geplantes Event für "${doc.name}" erstellt.`);
 
-                    // GEÄNDERT: Wir speichern die Discord Event-ID zurück in unsere Web-Datenbank,
-                    // damit die Klick-Interaktionen für dieses Event gematcht werden können!
+                    // Discord Event-ID zurückspeichern
                     await EventsCollection.updateAsync(doc._id, {
                       $set: { discordEventId: scheduledEvent.id }
                     } as never).catch(console.error);
@@ -396,6 +406,9 @@ export const initializeDiscordBot = async () => {
                   console.error('[Discord Events] Fehler beim Erstellen des geplanten Discord-Events:', eventCreateError);
                 }
 
+                // ------------------------------------------
+                // 2. SCHRITT: Ankündigungs-Nachricht & Datei-Anhang parsen
+                // ------------------------------------------
                 if (channel && 'send' in channel) {
                   const startTimeStr = doc.start ? dayjs(doc.start).format('DD.MM.YYYY [um] HH:mm [Uhr]') : '-';
                   const endTimeStr = doc.end ? dayjs(doc.end).format('DD.MM.YYYY [um] HH:mm [Uhr]') : '-';
@@ -408,8 +421,6 @@ export const initializeDiscordBot = async () => {
                       try {
                         const [fileMeta, dataUrl] = doc.preset.split(':::');
                         const filename = fileMeta.replace('file:', '');
-                        
-                        // Base64-Inhalt isolieren und in NodeJS-Buffer konvertieren
                         const base64Data = dataUrl.split(',')[1];
                         const buffer = Buffer.from(base64Data, 'base64');
                         
@@ -435,17 +446,21 @@ export const initializeDiscordBot = async () => {
                     `⏰ **Start:** ${startTimeStr}\n` +
                     `⏳ **Ende:** ${endTimeStr}\n` +
                     (doc.description ? `📖 **Beschreibung:**\n> ${doc.description}\n` : '') +
-                    presetLine + // 👈 Unsere dynamisch generierte Zeile
+                    presetLine + 
                     (discordEventUrl ? `📌 **Discord Event:** ${discordEventUrl}\n` : '') + 
                     `--------------------------------------------------\n` +
                     `👉 *Melde dich jetzt im Webpanel an!*`;
 
-                  // Sende Text und hänge die Datei (falls vorhanden) nativ an
                   await (channel as any).send({ 
                     content: messageContent, 
                     files: filesPayload.length > 0 ? filesPayload : undefined 
                   });
                   console.log(`[Discord Events] Text-Ankündigung für "${doc.name}" gepostet.`);
+
+                  // 👈 SCHUTZ-WALL 2: Jetzt markieren wir das Event unumkehrbar als angekündigt!
+                  await EventsCollection.updateAsync(doc._id, {
+                    $set: { isAnnounced: true }
+                  } as never).catch(console.error);
                 }
               } catch (err) {
                 console.error('[Discord Events] Fehler beim Verarbeiten des neuen Events:', err);
@@ -453,6 +468,65 @@ export const initializeDiscordBot = async () => {
             });
           }
         });
+
+        // ==========================================
+        // SPAMSCHUTZ (NEU)
+        // ==========================================
+        client!.on('messageCreate', async (message) => {
+          try {
+            if (message.author.bot) return;
+
+            // Prüfen, ob der Spamschutz in den Einstellungen aktiviert ist
+            const spamProtectionSetting = await SettingsCollection.findOneAsync({ key: 'discord-spam-protection-enabled' });
+            if (spamProtectionSetting?.value !== true) return;
+
+            // Moderatoren/Admins mit "Manage Messages" Rechten ignorieren
+            if (message.member?.permissions.has(PermissionFlagsBits.ManageMessages)) return;
+
+            const now = Date.now();
+            const userId = message.author.id;
+            const content = message.content.trim();
+
+            // Prüfen, ob die Nachricht einen Link enthält
+            const hasLink = /https?:\/\/\S+|www\.\S+|discord\.gg\/\S+/i.test(content);
+            if (!hasLink) return;
+
+            let history = userMessageHistory.get(userId) || [];
+            // Nur Nachrichten aus den letzten 15 Sekunden behalten
+            history = history.filter(msg => now - msg.timestamp < 15000);
+
+            history.push({ timestamp: now, content, message });
+            userMessageHistory.set(userId, history);
+
+            // Duplikats-Schutz für denselben Link: 3 identische Links in 15 Sekunden
+            const duplicates = history.filter(msg => msg.content === content);
+            if (duplicates.length >= 3) {
+              // Alle Duplikate dieses Zyklus löschen
+              for (const msg of duplicates) {
+                await msg.message.delete().catch(() => {});
+              }
+              await message.delete().catch(() => {});
+
+              // Stummschalten für 5 Minuten (Timeout)
+              if (message.member) {
+                await message.member.timeout(5 * 60 * 1000, 'Spamschutz: Link-Spam').catch(console.error);
+              }
+
+              const warning = await message.channel.send(`⚠️ <@${message.author.id}> wurde für 5 Minuten stummgeschaltet (Spamschutz: Derselbe Link wurde mehrfach gepostet).`).catch(console.error);
+              if (warning) {
+                Meteor.setTimeout(() => warning.delete().catch(() => {}), 10000);
+              }
+              return;
+            }
+          } catch (err) {
+            console.error('[Discord Spamschutz] Fehler:', err);
+          }
+        });
+        
+        // Timeout-Sicherheitsnetz für den ersten Serverstart (Zusatzschutz für Minimongo-Sync)
+        Meteor.setTimeout(() => {
+          initializingEvents = false;
+        }, 5000);
         initializingEvents = false;
 
         resolve();
@@ -489,6 +563,7 @@ const cleanUpBot = async () => {
     eventObserverHandle.stop();
   }
   eventObserverHandle = null;
+  userMessageHistory.clear();
 };
 
 export const reloadDiscordBot = async () => {
