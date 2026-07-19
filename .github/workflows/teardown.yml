@@ -43,7 +43,7 @@ jobs:
 
       # Checks out the default branch (where this workflow runs from) for the
       # slug helper + teardown script — the target branch itself may be gone.
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Resolve slug
         id: r
