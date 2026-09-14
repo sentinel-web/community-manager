@@ -44,7 +44,8 @@ Members (Meteor.users), Events, Attendances, Tasks, TaskStatus, Squads, Ranks, S
 - `name, color, description` + boolean permissions (`dashboard, orbat, logs, settings`) + CRUD permissions (`members, events, tasks, squads, ranks, specializations, medals, eventTypes, positions, taskStatus, registrations, discoveryTypes, roles, questionnaires`)
 
 **Registrations**
-- `name, id (1000-9999), age (min 16), discoveryType, rulesReadAndAccepted, description`
+- `name, id (1000-9999), age (min 16), discoveryType, rulesReadAndAccepted, description, createdAt`
+- `createdAt` is server-owned: stamped on insert (any client-supplied value is overwritten) and stripped from updates. Registrations created before it was introduced have none.
 
 **Questionnaires**
 - `name, description, status ('draft'|'active'|'closed'), allowAnonymous, interval ('once'|'daily'|'weekly'|'monthly'|'unlimited'), questions[], createdAt, updatedAt`

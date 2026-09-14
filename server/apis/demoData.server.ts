@@ -288,9 +288,9 @@ function createQuestionnaireResponses(memberIds: string[]): unknown[] {
 }
 
 const REGISTRATIONS: unknown[] = [
-  { _id: 'reg-1', name: 'Spartan', id: 2001, age: 22, discoveryType: 'reddit', rulesReadAndAccepted: true, description: 'Experienced ArmA player looking for a structured community. 500+ hours.' },
-  { _id: 'reg-2', name: 'Echo', id: 2002, age: 19, discoveryType: 'friend', rulesReadAndAccepted: true, description: 'Referred by Ghost. Interested in recon operations.' },
-  { _id: 'reg-3', name: 'Titan', id: 2003, age: 25, discoveryType: 'steam', rulesReadAndAccepted: true, description: 'Former milsim player, looking for an active group.' },
+  { _id: 'reg-1', name: 'Spartan', id: 2001, age: 22, discoveryType: 'reddit', rulesReadAndAccepted: true, description: 'Experienced ArmA player looking for a structured community. 500+ hours.', createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) },
+  { _id: 'reg-2', name: 'Echo', id: 2002, age: 19, discoveryType: 'friend', rulesReadAndAccepted: true, description: 'Referred by Ghost. Interested in recon operations.', createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
+  { _id: 'reg-3', name: 'Titan', id: 2003, age: 25, discoveryType: 'steam', rulesReadAndAccepted: true, description: 'Former milsim player, looking for an active group.', createdAt: new Date() },
 ];
 
 const COMMUNITY_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1890ff"/><stop offset="100%" stop-color="#003a8c"/></linearGradient></defs><path d="M64 4L120 28V68C120 96 96 118 64 124C32 118 8 96 8 68V28Z" fill="url(#g)" stroke="#fff" stroke-width="2"/><path d="M64 16L108 36V68C108 90 88 108 64 114C40 108 20 90 20 68V36Z" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1"/><text x="64" y="62" text-anchor="middle" fill="white" font-family="Arial,sans-serif" font-size="28" font-weight="bold" letter-spacing="4">TFS</text><text x="64" y="86" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-family="Arial,sans-serif" font-size="9" letter-spacing="2">SENTINEL</text></svg>`;

@@ -6,6 +6,7 @@ import {
   callAs,
   cleanupFixtures,
   createTestDoc,
+  createTestRole,
   createTestUser,
   TEST_PREFIX,
 } from './fixtures';
@@ -118,5 +119,46 @@ describe('registrations.insert — server-side id-range & age validation (#260)'
     );
     const leaked = await RegistrationsCollection.findOneAsync({ name: '__test_reg_leak' });
     assert.strictEqual(leaked, undefined, 'A rejected insert must not persist');
+  });
+});
+
+describe('registrations createdAt — server-set submission timestamp (#377)', () => {
+  const names = ['__test_reg_created', '__test_reg_spoofed', '__test_reg_update_spoof'];
+  let editorUserId: string;
+
+  before(async () => {
+    const roleId = await createTestRole({ registrations: { read: true, create: true, update: true, delete: false } });
+    editorUserId = await createTestUser({ roleId });
+  });
+
+  after(async () => {
+    await RegistrationsCollection.removeAsync({ name: { $in: names } });
+    await cleanupFixtures([RegistrationsCollection]);
+  });
+
+  it('stamps createdAt on insert', async () => {
+    const before = Date.now();
+    const id = (await callAs(null, 'registrations.insert', validRegistration({ id: 2001, name: names[0] }))) as string;
+    const doc = await RegistrationsCollection.findOneAsync(id);
+    assert.ok(doc?.createdAt instanceof Date, 'createdAt must be a server-set Date');
+    assert.ok(doc.createdAt.getTime() >= before && doc.createdAt.getTime() <= Date.now(), 'createdAt must be the insert time');
+  });
+
+  it('ignores a client-supplied createdAt on insert', async () => {
+    const spoofed = new Date('2000-01-01T00:00:00Z');
+    const before = Date.now();
+    const id = (await callAs(null, 'registrations.insert', validRegistration({ id: 2002, name: names[1], createdAt: spoofed }))) as string;
+    const doc = await RegistrationsCollection.findOneAsync(id);
+    assert.ok(doc?.createdAt instanceof Date);
+    assert.ok(doc.createdAt.getTime() >= before, 'A client-supplied createdAt must be overwritten by the server');
+  });
+
+  it('does not let an update overwrite createdAt', async () => {
+    const id = (await callAs(null, 'registrations.insert', validRegistration({ id: 2003, name: names[2] }))) as string;
+    const original = (await RegistrationsCollection.findOneAsync(id))?.createdAt;
+    await callAs(editorUserId, 'registrations.update', id, { description: 'edited', createdAt: new Date('2000-01-01T00:00:00Z') });
+    const doc = await RegistrationsCollection.findOneAsync(id);
+    assert.strictEqual(doc?.description, 'edited', 'The rest of the update must still apply');
+    assert.deepStrictEqual(doc?.createdAt, original, 'createdAt must be immutable through update');
   });
 });

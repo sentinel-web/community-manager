@@ -222,6 +222,11 @@ async function applyReadScope(
   return extra ? { $and: [filter, extra] } : filter;
 }
 
+// Collections whose `createdAt` is owned by the server: stamped on insert
+// (overwriting any client-supplied value) and stripped from updates, so the
+// timestamp can never be forged or rewritten through a crafted DDP call.
+const SERVER_CREATED_AT: ReadonlySet<CrudCollectionName> = new Set<CrudCollectionName>(['registrations', 'tasks']);
+
 const { DEFAULT: DEFAULT_PUBLISH_LIMIT, MAX: MAX_PUBLISH_LIMIT } = PUBLISH_LIMITS;
 
 function createCollectionPublish(collection: CrudCollectionName): void {
@@ -310,7 +315,7 @@ function createCollectionMethods(collection: CrudCollectionName): void {
             },
             [payload] as const,
             async ([p]) => {
-              if (collection === 'tasks') {
+              if (SERVER_CREATED_AT.has(collection)) {
                 p.createdAt = new Date();
               }
               sanitizeHtmlFields(collection, p);
@@ -347,6 +352,9 @@ function createCollectionMethods(collection: CrudCollectionName): void {
             },
             [id, data] as const,
             async ([targetId, changes]) => {
+              if (SERVER_CREATED_AT.has(collection)) {
+                delete (changes as Record<string, unknown>).createdAt;
+              }
               sanitizeHtmlFields(collection, changes as Record<string, unknown>);
               // Full-document FK enforcement (O-6): validate EVERY foreign key
               // on the document as it will exist after this `$set`, not only the

@@ -40,6 +40,8 @@ export interface Registration {
   discordTag?: string | null;
   rulesReadAndAccepted: boolean;
   description?: string | null;
+  /** Server-set on insert (never client-supplied); absent on registrations created before #377. */
+  createdAt?: Date;
 }
 
 export interface ProfilePicture {
