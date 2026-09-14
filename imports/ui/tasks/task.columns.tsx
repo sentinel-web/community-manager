@@ -20,7 +20,10 @@ export function Participants({ participants }: ParticipantsProps) {
   const { call } = useMethod<string>('members.participantNames');
 
   useEffect(() => {
-    if (!participants?.length) setValue('-');
+    if (!participants?.length) {
+      setValue('-');
+      return;
+    }
     const filter = { _id: { $in: participants } };
     const options = { fields: { 'profile.name': 1, 'profile.id': 1, 'profile.rankId': 1 } };
     call(filter, options).then(res => {

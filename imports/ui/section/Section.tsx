@@ -1,13 +1,15 @@
-import { App, Col, Row } from 'antd';
+import { Alert, App, Col, Row } from 'antd';
 import type { ExpandableConfig } from 'antd/es/table/interface';
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
 import { useFind, useSubscribe } from 'meteor/react-meteor-data';
 import React, { ComponentType, ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import { PUBLISH_LIMITS } from '../../config';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useDrawerStack } from '../drawer-stack';
 import useMethod from '../hooks/useMethod';
 import useModulePermissions from '../hooks/useModulePermissions';
+import useStableValue from '../hooks/useStableValue';
 import TableContainer from '../table/body/TableContainer';
 import TableFooter from '../table/footer/TableFooter';
 import GroupActionsBar from '../table/header/GroupActionsBar';
@@ -15,7 +17,7 @@ import TableHeader from '../table/header/TableHeader';
 import Table from '../table/Table';
 import DeleteImpactPreview, { type DeleteImpactPreviewData } from './DeleteImpactPreview';
 import SectionCard from './SectionCard';
-import type { BoundGroupAction, ColumnsFactory, GroupAction, RowClickEvent, SectionPermissions } from './types';
+import type { BoundGroupAction, ColumnsFactory, CustomViewProps, GroupAction, RowClickEvent, SectionPermissions } from './types';
 
 function defaultFilterFactory(input: string): Mongo.Selector<Record<string, unknown>> {
   return { name: { $regex: input, $options: 'i' } };
@@ -23,34 +25,34 @@ function defaultFilterFactory(input: string): Mongo.Selector<Record<string, unkn
 
 const emptyGroupActions: GroupAction[] = [];
 
+// Table view page size; each "load more" adds another page.
+const PAGE_SIZE = 20;
+
 function defaultColumnsFactory(): ReturnType<ColumnsFactory<Record<string, unknown>>> {
   return [];
 }
 
-interface SectionProps<T extends { _id?: string }> {
+interface SectionProps<T extends { _id?: string }, V extends object = object> {
   title?: string;
   collectionName?: string;
   Collection?: Mongo.Collection<T> | null;
   FormComponent?: ComponentType<unknown>;
+  // Re-applied whenever its identity changes — parents that build it from their
+  // own state must memoize it (useCallback) so it only changes with that state.
   filterFactory?: (input: string) => Mongo.Selector<T>;
+  sort?: Mongo.SortSpecifier;
   columnsFactory?: ColumnsFactory<T>;
   extra?: ReactNode;
   headerExtra?: ReactNode;
-  customView?:
-    | ComponentType<{
-        handleEdit: (e: RowClickEvent, record: T) => void;
-        handleDelete: (e: RowClickEvent, record: T) => void;
-        datasource: T[];
-        setFilter: (filter: Mongo.Selector<T>) => void;
-        permissions: SectionPermissions;
-      }>
-    | false;
+  customView?: ComponentType<CustomViewProps<T> & V> | false;
+  // Extra props for the custom view (e.g. a callback reporting its visible range).
+  customViewProps?: V;
   permissionModule?: string | null;
   expandable?: ExpandableConfig<T>;
   groupActions?: GroupAction[];
 }
 
-export default function Section<T extends { _id?: string }>({
+export default function Section<T extends { _id?: string }, V extends object = object>({
   title = '',
   collectionName = '',
   Collection = null,
@@ -59,14 +61,23 @@ export default function Section<T extends { _id?: string }>({
   columnsFactory = defaultColumnsFactory as unknown as ColumnsFactory<T>,
   extra = <></>,
   headerExtra = <></>,
+  sort,
   customView = false,
+  customViewProps,
   permissionModule = null,
   expandable,
   groupActions = emptyGroupActions,
-}: SectionProps<T>) {
+}: SectionProps<T, V>) {
   const [nameInput, setNameInput] = useState('');
-  const [filter, setFilter] = useState<Mongo.Selector<T>>(() => filterFactory(''));
-  const [options, setOptions] = useState<{ limit: number }>({ limit: 20 });
+  const [pageLimit, setPageLimit] = useState(PAGE_SIZE);
+  // Derived, never stored: a new filterFactory (parent filter state changed) or
+  // search input re-queries immediately. useStableValue keeps the identity while
+  // the selector is structurally unchanged, so deps below don't churn.
+  const filter = useStableValue(useMemo(() => filterFactory(nameInput), [filterFactory, nameInput]));
+  // Custom views have no "load more", so they load everything up to the
+  // server's publish cap instead of silently stopping at one page.
+  const limit = customView ? PUBLISH_LIMITS.MAX : pageLimit;
+  const options = useStableValue(useMemo(() => (sort ? { limit, sort } : { limit }), [limit, sort]));
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
   useSubscribe(collectionName, filter, options);
@@ -90,14 +101,9 @@ export default function Section<T extends { _id?: string }>({
     setSelectedRowKeys([]);
   }, [filter]);
 
-  const handleNameChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setNameInput(event.target.value);
-      const newFilter = filterFactory(event.target.value);
-      setFilter(newFilter);
-    },
-    [filterFactory]
-  );
+  const handleNameChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setNameInput(event.target.value);
+  }, []);
 
   const handleCreate = useCallback(() => {
     void drawerStack.push({
@@ -245,10 +251,11 @@ export default function Section<T extends { _id?: string }>({
   const columns = useMemo(() => columnsFactory(handleEdit, handleDelete, permissions, t), [handleEdit, handleDelete, columnsFactory, permissions, t]);
 
   const handleLoadMore = useCallback(() => {
-    setOptions(prevOptions => ({ limit: prevOptions.limit + 20 }));
+    setPageLimit(prevLimit => prevLimit + PAGE_SIZE);
   }, []);
 
-  const loadMoreDisabled = useMemo(() => datasource?.length < options?.limit, [options, datasource]);
+  const loadMoreDisabled = datasource.length < pageLimit;
+  const customViewTruncated = !!customView && datasource.length >= limit;
 
   return (
     <SectionCard title={title} ready={true}>
@@ -275,7 +282,12 @@ export default function Section<T extends { _id?: string }>({
         )}
         <Col span={24}>
           {customView ? (
-            React.createElement(customView, { handleEdit, handleDelete, datasource, setFilter, permissions })
+            <>
+              {customViewTruncated && (
+                <Alert type="warning" showIcon style={{ marginBottom: 16 }} message={t('messages.resultsTruncated', { limit })} />
+              )}
+              {React.createElement(customView, { ...(customViewProps as V), handleEdit, handleDelete, datasource, permissions })}
+            </>
           ) : (
             <TableSection<T>
               columns={columns}

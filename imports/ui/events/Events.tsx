@@ -1,5 +1,4 @@
 import { Col, Checkbox, DatePicker, Select } from 'antd';
-import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
@@ -19,12 +18,21 @@ import EventCalendar from './EventCalendar';
 import EventForm from './EventForm';
 import EventTypesForm from './event-types/EventTypesForm';
 import getEventColumns from './event.columns';
+import { buildEventFilter, getCalendarRange, type EventDateRange } from './eventFilter';
 
 type ViewType = 'calendar' | 'attendance' | 'table';
 
+const EVENT_SORT = { start: 1 } as const;
+
+interface EventsViewProps {
+  onRangeChange: (start: Date, end: Date) => void;
+}
+
 export default function Events() {
   const [viewType, setViewType] = useState<ViewType>('calendar');
-  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([dayjs().startOf('month'), dayjs().endOf('month')]);
+  // Single source of truth for the date filter: the range picker writes it in
+  // the table/attendance views, the calendar reports its visible range into it.
+  const [dateRange, setDateRange] = useState<EventDateRange>(() => getCalendarRange('month', dayjs()));
   const [eventTypes, setEventTypes] = useState<string[]>([]);
   const [relevantOnly, setRelevantOnly] = useState(false);
   const { t } = useTranslation();
@@ -42,30 +50,21 @@ export default function Events() {
   }, [viewType]);
 
   const filterFactory = useCallback(
-    (string: string): Mongo.Selector<EventDoc> => {
-      const eventTypesFilter = eventTypes?.length ? { eventType: { $in: eventTypes } } : {};
-      const filter: Record<string, unknown> = {
-        ...eventTypesFilter,
-        name: { $regex: string, $options: 'i' },
-        start: { $lte: dateRange?.[1]?.toDate?.() },
-        end: { $gte: dateRange?.[0]?.toDate?.() },
-      };
-      if (relevantOnly && userId) {
-        filter.$or = [{ hosts: userId }, { attendees: userId }];
-      }
-      return filter as Mongo.Selector<EventDoc>;
-    },
+    (search: string): Mongo.Selector<EventDoc> => buildEventFilter({ search, dateRange, eventTypes, relevantOnly, userId }),
     [dateRange, eventTypes, relevantOnly, userId]
   );
 
-  const handleViewTypeChange = useCallback(
-    (value: ViewType) => {
-      if (value === 'attendance') setDateRange([dayjs().startOf('month').subtract(1, 'month'), dayjs().endOf('month')]);
-      else setDateRange([dayjs().startOf('month'), dayjs().endOf('month')]);
-      setViewType(value);
-    },
-    [setViewType, setDateRange]
-  );
+  const handleCalendarRangeChange = useCallback((start: Date, end: Date) => {
+    setDateRange([dayjs(start), dayjs(end)]);
+  }, []);
+  const customViewProps = useMemo<EventsViewProps>(() => ({ onRangeChange: handleCalendarRangeChange }), [handleCalendarRangeChange]);
+
+  const handleViewTypeChange = useCallback((value: ViewType) => {
+    // The calendar reports its own visible range when it mounts.
+    if (value === 'attendance') setDateRange([dayjs().startOf('month').subtract(1, 'month'), dayjs().endOf('month')]);
+    else if (value === 'table') setDateRange([dayjs().startOf('month'), dayjs().endOf('month')]);
+    setViewType(value);
+  }, []);
 
   const eventsRef = useTourRef('events-section');
   useTourAction('events-switch-calendar', () => handleViewTypeChange('calendar'));
@@ -73,7 +72,7 @@ export default function Events() {
 
   return (
     <div ref={eventsRef}>
-      <Section<EventDoc>
+      <Section<EventDoc, EventsViewProps>
         title={t('events.title')}
         collectionName="events"
         customView={customView}
@@ -81,6 +80,8 @@ export default function Events() {
         FormComponent={EventForm}
         columnsFactory={getEventColumns}
         filterFactory={filterFactory}
+        sort={EVENT_SORT}
+        customViewProps={customViewProps}
         extra={<></>}
         headerExtra={
           <>
@@ -97,7 +98,7 @@ export default function Events() {
             </Col>
             {(['table', 'attendance'] as ViewType[]).includes(viewType) && (
               <Col>
-                <DatePicker.RangePicker value={dateRange} onChange={setDateRange as (value: unknown) => void} />
+                <DatePicker.RangePicker value={dateRange} onChange={setDateRange} />
               </Col>
             )}
             <Col>

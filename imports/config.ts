@@ -8,6 +8,14 @@ export const LAYOUT = {
   MODAL_WIDTH_RATIO: 0.75,
 } as const;
 
+// Documents per publication: DEFAULT when a subscription sends no limit, MAX as
+// the hard cap (enforced in server/crud.lib.ts). Views without pagination
+// request MAX.
+export const PUBLISH_LIMITS = {
+  DEFAULT: 100,
+  MAX: 1000,
+} as const;
+
 export function getDrawerWidth(windowWidth: number): number {
   return windowWidth < BREAKPOINTS.MOBILE ? windowWidth : windowWidth * LAYOUT.DRAWER_WIDTH_RATIO;
 }
