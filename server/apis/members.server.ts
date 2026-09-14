@@ -58,6 +58,18 @@ const getFullName = (rank: string | undefined, id: number | undefined, name: str
 };
 
 if (Meteor.isServer) {
+  // User documents are written only through server methods (members.*,
+  // Accounts). accounts-base ships a default `users.allow` rule that lets a
+  // client update the `profile` of its own document directly, and `profile`
+  // carries authorization data (roleId, squadId). A deny rule overrides every
+  // allow rule, so all client-originated insert/update/remove on Meteor.users
+  // are rejected. Server-side collection calls are unaffected.
+  Meteor.users.deny({
+    insert: () => true,
+    update: () => true,
+    remove: () => true,
+  });
+
   Meteor.publish('user', function () {
     validateUserId(this.userId);
     return MembersCollection.find({ _id: this.userId }, { fields: { services: 0 } });
