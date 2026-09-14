@@ -37,6 +37,7 @@ import './server/integrityCharacterization.test';
 import './server/integrityCoverage.test';
 import './server/integrityFullDocEnforcement.test';
 import './server/logsRetention.test';
+import './server/memberCredentials.test';
 import './server/membersMethods.test';
 import './server/methodErrors.test';
 import './server/modulePermissions.test';
