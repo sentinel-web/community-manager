@@ -44,4 +44,5 @@ import './server/skillLoader.test';
 import './server/specializationsMethods.test';
 import './server/tasksMethods.test';
 import './server/telemetry.test';
+import './server/usersClientWrites.test';
 import './server/validation.test';
