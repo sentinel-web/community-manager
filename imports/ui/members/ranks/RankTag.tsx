@@ -1,6 +1,7 @@
 import { Tag, Tooltip } from 'antd';
 import React, { useEffect, useState } from 'react';
 import type { Rank } from '../../../api/types/rank';
+import ColoredTag from '../../components/ColoredTag';
 import useMethod from '../../hooks/useMethod';
 
 interface RankTagProps {
@@ -28,7 +29,7 @@ export default function RankTag({ rankId }: RankTagProps) {
   if (!match) return <Tag>Not found</Tag>;
   return (
     <Tooltip title={match.description}>
-      <Tag color={match.color}>{match.name}</Tag>
+      <ColoredTag color={match.color}>{match.name}</ColoredTag>
     </Tooltip>
   );
 }

@@ -1,5 +1,5 @@
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
-import { App, Button, Col, Divider, Form, Row, Select, Tag } from 'antd';
+import { App, Button, Col, Divider, Form, Row, Select } from 'antd';
 import type { Rule } from 'antd/es/form';
 import type { NamePath } from 'antd/es/form/interface';
 import { Meteor } from 'meteor/meteor';
@@ -8,6 +8,7 @@ import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
 import React, { ComponentType, MouseEvent, ReactNode, useCallback, useMemo, useState } from 'react';
 import { useDrawerStack } from '../drawer-stack';
 import { useTranslation } from '/imports/i18n/LanguageContext';
+import ColoredTag from './ColoredTag';
 
 const empty = <></>;
 const emptyQuery: Mongo.Selector<CollectionDoc> = {};
@@ -190,7 +191,7 @@ const CollectionSelect = ({
     return (
       <Row gutter={[4, 4]} align="middle" justify="space-between" key={keyValue} style={{ marginRight: 4 }}>
         <Col flex="auto">
-          <Tag color={raw?.color}>{optionLabel}</Tag>
+          <ColoredTag color={raw?.color}>{optionLabel}</ColoredTag>
         </Col>
         {user && (
           <>

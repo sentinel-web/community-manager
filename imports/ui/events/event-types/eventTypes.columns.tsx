@@ -1,5 +1,5 @@
-import { Tag } from 'antd';
 import React from 'react';
+import ColoredTag from '../../components/ColoredTag';
 import type { ColumnsType } from 'antd/es/table';
 import TableActions from '../../table/body/actions/TableActions';
 import type { SectionPermissions, TranslateFn, RowClickEvent } from '../../section/types';
@@ -34,7 +34,7 @@ const getEventTypeColumns = (
       key: 'color',
       ellipsis: true,
       sorter: (a, b) => (a.color || '').localeCompare(b.color || ''),
-      render: (color: string | null) => <Tag color={color || 'transparent'}>{color}</Tag>,
+      render: (color: string | null) => <ColoredTag color={color}>{color || '-'}</ColoredTag>,
     },
   ];
 

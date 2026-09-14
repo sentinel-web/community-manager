@@ -110,10 +110,10 @@ Register the page in `imports/ui/navigation/` so it's reachable, and add its i18
   render: (date: Date | undefined) => (date ? new Date(date).toLocaleDateString() : '-') }
 ```
 
-### Color tag — preserve the color render (`color || 'transparent'`, never `?? undefined`)
+### Color tag — render user colors through `ColoredTag` (never a raw `<Tag color>`: antd forces white text)
 ```tsx
 { title: t('common.color'), dataIndex: 'color', key: 'color',
-  render: (color: string | undefined) => <Tag color={color || 'transparent'}>{color || '-'}</Tag> }
+  render: (color: string | undefined) => <ColoredTag color={color}>{color || '-'}</ColoredTag> }
 ```
 
 ## Guidelines

@@ -101,6 +101,7 @@ Field-level schemas for every collection: [`docs/collections.md`](docs/collectio
 | `Section` | `imports/ui/section/` | Generic CRUD page with table, filtering, drawer |
 | `SectionCard` | `imports/ui/section/` | Card wrapper with title and loading state |
 | `CollectionSelect` | `imports/ui/components/` | Multi-select dropdown with inline create/edit |
+| `ColoredTag` | `imports/ui/components/` | Tag for user-chosen colors with legible text color |
 | `FormFooter` | `imports/ui/components/` | Submit/cancel buttons for drawer forms |
 | `Table` | `imports/ui/table/` | Data table component |
 | `TableHeader` | `imports/ui/table/header/` | Search input and create button |
@@ -168,7 +169,7 @@ Follow this hierarchy when making tradeoffs — never compromise security for co
 - Section generic: `<Section<EntityType> Collection={EntityCollection} columnsFactory={getEntityColumns} ... />`
 - Section column factory: `const getEntityColumns: ColumnsFactory<Entity> = (handleEdit, handleDelete, permissions, t) => [...]`
 - For nullable string fields at antd DOM boundaries (Tag, Picker), convert with `?? undefined` *only* at the DOM site — never on a server-write path
-- Color render preservation: `<Tag color={color || 'transparent'}>` (NOT `?? undefined`)
+- User-chosen entity colors render through `<ColoredTag color={color}>` (`imports/ui/components/`), never a raw `<Tag color={color}>` — antd forces white text on custom colors; `ColoredTag` sets the legible (WCAG) text color and falls back to a plain Tag for an empty color. `ColorPicker`s use `format="hex" disabledAlpha` so stored colors stay 6-digit hex
 
 **Meteor Data Hooks**
 ```typescript
