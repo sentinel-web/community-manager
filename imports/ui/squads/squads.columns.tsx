@@ -1,6 +1,7 @@
 import type { ColumnsType } from 'antd/es/table';
 import React, { useEffect, useState } from 'react';
 import type { Squad } from '../../api/types/squad';
+import compareByOrderThenName from '../../helpers/sorting/compareByOrderThenName';
 import ColoredTag from '../components/ColoredTag';
 import useMethod from '../hooks/useMethod';
 import type { ColumnsFactory, RowClickEvent, SectionPermissions, TranslateFn } from '../section/types';
@@ -65,6 +66,14 @@ const getSquadsColumns: ColumnsFactory<Squad> = (
       key: 'name',
       sorter: (a: Squad, b: Squad) => String(a.name).localeCompare(String(b.name)),
       render: (name: string | undefined, record: Squad) => (name ? <ColoredTag color={record.color}>{name}</ColoredTag> : '-'),
+    },
+    {
+      title: t('squads.order'),
+      dataIndex: 'order',
+      key: 'order',
+      defaultSortOrder: 'ascend',
+      sorter: compareByOrderThenName,
+      render: (order: number | null | undefined) => order ?? '-',
     },
     {
       title: t('columns.shortRangeFrequency'),

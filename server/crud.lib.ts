@@ -18,7 +18,7 @@ import {
   validateForeignKeysForUpdate,
 } from './integrity';
 import { sanitizeHtml } from './htmlSanitizer';
-import type { CrudCollectionMap, CrudCollectionName } from '/imports/api/types';
+import { RANK_ABBREVIATION_MAX_LENGTH, type CrudCollectionMap, type CrudCollectionName } from '/imports/api/types';
 
 import AttendancesCollection from '../imports/api/collections/attendances.collection';
 import BriefingTemplatesCollection from '../imports/api/collections/briefingTemplates.collection';
@@ -127,6 +127,26 @@ const INSERT_VALIDATORS: Partial<Record<CrudCollectionName, (payload: Record<str
   },
 };
 
+// Per-collection field validators run on BOTH insert and update (the `$set` payload), unlike
+// INSERT_VALIDATORS. Each field is optional: absent/null (a cleared form field) passes, but a present
+// value must have the right shape, so a crafted DDP call can't store e.g. a string sort order.
+const FIELD_VALIDATORS: Partial<Record<CrudCollectionName, (payload: Record<string, unknown>) => void>> = {
+  ranks: payload => {
+    const abbreviation = payload.abbreviation;
+    if (abbreviation == null) return;
+    if (typeof abbreviation !== 'string' || abbreviation.length > RANK_ABBREVIATION_MAX_LENGTH) {
+      throw new Meteor.Error('invalid-abbreviation', `Rank abbreviation must be a string of at most ${RANK_ABBREVIATION_MAX_LENGTH} characters`);
+    }
+  },
+  squads: payload => {
+    const order = payload.order;
+    if (order == null) return;
+    if (typeof order !== 'number' || !Number.isFinite(order) || order < 0) {
+      throw new Meteor.Error('invalid-order', 'Squad order must be a non-negative number');
+    }
+  },
+};
+
 const DEFAULT_PUBLISH_LIMIT = 100;
 const MAX_PUBLISH_LIMIT = 1000;
 
@@ -208,6 +228,7 @@ function createCollectionMethods(collection: CrudCollectionName): void {
               validate: ([p]) => {
                 validateObject(p, false);
                 INSERT_VALIDATORS[collection]?.(p);
+                FIELD_VALIDATORS[collection]?.(p);
               },
             },
             [payload] as const,
@@ -235,6 +256,7 @@ function createCollectionMethods(collection: CrudCollectionName): void {
               validate: ([targetId, changes]) => {
                 validateString(targetId, false);
                 validateObject(changes, false);
+                FIELD_VALIDATORS[collection]?.(changes as Record<string, unknown>);
               },
               // One indexed _id read so the audit log captures pre-update values
               // for the touched fields, enabling a before→after diff view.

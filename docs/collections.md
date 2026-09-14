@@ -24,10 +24,12 @@ Members (Meteor.users), Events, Attendances, Tasks, TaskStatus, Squads, Ranks, S
 - `name, status (taskStatusId), participants[], priority ('low'|'medium'|'high'), link, description, parent (taskId)`
 
 **Squads**
-- `name, color, image (base64), parentSquadId, shortRangeFrequency, longRangeFrequency, description`
+- `name, color, image (base64), parentSquadId, shortRangeFrequency, longRangeFrequency, description, order`
+- `order` (optional non-negative number) sorts squads — ORBAT siblings, the members squad view and the squads table — by `{ order, name }`, missing order last
 
 **Ranks**
-- `name, type ('player'|'zeus'), color, previousRankId, nextRankId, description`
+- `name, abbreviation, type ('player'|'zeus'), color, previousRankId, nextRankId, description`
+- `abbreviation` (optional, max 16 chars, e.g. "OFw") is shown in compact places (rank tags, ORBAT, squad member lists) with the full name in a tooltip; selects show the full name. `previousRankId`/`nextRankId` form the seniority chain used to sort members by rank
 
 **Specializations**
 - `name, color, linkToFile, instructors[], requiredSpecializations[], requiredRankId, description`
