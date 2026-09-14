@@ -3,7 +3,10 @@
 Harness-level guardrails that convert prose rules from `CLAUDE.md` / agent memory
 into checks the harness enforces, so they cannot be silently skipped. Wired up in
 [`.claude/settings.json`](../settings.json). All scripts are referenced via
-`$CLAUDE_PROJECT_DIR` so they also work inside git worktrees.
+`$CLAUDE_PROJECT_DIR` and are **worktree-aware**: git state is read from the tree a
+command targets (`git -C <path>`, then a leading `cd <path> &&`, then the session
+`cwd` from the hook payload), never from the hook process's own directory — which is
+the primary checkout, usually on `main`.
 
 | Hook | Event | Script | What it does |
 |------|-------|--------|--------------|
@@ -16,7 +19,9 @@ into checks the harness enforces, so they cannot be silently skipped. Wired up i
 Branch-aware — the normal `branch → commit → push → PR` flow is **not** blocked.
 Only these are denied (exit 2):
 
-- `git commit` / `git push` while on the default branch (`main`/`master`)
+- `git commit` / `git push` while the *targeted* tree is on the default branch
+  (`main`/`master`) — a commit in a feature worktree is allowed even though the
+  primary checkout sits on `main`
 - `git reset --hard` (irreversible working-tree/index loss)
 - `git branch -D` / `--delete --force` (can drop unmerged commits)
 - `gh pr merge --delete-branch` (auto-closes open child PRs — the stacked-PR footgun)
@@ -37,7 +42,9 @@ How it works:
 
 1. `record-verify.sh` (PostToolUse) watches Bash commands. When a typecheck or
    test command passes, it records that against a **tree signature**
-   (`HEAD` sha + dirty-tree hash) in `.claude/.verify-state` (gitignored). It is
+   (`HEAD` sha + dirty-tree hash) in `<worktree>/.claude/.verify-state`
+   (gitignored) — one record per working tree, so parallel worktree sessions never
+   overwrite each other. A combined command records every check it contains. It is
    conservative — it records a pass only on an explicit `exit_code == 0` or, as a
    fallback, when no failure tokens appear in the output — so the gate can never
    be *falsely* satisfied.
@@ -50,6 +57,12 @@ How it works:
 **Bypass it** with `CLAUDE_SKIP_VERIFY_GATE=1` (not recommended).
 
 ## Testing the hooks
+
+Run the self-contained suite (builds a throwaway repo with feature worktrees):
+
+```bash
+.claude/hooks/test-hooks.sh
+```
 
 Each script reads a JSON event on stdin and signals via exit code (0 allow, 2 block):
 

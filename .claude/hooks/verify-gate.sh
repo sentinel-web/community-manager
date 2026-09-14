@@ -30,27 +30,31 @@ if printf '%s' "$INPUT" | grep -qE '"stop_hook_active":[[:space:]]*true'; then
   exit 0
 fi
 
-STATE_FILE="${CLAUDE_PROJECT_DIR:-.}/.claude/.verify-state"
+# Gate the tree the session is working in (payload cwd), with that tree's own
+# verification record — not the hook process's directory or a record shared by
+# every worktree.
+DIR=$(target_dir "$INPUT")
+STATE_FILE=$(state_file "$DIR")
 
-BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+BRANCH=$(git -C "$DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 [ -z "$BRANCH" ] && exit 0
 { [ "$BRANCH" = "main" ] || [ "$BRANCH" = "master" ]; } && exit 0
 
 # Source files changed on this branch: committed vs main + staged + unstaged +
 # untracked (new files don't appear in `git diff`, so list them explicitly).
-BASE=$(git merge-base main HEAD 2>/dev/null || echo "")
+BASE=$(git -C "$DIR" merge-base main HEAD 2>/dev/null || echo "")
 CHANGED=$(
   {
-    [ -n "$BASE" ] && git diff --name-only "$BASE"...HEAD 2>/dev/null
-    git diff --name-only 2>/dev/null
-    git diff --cached --name-only 2>/dev/null
-    git ls-files --others --exclude-standard 2>/dev/null
+    [ -n "$BASE" ] && git -C "$DIR" diff --name-only "$BASE"...HEAD 2>/dev/null
+    git -C "$DIR" diff --name-only 2>/dev/null
+    git -C "$DIR" diff --cached --name-only 2>/dev/null
+    git -C "$DIR" ls-files --others --exclude-standard 2>/dev/null
   } | sort -u | grep -E '^(imports|server|client|tests|e2e)/|^[^/]+\.ts$' || true
 )
 [ -z "$CHANGED" ] && exit 0   # no source changes — nothing to gate
 
 # Has the current code state passed both checks?
-SIG="$(tree_sig)"
+SIG="$(tree_sig "$DIR")"
 MARK_SIG=""
 [ -f "$STATE_FILE" ] && MARK_SIG=$(grep '^SIG=' "$STATE_FILE" 2>/dev/null | head -1 | cut -d= -f2-)
 

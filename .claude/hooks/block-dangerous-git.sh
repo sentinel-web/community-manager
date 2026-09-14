@@ -23,6 +23,10 @@
 
 set -uo pipefail
 
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=lib.sh
+. "$SCRIPT_DIR/lib.sh"
+
 INPUT=$(cat)
 [ -z "$INPUT" ] && exit 0
 
@@ -55,8 +59,12 @@ fi
 
 # --- Commits / pushes on the default branch ----------------------------------
 
-if printf '%s' "$INPUT" | grep -qE 'git[[:space:]]+(commit|push)([[:space:]]|\\|")'; then
-  BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+if printf '%s' "$INPUT" | grep -qE 'git[[:space:]]+(-C[[:space:]]+[^[:space:]]+[[:space:]]+)?(commit|push)([[:space:]]|\\|")'; then
+  # Read the branch of the tree the command targets (git -C / leading cd /
+  # session cwd), not the hook process's directory — otherwise every commit in a
+  # feature worktree is refused because the primary checkout sits on main.
+  DIR=$(target_dir "$INPUT")
+  BRANCH=$(git -C "$DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
   if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "master" ]; then
     deny "Refusing a git commit/push while on '$BRANCH'. Create a feature branch first (CLAUDE.md workflow: issue -> branch -> implement -> PR)."
   fi
