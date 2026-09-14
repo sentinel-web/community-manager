@@ -2,13 +2,12 @@ import { App, Col, Row } from 'antd';
 import type { ExpandableConfig } from 'antd/es/table/interface';
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
-import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
+import { useFind, useSubscribe } from 'meteor/react-meteor-data';
 import React, { ComponentType, ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
-import RolesCollection from '../../api/collections/roles.collection';
-import type { Role, CrudPermission } from '../../api/types';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useDrawerStack } from '../drawer-stack';
 import useMethod from '../hooks/useMethod';
+import useModulePermissions from '../hooks/useModulePermissions';
 import TableContainer from '../table/body/TableContainer';
 import TableFooter from '../table/footer/TableFooter';
 import GroupActionsBar from '../table/header/GroupActionsBar';
@@ -17,35 +16,6 @@ import Table from '../table/Table';
 import DeleteImpactPreview, { type DeleteImpactPreviewData } from './DeleteImpactPreview';
 import SectionCard from './SectionCard';
 import type { BoundGroupAction, ColumnsFactory, GroupAction, RowClickEvent, SectionPermissions } from './types';
-
-type ModuleKey = keyof Role;
-
-function getModulePermissions(role: Role | undefined, module: ModuleKey): SectionPermissions {
-  if (!role) {
-    return { canCreate: false, canUpdate: false, canDelete: false };
-  }
-
-  if (role.roles === true) {
-    return { canCreate: true, canUpdate: true, canDelete: true };
-  }
-
-  const permission = role[module];
-
-  if (permission === true) {
-    return { canCreate: true, canUpdate: true, canDelete: true };
-  }
-
-  if (typeof permission === 'object' && permission !== null) {
-    const crud = permission as CrudPermission;
-    return {
-      canCreate: crud.create === true,
-      canUpdate: crud.update === true,
-      canDelete: crud.delete === true,
-    };
-  }
-
-  return { canCreate: false, canUpdate: false, canDelete: false };
-}
 
 function defaultFilterFactory(input: string): Mongo.Selector<Record<string, unknown>> {
   return { name: { $regex: input, $options: 'i' } };
@@ -122,17 +92,7 @@ export default function Section<T extends { _id?: string }>({
   const { call: removeEntry } = useMethod(`${collectionName}.remove`, { success: t('messages.deleteSuccess') });
   const { call: bulkRemoveEntries } = useMethod<{ removed: number; errors: unknown[] }>(`${collectionName}.bulkRemove`);
 
-  const user = useTracker(() => Meteor.user(), []);
-  useSubscribe('roles', { _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 });
-  const roles = useFind(
-    () => RolesCollection.find({ _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 }),
-    [user?.profile?.roleId]
-  );
-  const permissions = useMemo(() => {
-    const role = roles?.[0];
-    const moduleKey = (permissionModule || collectionName) as ModuleKey;
-    return getModulePermissions(role, moduleKey);
-  }, [roles, permissionModule, collectionName]);
+  const permissions = useModulePermissions(collectionName, permissionModule);
 
   useEffect(() => {
     setSelectedRowKeys([]);

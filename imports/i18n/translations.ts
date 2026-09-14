@@ -344,7 +344,6 @@ export const translations = {
   "messages.copiedToClipboard": { en: "Copied to clipboard", de: "In die Zwischenablage kopiert", fr: "Copié dans le presse-papiers" },
   "messages.copyFailed": { en: "Failed to copy", de: "Kopieren fehlgeschlagen", fr: "Échec de la copie" },
   "messages.createSuccess": { en: "Created successfully", de: "Erfolgreich erstellt", fr: "Créé avec succès" },
-  "messages.deleteConfirm": { en: "Are you sure you want to delete this item?", de: "Möchten Sie diesen Eintrag wirklich löschen?", fr: "Êtes-vous sûr de vouloir supprimer cet élément ?" },
   "messages.deleteSuccess": { en: "Deleted successfully", de: "Erfolgreich gelöscht", fr: "Supprimé avec succès" },
   "messages.discoveryTypeCreated": { en: "Discovery type created successfully", de: "Entdeckungsart erfolgreich erstellt", fr: "Type de découverte créé avec succès" },
   "messages.discoveryTypeUpdated": { en: "Discovery type updated successfully", de: "Entdeckungsart erfolgreich aktualisiert", fr: "Type de découverte mis à jour avec succès" },
