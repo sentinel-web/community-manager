@@ -17,6 +17,14 @@ const getRankColumns: ColumnsFactory<Rank> = (handleEdit, handleDelete, permissi
       sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
     },
     {
+      title: t('ranks.abbreviation'),
+      dataIndex: 'abbreviation',
+      key: 'abbreviation',
+      ellipsis: true,
+      sorter: (a: Rank, b: Rank) => (a.abbreviation || '').localeCompare(b.abbreviation || ''),
+      render: (abbreviation: string | undefined) => abbreviation || '-',
+    },
+    {
       title: t('columns.type'),
       dataIndex: 'type',
       key: 'type',

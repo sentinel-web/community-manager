@@ -2,13 +2,14 @@ import { ColorPicker, Form, Input, Select } from 'antd';
 import React, { useEffect } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import { getColorFromValues } from '/imports/helpers/colors/getColorFromValues';
-import type { Rank } from '../../../api/types/rank';
+import { RANK_ABBREVIATION_MAX_LENGTH, type Rank } from '../../../api/types/rank';
 import useEntityForm from '../../hooks/useEntityForm';
 import FormFooter from '../../components/FormFooter';
 import RanksSelect from './RanksSelect';
 
 interface RankFormValues {
   name: string;
+  abbreviation?: string;
   type: 'player' | 'zeus';
   description?: string;
   color?: { toHexString?: () => string } | string;
@@ -24,8 +25,8 @@ export default function RanksForm() {
     created: 'messages.rankCreated',
     updated: 'messages.rankUpdated',
     toPayload: values => {
-      const { name, description, previousRankId, nextRankId, type } = values;
-      return { name, color: getColorFromValues(values), description, previousRankId, nextRankId, type };
+      const { name, abbreviation, description, previousRankId, nextRankId, type } = values;
+      return { name, abbreviation, color: getColorFromValues(values), description, previousRankId, nextRankId, type };
     },
   });
 
@@ -35,6 +36,7 @@ export default function RanksForm() {
     } else {
       form.setFieldsValue({
         name: '',
+        abbreviation: '',
         description: '',
         color: undefined,
         previousRankId: undefined,
@@ -47,6 +49,9 @@ export default function RanksForm() {
     <Form form={form} layout="vertical" onFinish={onFinish} disabled={loading}>
       <Form.Item name="name" label={t('common.name')} rules={[{ required: true, type: 'string' }]} required>
         <Input placeholder={t('forms.placeholders.enterName')} />
+      </Form.Item>
+      <Form.Item name="abbreviation" label={t('ranks.abbreviation')} rules={[{ required: false, type: 'string', max: RANK_ABBREVIATION_MAX_LENGTH }]}>
+        <Input maxLength={RANK_ABBREVIATION_MAX_LENGTH} placeholder={t('forms.placeholders.enterAbbreviation')} />
       </Form.Item>
       <Form.Item name="type" label={t('members.type')} rules={[{ required: true, type: 'string' }]} required>
         <Select
