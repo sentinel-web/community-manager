@@ -150,7 +150,7 @@ const EVENT_TYPES: unknown[] = [
   { _id: 'training', name: 'Training', color: '#1890ff', description: 'Skill-building and practice sessions' },
   { _id: 'operation', name: 'Operation', color: '#f5222d', description: 'Full-scale military operations' },
   { _id: 'briefing', name: 'Briefing', color: '#faad14', description: 'Mission planning and information sessions' },
-  { _id: 'social', name: 'Social', color: '#52c41a', description: 'Community social events and game nights' },
+  { _id: 'social', name: 'Social', color: '#52c41a', description: 'Community social events and game nights', countsForInactivity: false },
 ];
 
 const TASK_STATUSES: unknown[] = [
