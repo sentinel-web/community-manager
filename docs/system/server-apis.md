@@ -38,10 +38,10 @@ Custom methods split into two camps depending on whether they need the full audi
 
 | Style | Used by | Mechanics |
 |-------|---------|-----------|
-| **Pipeline** (`runMutation`) | `members.{insert,update,remove}`, all of `integrity.*` | Routes through the shared `MutationWithAudit` lifecycle (auth → permission → validate → body → audit), so a denial emits `<collection>.<op>.denied` automatically. See `server/mutation-pipeline.ts` and CONTEXT → MutationWithAudit. |
+| **Pipeline** (`runMutation`) | `members.{insert,update,remove,bulkRemove}`, all of `integrity.*` | Routes through the shared `MutationWithAudit` lifecycle (auth → permission → validate → body → audit), so a denial emits `<collection>.<op>.denied` automatically. See `server/mutation-pipeline.ts` and CONTEXT → MutationWithAudit. |
 | **Hand-rolled** | everything else (`events.rsvp`, `palette.search`, `dashboard.stats`, `members.read`, …) | Inline `if (!this.userId) throw 401` / `validateUserId` → `checkPermission` → body → optional `createLog`. These are reads, narrow validators, or single-shot reads/writes that don't need the standard insert/update/remove audit shape. |
 
-`members.server.ts` is the only file mixing both: its CRUD-shaped paths (`insert/update/remove`) use `runMutation`; its read/list/validator methods are hand-rolled (and several wrap their body in `instrument(...)` from `server/telemetry.ts` to record `denied`/`error`/`ok` outcomes).
+`members.server.ts` is the only file mixing both: its CRUD-shaped paths (`insert/update/remove/bulkRemove`) use `runMutation`; its read/list/validator methods are hand-rolled (and several wrap their body in `instrument(...)` from `server/telemetry.ts` to record `denied`/`error`/`ok` outcomes).
 
 ### Permission patterns
 
@@ -88,7 +88,8 @@ Custom methods split into two camps depending on whether they need the full audi
 | `members.findOne` | `User \| undefined` | `members.read` | `assertSafeSelector` + squad-scope so a crafted selector can't read outside scope. |
 | `members.insert` | id | `members` (create) | `runMutation`; body is `Accounts.createUserAsync` (custom path), so it explicitly calls `validateForeignKeys`. `redact` strips secrets from audit. |
 | `members.update` | count | `members` (update) | `runMutation` with `captureBefore` diff snapshot, full-document FK enforcement (`validateForeignKeysForUpdate`), and a `permissionOverride` allowing `canManageSpecializations` holders to update **only** `profile.specializationIds`. Non-officers can't edit members outside their squad. |
-| `members.remove` | `{ id, effects }` | `members` (delete) | `runMutation`; blocks self-delete; runs `enforceIntegrityOnDelete`; cascades the owned `ProfilePicture`. |
+| `members.remove` | `{ id, effects }` | `members` (delete) | `runMutation`; body is the shared `removeMember` helper: blocks self-delete, 404 when missing, runs `enforceIntegrityOnDelete`, cascades the owned `ProfilePicture`. |
+| `members.bulkRemove` | `{ removed, errors }` | `members` (delete) | `runMutation`; 1–100 ids (400 otherwise); runs `removeMember` per id, logs `members.deleted` per success, collects per-id failures (incl. self-delete) into `errors` — same contract as generic `<c>.bulkRemove`. |
 | `members.saveTaskFilter` | void | auth only | Persists a task filter into `profile.taskFilter`; `assertSafeSelector` because it's later forwarded into the tasks publication selector. |
 | `members.options` / `members.groupedOptions` / `members.participantNames` | select options / grouped options / name string | `members.read` (groupedOptions: auth only) | Rank-prefixed "Rank-ID Name" labels; squad-scoped (except groupedOptions). |
 | `members.getUsedIds` / `members.getUsedNames` | `number[]` / `string[]` | auth only | For client-side availability hints. |

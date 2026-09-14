@@ -1,16 +1,25 @@
 import assert from 'node:assert';
 import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
+import EventsCollection from '../../imports/api/collections/events.collection';
 import LogsCollection from '../../imports/api/collections/logs.collection';
 import MembersCollection from '../../imports/api/collections/members.collection';
+import ProfilePicturesCollection from '../../imports/api/collections/profilePictures.collection';
 import {
   assertRejectsWithCode,
   callAs,
   cleanupFixtures,
+  createTestDoc,
   createTestRole,
   createTestUser,
+  findLatestAuditLog,
   TEST_PREFIX,
 } from './fixtures';
+
+interface BulkRemoveResult {
+  removed: number;
+  errors: string[];
+}
 
 // Targets the bespoke methods in server/apis/members.server.ts that are being
 // migrated onto the mutation-pipeline wrapper one slice at a time. Each test
@@ -189,5 +198,102 @@ describe('members.remove — migrated to mutation-pipeline (#102)', () => {
     } finally {
       (MembersCollection as unknown as { removeAsync: typeof originalRemove }).removeAsync = originalRemove;
     }
+  });
+});
+
+describe('members.bulkRemove — per-id members.remove semantics (#360)', () => {
+  let adminUserId: string;
+  let noDeleteUserId: string;
+
+  before(async () => {
+    const [adminRoleId, noDeleteRoleId] = await Promise.all([
+      createTestRole({ roles: true }),
+      createTestRole({ members: { read: true, create: false, update: false, delete: false } }),
+    ]);
+    [adminUserId, noDeleteUserId] = await Promise.all([createTestUser({ roleId: adminRoleId }), createTestUser({ roleId: noDeleteRoleId })]);
+  });
+
+  after(async () => {
+    await cleanupFixtures([EventsCollection, ProfilePicturesCollection]);
+  });
+
+  it('removes every selected member and returns { removed, errors }', async () => {
+    const [firstId, secondId] = await Promise.all([createTestUser(), createTestUser()]);
+
+    const result = (await callAs(adminUserId, 'members.bulkRemove', [firstId, secondId])) as BulkRemoveResult;
+
+    assert.deepStrictEqual(result, { removed: 2, errors: [] });
+    assert.strictEqual(await MembersCollection.findOneAsync(firstId), undefined);
+    assert.strictEqual(await MembersCollection.findOneAsync(secondId), undefined);
+  });
+
+  it('writes one members.deleted audit entry per removed id', async () => {
+    const [firstId, secondId] = await Promise.all([createTestUser(), createTestUser()]);
+
+    await callAs(adminUserId, 'members.bulkRemove', [firstId, secondId]);
+
+    assert.ok(await findLatestAuditLog('members.deleted', firstId), 'expected audit entry for first id');
+    assert.ok(await findLatestAuditLog('members.deleted', secondId), 'expected audit entry for second id');
+  });
+
+  it('runs the integrity layer and the owned profile-picture cascade for each id', async () => {
+    const pictureId = await createTestDoc(ProfilePicturesCollection, { value: 'data:image/png;base64,xxx' });
+    const memberId = await createTestUser({ profile: { profilePictureId: pictureId } });
+    const eventId = await createTestDoc(EventsCollection, {
+      name: '__test_bulk_member_event',
+      start: new Date(),
+      end: new Date(),
+      hosts: [memberId],
+      attendees: [memberId],
+    });
+
+    const result = (await callAs(adminUserId, 'members.bulkRemove', [memberId])) as BulkRemoveResult;
+
+    assert.deepStrictEqual(result, { removed: 1, errors: [] });
+    assert.strictEqual(await ProfilePicturesCollection.findOneAsync(pictureId), undefined, 'owned profile picture should be deleted');
+    const event = await EventsCollection.findOneAsync(eventId);
+    assert.deepStrictEqual(event?.hosts, []);
+    assert.deepStrictEqual(event?.attendees, []);
+  });
+
+  it('refuses self-deletion per id while still removing the other members', async () => {
+    const otherId = await createTestUser();
+
+    const result = (await callAs(adminUserId, 'members.bulkRemove', [adminUserId, otherId])) as BulkRemoveResult;
+
+    assert.strictEqual(result.removed, 1);
+    assert.strictEqual(result.errors.length, 1);
+    assert.match(result.errors[0], new RegExp(adminUserId));
+    assert.ok(await MembersCollection.findOneAsync(adminUserId), 'caller must survive a bulk delete that includes themselves');
+    assert.strictEqual(await MembersCollection.findOneAsync(otherId), undefined);
+  });
+
+  it('reports missing ids as errors without aborting the batch', async () => {
+    const existingId = await createTestUser();
+    const missingId = `${TEST_PREFIX}missing_member`;
+
+    const result = (await callAs(adminUserId, 'members.bulkRemove', [missingId, existingId])) as BulkRemoveResult;
+
+    assert.strictEqual(result.removed, 1);
+    assert.strictEqual(result.errors.length, 1);
+    assert.match(result.errors[0], new RegExp(missingId));
+    assert.strictEqual(await MembersCollection.findOneAsync(existingId), undefined);
+  });
+
+  it('rejects an empty id list with 400', async () => {
+    await assertRejectsWithCode(() => callAs(adminUserId, 'members.bulkRemove', []), 400);
+  });
+
+  it('rejects more than 100 ids with 400', async () => {
+    const ids = Array.from({ length: 101 }, (_, i) => `${TEST_PREFIX}bulk_${i}`);
+    await assertRejectsWithCode(() => callAs(adminUserId, 'members.bulkRemove', ids), 400);
+  });
+
+  it('rejects callers without members.delete permission with 403 and removes nothing', async () => {
+    const targetId = await createTestUser();
+
+    await assertRejectsWithCode(() => callAs(noDeleteUserId, 'members.bulkRemove', [targetId]), 403);
+
+    assert.ok(await MembersCollection.findOneAsync(targetId), 'target must survive a denied bulk delete');
   });
 });
