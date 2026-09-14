@@ -4,7 +4,7 @@ The hand-written Meteor methods and publications in `server/apis/` that go **bey
 
 ## Key files
 
-- `server/apis/attendances.server.ts` — `attendances.upsert`: atomic per-event attendance grid write under a dynamic `[memberId]` key.
+- `server/apis/attendances.server.ts` — `attendances.upsert`: atomic per-event attendance grid write under a dynamic `[memberId]` key; `attendances.pointsSummary`: all-time point totals for the attendance grid (via `server/attendance-points.ts`).
 - `server/apis/backup.server.ts` — full-DB export / restore / validate, with SEC-004 privilege-escalation hardening and DDP rate limits.
 - `server/apis/dashboard.server.ts` — role-gated dashboard aggregations (counts + group-by via raw Mongo `aggregate`).
 - `server/apis/demoData.server.ts` — dev-only `demoData.generate`: wipe-all + reseed every collection from fixed `_id` seeds.
@@ -67,6 +67,7 @@ Custom methods split into two camps depending on whether they need the full audi
 
 | Method | Returns | Permission | Notable logic |
 |--------|---------|-----------|----------------|
+| `attendances.pointsSummary` | `Record<memberId, { attendancePoints, inactivityPoints }>` | `events.read` + squad scope | All-time totals for up to 1000 member ids; unknown/out-of-squad members are omitted. `server/attendance-points.ts` loads the members' attendances in one query, batch-loads only the no-show events whose event type has `countsForInactivity: false`, then applies the shared pure calculation in `imports/api/attendance/points.ts` (also used by `members.profileStats`). |
 | `attendances.upsert` | `boolean` | `events.update` | One attendance doc **per event**; each member's status held under a dynamic `[memberId]` key. `upsertAsync({ eventId })` + unique `{ eventId }` index makes it race-safe (#261). `memberId` is hardened against Mongo operator/path chars and structural-field collision via `ID_PATTERN` (`/^[A-Za-z0-9]{17,24}$/`). Status must be one of `-2,-1,0,1,2`. |
 | `backup.create` | `BackupData` | `settings.read` | Exports all `BACKUP_COLLECTIONS` + `settings` + `users` (collection fetches raced via `Promise.all`); per-collection failures log `backup.export.error` and yield an empty array. |
 | `backup.createQuick` | `BackupData` | `settings.read` | Same as `create` but tags `meta.isSafetyBackup`; used internally as the pre-restore safety snapshot. |
@@ -97,7 +98,7 @@ Custom methods split into two camps depending on whether they need the full audi
 | `members.all` | `User[]` (no `services`) | `members.read` | Full squad-scoped member list (no projection → strip is essential). |
 | `members.profileAccess` | `{ canViewContact }` | auth only | True if viewer is officer/admin or viewing self. |
 | `members.attendanceBreakdown` | `{ total, quarterly, missionCount }` | self or `members.read` | Scans attendance docs keyed by `userId`; maps statuses (1=present, 2=zeus, -1=absent, 0=excused, -2=skip). |
-| `members.profileStats` | profile detail object | self or `members.read`+squad | `typeof`-discriminated param: full user doc / userId string / undefined (=self). Computes attendance & inactivity points from the attendance grid (+ static base points), resolves rank/navyRank/position/squad/role/medals/specializations. See [reference: profileStats overload]. |
+| `members.profileStats` | profile detail object | self or `members.read`+squad | `typeof`-discriminated param: full user doc / userId string / undefined (=self). Computes attendance & inactivity points via `loadMemberPoints` (same calculation as `attendances.pointsSummary`), resolves rank/navyRank/position/squad/role/medals/specializations. See [reference: profileStats overload]. |
 | `orbat.squads` | `Squad[]` | auth only (`validateString(userId)`) | Squads with `excludeFromOrbat ≠ true`; source for the org chart. |
 | `orbat.popover.items` | `OrbatPopoverItem[]` | auth only | Per-squad roster with `"Position - Rank"` labels. |
 | `palette.search` | `PaletteSearchResult` | per-collection `read` | Escapes the query into a case-insensitive regex; searches members/events/tasks/squads/registrations/questionnaires, **each gated independently** by its own `read` permission (raced via `Promise.all`). Members honour squad scope; numeric queries also match `profile.id`. Caps results at `MAX_LIMIT` (30). |

@@ -1,8 +1,9 @@
 import { Typography } from 'antd';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
-
-const ATTENDANCE_COLORS = { present: '#52c41a', zeus: '#1890ff', excused: '#faad14', absent: '#ff4d4f' };
+import { ATTENDANCE_STATUS_META } from '../../api/attendance/status';
+import type { AttendanceStatus } from '../../api/types/shared';
+import { useTranslation } from '../../i18n/LanguageContext';
 
 interface AttendanceBreakdownData {
   present: number;
@@ -11,18 +12,31 @@ interface AttendanceBreakdownData {
   absent: number;
 }
 
+// Breakdown bucket → attendance status; label and color come from the shared
+// status map (#365). Cancelled events are not part of the breakdown.
+const BREAKDOWN_STATUSES: readonly [keyof AttendanceBreakdownData, AttendanceStatus][] = [
+  ['present', 1],
+  ['zeus', 2],
+  ['excused', 0],
+  ['absent', -1],
+];
+
 interface AttendancePieChartProps {
   data: AttendanceBreakdownData;
   title: string;
 }
 
 export default function AttendancePieChart({ data, title }: AttendancePieChartProps) {
-  const chartData = [
-    { name: 'Present', value: data.present, color: ATTENDANCE_COLORS.present },
-    { name: 'Zeus', value: data.zeus, color: ATTENDANCE_COLORS.zeus },
-    { name: 'Excused', value: data.excused, color: ATTENDANCE_COLORS.excused },
-    { name: 'Absent', value: data.absent, color: ATTENDANCE_COLORS.absent },
-  ].filter(d => d.value > 0);
+  const { t } = useTranslation();
+  const chartData = useMemo(
+    () =>
+      BREAKDOWN_STATUSES.map(([bucket, status]) => ({
+        name: t(ATTENDANCE_STATUS_META[status].labelKey),
+        value: data[bucket],
+        color: ATTENDANCE_STATUS_META[status].chartColor,
+      })).filter(d => d.value > 0),
+    [data, t]
+  );
 
   if (!chartData.length) return <Typography.Text type="secondary">{title}: -</Typography.Text>;
 
