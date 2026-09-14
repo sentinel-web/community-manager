@@ -104,19 +104,19 @@ const ROLES: unknown[] = [
 ];
 
 const SQUADS: unknown[] = [
-  { _id: 'hq', name: 'HQ Command', color: '#f5222d', shortRangeFrequency: '100.0', longRangeFrequency: '50.0', description: 'Headquarters and command staff' },
-  { _id: 'alpha', name: 'Alpha', color: '#1890ff', parentSquadId: 'hq', shortRangeFrequency: '110.0', longRangeFrequency: '50.0', description: 'Primary assault element' },
-  { _id: 'bravo', name: 'Bravo', color: '#52c41a', parentSquadId: 'hq', shortRangeFrequency: '120.0', longRangeFrequency: '50.0', description: 'Fire support element' },
-  { _id: 'charlie', name: 'Charlie', color: '#faad14', parentSquadId: 'hq', shortRangeFrequency: '130.0', longRangeFrequency: '50.0', description: 'Reconnaissance and special operations' },
+  { _id: 'hq', name: 'HQ Command', order: 0, color: '#f5222d', shortRangeFrequency: '100.0', longRangeFrequency: '50.0', description: 'Headquarters and command staff' },
+  { _id: 'alpha', name: 'Alpha', order: 1, color: '#1890ff', parentSquadId: 'hq', shortRangeFrequency: '110.0', longRangeFrequency: '50.0', description: 'Primary assault element' },
+  { _id: 'bravo', name: 'Bravo', order: 2, color: '#52c41a', parentSquadId: 'hq', shortRangeFrequency: '120.0', longRangeFrequency: '50.0', description: 'Fire support element' },
+  { _id: 'charlie', name: 'Charlie', order: 3, color: '#faad14', parentSquadId: 'hq', shortRangeFrequency: '130.0', longRangeFrequency: '50.0', description: 'Reconnaissance and special operations' },
 ];
 
 const RANKS: unknown[] = [
-  { _id: 'recruit', name: 'Recruit', type: 'player', color: '#8c8c8c', nextRankId: 'private', description: 'New community member in training' },
-  { _id: 'private', name: 'Private', type: 'player', color: '#52c41a', previousRankId: 'recruit', nextRankId: 'corporal', description: 'Standard member rank' },
-  { _id: 'corporal', name: 'Corporal', type: 'player', color: '#1890ff', previousRankId: 'private', nextRankId: 'sergeant', description: 'Experienced member, may lead fireteams' },
-  { _id: 'sergeant', name: 'Sergeant', type: 'player', color: '#722ed1', previousRankId: 'corporal', nextRankId: 'lieutenant', description: 'Squad-level leadership' },
-  { _id: 'lieutenant', name: 'Lieutenant', type: 'player', color: '#fa8c16', previousRankId: 'sergeant', nextRankId: 'captain', description: 'Platoon-level command' },
-  { _id: 'captain', name: 'Captain', type: 'player', color: '#f5222d', previousRankId: 'lieutenant', description: 'Senior command' },
+  { _id: 'recruit', name: 'Recruit', abbreviation: 'Rct', type: 'player', color: '#8c8c8c', nextRankId: 'private', description: 'New community member in training' },
+  { _id: 'private', name: 'Private', abbreviation: 'Pvt', type: 'player', color: '#52c41a', previousRankId: 'recruit', nextRankId: 'corporal', description: 'Standard member rank' },
+  { _id: 'corporal', name: 'Corporal', abbreviation: 'Cpl', type: 'player', color: '#1890ff', previousRankId: 'private', nextRankId: 'sergeant', description: 'Experienced member, may lead fireteams' },
+  { _id: 'sergeant', name: 'Sergeant', abbreviation: 'Sgt', type: 'player', color: '#722ed1', previousRankId: 'corporal', nextRankId: 'lieutenant', description: 'Squad-level leadership' },
+  { _id: 'lieutenant', name: 'Lieutenant', abbreviation: 'Lt', type: 'player', color: '#fa8c16', previousRankId: 'sergeant', nextRankId: 'captain', description: 'Platoon-level command' },
+  { _id: 'captain', name: 'Captain', abbreviation: 'Capt', type: 'player', color: '#f5222d', previousRankId: 'lieutenant', description: 'Senior command' },
 ];
 
 const SPECIALIZATIONS: unknown[] = [
@@ -135,9 +135,9 @@ const MEDALS: unknown[] = [
 ];
 
 const POSITIONS: unknown[] = [
-  { _id: 'squad-leader', name: 'Squad Leader', color: '#f5222d', description: 'Leads a squad in operations' },
-  { _id: 'fireteam-lead', name: 'Fireteam Lead', color: '#fa8c16', description: 'Leads a fireteam within a squad' },
-  { _id: 'logistics', name: 'Logistics Officer', color: '#1890ff', description: 'Manages equipment and supply operations' },
+  { _id: 'squad-leader', name: 'Squad Leader', order: 1, color: '#f5222d', description: 'Leads a squad in operations' },
+  { _id: 'fireteam-lead', name: 'Fireteam Lead', order: 2, color: '#fa8c16', description: 'Leads a fireteam within a squad' },
+  { _id: 'logistics', name: 'Logistics Officer', order: 3, color: '#1890ff', description: 'Manages equipment and supply operations' },
 ];
 
 const DISCOVERY_TYPES: unknown[] = [

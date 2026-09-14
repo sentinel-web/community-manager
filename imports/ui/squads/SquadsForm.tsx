@@ -1,4 +1,4 @@
-import { Col, ColorPicker, Form, Input, Row, Switch, Upload } from 'antd';
+import { Col, ColorPicker, Form, Input, InputNumber, Row, Switch, Upload } from 'antd';
 import type { RcFile } from 'antd/es/upload';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
@@ -18,6 +18,7 @@ interface SquadsFormValues {
   longRangeFrequency?: string;
   description?: string;
   excludeFromOrbat?: boolean;
+  order?: number | null;
 }
 
 const SquadsForm = () => {
@@ -78,6 +79,9 @@ const SquadsForm = () => {
           </Form.Item>
         </Col>
       </Row>
+      <Form.Item label={t('squads.order')} name="order" rules={[{ required: false, type: 'number', min: 0 }]}>
+        <InputNumber min={0} placeholder={t('squads.order')} />
+      </Form.Item>
       <SquadsSelect
         label={t('squads.parentSquad')}
         name="parentSquadId"
