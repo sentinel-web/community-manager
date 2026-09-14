@@ -52,7 +52,7 @@ test.describe('Questionnaires', () => {
     await page.click('button:has-text("Add Question")');
 
     // Fill the question text
-    const questionInput = page.locator('input[id="questions_0_text"]');
+    const questionInput = page.locator('textarea[id="questions_0_text"]');
     await questionInput.fill('How satisfied are you?');
 
     // Select question type
