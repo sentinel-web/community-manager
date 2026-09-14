@@ -17,15 +17,18 @@ import { useDrawerStack } from '../drawer-stack';
 import EventDetailPopover from './EventDetailPopover';
 import EventForm from './EventForm';
 import { useTourRef } from '../tour/TourContext';
+import { getCalendarRange } from './eventFilter';
 
 const DnDCalendar = withDragAndDrop(Calendar);
 
 interface EventCalendarProps {
   datasource?: EventDoc[];
-  setFilter?: (updater: (prev: Record<string, unknown> | null) => Record<string, unknown>) => void;
+  // Reports the visible date range (on mount and on every navigation/view
+  // change) so the owner can filter the events it passes back in.
+  onRangeChange?: (start: Date, end: Date) => void;
 }
 
-const EventCalendar = ({ datasource, setFilter }: EventCalendarProps) => {
+const EventCalendar = ({ datasource, onRangeChange }: EventCalendarProps) => {
   const calendarRef = useTourRef('events-calendar');
   const { t, language } = useLanguage();
   const drawerStack = useDrawerStack();
@@ -41,10 +44,6 @@ const EventCalendar = ({ datasource, setFilter }: EventCalendarProps) => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailEvent, setDetailEvent] = useState<EventDoc | null>(null);
 
-  const [range, setRange] = useState({
-    start: dayjs().startOf('month').startOf('week').toDate(),
-    end: dayjs().endOf('month').endOf('week').toDate(),
-  });
   const eventTypeIds = useMemo(() => datasource?.map?.(doc => doc.eventType) || [], [datasource]);
   useSubscribe('eventTypes', { _id: { $in: eventTypeIds } });
   const eventTypes = useFind(() => EventTypesCollection.find({ _id: { $in: eventTypeIds } }), [datasource]);
@@ -120,34 +119,22 @@ const EventCalendar = ({ datasource, setFilter }: EventCalendarProps) => {
     typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.MOBILE ? 'agenda' : 'month'
   );
 
+  // react-big-calendar only reports ranges on navigation, so report the
+  // initial one on mount. Later ranges come from handleRangeChange.
+  useEffect(() => {
+    const [start, end] = getCalendarRange(currentView, dayjs());
+    onRangeChange?.(start.toDate(), end.toDate());
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: the calendar starts on today's date in the initial view
+  }, []);
+
   const handleRangeChange = useCallback(
     (value: Date[] | DateRange, view?: View) => {
-      const newRange = { ...range };
-      switch (view ?? currentView) {
-        case 'day':
-        case 'week': {
-          const dateArray = value as Date[];
-          newRange.start = dayjs(dateArray[0]).startOf('day').toDate();
-          newRange.end = dayjs(dateArray[dateArray.length - 1])
-            .endOf('day')
-            .toDate();
-          break;
-        }
-        case 'month':
-        case 'agenda': {
-          const dateRange = value as DateRange;
-          newRange.start = dayjs(dateRange.start).startOf('day').toDate();
-          newRange.end = dayjs(dateRange.end).endOf('day').toDate();
-          break;
-        }
-        default:
-          break;
-      }
-      setCurrentView(view ?? currentView);
-      setRange(newRange);
-      setFilter?.(prev => ({ ...(prev ?? {}), start: { $lte: newRange.end }, end: { $gte: newRange.start } }));
+      // Day/week views pass the visible days, month/agenda a { start, end } range.
+      const [first, last] = Array.isArray(value) ? [value[0], value[value.length - 1]] : [value.start, value.end];
+      if (view) setCurrentView(view);
+      onRangeChange?.(dayjs(first).startOf('day').toDate(), dayjs(last).endOf('day').toDate());
     },
-    [range, currentView]
+    [onRangeChange]
   );
 
   const events = useMemo<CalendarEvent[]>(

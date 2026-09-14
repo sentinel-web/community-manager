@@ -19,6 +19,14 @@ export type ColumnsFactory<T = Record<string, unknown>> = (
   t: TranslateFn
 ) => ColumnsType<T>;
 
+/** Props Section passes to a `customView` (in addition to its `customViewProps`). */
+export interface CustomViewProps<T> {
+  handleEdit: (e: RowClickEvent, record: T) => void;
+  handleDelete: (e: RowClickEvent, record: T) => void;
+  datasource: T[];
+  permissions: SectionPermissions;
+}
+
 export interface GroupAction {
   key: string;
   label: string;

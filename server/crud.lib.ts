@@ -19,6 +19,7 @@ import {
 } from './integrity';
 import { sanitizeHtml } from './htmlSanitizer';
 import type { CrudCollectionMap, CrudCollectionName } from '/imports/api/types';
+import { PUBLISH_LIMITS } from '/imports/config';
 
 import AttendancesCollection from '../imports/api/collections/attendances.collection';
 import BriefingTemplatesCollection from '../imports/api/collections/briefingTemplates.collection';
@@ -127,8 +128,7 @@ const INSERT_VALIDATORS: Partial<Record<CrudCollectionName, (payload: Record<str
   },
 };
 
-const DEFAULT_PUBLISH_LIMIT = 100;
-const MAX_PUBLISH_LIMIT = 1000;
+const { DEFAULT: DEFAULT_PUBLISH_LIMIT, MAX: MAX_PUBLISH_LIMIT } = PUBLISH_LIMITS;
 
 function createCollectionPublish(collection: CrudCollectionName): void {
   if (Meteor.isServer) {

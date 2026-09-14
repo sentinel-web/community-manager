@@ -82,8 +82,8 @@ What `Section` does internally:
 | Concern | Implementation |
 |---------|----------------|
 | Reactive data | `useSubscribe(collectionName, filter, options)` + `useFind(() => Collection.find(filter, options))`. |
-| Search | `TableHeader` input → `filterFactory(input)` (default `{ name: { $regex, $options: 'i' } }`). |
-| Pagination | `options.limit` starts at 20, `handleLoadMore` adds 20; `TableFooter` "load more" disabled when fewer rows than the limit. |
+| Search / filters | `filter` is derived (`useMemo`) from `filterFactory(nameInput)` (default `{ name: { $regex, $options: 'i' } }`), so both typing and a new `filterFactory` identity re-query. Parents that build `filterFactory` from their own filter state must memoize it with `useCallback`; `useStableValue` keeps the selector identity while it is structurally unchanged. |
+| Pagination | Table view: `options.limit` starts at 20, `handleLoadMore` adds 20; `TableFooter` "load more" disabled when fewer rows than the limit. A `customView` has no "load more", so it requests `PUBLISH_LIMITS.MAX` (1000, `imports/config.ts`) and shows a truncation warning when that cap is hit. Optional `sort` is forwarded to both the subscription and `find`. |
 | Permissions | reads the user's role doc, derives `{ canCreate, canUpdate, canDelete }` via `getModulePermissions(role, permissionModule ?? collectionName)`. |
 | Columns | `columns = columnsFactory(handleEdit, handleDelete, permissions, t)` — the factory builds the antd `ColumnsType<T>` and decides which action buttons to show. |
 | Create | `handleCreate` → `drawerStack.push({ Component: FormComponent, model: {} })`. |
@@ -99,7 +99,7 @@ const getSquadColumns: ColumnsFactory<Squad> =
   (handleEdit, handleDelete, permissions, t) => [ /* antd columns */ ];
 ```
 
-A view that is not a table passes `customView` (a render component receiving `{ handleEdit, handleDelete, datasource, setFilter, permissions }`) instead of using the built-in `Table` — e.g. calendar, kanban, orbat.
+A view that is not a table passes `customView` (a render component receiving `CustomViewProps` — `{ handleEdit, handleDelete, datasource, permissions }` — plus any `customViewProps`) instead of using the built-in `Table` — e.g. calendar, kanban, orbat. Custom views never write the filter themselves; they report state (e.g. the calendar's visible range) up to the parent, which folds it into `filterFactory`.
 
 `getModulePermissions` (`Section.tsx:23`) and `checkAccess` (`Main.tsx`) and `hasAccess` (`Navigation.tsx:46`) are three near-identical role→permission readers — Section needs the full CRUD triple, Main/Navigation only the read bit. Pass `permissionModule` when the collection name differs from its permission module (e.g. a sub-collection page), or the wrong module is resolved.
 

@@ -49,16 +49,18 @@ the custom view receives the filtered `datasource` plus `handleEdit`/`handleDele
 `Events.tsx` is the shell: a `viewType` selector (`calendar`/`attendance`/`table`),
 an event-type multi-select filter, a date-range picker (shown only for table &
 attendance), and a "relevant to me" checkbox that ORs `hosts`/`attendees` against
-the current `userId` into the Mongo selector (`filterFactory`, `Events.tsx:44`).
+the current `userId` into the Mongo selector. `Events` owns one `dateRange` state
+(the single source of truth for every view) and builds the selector with the pure
+`buildEventFilter` (`eventFilter.ts`: day-inclusive overlap range, sorted by `start`).
 
 - **`EventCalendar`** wraps `react-big-calendar` with its drag-and-drop addon
   (`withDragAndDrop(Calendar)`, `EventCalendar.tsx:21`). The localizer is
   `dayjsLocalizer(dayjs)`, re-created when the i18n `language` changes
   (`EventCalendar.tsx:34-40`). Below `BREAKPOINTS.MOBILE` it defaults to the
-  `agenda` list (the month grid is unreadable on a phone). `onRangeChange`
-  (`EventCalendar.tsx:123`) recomputes the visible window and pushes a
-  `{ start: {$lte}, end: {$gte} }` overlap filter up to the parent's `setFilter`,
-  so the subscription only loads visible events. Drag/resize/slot-select all
+  `agenda` list (the month grid is unreadable on a phone). It reports its visible
+  window through the `onRangeChange` prop (on mount via `getCalendarRange`, then on
+  every navigation/view change) into `Events`' `dateRange`, so the subscription
+  only loads visible events. Drag/resize/slot-select all
   funnel into `openForm` which pushes `EventForm` onto the DrawerStack with the
   dragged dates pre-filled — **the drag does not persist directly**, it opens the
   form. `eventPropGetter` colours each block by `event.color` (falling back to its
