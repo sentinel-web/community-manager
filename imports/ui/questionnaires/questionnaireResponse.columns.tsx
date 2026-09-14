@@ -18,9 +18,9 @@ const getQuestionnaireResponseColumns = (
       dataIndex: 'respondentName',
       key: 'respondentName',
       ellipsis: true,
-      render: (name: string, record: QuestionnaireResponseRow) => (
+      render: (name: string | null | undefined, record: QuestionnaireResponseRow) => (
         <Space>
-          {record.respondentId ? name : <Tag color="blue">{t('questionnaires.anonymous')}</Tag>}
+          {record.respondentId ? name || t('questionnaires.unknownRespondent') : <Tag color="blue">{t('questionnaires.anonymous')}</Tag>}
           {record.ignored && <Tag color="orange">{t('questionnaires.ignored')}</Tag>}
         </Space>
       ),
