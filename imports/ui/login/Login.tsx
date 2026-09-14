@@ -1,6 +1,6 @@
-import { App, Button, Card, Col, Form, Input, Row, Typography } from 'antd';
+import { App, Button, Card, Col, Form, Input, Modal, Result, Row, Typography } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import { useDrawerStack } from '../drawer-stack';
 import RegistrationForm from '../registration/RegistrationForm';
@@ -14,6 +14,7 @@ export default function Login() {
   const { t } = useTranslation();
   const { notification } = App.useApp();
   const drawerStack = useDrawerStack();
+  const [registrationReceived, setRegistrationReceived] = useState(false);
 
   const handleSubmit = useCallback(
     (values: LoginValues) => {
@@ -30,13 +31,17 @@ export default function Login() {
     [notification, t]
   );
 
-  const handleRegister = useCallback(() => {
-    void drawerStack.push<string, Record<string, unknown>>({
+  const handleRegister = useCallback(async () => {
+    // Resolves with the new registration id on submit, undefined on cancel.
+    const registrationId = await drawerStack.push<string, Record<string, unknown>>({
       title: t('modals.registration'),
       Component: RegistrationForm,
       model: {},
     });
+    if (registrationId) setRegistrationReceived(true);
   }, [drawerStack, t]);
+
+  const closeConfirmation = useCallback(() => setRegistrationReceived(false), []);
 
   return (
     <Card className="login" title={<Typography.Title level={2}>{t('auth.login')}</Typography.Title>} type="inner">
@@ -58,6 +63,18 @@ export default function Login() {
           </Col>
         </Row>
       </Form>
+      <Modal open={registrationReceived} onCancel={closeConfirmation} footer={null} centered>
+        <Result
+          status="success"
+          title={t('registrations.confirmation.title')}
+          subTitle={t('registrations.confirmation.description')}
+          extra={
+            <Button type="primary" onClick={closeConfirmation}>
+              {t('common.close')}
+            </Button>
+          }
+        />
+      </Modal>
     </Card>
   );
 }
