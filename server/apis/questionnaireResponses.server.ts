@@ -5,6 +5,7 @@ import MembersCollection from '../../imports/api/collections/members.collection'
 import { checkPermission, validateString, validateArray, validateObject } from '../main';
 import { createLog } from './logs.server';
 import type { Answer, Questionnaire, QuestionnaireInterval } from '/imports/api/types';
+import type { QuestionnaireErrorCode, QuestionnaireErrorDetails } from '/imports/api/types/questionnaire';
 
 export function getIntervalCutoffDate(interval: QuestionnaireInterval | string | undefined): Date | null {
   if (!interval || interval === 'once') return null;
@@ -25,8 +26,26 @@ export function getIntervalCutoffDate(interval: QuestionnaireInterval | string |
 
 export interface CanRespondResult {
   canRespond: boolean;
-  reason?: string;
+  /** Stable error code; the client translates it. */
+  reason?: QuestionnaireErrorCode;
   nextAllowedDate?: Date;
+}
+
+// English fallback reasons for the stable codes — shown only to clients that do
+// not map the code (the app UI translates it, see imports/i18n/methodErrors.ts).
+const FALLBACK_REASONS: Record<QuestionnaireErrorCode, string> = {
+  'questionnaire-already-responded': 'You have already submitted a response',
+  'questionnaire-answer-invalid': 'Invalid answer type',
+  'questionnaire-answer-required': 'A required question is unanswered',
+  'questionnaire-not-active': 'Questionnaire is not active',
+  'questionnaire-rating-invalid': 'Invalid rating value',
+  'questionnaire-response-anonymous': 'Anonymous responses cannot be revoked',
+  'questionnaire-response-cooldown': 'You cannot submit another response yet',
+  'questionnaire-response-not-own': 'You can only revoke your own responses',
+};
+
+function questionnaireError(code: QuestionnaireErrorCode, details?: QuestionnaireErrorDetails): Meteor.Error {
+  return new Meteor.Error(code, FALLBACK_REASONS[code], details);
 }
 
 export async function canUserRespond(questionnaire: Questionnaire, userId: string): Promise<CanRespondResult> {
@@ -53,7 +72,7 @@ export async function canUserRespond(questionnaire: Questionnaire, userId: strin
   if (!existingResponse) return { canRespond: true };
 
   if (interval === 'once') {
-    return { canRespond: false, reason: 'You have already submitted a response' };
+    return { canRespond: false, reason: 'questionnaire-already-responded' };
   }
 
   const nextAllowedDate = new Date(existingResponse.submittedAt ?? new Date());
@@ -71,7 +90,7 @@ export async function canUserRespond(questionnaire: Questionnaire, userId: strin
 
   return {
     canRespond: false,
-    reason: `You can submit again after ${nextAllowedDate.toLocaleDateString()}`,
+    reason: 'questionnaire-response-cooldown',
     nextAllowedDate,
   };
 }
@@ -93,11 +112,11 @@ if (Meteor.isServer) {
 
       const questionnaire = await QuestionnairesCollection.findOneAsync(questionnaireId);
       if (!questionnaire) throw new Meteor.Error(404, 'Questionnaire not found');
-      if (questionnaire.status !== 'active') throw new Meteor.Error(400, 'Questionnaire is not active');
+      if (questionnaire.status !== 'active') throw questionnaireError('questionnaire-not-active');
 
-      const { canRespond, reason } = await canUserRespond(questionnaire, this.userId);
+      const { canRespond, reason, nextAllowedDate } = await canUserRespond(questionnaire, this.userId);
       if (!canRespond) {
-        throw new Meteor.Error(400, reason);
+        throw questionnaireError(reason ?? 'questionnaire-already-responded', { nextAllowedDate: nextAllowedDate?.toISOString() });
       }
 
       const requiredQuestions = (questionnaire.questions || [])
@@ -107,10 +126,10 @@ if (Meteor.isServer) {
       for (const question of requiredQuestions) {
         const answer = answerByIndex.get(question.index);
         if (!answer || answer.value === undefined || answer.value === null || answer.value === '') {
-          throw new Meteor.Error(400, `Question "${question.text}" is required`);
+          throw questionnaireError('questionnaire-answer-required', { question: question.text });
         }
         if (Array.isArray(answer.value) && answer.value.length === 0) {
-          throw new Meteor.Error(400, `Question "${question.text}" is required`);
+          throw questionnaireError('questionnaire-answer-required', { question: question.text });
         }
       }
 
@@ -124,19 +143,19 @@ if (Meteor.isServer) {
         if (value === undefined || value === null || value === '') continue;
 
         if ((type === 'text' || type === 'textarea') && typeof value !== 'string') {
-          throw new Meteor.Error(400, `Invalid answer type for question "${question.text}"`);
+          throw questionnaireError('questionnaire-answer-invalid', { question: question.text });
         }
         if (type === 'number' && typeof value !== 'number') {
-          throw new Meteor.Error(400, `Invalid answer type for question "${question.text}"`);
+          throw questionnaireError('questionnaire-answer-invalid', { question: question.text });
         }
         if (type === 'select' && typeof value !== 'string') {
-          throw new Meteor.Error(400, `Invalid answer type for question "${question.text}"`);
+          throw questionnaireError('questionnaire-answer-invalid', { question: question.text });
         }
         if (type === 'multiselect' && !Array.isArray(value)) {
-          throw new Meteor.Error(400, `Invalid answer type for question "${question.text}"`);
+          throw questionnaireError('questionnaire-answer-invalid', { question: question.text });
         }
         if (type === 'rating' && (typeof value !== 'number' || value < 1 || value > 5)) {
-          throw new Meteor.Error(400, `Invalid rating value for question "${question.text}"`);
+          throw questionnaireError('questionnaire-rating-invalid', { question: question.text });
         }
       }
 
@@ -200,10 +219,12 @@ if (Meteor.isServer) {
 
       const enrichedResponses = await Promise.all(
         responses.map(async response => {
-          let respondentName = 'Anonymous';
+          // null = anonymous or unresolvable member; the client renders the
+          // translated "Anonymous" / "Unknown" label from respondentId.
+          let respondentName: string | null = null;
           if (response.respondentId) {
             const member = await MembersCollection.findOneAsync(response.respondentId);
-            respondentName = member?.profile!.name || member?.username || 'Unknown';
+            respondentName = member?.profile!.name || member?.username || null;
           }
           return {
             ...response,
@@ -236,11 +257,11 @@ if (Meteor.isServer) {
       if (!response) throw new Meteor.Error(404, 'Response not found');
 
       if (response.respondentId !== this.userId) {
-        throw new Meteor.Error(403, 'You can only revoke your own responses');
+        throw questionnaireError('questionnaire-response-not-own');
       }
 
       if (!response.respondentId) {
-        throw new Meteor.Error(400, 'Anonymous responses cannot be revoked');
+        throw questionnaireError('questionnaire-response-anonymous');
       }
 
       await QuestionnaireResponsesCollection.removeAsync(responseId);

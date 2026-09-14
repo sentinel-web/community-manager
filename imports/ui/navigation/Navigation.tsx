@@ -302,12 +302,12 @@ export default function Navigation() {
     if (hasAccess(role, 'questionnaires')) {
       newItems.push({
         key: 'myQuestionnaires',
-        label: 'My Questionnaires',
+        label: t('questionnaires.myTitle'),
         icon: <FormOutlined />,
       });
       newItems.push({
         key: 'questionnaires',
-        label: 'Manage Questionnaires',
+        label: t('questionnaires.title'),
         icon: <FormOutlined />,
       });
     }

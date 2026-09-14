@@ -1,7 +1,8 @@
-import { Form, Input, InputNumber, Rate, Select, Typography } from 'antd';
+import { App, Form, Input, InputNumber, Rate, Select, Typography } from 'antd';
 import React, { useCallback } from 'react';
 import type { Question, Questionnaire } from '../../api/types/questionnaire';
 import { useTranslation } from '../../i18n/LanguageContext';
+import { describeMethodError } from '../../i18n/methodErrors';
 import { useDrawerFrame } from '../drawer-stack';
 import useMethod from '../hooks/useMethod';
 import FormFooter from '../components/FormFooter';
@@ -15,9 +16,13 @@ const QuestionnaireResponseForm = () => {
   const questionnaire = (model || {}) as unknown as Questionnaire;
   const { t } = useTranslation();
   const [form] = Form.useForm<ResponseFormValues>();
+  const { notification } = App.useApp();
 
+  // notify: false — submit failures carry stable error codes that are
+  // translated here instead of showing the server's English reason.
   const { call, loading } = useMethod('questionnaireResponses.submit', {
     success: t('questionnaires.submitSuccess'),
+    notify: false,
   });
 
   const handleFinish = useCallback(
@@ -28,12 +33,15 @@ const QuestionnaireResponseForm = () => {
       }));
 
       const res = await call(questionnaire._id, answers);
-      if (!res.ok) return;
+      if (!res.ok) {
+        notification.error(describeMethodError(res.error, t));
+        return;
+      }
       // Resolve with a truthy sentinel so the opener can detect "submitted"
       // and refresh its list — undefined would mean "cancelled".
       resolve(true);
     },
-    [resolve, questionnaire, call]
+    [resolve, questionnaire, call, notification, t]
   );
 
   const renderQuestionField = (question: Question, index: number) => {

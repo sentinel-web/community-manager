@@ -2,8 +2,9 @@ import { CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined, FormOutlined 
 import { App, Button, Card, Col, Empty, Popconfirm, Row, Space, Spin, Tag, Tooltip, Typography } from 'antd';
 import { Meteor } from 'meteor/meteor';
 import React, { useCallback, useEffect, useState } from 'react';
-import type { QuestionnaireInterval } from '../../api/types/questionnaire';
+import type { QuestionnaireErrorCode, QuestionnaireInterval } from '../../api/types/questionnaire';
 import { useTranslation } from '../../i18n/LanguageContext';
+import { describeMethodError, translateErrorCode } from '../../i18n/methodErrors';
 import { useDrawerStack } from '../drawer-stack';
 import type { TranslateFn } from '../section/types';
 import SectionCard from '../section/SectionCard';
@@ -18,7 +19,7 @@ interface ActiveQuestionnaire {
   description?: string;
   questionCount?: number;
   canRespond?: boolean;
-  responseReason?: string;
+  responseReason?: QuestionnaireErrorCode;
   nextAllowedDate?: string | Date;
   responseCount?: number;
   allowAnonymous?: boolean;
@@ -46,14 +47,11 @@ export default function MyQuestionnaires() {
       const result = await Meteor.callAsync('questionnaires.getActiveForUser');
       setQuestionnaires(result as ActiveQuestionnaire[]);
     } catch (error) {
-      notification.error({
-        message: (error as Meteor.Error).error,
-        description: (error as Meteor.Error).message,
-      });
+      notification.error(describeMethodError(error, t));
     } finally {
       setLoading(false);
     }
-  }, [notification]);
+  }, [notification, t]);
 
   useEffect(() => {
     loadQuestionnaires();
@@ -81,10 +79,7 @@ export default function MyQuestionnaires() {
         notification.success({ message: t('questionnaires.revokeSuccess') });
         loadQuestionnaires();
       } catch (error) {
-        notification.error({
-          message: (error as Meteor.Error).error,
-          description: (error as Meteor.Error).message,
-        });
+        notification.error(describeMethodError(error, t));
       }
     },
     [notification, loadQuestionnaires, t]
@@ -125,6 +120,8 @@ const QuestionnaireCard = ({ questionnaire, onFillOut, onRevoke, t }: Questionna
 
   const intervalLabel = interval ? intervalLabels[interval] || intervalLabels.once : intervalLabels.once;
   const canRevoke = !allowAnonymous && latestResponseId && !canRespond;
+  const nextAllowedIso = nextAllowedDate ? new Date(nextAllowedDate).toISOString() : undefined;
+  const reasonText = translateErrorCode(responseReason, { nextAllowedDate: nextAllowedIso }, t);
 
   const renderAction = () => {
     if (canRespond) {
@@ -145,7 +142,7 @@ const QuestionnaireCard = ({ questionnaire, onFillOut, onRevoke, t }: Questionna
     }
 
     return (
-      <Tooltip title={responseReason}>
+      <Tooltip title={reasonText}>
         <Space key="waiting">
           <ClockCircleOutlined style={{ color: '#faad14' }} />
           <Text type="warning">
