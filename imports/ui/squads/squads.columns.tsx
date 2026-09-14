@@ -1,8 +1,7 @@
-import { Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import React, { useEffect, useState } from 'react';
 import type { Squad } from '../../api/types/squad';
-import getLegibleTextColor from '../../helpers/colors/getLegibleTextColor';
+import ColoredTag from '../components/ColoredTag';
 import useMethod from '../hooks/useMethod';
 import type { ColumnsFactory, RowClickEvent, SectionPermissions, TranslateFn } from '../section/types';
 import TableActions from '../table/body/actions/TableActions';
@@ -35,9 +34,9 @@ export const SquadTags = ({ squadIds }: SquadTagsProps) => {
   return (
     <>
       {squadNames.map(squadName => (
-        <Tag color={squadName.raw.color} key={squadName.value}>
-          <span style={{ color: squadName.raw.color ? getLegibleTextColor(squadName.raw.color) : undefined }}>{squadName.label}</span>
-        </Tag>
+        <ColoredTag color={squadName.raw.color} key={squadName.value}>
+          {squadName.label}
+        </ColoredTag>
       ))}
     </>
   );
@@ -65,18 +64,7 @@ const getSquadsColumns: ColumnsFactory<Squad> = (
       dataIndex: 'name',
       key: 'name',
       sorter: (a: Squad, b: Squad) => String(a.name).localeCompare(String(b.name)),
-      render: (name: string | undefined, record: Squad) =>
-        name ? (
-          record.color ? (
-            <Tag color={record.color}>
-              <span style={{ color: getLegibleTextColor(record.color) }}>{name}</span>
-            </Tag>
-          ) : (
-            <Tag>{name}</Tag>
-          )
-        ) : (
-          '-'
-        ),
+      render: (name: string | undefined, record: Squad) => (name ? <ColoredTag color={record.color}>{name}</ColoredTag> : '-'),
     },
     {
       title: t('columns.shortRangeFrequency'),

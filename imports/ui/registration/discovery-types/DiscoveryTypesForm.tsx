@@ -41,7 +41,7 @@ export default function DiscoveryTypeForm() {
         <Input.TextArea autoSize placeholder={t('forms.placeholders.enterDescription')} />
       </Form.Item>
       <Form.Item name="color" label={t('common.color')}>
-        <ColorPicker format="hex" />
+        <ColorPicker format="hex" disabledAlpha />
       </Form.Item>
       <Form.Item name="hasTextInput" label={t('registrations.hasTextInput')} valuePropName="checked" rules={[{ type: 'boolean' }]}>
         <Switch />
