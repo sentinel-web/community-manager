@@ -20,6 +20,7 @@ import './server/crudMethods.test';
 import './server/dashboardEventTypeStats.test';
 import './server/entityFormSubmit.test';
 import './server/eventsDescriptionSanitize.test';
+import './server/eventsVisibility.test';
 import './server/getCollection.test';
 import './server/htmlSanitizer.test';
 import './server/i18n.extractParams.test';
