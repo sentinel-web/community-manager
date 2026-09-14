@@ -1,6 +1,7 @@
 import { Tag, Tooltip } from 'antd';
 import React, { useEffect, useState } from 'react';
 import type { DiscoveryType } from '../../../api/types/misc';
+import ColoredTag from '../../components/ColoredTag';
 import useMethod from '../../hooks/useMethod';
 
 interface DiscoveryTypeTagProps {
@@ -29,7 +30,7 @@ export default function DiscoveryTypeTag({ discoveryTypeId }: DiscoveryTypeTagPr
   if (!match) return <Tag>Not found</Tag>;
   return (
     <Tooltip title={match.description}>
-      <Tag color={match.color || 'transparent'}>{match.name}</Tag>
+      <ColoredTag color={match.color}>{match.name}</ColoredTag>
     </Tooltip>
   );
 }

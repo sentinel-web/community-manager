@@ -129,7 +129,7 @@ const EventForm = () => {
         </Col>
         <Col flex="auto">
           <Form.Item name="color" label={t('common.color')}>
-            <ColorPicker />
+            <ColorPicker format="hex" disabledAlpha />
           </Form.Item>
         </Col>
       </Row>

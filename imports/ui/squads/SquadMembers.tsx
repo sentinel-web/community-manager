@@ -1,7 +1,7 @@
-import { Empty, List, Spin, Tag } from 'antd';
+import { Empty, List, Spin } from 'antd';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
-import getLegibleTextColor from '../../helpers/colors/getLegibleTextColor';
+import ColoredTag from '../components/ColoredTag';
 import useMethod from '../hooks/useMethod';
 
 interface SquadMemberItem {
@@ -43,14 +43,14 @@ export default function SquadMembers({ squadId }: SquadMembersProps) {
             {member.id} &quot;{member.name}&quot;
           </span>
           {member.rankName && (
-            <Tag color={member.rankColor ?? undefined} style={{ marginLeft: 8 }}>
-              <span style={{ color: member.rankColor ? getLegibleTextColor(member.rankColor) : undefined }}>{member.rankName}</span>
-            </Tag>
+            <ColoredTag color={member.rankColor} style={{ marginLeft: 8 }}>
+              {member.rankName}
+            </ColoredTag>
           )}
           {member.positionName && (
-            <Tag color={member.positionColor ?? undefined} style={{ marginLeft: 4 }}>
-              <span style={{ color: member.positionColor ? getLegibleTextColor(member.positionColor) : undefined }}>{member.positionName}</span>
-            </Tag>
+            <ColoredTag color={member.positionColor} style={{ marginLeft: 4 }}>
+              {member.positionName}
+            </ColoredTag>
           )}
         </List.Item>
       )}

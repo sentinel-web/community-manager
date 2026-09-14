@@ -1,5 +1,5 @@
-import { Tag } from 'antd';
 import React from 'react';
+import ColoredTag from '../../components/ColoredTag';
 import type { Medal } from '../../../api/types/misc';
 import type { ColumnsFactory } from '../../section/types';
 import TableActions from '../../table/body/actions/TableActions';
@@ -28,7 +28,7 @@ const getMedalColumns: ColumnsFactory<Medal> = (handleEdit, handleDelete, permis
       key: 'color',
       ellipsis: true,
       sorter: (a: Medal, b: Medal) => (a.color || '').localeCompare(b.color || ''),
-      render: (color: string) => <Tag color={color || 'transparent'}>{color}</Tag>,
+      render: (color: string) => <ColoredTag color={color}>{color || '-'}</ColoredTag>,
     },
   ];
 

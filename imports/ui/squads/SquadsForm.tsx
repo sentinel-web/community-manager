@@ -74,7 +74,7 @@ const SquadsForm = () => {
         </Col>
         <Col>
           <Form.Item label={t('common.color')} name="color" rules={[{ required: false }]}>
-            <ColorPicker />
+            <ColorPicker format="hex" disabledAlpha />
           </Form.Item>
         </Col>
       </Row>
