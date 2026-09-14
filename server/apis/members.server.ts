@@ -11,9 +11,10 @@ import RanksCollection from '../../imports/api/collections/ranks.collection';
 import RolesCollection from '../../imports/api/collections/roles.collection';
 import SpecializationsCollection from '../../imports/api/collections/specializations.collection';
 import SquadsCollection from '../../imports/api/collections/squads.collection';
-import { validateObject, validatePublish, validateString, validateNumber, validateUserId, checkPermission, checkSpecialPermission, getSquadScope, isOfficerOrAdmin, getUserRole, assertSafeSelector } from '../main';
+import { validateArrayOfStrings, validateObject, validatePublish, validateString, validateNumber, validateUserId, checkPermission, checkSpecialPermission, getSquadScope, isOfficerOrAdmin, getUserRole, assertSafeSelector } from '../main';
 import { runMutation, snapshotTouchedFields } from '../mutation-pipeline';
 import { instrument } from '../telemetry';
+import { createLog } from './logs.server';
 import { COLLECTION_REGISTRY } from '../collection-registry';
 import {
   enforceIntegrityOnDelete,
@@ -56,6 +57,48 @@ void getRankName;
 const getFullName = (rank: string | undefined, id: number | undefined, name: string | undefined): string => {
   return `${rank || 'Unranked'}-${id || '0000'} ${name || 'Name'}`;
 };
+
+// Matches the generic CRUD bulkRemove cap (server/crud.lib.ts).
+const BULK_REMOVE_MAX_IDS = 100;
+
+interface MemberRemoval {
+  id: string;
+  effects: Awaited<ReturnType<typeof enforceIntegrityOnDelete>>;
+}
+
+// The per-member delete shared by members.remove and members.bulkRemove. Runs
+// after the caller passed the pipeline's auth/permission/validation gates.
+async function removeMember(targetId: string, callerUserId: string | null): Promise<MemberRemoval> {
+  // Self-delete prevention: an admin deleting their own account would lock
+  // themselves out instantly. The integrity layer can't help here — even a
+  // clean delete is undesirable.
+  if (targetId === callerUserId) {
+    throw new Meteor.Error(400, 'Cannot delete your own account');
+  }
+
+  const member = await MembersCollection.findOneAsync(targetId);
+  if (!member) throw new Meteor.Error(404, 'Member not found');
+
+  // Run the registry-driven integrity layer (pulls from events, tasks,
+  // specializations; sets respondentId null on responses). Generic CRUD
+  // .remove does this automatically — members use a custom path, so it is
+  // called explicitly.
+  const effects = await enforceIntegrityOnDelete('members', targetId, { userId: callerUserId });
+
+  // Owned-target cascade: the ProfilePicture is private to one Member, so
+  // deleting the Member also deletes their picture. The only owned-target
+  // relationship in the registry; per the rule of three (one instance), kept
+  // here as code rather than promoted to a registry primitive. See
+  // server/integrity.ts.
+  const profilePictureId = member.profile!.profilePictureId;
+  if (profilePictureId) {
+    await ProfilePicturesCollection.removeAsync({ _id: profilePictureId } as never);
+    effects.cascaded.profilePictures = (effects.cascaded.profilePictures ?? 0) + 1;
+  }
+
+  await MembersCollection.removeAsync({ _id: targetId } as never);
+  return { id: targetId, effects };
+}
 
 if (Meteor.isServer) {
   // User documents are written only through server methods (members.*,
@@ -236,46 +279,46 @@ if (Meteor.isServer) {
           collection: 'members',
           operation: 'delete',
           action: 'members.deleted',
-          audit: (args, result) => {
-            const r = result as { id: string; effects: Awaited<ReturnType<typeof enforceIntegrityOnDelete>> };
-            return buildRemoveAuditPayload(r.id, r.effects);
-          },
+          audit: (_args, result: MemberRemoval) => buildRemoveAuditPayload(result.id, result.effects),
           permissionModule: 'members',
           validate: ([id]) => validateString(id, false),
         },
         [memberId] as const,
-        async ([targetId]) => {
-          // Self-delete prevention: an admin deleting their own account
-          // would lock themselves out instantly. The integrity layer can't
-          // help here — even a clean delete is undesirable. This guard is
-          // 1-site, so it stays in the body per the rule of three.
-          if (targetId === callerUserId) {
-            throw new Meteor.Error(400, 'Cannot delete your own account');
+        async ([targetId]) => removeMember(targetId, callerUserId),
+      );
+    },
+    // Same per-id semantics as members.remove (self-delete guard, existence
+    // check, integrity layer, profile-picture cascade, one audit entry per id);
+    // per-id failures are collected instead of aborting the batch. Mirrors the
+    // generic `<collection>.bulkRemove` contract that Section relies on.
+    'members.bulkRemove': async function (memberIds: string[] = []) {
+      const callerUserId = this.userId;
+      return runMutation(
+        { userId: callerUserId },
+        {
+          collection: 'members',
+          operation: 'delete',
+          permissionModule: 'members',
+          validate: ([ids]) => {
+            validateArrayOfStrings(ids, false);
+            if (ids.length === 0) throw new Meteor.Error(400, 'No ids provided');
+            if (ids.length > BULK_REMOVE_MAX_IDS) throw new Meteor.Error(400, `Maximum ${BULK_REMOVE_MAX_IDS} items per bulk delete`);
+          },
+        },
+        [memberIds] as const,
+        async ([ids]) => {
+          let removed = 0;
+          const errors: string[] = [];
+          for (const id of ids) {
+            try {
+              const result = await removeMember(id, callerUserId);
+              await createLog('members.deleted', buildRemoveAuditPayload(result.id, result.effects));
+              removed++;
+            } catch (error) {
+              errors.push(`Failed to delete ${id}: ${(error as Error).message}`);
+            }
           }
-
-          // Existence check stays as code in the body (1-site variation;
-          // not promoted to a registry field per the rule of three).
-          const member = await getMemberById(targetId);
-
-          // Run the registry-driven integrity layer (pulls from events,
-          // tasks, specializations; sets respondentId null on responses).
-          // Generic CRUD .remove does this automatically — members.remove
-          // is a custom path so it calls explicitly.
-          const effects = await enforceIntegrityOnDelete('members', targetId, { userId: callerUserId });
-
-          // Owned-target cascade: the ProfilePicture is private to one
-          // Member, so deleting the Member also deletes their picture.
-          // The only owned-target relationship in the registry; per the
-          // rule of three (one instance), kept here as code rather than
-          // promoted to a registry primitive. See server/integrity.ts.
-          const profilePictureId = member.profile!.profilePictureId;
-          if (profilePictureId) {
-            await ProfilePicturesCollection.removeAsync({ _id: profilePictureId } as never);
-            effects.cascaded.profilePictures = (effects.cascaded.profilePictures ?? 0) + 1;
-          }
-
-          await MembersCollection.removeAsync({ _id: targetId } as never);
-          return { id: targetId, effects };
+          return { removed, errors };
         },
       );
     },
