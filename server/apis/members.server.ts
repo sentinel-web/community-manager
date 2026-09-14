@@ -11,6 +11,7 @@ import RanksCollection from '../../imports/api/collections/ranks.collection';
 import RolesCollection from '../../imports/api/collections/roles.collection';
 import SpecializationsCollection from '../../imports/api/collections/specializations.collection';
 import SquadsCollection from '../../imports/api/collections/squads.collection';
+import { loadMemberPoints } from '../attendance-points';
 import { validateArrayOfStrings, validateObject, validatePublish, validateString, validateNumber, validateUserId, checkPermission, checkSpecialPermission, getSquadScope, isOfficerOrAdmin, getUserRole, assertSafeSelector } from '../main';
 import { runMutation, snapshotTouchedFields } from '../mutation-pipeline';
 import { instrument } from '../telemetry';
@@ -599,15 +600,8 @@ if (Meteor.isServer) {
       const roleId = user.profile?.roleId;
       if (!role) role = (await RolesCollection.findOneAsync({ _id: roleId ?? null } as never)) as Role | undefined;
 
-      let inactivityPoints = user.profile?.staticInactivityPoints || 0;
-      let attendancePoints = user.profile?.staticAttendancePoints || 0;
-      const userIdKey = user._id;
-      await AttendancesCollection.find({ [userIdKey]: { $exists: true } }).forEachAsync(attendance => {
-        const val = (attendance as Record<string, unknown>)[userIdKey] as number;
-        if (val === -2) return;
-        if (val === -1) inactivityPoints += 1;
-        attendancePoints += val === 2 ? 1 : (val || 0);
-      });
+      // Same calculation as the attendance grid's attendances.pointsSummary (#363).
+      const { attendancePoints, inactivityPoints } = (await loadMemberPoints([user]))[user._id];
 
       const resolvedRank = user.profile?.rankId ? await RanksCollection.findOneAsync({ _id: user.profile.rankId }) : null;
       const resolvedNavyRank = user.profile?.navyRankId ? await RanksCollection.findOneAsync({ _id: user.profile.navyRankId }) : null;

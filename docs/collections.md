@@ -32,8 +32,11 @@ Members (Meteor.users), Events, Attendances, Tasks, TaskStatus, Squads, Ranks, S
 **Specializations**
 - `name, color, linkToFile, instructors[], requiredSpecializations[], requiredRankId, description`
 
-**Medals, EventTypes, TaskStatus, DiscoveryTypes**
-- `name, color, description`
+**Medals, TaskStatus, DiscoveryTypes**
+- `name, color, description` (DiscoveryTypes also `hasTextInput`)
+
+**EventTypes**
+- `name, color, description, countsForInactivity` — `countsForInactivity` (boolean, unset = `true`): when `false`, unexcused absences (`-1`) at events of this type add no inactivity points (the attendance-point penalty still applies)
 
 **Roles**
 - `name, color, description` + boolean permissions (`dashboard, orbat, logs, settings`) + CRUD permissions (`members, events, tasks, squads, ranks, specializations, medals, eventTypes, positions, taskStatus, registrations, discoveryTypes, roles, questionnaires`)
@@ -49,7 +52,7 @@ Members (Meteor.users), Events, Attendances, Tasks, TaskStatus, Squads, Ranks, S
 - `questionnaireId, respondentId (null if anonymous), answers[], ignored, submittedAt, createdAt`
 - `answers[]: { questionIndex, questionText, questionType, value }`
 
-**Attendances** - `{ [eventId]: { [memberId]: points } }`
+**Attendances** - `{ _id, eventId, [memberId]: status }` — one document per event (unique index on `eventId`), each member's status under a dynamic `[memberId]` key. Status is an int: `-2` event cancelled, `-1` absent (unexcused), `0` excused, `1` present, `2` present (Zeus). Points (`imports/api/attendance/points.ts`): `-1` → +1 inactivity point and −1 attendance point, `1`/`2` → +1 attendance point, `0`/`-2` → nothing; both start from the member's `static*Points`
 **ProfilePictures** - `{ value (base64) }`
 **Settings** - Key-value store
 **Logs** - `{ action, data, createdAt }`
