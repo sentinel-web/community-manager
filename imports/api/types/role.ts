@@ -32,5 +32,7 @@ export interface Role {
   canCreateEvents?: boolean;
   canManageTasks?: boolean;
   canManageSpecializations?: boolean;
+  // Not checked anywhere on the server, so it grants nothing. Hidden from
+  // RolesForm until a behaviour is defined (#357); kept so stored roles still type-check.
   canManageRecruits?: boolean;
 }

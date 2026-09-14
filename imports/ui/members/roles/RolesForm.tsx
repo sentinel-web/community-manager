@@ -4,10 +4,10 @@ import React, { useMemo } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import { getColorFromValues } from '/imports/helpers/colors/getColorFromValues';
 import type { TranslateFn } from '../../section/types';
-import type { LocaleKey } from '/imports/i18n';
-import type { CrudPermission, Role } from '../../../api/types/role';
+import type { Role } from '../../../api/types/role';
 import useEntityForm from '../../hooks/useEntityForm';
 import FormFooter from '../../components/FormFooter';
+import { ADMIN_FIELD, CRUD_MODULES, buildRolePayload, prepareRoleForForm } from './roleFormModel';
 
 interface RuleInputProps {
   name: string;
@@ -20,71 +20,20 @@ interface CrudPermissionInputProps {
   t: TranslateFn;
 }
 
-// Modules that use CRUD permissions - label keys reference navigation translations.
-// `as const satisfies` preserves the literal union of labelKey values so t(labelKey)
-// resolves to a paramless LocaleKey rather than the full LocaleKey union.
-const CRUD_MODULES = [
-  { name: 'members', labelKey: 'navigation.members' },
-  { name: 'events', labelKey: 'navigation.events' },
-  { name: 'tasks', labelKey: 'navigation.tasks' },
-  { name: 'squads', labelKey: 'navigation.squads' },
-  { name: 'ranks', labelKey: 'navigation.ranks' },
-  { name: 'specializations', labelKey: 'navigation.specializations' },
-  { name: 'medals', labelKey: 'navigation.medals' },
-  { name: 'eventTypes', labelKey: 'navigation.eventTypes' },
-  { name: 'briefingTemplates', labelKey: 'navigation.briefingTemplates' },
-  { name: 'taskStatus', labelKey: 'navigation.taskStatus' },
-  { name: 'registrations', labelKey: 'navigation.registrations' },
-  { name: 'discoveryTypes', labelKey: 'navigation.discoveryTypes' },
-  { name: 'roles', labelKey: 'navigation.roles' },
-  { name: 'questionnaires', labelKey: 'navigation.questionnaires' },
-  { name: 'positions', labelKey: 'navigation.positions' },
-] as const satisfies readonly { name: string; labelKey: LocaleKey }[];
-
-/**
- * Normalizes permission value for form initial values.
- * Converts old boolean format to CRUD object format.
- */
-function normalizePermissionForForm(value: boolean | CrudPermission | undefined): CrudPermission {
-  if (value === true) {
-    return { read: true, create: true, update: true, delete: true };
-  }
-  if (value === false || value === undefined) {
-    return { read: false, create: false, update: false, delete: false };
-  }
-  return value;
-}
-
-/**
- * Prepares model for form initialization by normalizing CRUD permissions.
- */
-function prepareModelForForm(model: Role | null | undefined): Record<string, unknown> {
-  if (!model) return {};
-
-  const prepared: Record<string, unknown> = { ...model };
-  for (const { name } of CRUD_MODULES) {
-    prepared[name] = normalizePermissionForForm(model[name as keyof Role] as boolean | CrudPermission | undefined);
-  }
-  return prepared;
-}
-
 const RolesForm = () => {
   const { t } = useTranslation();
-  const {
-    onFinish,
-    loading,
-    model: rawModel,
-    cancel,
-  } = useEntityForm<Record<string, unknown>, Partial<Role> & { _id?: string }>({
+  const { onFinish, loading, model, cancel } = useEntityForm<Record<string, unknown>, Partial<Role> & { _id?: string }>({
     collection: 'roles',
     created: 'messages.roleCreated',
     updated: 'messages.roleUpdated',
-    toPayload: values => ({ ...values, color: getColorFromValues(values) }),
+    toPayload: values => ({ ...buildRolePayload(values), color: getColorFromValues(values) }),
   });
-  const model = (rawModel || {}) as Role & { _id?: string };
 
   const [form] = Form.useForm<Record<string, unknown>>();
-  const initialValues = useMemo(() => prepareModelForForm(model), [model]);
+  const initialValues = useMemo(() => prepareRoleForForm(model), [model]);
+  // Module permissions are irrelevant while the admin grant is on, so they are
+  // hidden (not unmounted — their values stay registered for when it is turned off).
+  const isAdmin = Form.useWatch(ADMIN_FIELD, form) === true;
 
   return (
     <Form layout="vertical" form={form} onFinish={onFinish} initialValues={initialValues} disabled={loading}>
@@ -98,28 +47,33 @@ const RolesForm = () => {
         <ColorPicker format="hex" />
       </Form.Item>
 
-      <Typography.Title level={5} style={{ marginTop: 16 }}>
-        {t('members.basicPermissions')}
-      </Typography.Title>
-      <RuleInput name="dashboard" label={t('navigation.dashboard')} />
-      <RuleInput name="orbat" label={t('navigation.orbat')} />
-      <RuleInput name="logs" label={t('navigation.logs')} />
-      <RuleInput name="settings" label={t('navigation.settings')} />
+      <Form.Item name={ADMIN_FIELD} label={t('members.administrator')} extra={t('members.administratorHint')} valuePropName="checked">
+        <Switch checkedChildren={<CheckOutlined />} unCheckedChildren={<CloseOutlined />} />
+      </Form.Item>
 
-      <Typography.Title level={5} style={{ marginTop: 16 }}>
-        {t('members.crudPermissions')}
-      </Typography.Title>
-      {CRUD_MODULES.map(({ name, labelKey }) => (
-        <CrudPermissionInput key={name} name={name} label={t(labelKey)} t={t} />
-      ))}
+      <div hidden={isAdmin}>
+        <Typography.Title level={5} style={{ marginTop: 16 }}>
+          {t('members.basicPermissions')}
+        </Typography.Title>
+        <RuleInput name="dashboard" label={t('navigation.dashboard')} />
+        <RuleInput name="orbat" label={t('navigation.orbat')} />
+        <RuleInput name="logs" label={t('navigation.logs')} />
+        <RuleInput name="settings" label={t('navigation.settings')} />
 
-      <Typography.Title level={5} style={{ marginTop: 16 }}>
-        {t('members.specialPermissions')}
-      </Typography.Title>
-      <RuleInput name="canManageSpecializations" label={t('members.canManageSpecializations')} />
-      <RuleInput name="canManageRecruits" label={t('members.canManageRecruits')} />
-      <RuleInput name="canCreateEvents" label={t('members.canCreateEvents')} />
-      <RuleInput name="canManageTasks" label={t('members.canManageTasks')} />
+        <Typography.Title level={5} style={{ marginTop: 16 }}>
+          {t('members.crudPermissions')}
+        </Typography.Title>
+        {CRUD_MODULES.map(({ name, labelKey }) => (
+          <CrudPermissionInput key={name} name={name} label={t(labelKey)} t={t} />
+        ))}
+
+        <Typography.Title level={5} style={{ marginTop: 16 }}>
+          {t('members.specialPermissions')}
+        </Typography.Title>
+        <RuleInput name="canManageSpecializations" label={t('members.canManageSpecializations')} />
+        <RuleInput name="canCreateEvents" label={t('members.canCreateEvents')} />
+        <RuleInput name="canManageTasks" label={t('members.canManageTasks')} />
+      </div>
 
       <FormFooter onCancel={cancel} loading={loading} />
     </Form>
