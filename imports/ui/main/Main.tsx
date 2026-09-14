@@ -1,10 +1,10 @@
 import { Result } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
+import { useTracker } from 'meteor/react-meteor-data';
 import React, { lazy, useMemo } from 'react';
-import RolesCollection from '../../api/collections/roles.collection';
 import type { Role, CrudPermission } from '../../api/types';
 import { isDeviceUnsupported } from '../../config';
+import useOwnRole from '../hooks/useOwnRole';
 import useViewportSize from '../hooks/useViewportSize';
 import Login from '../login/Login';
 import useNavigation from '../navigation/navigation.hook';
@@ -58,22 +58,10 @@ const MyQuestionnaires = lazy(() => import('../questionnaires/MyQuestionnaires')
 export default function Main() {
   const { navigationValue } = useNavigation();
   const { width } = useViewportSize();
-  const { loggedIn, user } = useTracker(() => {
-    return {
-      loggedIn: !!Meteor.userId(),
-      user: Meteor.user(),
-    };
-  }, []);
+  const loggedIn = useTracker(() => !!Meteor.userId(), []);
 
-  useSubscribe('roles', { _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 });
-  const roles = useFind(
-    () => RolesCollection.find({ _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 }),
-    [user?.profile?.roleId]
-  );
-  const hasAccess = useMemo(() => {
-    const role = roles?.[0];
-    return checkAccess(role, navigationValue);
-  }, [roles, navigationValue]);
+  const role = useOwnRole();
+  const hasAccess = useMemo(() => checkAccess(role, navigationValue), [role, navigationValue]);
 
   if (isDeviceUnsupported(width)) {
     return (

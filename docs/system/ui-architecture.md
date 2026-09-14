@@ -84,7 +84,7 @@ What `Section` does internally:
 | Reactive data | `useSubscribe(collectionName, filter, options)` + `useFind(() => Collection.find(filter, options))`. |
 | Search | `TableHeader` input → `filterFactory(input)` (default `{ name: { $regex, $options: 'i' } }`). |
 | Pagination | `options.limit` starts at 20, `handleLoadMore` adds 20; `TableFooter` "load more" disabled when fewer rows than the limit. |
-| Permissions | reads the user's role doc, derives `{ canCreate, canUpdate, canDelete }` via `getModulePermissions(role, permissionModule ?? collectionName)`. |
+| Permissions | `useModulePermissions(collectionName, permissionModule)` — the user's own role (`roles.own`) → `{ canRead, canCreate, canUpdate, canDelete }` via `getModulePermissions`, including registry fallback flags (`canCreateEvents`, `canManageTasks`). `CollectionSelect` uses the same hook to gate its inline create/edit/delete. |
 | Columns | `columns = columnsFactory(handleEdit, handleDelete, permissions, t)` — the factory builds the antd `ColumnsType<T>` and decides which action buttons to show. |
 | Create | `handleCreate` → `drawerStack.push({ Component: FormComponent, model: {} })`. |
 | Edit | `handleEdit(e, record)` → `drawerStack.push({ Component: FormComponent, model: record })`. |
@@ -101,7 +101,7 @@ const getSquadColumns: ColumnsFactory<Squad> =
 
 A view that is not a table passes `customView` (a render component receiving `{ handleEdit, handleDelete, datasource, setFilter, permissions }`) instead of using the built-in `Table` — e.g. calendar, kanban, orbat.
 
-`getModulePermissions` (`Section.tsx:23`) and `checkAccess` (`Main.tsx`) and `hasAccess` (`Navigation.tsx:46`) are three near-identical role→permission readers — Section needs the full CRUD triple, Main/Navigation only the read bit. Pass `permissionModule` when the collection name differs from its permission module (e.g. a sub-collection page), or the wrong module is resolved.
+`getModulePermissions` (`imports/api/permissions/modulePermissions.ts`) and `checkAccess` (`Main.tsx`) and `hasAccess` (`Navigation.tsx:46`) are the role→permission readers — Section/CollectionSelect need the CRUD set, Main/Navigation only the read bit. All read the role via `useOwnRole()`. Pass `permissionModule` when the collection name differs from its permission module (e.g. a sub-collection page), or the wrong module is resolved.
 
 ### DrawerStack — nested entity editing
 
@@ -193,7 +193,7 @@ function SquadsForm() {
 - **`useConfirmClose` predicate only runs on user-initiated close.** `resolve`/`cancel` from inside a form skip it; closing a non-top frame cascades resolutions downward with `undefined`.
 - **No router.** Links must `history.pushState` + `setNavigationValue`; reading `window.location` alone won't re-render. Reachable views must be wired into both `getNavigationValue()` and the `Main.tsx` switch.
 - **`Palette` opens create forms via the URL, not `push`.** It navigates to `/key?action=create`; the target `Section`'s effect picks up the param and opens the drawer once. A view without a `FormComponent` (or without `canCreate`) silently ignores it.
-- **Three independent role reads.** `Main`, `Navigation`, and each `Section` each `useSubscribe('roles', …)` and recompute permissions; there is no shared permission context. Role changes can lag up to the server-side cache TTL (~1 min).
+- **Independent role reads.** `Main`, `Navigation`, `Palette`, each `Section` and `CollectionSelect` call `useOwnRole()` (the `roles.own` publication — never the `roles.read`-gated `roles` one) and recompute permissions; there is no shared permission context. Role changes can lag up to the server-side cache TTL (~1 min).
 - **`Switch`/`Checkbox` Form.Items need `valuePropName="checked"`; handle both create (`model = {}`, no `_id`) and update in `toPayload`/`handleFinish`.** (CLAUDE.md → Forms.)
 
 ## See also

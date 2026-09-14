@@ -1,12 +1,10 @@
 import { App, Empty, Row, Spin, Typography } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import RolesCollection from '../../api/collections/roles.collection';
 import type { Questionnaire } from '../../api/types/questionnaire';
-import type { Role } from '../../api/types/role';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useDrawerFrame, useDrawerStack } from '../drawer-stack';
+import useModulePermissions from '../hooks/useModulePermissions';
 import type { RowClickEvent } from '../section/types';
 import TableContainer from '../table/body/TableContainer';
 import TableFooter from '../table/footer/TableFooter';
@@ -16,16 +14,6 @@ import ResponseDetailView from './ResponseDetailView';
 import type { QuestionnaireResponseRow } from './types';
 
 const { Text } = Typography;
-
-function getUpdatePermission(role: Role | undefined): boolean {
-  if (!role) return false;
-  const permission = role.questionnaires;
-  if (permission === true) return true;
-  if (typeof permission === 'object' && permission !== null) {
-    return permission.update === true;
-  }
-  return false;
-}
 
 export default function QuestionnaireResponses() {
   const { model } = useDrawerFrame<void, Questionnaire>();
@@ -38,10 +26,7 @@ export default function QuestionnaireResponses() {
   const [loading, setLoading] = useState(true);
   const [limit, setLimit] = useState(20);
 
-  const user = useTracker(() => Meteor.user(), []);
-  useSubscribe('roles', { _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 });
-  const roles = useFind(() => RolesCollection.find({ _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 }), [user?.profile?.roleId]);
-  const canUpdate = useMemo(() => getUpdatePermission(roles?.[0]), [roles]);
+  const { canUpdate } = useModulePermissions('questionnaires');
 
   const loadResponses = useCallback(async () => {
     if (!questionnaire?._id) return;

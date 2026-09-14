@@ -21,6 +21,7 @@ import './apis/palette.server';
 import './apis/questionnaireResponses.server';
 import './apis/questionnaires.server';
 import './apis/registrations.server';
+import './apis/roles.server';
 import './apis/settings.server';
 import './apis/specializations.server';
 import './apis/squads.server';

@@ -1,11 +1,9 @@
 import { Input, Modal } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import RolesCollection from '../../api/collections/roles.collection';
-import type { Role } from '../../api/types';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { Locale } from '../../i18n';
+import useOwnRole from '../hooks/useOwnRole';
 import { getNavigationValue } from '../navigation/Navigation';
 import useNavigation from '../navigation/navigation.hook';
 import useTheme from '../theme/theme.hook';
@@ -32,13 +30,7 @@ export default function Palette() {
   const { t, language, setLanguage, locales } = useLanguage();
   const { theme, setTheme } = useTheme();
   const { setNavigationValue } = useNavigation();
-  const user = useTracker(() => Meteor.user(), []);
-  useSubscribe('roles', { _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 });
-  const roles = useFind(
-    () => RolesCollection.find({ _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 }),
-    [user?.profile?.roleId]
-  );
-  const role = roles?.[0] as Role | undefined;
+  const role = useOwnRole();
 
   const [query, setQuery] = useState('');
   const [highlighted, setHighlighted] = useState(0);
