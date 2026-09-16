@@ -10,8 +10,10 @@ interface TreeSquad {
 
 /**
  * Builds the ORBAT forest from a flat squad list. Siblings keep the order of the input list, so sort the
- * squads first (e.g. with `compareByOrderThenName`). Squads whose parent is missing from the list, or whose
- * parent chain loops back to themselves, become roots instead of disappearing.
+ * squads first (e.g. with `compareByOrderThenName`). Nothing is ever dropped: a squad becomes a root when
+ * its parent is missing from the list, or when its ancestor chain loops. The loop check walks the whole
+ * ancestor chain, so the whole subtree hanging *below* a cycle is flattened into roots too, rather than
+ * being attached to a parent that can never be reached from any root.
  */
 export default function buildOrbatTree<T extends TreeSquad>(squads: readonly T[]): OrbatTreeNode<T>[] {
   const nodes = new Map<string, OrbatTreeNode<T>>();

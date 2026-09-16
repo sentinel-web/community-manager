@@ -19,7 +19,8 @@ The hand-written Meteor methods and publications in `server/apis/` that go **bey
 - `server/apis/registrations.server.ts` — `registrations.validateId` / `validateName`: cross-collection (members + registrations) uniqueness checks.
 - `server/apis/settings.server.ts` — `settings.public` / `settings` publications + key/value upsert/remove/findOne.
 - `server/apis/specializations.server.ts` — `specializations.names` (id→name join) and `specializations.request` (audit-only request).
-- `server/apis/squads.server.ts` — `squads.members`: per-squad member summary (rank + position resolved).
+- `server/apis/squads.server.ts` — `squads.members`: a squad's roster as `SquadMemberRow[]`.
+- `server/squad-member-rows.ts` — `loadSquadMemberRows(squadId)`: the single roster loader behind both `orbat.popover.items` and `squads.members`.
 - `server/apis/tasks.server.ts` — `tasks.addComment`: append a comment to a task.
 
 ## How it works
@@ -97,8 +98,8 @@ Custom methods split into two camps depending on whether they need the full audi
 | `members.profileAccess` | `{ canViewContact }` | auth only | True if viewer is officer/admin or viewing self. |
 | `members.attendanceBreakdown` | `{ total, quarterly, missionCount }` | self or `members.read` | Scans attendance docs keyed by `userId`; maps statuses (1=present, 2=zeus, -1=absent, 0=excused, -2=skip). |
 | `members.profileStats` | profile detail object | self or `members.read`+squad | `typeof`-discriminated param: full user doc / userId string / undefined (=self). Computes attendance & inactivity points from the attendance grid (+ static base points), resolves rank/navyRank/position/squad/role/medals/specializations. See [reference: profileStats overload]. |
-| `orbat.squads` | `Squad[]` | auth only (`validateString(userId)`) | Squads with `excludeFromOrbat ≠ true`; source for the org chart. |
-| `orbat.popover.items` | `OrbatPopoverItem[]` | auth only | Per-squad roster with `"Position - Rank"` labels. |
+| `orbat.squads` | `OrbatSquad[]` | **any authenticated user** — intentional: the ORBAT is visible to all members (`validateString(userId)` only; no `orbat` module check, no squad scope) | Squads with `excludeFromOrbat ≠ true`, sorted by `compareByOrderThenName` (`order` ascending, missing last, then `name`). Each carries `memberCount`: its **direct** members only, sub-squads excluded, resolved for every node in one `$group` aggregation (`countDirectMembersBySquad`) instead of a count query per node. The client assembles the forest from this flat list with `buildOrbatTree`. |
+| `orbat.popover.items` | `SquadMemberRow[]` | **any authenticated user** — intentional, as above | Asserts the squad exists, then delegates to `loadSquadMemberRows(squadId)` (`server/squad-member-rows.ts`). |
 | `palette.search` | `PaletteSearchResult` | per-collection `read` | Escapes the query into a case-insensitive regex; searches members/events/tasks/squads/registrations/questionnaires, **each gated independently** by its own `read` permission (raced via `Promise.all`). Members honour squad scope; numeric queries also match `profile.id`. Caps results at `MAX_LIMIT` (30). |
 | `questionnaires.getActiveForUser` | active questionnaires + eligibility | `questionnaires.read` | For each `status: 'active'` questionnaire, attaches `canRespond`/`responseReason`/`nextAllowedDate` (via `canUserRespond`), the caller's `responseCount`/`latestResponseId` (non-anonymous only), and `questionCount`. |
 | `questionnaireResponses.submit` | id | `questionnaires.read` | Requires `status: 'active'` + `canUserRespond`. Validates required questions and per-question answer types (text/number/select/multiselect/rating 1–5). Stores `respondentId: null` when `allowAnonymous`. |
@@ -111,8 +112,26 @@ Custom methods split into two camps depending on whether they need the full audi
 | `settings.upsert` / `settings.remove` / `settings.findOne` | result / result / value | `settings` | Key/value store; upsert keyed on the setting `key`; logs `settings.updated`/`deleted`. |
 | `specializations.names` | `string` (comma-joined) | auth only | id→name join for display. |
 | `specializations.request` | `boolean` | auth only | Audit-only: logs `specializations.requested`, does **not** grant the specialization. |
-| `squads.members` | `SquadMemberSummary[]` | auth only | Members of a squad with rank/position name+color resolved (empty array short-circuit when the squad has no members). |
+| `squads.members` | `SquadMemberRow[]` | **any authenticated user** — intentional, as above | The same `loadSquadMemberRows(squadId)` rows the ORBAT popover shows, for the squad drawer. |
 | `tasks.addComment` | `TaskComment` | auth only | `$push`es `{ userId, text, createdAt }` onto `task.comments`; logs `tasks.commentAdded`. |
+
+## Squad roster rows (`loadSquadMemberRows`)
+
+`server/squad-member-rows.ts` is the one loader behind both `orbat.popover.items` and `squads.members`, so the ORBAT popover and the squad drawer can never disagree about a roster. It returns `SquadMemberRow[]` (`imports/api/types/orbat.ts`) — a flat, fully-resolved display shape, **not** member documents:
+
+```
+SquadMemberRow = { memberId, memberNumber, memberName, positionName, positionColor, rankName, rankAbbreviation, rankColor }
+```
+
+Every field but `memberId` is `| null`, so the client renders a placeholder instead of branching on undefined. Mechanics:
+
+1. Fetch the squad's **direct** members (`profile.squadId`), projected to the four profile fields the row needs. No members → empty array, short-circuiting the rest.
+2. Load **all** ranks (not only the ones these members hold) plus just the referenced positions. The whole rank collection is needed because seniority is derived from the `previousRankId`/`nextRankId` chain, which can run through ranks nobody in this squad holds.
+3. `buildSquadMemberRows` (`imports/helpers/squads/`) resolves the FK names/colours and sorts: position `order` ascending (missing last) → rank seniority from `getRankOrdinals` (missing last) → member name → member number.
+
+`getRankOrdinals` (`imports/helpers/ranks/`) turns the chain into `0`-is-most-senior ordinals. A rank that takes part in **no** surviving link, and any rank in or leading into a cycle, gets no ordinal at all and therefore sorts last — deliberately, so an unchained rank cannot masquerade as the top of the chain.
+
+Both callers are gated on authentication alone, by design: the ORBAT and its rosters are visible to every member, with no `orbat` module check and no squad scoping. Treat that as decided (see Gotchas) and keep the row projection narrow instead.
 
 ## Backup / restore data shapes
 
@@ -153,6 +172,7 @@ Adding a collection means wiring it into **both** `wipeAllCollections()` and `in
 - **`registrations.validate*` and `members.validate*` differ on self-exclusion** — registration validators never self-exclude a member match (members aren't the edit target there), and they run unauthenticated on the public form.
 - **`backup.restore` validates the entire payload before any DB write** — a malformed or privilege-smuggling backup aborts with zero mutations. Don't move validation after the wipe.
 - **`integrity.scanResolve` must run before full-document FK enforcement** is enabled on a populated DB, or edits to already-orphaned rows start failing.
+- **The ORBAT/roster reads are auth-only *by design*** — `orbat.squads`, `orbat.popover.items` and `squads.members` check only that there *is* a `userId`. They deliberately apply neither the `orbat` module permission nor `getSquadScope`: the ORBAT is meant to be visible to every member, so any authenticated account may read the full squad structure, the per-squad member counts and every roster — including squads it is not in and members it could not fetch through the scoped `members.read`. Don't "fix" this by adding a permission check; it is a decided behaviour, not an oversight. What *is* off-limits here is anything beyond the roster display fields — keep the `SquadMemberRow` projection tight rather than widening it toward full member documents.
 - **`assertSafeSelector`** must guard any caller-supplied selector that gets persisted and later replayed (`members.saveTaskFilter`, `members.findOne`, `members.participantNames`) so code-execution operators can't be smuggled in.
 
 ## See also
