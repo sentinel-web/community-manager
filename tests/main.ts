@@ -11,6 +11,7 @@ import './helpers/orbat/buildOrbatTree.test';
 import './helpers/ranks/getRankOrdinals.test';
 import './helpers/sorting/compareByOrderThenName.test';
 import './helpers/squads/buildSquadMemberRows.test';
+import './helpers/colors/toOpaqueColor.test';
 import './server/attendancesDedupeIndex.test';
 import './server/attendancesUpsert.test';
 import './server/backupRestore.test';
