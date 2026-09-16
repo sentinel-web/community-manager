@@ -36,6 +36,7 @@ import './server/readSecurityHardening.test';
 import './server/registrationsMethods.test';
 import './server/roleFormModel.test';
 import './server/rolesOwnPublication.test';
+import './server/rolesPrivilegeEscalation.test';
 import './server/runMethodCall.test';
 import './server/scaffolderSkills.test';
 import './server/settingsMethods.test';
