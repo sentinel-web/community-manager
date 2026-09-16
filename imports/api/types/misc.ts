@@ -1,8 +1,15 @@
 import type { ColoredEntity } from './shared';
 
 export type Medal = ColoredEntity;
-export type EventType = ColoredEntity;
 export type TaskStatus = ColoredEntity;
+
+/**
+ * `countsForInactivity` (#366): unset means true. When false, unexcused
+ * absences at events of this type add no inactivity points.
+ */
+export interface EventType extends ColoredEntity {
+  countsForInactivity?: boolean;
+}
 
 /** A reusable rich-text briefing block; `content` holds sanitized HTML (ADR 0001). */
 export interface BriefingTemplate extends ColoredEntity {

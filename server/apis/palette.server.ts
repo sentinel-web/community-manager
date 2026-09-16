@@ -5,6 +5,7 @@ import QuestionnairesCollection from '../../imports/api/collections/questionnair
 import RegistrationsCollection from '../../imports/api/collections/registrations.collection';
 import SquadsCollection from '../../imports/api/collections/squads.collection';
 import TasksCollection from '../../imports/api/collections/tasks.collection';
+import { getEventVisibilityFilter, withEventVisibility } from '../event-visibility';
 import { checkPermission, getSquadScope, validateNumber, validateString } from '../main';
 
 export interface PaletteSearchResult {
@@ -69,10 +70,13 @@ if (Meteor.isServer) {
       }
 
       if (canEvents) {
-        empty.events = (await EventsCollection.find(
-          { name: regex },
-          { limit: cap, fields: { ...fields, name: 1, start: 1 } }
-        ).fetchAsync()) as unknown as PaletteSearchResult['events'];
+        // Same private-event rule as the `events` publication — otherwise the
+        // palette lists names the caller may not open and the click 404s.
+        const visibility = await getEventVisibilityFilter(userId);
+        empty.events = (await EventsCollection.find(withEventVisibility({ name: regex }, visibility), {
+          limit: cap,
+          fields: { ...fields, name: 1, start: 1 },
+        }).fetchAsync()) as unknown as PaletteSearchResult['events'];
       }
 
       if (canTasks) {

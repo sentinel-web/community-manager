@@ -11,6 +11,7 @@ import RanksCollection from '../../imports/api/collections/ranks.collection';
 import RolesCollection from '../../imports/api/collections/roles.collection';
 import SpecializationsCollection from '../../imports/api/collections/specializations.collection';
 import SquadsCollection from '../../imports/api/collections/squads.collection';
+import { loadMemberPoints } from '../attendance-points';
 import { validateArrayOfStrings, validateObject, validatePublish, validateString, validateNumber, validateUserId, checkPermission, checkSpecialPermission, getSquadScope, isOfficerOrAdmin, getUserRole, assertSafeSelector } from '../main';
 import { runMutation, snapshotTouchedFields } from '../mutation-pipeline';
 import { instrument } from '../telemetry';
@@ -573,7 +574,15 @@ if (Meteor.isServer) {
     'members.profileStats': async function (userOrTargetId: Meteor.User | string | undefined, role?: Role) {
       if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
 
-      let user: Meteor.User | null | undefined = typeof userOrTargetId === 'object' ? userOrTargetId : undefined;
+      // The object form (used by dashboard.stats, which already holds the member
+      // document) is caller-supplied over DDP too, and its `_id` flows into the
+      // shared points loader as a dynamic field path — so validate it here
+      // rather than letting a shapeless object reach the database layer.
+      let user: Meteor.User | null | undefined;
+      if (userOrTargetId && typeof userOrTargetId === 'object') {
+        validateString((userOrTargetId as { _id?: unknown })._id);
+        user = userOrTargetId;
+      }
 
       if (typeof userOrTargetId === 'string') {
         if (userOrTargetId !== this.userId) {
@@ -599,15 +608,10 @@ if (Meteor.isServer) {
       const roleId = user.profile?.roleId;
       if (!role) role = (await RolesCollection.findOneAsync({ _id: roleId ?? null } as never)) as Role | undefined;
 
-      let inactivityPoints = user.profile?.staticInactivityPoints || 0;
-      let attendancePoints = user.profile?.staticAttendancePoints || 0;
-      const userIdKey = user._id;
-      await AttendancesCollection.find({ [userIdKey]: { $exists: true } }).forEachAsync(attendance => {
-        const val = (attendance as Record<string, unknown>)[userIdKey] as number;
-        if (val === -2) return;
-        if (val === -1) inactivityPoints += 1;
-        attendancePoints += val === 2 ? 1 : (val || 0);
-      });
+      // Same calculation as the attendance grid's attendances.pointsSummary (#363).
+      // The loader skips ids it cannot use as a field path, so fall back to zeroed
+      // totals rather than destructuring an absent entry.
+      const { attendancePoints, inactivityPoints } = (await loadMemberPoints([user]))[user._id] ?? { attendancePoints: 0, inactivityPoints: 0 };
 
       const resolvedRank = user.profile?.rankId ? await RanksCollection.findOneAsync({ _id: user.profile.rankId }) : null;
       const resolvedNavyRank = user.profile?.navyRankId ? await RanksCollection.findOneAsync({ _id: user.profile.navyRankId }) : null;

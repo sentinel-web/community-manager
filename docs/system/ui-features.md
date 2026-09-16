@@ -70,7 +70,8 @@ the current `userId` into the Mongo selector. `Events` owns one `dateRange` stat
   subscription yields (see `data-model.md` → Events, `rrule` for recurrence).
 - **`EventDetailPopover`** is a `Modal` (not a real popover) opened on
   `onSelectEvent`. It lazily calls `events.detail` for the enriched single event
-  (resolved host/attendee names, type colour, `isSignedUp`) and exposes an
+  (resolved host/attendee names, type colour, `isSignedUp`), lists the signed-up
+  members' names (scrollable when long), and exposes an
   **RSVP** button calling `events.rsvp`, which toggles the caller in/out of
   `attendees` and returns the new boolean state.
 - **`EventAttendance`** renders a grid: members down the rows, events across the
@@ -79,18 +80,26 @@ the current `userId` into the Mongo selector. `Events` owns one `dateRange` stat
   — see [attendance value mapping] in memory). A cell write calls
   `attendances.upsert(eventId, memberId, status)` — an **atomic per-event upsert
   keyed on `{ eventId }`**, race-safe after #261; the old read-then-write created
-  duplicate rows. The leftmost columns derive running **inactivity points** (+1
-  per absence) and **attendance points** (per-status sum) from the member's
-  `static*Points` baseline plus the attendance docs (`EventAttendance.tsx:230-252`).
-  Member names are pre-computed into a `Map` to avoid N+1 lookups per row.
+  duplicate rows. The leftmost columns show each member's **all-time**
+  **inactivity points** and **attendance points** from `attendances.pointsSummary`
+  — the same shared calculation (`imports/api/attendance/points.ts`) the profile
+  uses, not just the events currently loaded (#363) — a column tooltip
+  (`events.pointsAllTimeHint`) spells out that those two columns ignore the
+  selected date range while every event column honours it. The summary is
+  refetched off narrow digests of the member set, their static points and the
+  loaded attendance statuses, so unrelated document updates don't re-call the
+  method. Status labels and tag colours
+  come from the shared map in `imports/api/attendance/status.ts` (also used by the
+  profile `AttendancePieChart`). Member names are pre-computed into a `Map` to
+  avoid N+1 lookups per row.
 
 | Attendance status | Value | Tag colour | Points effect |
 |-------------------|-------|-----------|---------------|
-| Event cancelled | `-2` | default | skipped (neither IP nor points) |
-| Absent | `-1` | red | `+1` inactivity point |
-| Excused | `0` | yellow | `+0` |
+| Event cancelled | `-2` | black | skipped (neither IP nor points) |
+| Absent (unexcused) | `-1` | red | `+1` inactivity point (none if the event type has `countsForInactivity: false`), `-1` attendance point |
+| Excused | `0` | gold | `+0` |
 | Present | `1` | green | `+1` |
-| Present (Zeus) | `2` | cyan | `+1` |
+| Present (Zeus) | `2` | blue | `+1` |
 
 - **`EventForm`** is a rich form: `MembersSelect` for hosts/attendees, a
   `SquadQuickAdd` widget (bulk-adds a whole squad or all members via
