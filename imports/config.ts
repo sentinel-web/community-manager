@@ -9,8 +9,11 @@ export const LAYOUT = {
 } as const;
 
 // Documents per publication: DEFAULT when a subscription sends no limit, MAX as
-// the hard cap (enforced in server/crud.lib.ts). Views without pagination
-// request MAX.
+// the hard cap. The cap is *enforced* server-side (server/crud.lib.ts imports
+// this); it lives here — not in server/config.ts with a client mirror — so that
+// the client's own use of it (clamping `Section`'s `customViewLimit` and
+// deciding when to warn that results were truncated) can never disagree with
+// what the server enforces. The price is that it is not Meteor.settings-tunable.
 export const PUBLISH_LIMITS = {
   DEFAULT: 100,
   MAX: 1000,

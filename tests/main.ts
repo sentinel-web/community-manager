@@ -4,6 +4,7 @@ import './client/hooks/drawerStackHooks.test';
 import './client/hooks/drawerStackStore.test';
 import './client/hooks/useEntityForm.test';
 import './client/hooks/useMethod.test';
+import './client/hooks/useStableValue.test';
 import './client/sectionFilter.test';
 import './helpers/colors/getLegibleTextColor.test';
 import './helpers/colors/getLuminance.test';

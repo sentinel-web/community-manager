@@ -74,10 +74,4 @@ describe('getCalendarRange (#358)', () => {
     assert.ok(end.isSame(date.add(30, 'day').endOf('day')));
   });
 
-  it('covers a single day for the day view', () => {
-    const [start, end] = getCalendarRange('day', date);
-
-    assert.ok(start.isSame(date.startOf('day')));
-    assert.ok(end.isSame(date.endOf('day')));
-  });
 });

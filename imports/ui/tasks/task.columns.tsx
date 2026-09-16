@@ -11,15 +11,24 @@ import TaskStatusTag from './task-status/TaskStatusTag';
 
 type TFn = LanguageContextValue['t'];
 
+const LOADING = 'loading...';
+
 interface ParticipantsProps {
   participants?: string[];
+  // Name resolution owned by the parent: `null` while it is still resolving, a
+  // member-id → name lookup once it has. Omitting it (the table columns) makes
+  // the component resolve its own names — fine per row, but a parent rendering
+  // many at once should resolve them in one call instead (see KanbanBoard).
+  nameById?: Record<string, string> | null;
 }
 
-export function Participants({ participants }: ParticipantsProps) {
-  const [value, setValue] = useState<string>('loading...');
+export function Participants({ participants, nameById }: ParticipantsProps) {
+  const [value, setValue] = useState<string>(LOADING);
   const { call } = useMethod<string>('members.participantNames');
+  const parentOwnsNames = nameById !== undefined;
 
   useEffect(() => {
+    if (parentOwnsNames) return;
     if (!participants?.length) {
       setValue('-');
       return;
@@ -29,9 +38,14 @@ export function Participants({ participants }: ParticipantsProps) {
     call(filter, options).then(res => {
       if (res.ok) setValue(res.data?.length ? res.data : '-');
     });
-  }, [participants, call]);
+  }, [participants, call, parentOwnsNames]);
 
-  return <>{value}</>;
+  if (!parentOwnsNames) return <>{value}</>;
+  if (nameById === null) return <>{LOADING}</>;
+  // Ids the lookup doesn't know (outside the caller's squad scope) are dropped,
+  // exactly as members.participantNames would have dropped them.
+  const names = participants?.flatMap(id => (nameById[id] ? [nameById[id]] : [])) ?? [];
+  return <>{names.length ? names.join(', ') : '-'}</>;
 }
 
 export function getTaskColumns(

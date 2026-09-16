@@ -6,6 +6,12 @@ import React from 'react';
 // changes, not only when the search input does. Mounts the real Section, so it
 // only runs in the Meteor client test context where a browser supplies a DOM;
 // the pure selector building is covered by eventFilter.test.ts.
+//
+// NOTE: this file does NOT run in CI — `.github/workflows/ci.yml` runs
+// `meteor test --once` with no browser driver, so the Meteor client context is
+// never started. The CI-visible regression for the same behaviour is the
+// Playwright spec "should re-query when the date filter changes without typing
+// in search" in e2e/tests/events.spec.ts.
 if (Meteor.isClient) {
   const ReactDOMClient = require('react-dom/client') as typeof import('react-dom/client');
   const { act } = require('react-dom/test-utils') as { act: (cb: () => void | Promise<void>) => Promise<void> };

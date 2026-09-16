@@ -55,6 +55,37 @@ test.describe('Events', () => {
     await expect(page.locator('input[id="name"]')).toBeVisible();
   });
 
+  // Regression for #358: a Section filter change that isn't a search keystroke
+  // must re-query. The unit-level proof (tests/client/sectionFilter.test.tsx)
+  // needs a DOM and so never runs in CI's `meteor test --once`; this does.
+  test('should re-query when the date filter changes without typing in search', async () => {
+    const eventName = `Filter Probe ${Date.now()}`;
+    const now = new Date();
+    const later = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    const formatDateTime = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:00`;
+    const formatDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+    await eventsPage.createEvent({ name: eventName, start: formatDateTime(now), end: formatDateTime(later) });
+    await eventsPage.waitForDrawerClose();
+
+    try {
+      await eventsPage.switchToTableView();
+      await eventsPage.expectEventInTable(eventName);
+
+      // Move the range off today — the event must disappear even though the
+      // search input was never touched.
+      await eventsPage.setDateRange('1990-01-01', '1990-01-31');
+      await eventsPage.expectEventNotInTable(eventName);
+
+      // And come back when the range covers it again.
+      await eventsPage.setDateRange(formatDate(now), formatDate(now));
+      await eventsPage.expectEventInTable(eventName);
+    } finally {
+      await eventsPage.deleteEvent(eventName);
+    }
+  });
+
   test('should create and delete an event', async () => {
     const eventName = `Test Event ${Date.now()}`;
 

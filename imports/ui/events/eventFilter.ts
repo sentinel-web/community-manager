@@ -1,7 +1,7 @@
 import type { Dayjs } from 'dayjs';
 import type { Mongo } from 'meteor/mongo';
-import type { View } from 'react-big-calendar';
 import type { EventDoc } from '../../api/types/event';
+import { BREAKPOINTS } from '../../config';
 
 /** Selected date range; either bound (or the whole range, when cleared) may be absent. */
 export type EventDateRange = [Dayjs | null, Dayjs | null] | null;
@@ -37,21 +37,27 @@ export function buildEventFilter({ search, dateRange, eventTypes, relevantOnly, 
 // react-big-calendar's agenda view spans this many days from its date.
 const AGENDA_LENGTH_DAYS = 30;
 
+/** The views the calendar can *start* in — the only ones whose range we predict. */
+export type CalendarStartView = 'month' | 'agenda';
+
 /**
- * The range a react-big-calendar view shows for `date`. The calendar only
- * reports ranges on navigation, so it uses this to report its initial range
- * on mount.
+ * The view react-big-calendar mounts in: agenda on phones (the month grid is
+ * unreadable there), month everywhere else. Shared with the owner of the date
+ * filter so it can predict the calendar's range before the calendar mounts.
  */
-export function getCalendarRange(view: View, date: Dayjs): [Dayjs, Dayjs] {
-  switch (view) {
-    case 'agenda':
-      return [date.startOf('day'), date.add(AGENDA_LENGTH_DAYS, 'day').endOf('day')];
-    case 'day':
-      return [date.startOf('day'), date.endOf('day')];
-    case 'week':
-      return [date.startOf('week'), date.endOf('week')];
-    case 'month':
-    default:
-      return [date.startOf('month').startOf('week'), date.endOf('month').endOf('week')];
-  }
+export function getInitialCalendarView(): CalendarStartView {
+  return typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.MOBILE ? 'agenda' : 'month';
+}
+
+/**
+ * The range a freshly mounted react-big-calendar shows for `date`. The calendar
+ * only reports ranges on navigation, so both it (on mount) and the owner of the
+ * date filter (when switching to the calendar view) derive the initial range
+ * from here. Later ranges come from the calendar's own `onRangeChange`, so the
+ * navigable views (week/day) are deliberately not modelled.
+ */
+export function getCalendarRange(view: CalendarStartView, date: Dayjs): [Dayjs, Dayjs] {
+  if (view === 'agenda') return [date.startOf('day'), date.add(AGENDA_LENGTH_DAYS, 'day').endOf('day')];
+  // Month: the grid includes the leading/trailing days of the adjacent months.
+  return [date.startOf('month').startOf('week'), date.endOf('month').endOf('week')];
 }
