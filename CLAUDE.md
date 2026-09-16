@@ -35,7 +35,10 @@ server/apis/demoData.server.ts  # On-demand demo-data seeder (demoData.generate,
 server/crud.lib.ts      # Generic CRUD method/publish generator
 server/collection-registry.ts  # Per-collection permission/FK/audit metadata (COLLECTION_REGISTRY)
 server/mutation-pipeline.ts    # Shared server-mutation lifecycle (runMutation: auth→perm→validate→body→audit)
+server/attendance-points.ts    # Batched attendance/static-points loader behind attendances.pointsSummary + members.profileStats
+server/event-visibility.ts     # Private-event read filter shared by the events publication, methods, generic reads and palette
 server/config.ts        # Server settings with Meteor.settings overrides
+imports/api/attendance/   # Pure attendance domain logic (points calculation, status → label/color map)
 imports/api/collections/  # MongoDB collection definitions (*.collection.ts)
 imports/api/types/      # Shared TS interfaces mirroring server return shapes
 imports/ui/             # React components organized by feature (.tsx)

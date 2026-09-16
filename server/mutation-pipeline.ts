@@ -37,6 +37,13 @@ export interface MutationDescriptor<TArgs extends readonly unknown[], TResult> {
   // until 3+ collections need it).
   readonly permissionOverride?: (ctx: MutationContext, args: TArgs) => Promise<boolean>;
   readonly validate?: (args: TArgs) => void;
+  // Identity-aware gate that can only TIGHTEN the decision (the mirror image of
+  // permissionOverride, which re-admits). Runs after validation, with the caller
+  // and the validated args, and denies by throwing — for writes whose module
+  // permission is not fine-grained enough, e.g. a field only an admin may set
+  // (see crud.lib.ts PRIVILEGED_FIELD_GUARDS). Its failures are audited as
+  // pre-body denials, like a failed permission check.
+  readonly authorize?: (ctx: MutationContext, args: TArgs) => Promise<void>;
 }
 
 const OP_TO_DENIAL_SEGMENT: Record<MutationOp, string> = {
@@ -189,6 +196,15 @@ export async function runMutation<TArgs extends readonly unknown[], TResult>(
       if (descriptor.validate) {
         try {
           descriptor.validate(args);
+        } catch (error) {
+          await emitDenial(ctx, descriptor, args);
+          throw error;
+        }
+      }
+
+      if (descriptor.authorize) {
+        try {
+          await descriptor.authorize(ctx, args);
         } catch (error) {
           await emitDenial(ctx, descriptor, args);
           throw error;

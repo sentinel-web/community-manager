@@ -1,4 +1,4 @@
-import { ColorPicker, Form, Input } from 'antd';
+import { ColorPicker, Form, Input, Switch } from 'antd';
 import React, { useEffect } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import useEntityForm from '../../hooks/useEntityForm';
@@ -14,19 +14,21 @@ export default function EventTypesForm() {
     created: 'messages.eventTypeCreated',
     updated: 'messages.eventTypeUpdated',
     toPayload: values => {
-      const { name, description } = values as { name: string; description?: string };
-      return { name, color: getColorFromValues(values), description };
+      const { name, description, countsForInactivity } = values as { name: string; description?: string; countsForInactivity?: boolean };
+      return { name, color: getColorFromValues(values), description, countsForInactivity: countsForInactivity !== false };
     },
   });
 
   useEffect(() => {
     if (model && Object.keys(model).length > 0) {
-      form.setFieldsValue(model);
+      // Unset means true (#366), so legacy event types show the switch on.
+      form.setFieldsValue({ ...model, countsForInactivity: model.countsForInactivity !== false });
     } else {
       form.setFieldsValue({
         name: '',
         description: '',
         color: null,
+        countsForInactivity: true,
       });
     }
   }, [model, form.setFieldsValue]);
@@ -41,6 +43,15 @@ export default function EventTypesForm() {
       </Form.Item>
       <Form.Item name="color" label={t('common.color')}>
         <ColorPicker format="hex" />
+      </Form.Item>
+      <Form.Item
+        name="countsForInactivity"
+        label={t('events.countsForInactivity')}
+        tooltip={t('events.countsForInactivityHint')}
+        valuePropName="checked"
+        rules={[{ type: 'boolean' }]}
+      >
+        <Switch />
       </Form.Item>
       <FormFooter onCancel={cancel} loading={loading} />
     </Form>

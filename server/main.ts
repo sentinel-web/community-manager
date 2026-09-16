@@ -7,6 +7,10 @@ import MembersCollection from '../imports/api/collections/members.collection';
 import RegistrationsCollection from '../imports/api/collections/registrations.collection';
 import RolesCollection from '../imports/api/collections/roles.collection';
 import TasksCollection from '../imports/api/collections/tasks.collection';
+// BOOLEAN_MODULES lives with the client permission mirror so the two cannot
+// drift; it is re-exported below because server code has always imported it
+// from main.
+import { BOOLEAN_MODULES } from '/imports/api/permissions/modulePermissions';
 import type { CrudCollectionName, Role } from '/imports/api/types';
 import './apis/attendances.server';
 import './apis/backup.server';
@@ -21,6 +25,7 @@ import './apis/palette.server';
 import './apis/questionnaireResponses.server';
 import './apis/questionnaires.server';
 import './apis/registrations.server';
+import './apis/roles.server';
 import './apis/settings.server';
 import './apis/specializations.server';
 import './apis/squads.server';
@@ -32,8 +37,6 @@ import { CACHE, LOGS, SQUAD_SCOPED_PERMISSIONS } from './config';
 // === Permission System ===
 
 export type CrudOperation = 'read' | 'create' | 'update' | 'delete';
-
-const BOOLEAN_MODULES: readonly string[] = ['dashboard', 'orbat', 'logs', 'settings'];
 
 // Distinct CRUD-style permission modules across the registry, minus boolean
 // modules. Used by normalizeRolePermissions to expand `role[mod] = true` into

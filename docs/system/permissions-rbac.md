@@ -12,7 +12,9 @@ The two-tier role-based access control system that gates every server method, pu
 - `server/crud.lib.ts` — wires registry fields into `runMutation` for every generated CRUD method; gates publications (`createCollectionPublish`).
 - `server/config.ts` — `CACHE.roleTtlMs`, `SQUAD_SCOPED_PERMISSIONS.enabled` (settings-overridable).
 - `imports/ui/main/Main.tsx` — client-side `checkAccess` + `MODULE_PERMISSION_MAP` (view gating; cosmetic only).
-- `imports/ui/members/roles/RolesForm.tsx` — the drawer form that edits a role's permission matrix.
+- `server/apis/roles.server.ts` — the `roles.own` publication: the caller's own role, independent of `roles.read`.
+- `imports/api/permissions/modulePermissions.ts` — client mirror of the registry's `module`/`fallback` (`COLLECTION_PERMISSIONS`, drift-tested) and `getModulePermissions`; consumed via `useOwnRole`/`useModulePermissions` (`imports/ui/hooks/`) by `Section`, `CollectionSelect`, `Main`, `Navigation`, `Palette`.
+- `imports/ui/members/roles/RolesForm.tsx` — the drawer form that edits a role's permission matrix (pure transforms in `roleFormModel.ts`; the admin grant is its own "Administrator" switch, so `roles: true` is never rewritten into a CRUD object).
 
 ## How it works
 
@@ -67,12 +69,15 @@ Every generated CRUD method routes through `runMutation` (`server/mutation-pipel
 | Fallback flag | if denied and `fallbackFlag` set: `checkSpecialPermission(userId, flag)` | falls through to override |
 | Permission override | if still denied and `permissionOverride` set: `await permissionOverride(ctx, args)` | `.denied` log, `Meteor.Error(403)` |
 | Validate | `descriptor.validate(args)` | `.denied` log, re-throws the validation error |
+| Authorize | `descriptor.authorize(ctx, args)` — identity-aware gate that can only **tighten** | `.denied` log, re-throws (a `403`) |
 | Body | runs the actual mutation | error propagates **untouched** (no `.denied`) |
 
 `bodyStarted` flips true only after every gate passes, so telemetry can classify a pre-body rejection as `denied` vs. a body throw as `error`. The four special flags are wired in two ways:
 
 - **`fallbackFlag`** (unconditional) — comes from `registryEntry.fallback`. `events.create` re-admits on `canCreateEvents`; `tasks.{create,update}` re-admit on `canManageTasks`. Set in `crud.lib.ts` (`fallbackFlag: fallback?.create` / `fallback?.update`).
 - **`permissionOverride`** (conditional callback) — used by `members.update` so a caller lacking update permission may still edit `profile.specializationIds` *alone* if they hold `canManageSpecializations` (`server/apis/members.server.ts:180`). Kept as a callback per the Rule of Three (one site today).
+
+`authorize` is the mirror image: `permissionOverride` re-admits a denied call, `authorize` denies an admitted one. It exists for writes whose permission module is not fine-grained enough — a field that the collection's write permission alone must not be enough to set. `crud.lib.ts` wires it from `PRIVILEGED_FIELD_GUARDS`, which today holds one entry: **only a caller whose own role has `roles === true` may write `roles: true`** on `roles.insert`/`roles.update`. Without it, any role with `roles.update` could set the super-admin grant on its own role and take over the instance (the role cache is cleared on write, so it takes effect immediately). The "Administrator" switch in `RolesForm` is UI convenience; this is the control. Covered by `tests/server/rolesPrivilegeEscalation.test.ts`.
 
 ### Denial auditing
 
@@ -91,6 +96,8 @@ e.g. a blocked task create logs `tasks.insert.denied`. The payload always carrie
 
 `createCollectionPublish` (`server/crud.lib.ts:133`) authorizes subscriptions, not just methods. Unless `allowsAnonymous.read` is set, an unauthenticated subscriber gets `this.ready()` (empty), and an authenticated one must pass `checkPermission(this.userId, module, 'read')` or the publication calls `this.ready()` and throws `403`. This closed SEC-003 (any authenticated user used to subscribe to any collection). The `events` publication is custom (`events.server.ts`) and additionally filters private events for non-officers.
 
+The client never reads its own role through the gated `roles` publication: `roles.own` (`server/apis/roles.server.ts`) publishes exactly the caller's role, derived server-side from the stored `profile.roleId` (its optional argument is an untrusted resubscribe key that never reaches the query). Without it, a member lacking `roles.read` received no role and the whole UI rendered as permissionless.
+
 ### Special flags (`can*`)
 
 | Flag | Wired via | Effect |
@@ -98,9 +105,9 @@ e.g. a blocked task create logs `tasks.insert.denied`. The payload always carrie
 | `canCreateEvents` | registry `fallback.create` on `events` | create events without `events.create` (Zeus role) |
 | `canManageTasks` | registry `fallback.{create,update}` on `tasks` | create/update tasks without `tasks` perms (Developer role) |
 | `canManageSpecializations` | `members.update` `permissionOverride` | edit only `profile.specializationIds` without `members.update` |
-| `canManageRecruits` | UI/registration paths | recruit-management carve-out |
+| `canManageRecruits` | nothing — not checked server-side | no effect; kept on the `Role` type so stored documents and backups round-trip, and rendered **disabled** in `RolesForm` (labelled "grants no permissions") rather than hidden, until a behaviour is defined |
 
-All four are edited in `RolesForm.tsx` under "Special Permissions" alongside the boolean and CRUD matrices.
+The three enforced flags are edited in `RolesForm.tsx` under "Special Permissions" alongside the boolean and CRUD matrices. Client-side, `getModulePermissions` applies the same `fallback` flags so e.g. a Zeus role sees the event create button.
 
 ## Squad-scoped permissions
 

@@ -73,10 +73,10 @@ const hasPermission = await checkPermission(userId, 'members', 'update');
 if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
 ```
 
-Client-side (in Section):
-```javascript
-const permissions = getModulePermissions(role, 'members');
-// permissions = { canCreate, canUpdate, canDelete }
+Client-side (Section, CollectionSelect — UI gating only, the server re-checks):
+```typescript
+const permissions = useModulePermissions('members');
+// permissions = { canRead, canCreate, canUpdate, canDelete }, incl. registry fallback flags
 ```
 
 ## Collection to Module Mapping
