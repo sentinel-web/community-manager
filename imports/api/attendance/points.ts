@@ -55,11 +55,25 @@ export function calculateMemberPoints(
   return { attendancePoints, inactivityPoints };
 }
 
-/** Event ids where at least one of the members was an unexcused no-show. */
+/**
+ * Event ids where at least one of the members was an unexcused no-show.
+ *
+ * Walks each document's own keys against a Set of member ids rather than
+ * probing the document once per member, so the cost is the number of graded
+ * members on the document instead of members × documents.
+ */
 export function collectNoShowEventIds(memberIds: readonly string[], attendances: readonly AttendanceDoc[]): Set<string> {
+  const wanted = new Set<string>(memberIds);
   const eventIds = new Set<string>();
   for (const attendance of attendances) {
-    if (attendance.eventId && memberIds.some(memberId => attendance[memberId] === NO_SHOW)) eventIds.add(attendance.eventId);
+    const eventId = attendance.eventId;
+    if (!eventId || eventIds.has(eventId)) continue;
+    for (const [key, value] of Object.entries(attendance)) {
+      if (value === NO_SHOW && wanted.has(key)) {
+        eventIds.add(eventId);
+        break;
+      }
+    }
   }
   return eventIds;
 }

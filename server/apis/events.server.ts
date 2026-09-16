@@ -3,7 +3,8 @@ import EventsCollection from '../../imports/api/collections/events.collection';
 import EventTypesCollection from '../../imports/api/collections/eventTypes.collection';
 import MembersCollection from '../../imports/api/collections/members.collection';
 import RanksCollection from '../../imports/api/collections/ranks.collection';
-import { validateUserId, validateString, validateObject, getUserRole, isOfficerOrAdmin } from '../main';
+import { getEventVisibilityFilter, withEventVisibility } from '../event-visibility';
+import { validateUserId, validateString, validateObject } from '../main';
 import { createLog } from './logs.server';
 
 const getFullName = (rank: string | undefined, id: number | undefined, name: string | undefined): string =>
@@ -26,21 +27,14 @@ async function resolveNames(userIds: string[] | undefined): Promise<ResolvedMemb
   }));
 }
 
-// Private events are visible only to admins and to their hosts and attendees.
-// Returns the selector restricting a query to events `userId` may see, or null
-// when the caller sees every event. Shared by the `events` publication and the
-// id-based methods so a known event id can't bypass the publication's rule.
-async function getEventVisibilityFilter(userId: string): Promise<Record<string, unknown> | null> {
-  const role = await getUserRole(userId);
-  if (isOfficerOrAdmin(role)) return null;
-  return { $or: [{ isPrivate: { $ne: true } }, { hosts: userId }, { attendees: userId }] };
-}
-
-// Loads an event the caller may see. Invisible events are reported exactly like
-// missing ones (404), so private event ids can't be probed.
+// Loads an event the caller may see, applying the shared private-event filter
+// (server/event-visibility.ts) that also gates the `events` publication, the
+// generated `events.read`/`.count`/`.options` methods, and `palette.search`.
+// Invisible events are reported exactly like missing ones (404), so private
+// event ids can't be probed.
 async function findVisibleEvent(userId: string, eventId: string) {
   const visibility = await getEventVisibilityFilter(userId);
-  const event = await EventsCollection.findOneAsync(visibility ? { $and: [{ _id: eventId }, visibility] } : { _id: eventId });
+  const event = await EventsCollection.findOneAsync(withEventVisibility({ _id: eventId }, visibility));
   if (!event) throw new Meteor.Error(404, 'Event not found');
   return event;
 }
@@ -62,7 +56,7 @@ if (Meteor.isServer) {
     }
 
     const visibility = await getEventVisibilityFilter(this.userId);
-    return EventsCollection.find(visibility ? { $and: [filter, visibility] } : filter, limitedOptions);
+    return EventsCollection.find(withEventVisibility(filter, visibility), limitedOptions);
   });
 
   Meteor.methods({

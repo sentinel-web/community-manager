@@ -35,7 +35,8 @@ export default function AttendancePieChart({ data, title }: AttendancePieChartPr
         value: data[bucket],
         color: ATTENDANCE_STATUS_META[status].chartColor,
       })).filter(d => d.value > 0),
-    [data, t]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- narrowed to the four counts the chart reads, so a new `data` object with identical counts does not rebuild it
+    [data.present, data.zeus, data.excused, data.absent, t]
   );
 
   if (!chartData.length) return <Typography.Text type="secondary">{title}: -</Typography.Text>;

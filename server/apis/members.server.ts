@@ -574,7 +574,15 @@ if (Meteor.isServer) {
     'members.profileStats': async function (userOrTargetId: Meteor.User | string | undefined, role?: Role) {
       if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
 
-      let user: Meteor.User | null | undefined = typeof userOrTargetId === 'object' ? userOrTargetId : undefined;
+      // The object form (used by dashboard.stats, which already holds the member
+      // document) is caller-supplied over DDP too, and its `_id` flows into the
+      // shared points loader as a dynamic field path — so validate it here
+      // rather than letting a shapeless object reach the database layer.
+      let user: Meteor.User | null | undefined;
+      if (userOrTargetId && typeof userOrTargetId === 'object') {
+        validateString((userOrTargetId as { _id?: unknown })._id);
+        user = userOrTargetId;
+      }
 
       if (typeof userOrTargetId === 'string') {
         if (userOrTargetId !== this.userId) {
@@ -601,7 +609,9 @@ if (Meteor.isServer) {
       if (!role) role = (await RolesCollection.findOneAsync({ _id: roleId ?? null } as never)) as Role | undefined;
 
       // Same calculation as the attendance grid's attendances.pointsSummary (#363).
-      const { attendancePoints, inactivityPoints } = (await loadMemberPoints([user]))[user._id];
+      // The loader skips ids it cannot use as a field path, so fall back to zeroed
+      // totals rather than destructuring an absent entry.
+      const { attendancePoints, inactivityPoints } = (await loadMemberPoints([user]))[user._id] ?? { attendancePoints: 0, inactivityPoints: 0 };
 
       const resolvedRank = user.profile?.rankId ? await RanksCollection.findOneAsync({ _id: user.profile.rankId }) : null;
       const resolvedNavyRank = user.profile?.navyRankId ? await RanksCollection.findOneAsync({ _id: user.profile.navyRankId }) : null;

@@ -219,6 +219,7 @@ export const translations = {
   "events.overwriteDescriptionBody": { en: "The description already has content. Loading this template will replace it.", de: "Die Beschreibung enthält bereits Inhalt. Das Laden dieser Vorlage ersetzt ihn.", fr: "La description contient déjà du contenu. Charger ce modèle le remplacera." },
   "events.overwriteDescriptionTitle": { en: "Replace description?", de: "Beschreibung ersetzen?", fr: "Remplacer la description ?" },
   "events.points": { en: "Points", de: "Punkte", fr: "Points" },
+  "events.pointsAllTimeHint": { en: "All-time total across every event — unlike the attendance columns, it is not limited to the selected date range.", de: "Gesamtwert über alle Ereignisse — anders als die Anwesenheitsspalten nicht auf den gewählten Zeitraum begrenzt.", fr: "Total de tous les temps sur l'ensemble des événements — contrairement aux colonnes de présence, il n'est pas limité à la période sélectionnée." },
   "events.present": { en: "Present", de: "Anwesend", fr: "Présent" },
   "events.presentZeus": { en: "Present (Zeus)", de: "Anwesend (Zeus)", fr: "Présent (Zeus)" },
   "events.private": { en: "Private", de: "Privat", fr: "Privé" },
