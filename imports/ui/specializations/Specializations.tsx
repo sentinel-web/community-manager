@@ -19,7 +19,6 @@ export default function Specializations() {
         Collection={SpecializationsCollection}
         FormComponent={SpecializationForm}
         columnsFactory={getSpecializationColumns}
-        filterFactory={string => ({ name: { $regex: string, $options: 'i' } })}
       />
     </div>
   );

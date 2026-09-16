@@ -4,7 +4,7 @@ The hand-written Meteor methods and publications in `server/apis/` that go **bey
 
 ## Key files
 
-- `server/apis/attendances.server.ts` — `attendances.upsert`: atomic per-event attendance grid write under a dynamic `[memberId]` key.
+- `server/apis/attendances.server.ts` — `attendances.upsert`: atomic per-event attendance grid write under a dynamic `[memberId]` key; `attendances.pointsSummary`: all-time point totals for the attendance grid (via `server/attendance-points.ts`).
 - `server/apis/backup.server.ts` — full-DB export / restore / validate, with SEC-004 privilege-escalation hardening and DDP rate limits.
 - `server/apis/dashboard.server.ts` — role-gated dashboard aggregations (counts + group-by via raw Mongo `aggregate`).
 - `server/apis/demoData.server.ts` — dev-only `demoData.generate`: wipe-all + reseed every collection from fixed `_id` seeds.
@@ -38,10 +38,10 @@ Custom methods split into two camps depending on whether they need the full audi
 
 | Style | Used by | Mechanics |
 |-------|---------|-----------|
-| **Pipeline** (`runMutation`) | `members.{insert,update,remove}`, all of `integrity.*` | Routes through the shared `MutationWithAudit` lifecycle (auth → permission → validate → body → audit), so a denial emits `<collection>.<op>.denied` automatically. See `server/mutation-pipeline.ts` and CONTEXT → MutationWithAudit. |
+| **Pipeline** (`runMutation`) | `members.{insert,update,remove,bulkRemove}`, all of `integrity.*` | Routes through the shared `MutationWithAudit` lifecycle (auth → permission → validate → body → audit), so a denial emits `<collection>.<op>.denied` automatically. See `server/mutation-pipeline.ts` and CONTEXT → MutationWithAudit. |
 | **Hand-rolled** | everything else (`events.rsvp`, `palette.search`, `dashboard.stats`, `members.read`, …) | Inline `if (!this.userId) throw 401` / `validateUserId` → `checkPermission` → body → optional `createLog`. These are reads, narrow validators, or single-shot reads/writes that don't need the standard insert/update/remove audit shape. |
 
-`members.server.ts` is the only file mixing both: its CRUD-shaped paths (`insert/update/remove`) use `runMutation`; its read/list/validator methods are hand-rolled (and several wrap their body in `instrument(...)` from `server/telemetry.ts` to record `denied`/`error`/`ok` outcomes).
+`members.server.ts` is the only file mixing both: its CRUD-shaped paths (`insert/update/remove/bulkRemove`) use `runMutation`; its read/list/validator methods are hand-rolled (and several wrap their body in `instrument(...)` from `server/telemetry.ts` to record `denied`/`error`/`ok` outcomes).
 
 ### Permission patterns
 
@@ -49,8 +49,9 @@ Custom methods split into two camps depending on whether they need the full audi
 
 - **Boolean modules** (`dashboard`, `orbat`, `logs`, `settings`) ignore the `operation` arg — `read` and `update` are identical. This is why `backup.restore` gates on admin (`isOfficerOrAdmin`) instead of `checkPermission('settings','update')`: the latter would not be stronger than read.
 - **Synthetic admin-only gate** — `integrity.scan` / `integrity.scanResolve` pass `permissionModule: '__admin_only__'`, a deliberately-unknown module. `checkPermission` short-circuits `true` for admins (`role.roles === true`) before reading the module; every non-admin role falls through the unknown-module branch and is denied.
-- **Squad scoping** — member reads merge `getSquadScope(userId)` into the selector so a squad-scoped caller only sees their own squad (see [reference: squad-scoped permissions]). Applies to `members.read/findOne/options/all/groupedOptions/participantNames`, `palette.search` members, and the `members`/`events` publications.
+- **Squad scoping** — member reads merge `getSquadScope(userId)` into the selector so a squad-scoped caller only sees their own squad (see [reference: squad-scoped permissions]). Applies to `members.read/findOne/options/all/groupedOptions/participantNames/namesByIds`, `palette.search` members, and the `members`/`events` publications. Member **writes** enforce the same boundary as a check rather than a selector merge: `members.update` refuses a cross-squad update, `members.remove`/`members.bulkRemove` a cross-squad delete (both 403).
 - **Self-or-permission** — `members.attendanceBreakdown` / `members.profileStats` allow viewing your own data freely but require `members.read` (plus squad scope for non-officers) to view another member.
+- **Private-event scoping** — `getEventVisibilityFilter` (`server/event-visibility.ts`) is the single private-event rule. It is merged into the `events` publication, `events.detail`/`events.rsvp`, `palette.search`'s event branch, and — via the `READ_SCOPES` hook in `server/crud.lib.ts` — the generated `events.read`/`.count`/`.options`, so no read path can enumerate a private event by id.
 
 ### Publications
 
@@ -67,6 +68,7 @@ Custom methods split into two camps depending on whether they need the full audi
 
 | Method | Returns | Permission | Notable logic |
 |--------|---------|-----------|----------------|
+| `attendances.pointsSummary` | `Record<memberId, { attendancePoints, inactivityPoints }>` | `events.read` + squad scope | All-time totals for up to 1000 member ids; unknown/out-of-squad members are omitted. `server/attendance-points.ts` loads the members' attendances in one query, batch-loads only the no-show events whose event type has `countsForInactivity: false`, then applies the shared pure calculation in `imports/api/attendance/points.ts` (also used by `members.profileStats`). |
 | `attendances.upsert` | `boolean` | `events.update` | One attendance doc **per event**; each member's status held under a dynamic `[memberId]` key. `upsertAsync({ eventId })` + unique `{ eventId }` index makes it race-safe (#261). `memberId` is hardened against Mongo operator/path chars and structural-field collision via `ID_PATTERN` (`/^[A-Za-z0-9]{17,24}$/`). Status must be one of `-2,-1,0,1,2`. |
 | `backup.create` | `BackupData` | `settings.read` | Exports all `BACKUP_COLLECTIONS` + `settings` + `users` (collection fetches raced via `Promise.all`); per-collection failures log `backup.export.error` and yield an empty array. |
 | `backup.createQuick` | `BackupData` | `settings.read` | Same as `create` but tags `meta.isSafetyBackup`; used internally as the pre-restore safety snapshot. |
@@ -88,18 +90,20 @@ Custom methods split into two camps depending on whether they need the full audi
 | `members.findOne` | `User \| undefined` | `members.read` | `assertSafeSelector` + squad-scope so a crafted selector can't read outside scope. |
 | `members.insert` | id | `members` (create) | `runMutation`; body is `Accounts.createUserAsync` (custom path), so it explicitly calls `validateForeignKeys`. `redact` strips secrets from audit. |
 | `members.update` | count | `members` (update) | `runMutation` with `captureBefore` diff snapshot, full-document FK enforcement (`validateForeignKeysForUpdate`), and a `permissionOverride` allowing `canManageSpecializations` holders to update **only** `profile.specializationIds`. Non-officers can't edit members outside their squad. |
-| `members.remove` | `{ id, effects }` | `members` (delete) | `runMutation`; blocks self-delete; runs `enforceIntegrityOnDelete`; cascades the owned `ProfilePicture`. |
+| `members.remove` | `{ id, effects }` | `members` (delete) | `runMutation`; body is the shared `removeMember` helper: blocks self-delete, 404 when missing, refuses cross-squad deletes (403), then **removes the member document first** and runs the cascade (`enforceIntegrityOnDelete` + the owned `ProfilePicture`) after — a cascade failure leaves detectable orphans, logs `members.deleted` with `cleanupFailed`, and throws a 500 naming the phase. |
+| `members.bulkRemove` | `{ removed, errors }` | `members` (delete) | `runMutation`; 1–100 ids (400 otherwise); runs `removeMember` per id, logs `members.deleted` per success, collects per-id failures (incl. self-delete and out-of-squad targets) into `errors` as classified messages (`Meteor.Error.reason` or a generic fallback; full detail goes to the server log) — same contract as generic `<c>.bulkRemove`. |
 | `members.saveTaskFilter` | void | auth only | Persists a task filter into `profile.taskFilter`; `assertSafeSelector` because it's later forwarded into the tasks publication selector. |
 | `members.options` / `members.groupedOptions` / `members.participantNames` | select options / grouped options / name string | `members.read` (groupedOptions: auth only) | Rank-prefixed "Rank-ID Name" labels; squad-scoped (except groupedOptions). |
+| `members.namesByIds` | `Record<memberId, name>` | `members.read` | Batched sibling of `participantNames` for views that would otherwise call it once per widget (the Kanban board resolves its whole datasource in one call). Max 1000 ids (400 otherwise); squad-scoped, so out-of-scope ids are simply absent from the result. |
 | `members.getUsedIds` / `members.getUsedNames` | `number[]` / `string[]` | auth only | For client-side availability hints. |
 | `members.validateName` / `members.validateId` | `boolean` (free?) | auth only | Uniqueness among members, excluding the edited member (`excludeId`). |
 | `members.all` | `User[]` (no `services`) | `members.read` | Full squad-scoped member list (no projection → strip is essential). |
 | `members.profileAccess` | `{ canViewContact }` | auth only | True if viewer is officer/admin or viewing self. |
 | `members.attendanceBreakdown` | `{ total, quarterly, missionCount }` | self or `members.read` | Scans attendance docs keyed by `userId`; maps statuses (1=present, 2=zeus, -1=absent, 0=excused, -2=skip). |
-| `members.profileStats` | profile detail object | self or `members.read`+squad | `typeof`-discriminated param: full user doc / userId string / undefined (=self). Computes attendance & inactivity points from the attendance grid (+ static base points), resolves rank/navyRank/position/squad/role/medals/specializations. See [reference: profileStats overload]. |
+| `members.profileStats` | profile detail object | self or `members.read`+squad | `typeof`-discriminated param: full user doc / userId string / undefined (=self). Computes attendance & inactivity points via `loadMemberPoints` (same calculation as `attendances.pointsSummary`), resolves rank/navyRank/position/squad/role/medals/specializations. See [reference: profileStats overload]. |
 | `orbat.squads` | `Squad[]` | auth only (`validateString(userId)`) | Squads with `excludeFromOrbat ≠ true`; source for the org chart. |
 | `orbat.popover.items` | `OrbatPopoverItem[]` | auth only | Per-squad roster with `"Position - Rank"` labels. |
-| `palette.search` | `PaletteSearchResult` | per-collection `read` | Escapes the query into a case-insensitive regex; searches members/events/tasks/squads/registrations/questionnaires, **each gated independently** by its own `read` permission (raced via `Promise.all`). Members honour squad scope; numeric queries also match `profile.id`. Caps results at `MAX_LIMIT` (30). |
+| `palette.search` | `PaletteSearchResult` | per-collection `read` | Escapes the query into a case-insensitive regex; searches members/events/tasks/squads/registrations/questionnaires, **each gated independently** by its own `read` permission (raced via `Promise.all`). Members honour squad scope; events honour the private-event filter; numeric queries also match `profile.id`. Caps results at `MAX_LIMIT` (30). |
 | `questionnaires.getActiveForUser` | active questionnaires + eligibility | `questionnaires.read` | For each `status: 'active'` questionnaire, attaches `canRespond`/`responseReason`/`nextAllowedDate` (via `canUserRespond`), the caller's `responseCount`/`latestResponseId` (non-anonymous only), and `questionCount`. |
 | `questionnaireResponses.submit` | id | `questionnaires.read` | Requires `status: 'active'` + `canUserRespond`. Validates required questions and per-question answer types (text/number/select/multiselect/rating 1–5). Stores `respondentId: null` when `allowAnonymous`. |
 | `questionnaireResponses.hasResponded` | `boolean` | `questionnaires.read` | — |
