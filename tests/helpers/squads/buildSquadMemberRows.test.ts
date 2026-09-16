@@ -67,6 +67,23 @@ describe('buildSquadMemberRows', () => {
     );
   });
 
+  it('sorts a member holding a rank outside the chain last, not first', () => {
+    const withLoner = [...ranks, { _id: 'lone', name: 'Unlinked' }];
+    const rows = buildSquadMemberRows(
+      [
+        { _id: 'unlinked', profile: { name: 'Alpha', rankId: 'lone' } },
+        { _id: 'private', profile: { name: 'Bravo', rankId: 'pvt' } },
+        { _id: 'captain', profile: { name: 'Charlie', rankId: 'cpt' } },
+      ],
+      withLoner,
+      positions
+    );
+    assert.deepStrictEqual(
+      rows.map(r => r.memberId),
+      ['captain', 'private', 'unlinked']
+    );
+  });
+
   it('falls back to name order when ranks form a cycle', () => {
     const cyclic = [
       { _id: 'a', name: 'A', nextRankId: 'b' },

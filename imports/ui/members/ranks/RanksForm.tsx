@@ -1,21 +1,11 @@
 import { ColorPicker, Form, Input, Select } from 'antd';
 import React, { useEffect } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
-import { getColorFromValues } from '/imports/helpers/colors/getColorFromValues';
 import { RANK_ABBREVIATION_MAX_LENGTH, type Rank } from '../../../api/types/rank';
 import useEntityForm from '../../hooks/useEntityForm';
 import FormFooter from '../../components/FormFooter';
+import toRankPayload, { type RankFormValues } from './ranksFormPayload';
 import RanksSelect from './RanksSelect';
-
-interface RankFormValues {
-  name: string;
-  abbreviation?: string;
-  type: 'player' | 'zeus';
-  description?: string;
-  color?: { toHexString?: () => string } | string;
-  previousRankId?: string;
-  nextRankId?: string;
-}
 
 export default function RanksForm() {
   const { t } = useTranslation();
@@ -24,10 +14,7 @@ export default function RanksForm() {
     collection: 'ranks',
     created: 'messages.rankCreated',
     updated: 'messages.rankUpdated',
-    toPayload: values => {
-      const { name, abbreviation, description, previousRankId, nextRankId, type } = values;
-      return { name, abbreviation, color: getColorFromValues(values), description, previousRankId, nextRankId, type };
-    },
+    toPayload: toRankPayload,
   });
 
   useEffect(() => {

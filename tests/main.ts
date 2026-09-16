@@ -46,6 +46,7 @@ import './server/paletteScoring.test';
 import './server/paletteSearch.test';
 import './server/permissions.test';
 import './server/questionnaireInterval.test';
+import './server/ranksFormPayload.test';
 import './server/readSecurityHardening.test';
 import './server/registrationsMethods.test';
 import './server/roleFormModel.test';

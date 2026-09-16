@@ -14,14 +14,12 @@ async function orbatPopoverItems(this: Meteor.MethodThisType, squadId: string = 
   return loadSquadMemberRows(squadId);
 }
 
-type AggregatableCollection = { aggregate(pipeline: unknown[]): { toArray(): Promise<Array<{ _id: string; count: number }>> } };
-
 // One aggregation for every node instead of a count request per ORBAT node.
 async function countDirectMembersBySquad(squadIds: string[]): Promise<Map<string, number>> {
   if (squadIds.length === 0) return new Map();
   const pipeline = [{ $match: { 'profile.squadId': { $in: squadIds } } }, { $group: { _id: '$profile.squadId', count: { $sum: 1 } } }];
-  const rawCollection = MembersCollection.rawCollection() as unknown as AggregatableCollection;
-  const counts = await rawCollection.aggregate(pipeline).toArray();
+  // The driver's own generic types the result documents — no cast needed.
+  const counts = await MembersCollection.rawCollection().aggregate<{ _id: string; count: number }>(pipeline).toArray();
   return new Map(counts.map(({ _id, count }) => [_id, count]));
 }
 

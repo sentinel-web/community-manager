@@ -137,21 +137,37 @@ view; `status` and `participants` arrays feed the Mongo selector.
 
 ### ORBAT (`react-organizational-chart`)
 
-`Orbat.tsx` is a single file. It fetches the squad tree via `orbat.squads`, then
-client-side partitions squads into **roots / parents / children** and assembles a
-nested `OrbatNode` tree (`getOptions`, `Orbat.tsx:57-108`). The ordered traversal
-(roots → parents → children) guarantees a parent is placed before any child looks
-it up via `findParentRecursive`; a `Set` of referenced parent IDs turns the
-"is anyone my child?" check from O(n²) to O(n). Squad images (base64) are decoded
-in parallel before the sequential tree assembly.
+`Orbat.tsx` fetches the flat squad list via `orbat.squads` — already sorted
+server-side by `order` (missing last) then name, and already carrying each
+squad's direct `memberCount`. The forest is then assembled by
+`buildOrbatTree` (`imports/helpers/orbat/`), a pure helper with no React or
+Meteor in it: one pass to index the squads by `_id`, one pass to hang each
+squad under its parent. Siblings keep the order of the input list, which is why
+the server sorts and the client does not. Nothing is ever dropped — a squad
+whose parent is missing from the list (e.g. an `excludeFromOrbat` parent), and
+the whole subtree below a parent cycle, become roots rather than disappearing.
+Squad images (base64) are decoded in parallel before the tree is mapped onto the
+render-shaped `OrbatNode`s.
 
 - Renders with `<Tree>` / `<TreeNode>` from `react-organizational-chart`;
   `lineColor` follows the theme. The card scrolls horizontally only (a wide tree
   pans sideways rather than pushing a page scrollbar).
+- Every node shows its **direct** member count (sub-squads excluded) under the
+  name, with a tooltip saying so — it comes from the `orbat.squads` payload, so
+  no extra round trip.
 - Two label modes via a `viewType` selector: **`simple`** (`ORBAT_SimpleLabel`,
-  image + name + SR-frequency, click-popover roster) and **`advanced`**
-  (`ORBAT_AdvancedLabel`, a coloured inner card listing members inline). Both pull
-  the per-squad roster lazily via `orbat.popover.items(squadId)`.
+  image + name + SR-frequency + member count, click-popover roster) and
+  **`advanced`** (`ORBAT_AdvancedLabel`, a coloured inner card listing the roster
+  inline). Both share one `ORBAT_Label` wrapper that calls
+  `orbat.popover.items(squadId)` **on mount**, once per node — not lazily on
+  popover open — so switching view type does not refetch, but a large chart does
+  issue one call per squad.
+- The roster renders through `OrbatMemberRows`, a fixed three-column grid
+  (position | rank | member) over the `SquadMemberRow[]` the server returns, so
+  rows line up whether or not a value is set and a missing value shows `-`.
+  Ranks render as `CompactRankTag` (abbreviation when there is one, full name in
+  the tooltip); positions as `ColoredTag`. Row order is decided server-side
+  (position order → rank seniority → name), not here.
 - Note: `descritpion` (sic) and `ORBAT_*` PascalCase-with-underscore names are
   the actual identifiers in the source.
 

@@ -45,6 +45,18 @@ describe('buildOrbatTree', () => {
     assert.deepStrictEqual(shape(tree), ['a', 'b', 'self']);
   });
 
+  it('promotes a squad hanging below a cycle to a root as well', () => {
+    // `child`'s own parent exists, but its ancestor chain loops, so no root could ever reach it.
+    // The whole subtree below the cycle is flattened into roots rather than being hidden.
+    const tree = buildOrbatTree<TestSquad>([
+      { _id: 'a', parentSquadId: 'b' },
+      { _id: 'b', parentSquadId: 'a' },
+      { _id: 'child', parentSquadId: 'a' },
+      { _id: 'grandchild', parentSquadId: 'child' },
+    ]);
+    assert.deepStrictEqual(shape(tree), ['a', 'b', 'child', 'grandchild']);
+  });
+
   it('skips squads without an _id and ignores duplicates', () => {
     const tree = buildOrbatTree<TestSquad>([{}, { _id: 'a' }, { _id: 'a' }]);
     assert.deepStrictEqual(shape(tree), ['a']);
