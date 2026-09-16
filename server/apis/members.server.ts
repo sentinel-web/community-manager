@@ -61,9 +61,34 @@ const getFullName = (rank: string | undefined, id: number | undefined, name: str
 // Matches the generic CRUD bulkRemove cap (server/crud.lib.ts).
 const BULK_REMOVE_MAX_IDS = 100;
 
+// members.namesByIds resolves one view's worth of ids, so the cap matches the
+// publish cap a custom view can hold (PUBLISH_LIMITS.MAX in imports/config.ts).
+const NAMES_BY_IDS_MAX = 1000;
+
+// Rank-prefixed display names ("Rank-ID Name") for a set of member docs, keyed
+// by member id and ordered as the docs were fetched. One rank lookup for the
+// whole set, not one per member.
+async function buildMemberNames(members: Meteor.User[]): Promise<Map<string, string>> {
+  const rankIds = [...new Set(members.flatMap(m => (m.profile?.rankId ? [m.profile.rankId] : [])))];
+  const ranks = await RanksCollection.find({ _id: { $in: rankIds } }).fetchAsync();
+  const rankNameById = new Map(ranks.map(r => [r._id, r.name]));
+
+  return new Map(
+    members.map(member => [member._id, getFullName(rankNameById.get(member.profile!.rankId as string), member.profile!.id, member.profile!.name)])
+  );
+}
+
 interface MemberRemoval {
   id: string;
   effects: Awaited<ReturnType<typeof enforceIntegrityOnDelete>>;
+}
+
+// Client-facing text for a failed delete. A Meteor.Error's `reason` is written
+// for the caller, so it passes through; anything else can carry internal detail
+// (driver messages, stack text) and is replaced by `fallback` — the full error
+// is logged server-side instead.
+function describeFailure(error: unknown, fallback: string): string {
+  return error instanceof Meteor.Error && error.reason ? error.reason : fallback;
 }
 
 // The per-member delete shared by members.remove and members.bulkRemove. Runs
@@ -79,25 +104,47 @@ async function removeMember(targetId: string, callerUserId: string | null): Prom
   const member = await MembersCollection.findOneAsync(targetId);
   if (!member) throw new Meteor.Error(404, 'Member not found');
 
-  // Run the registry-driven integrity layer (pulls from events, tasks,
-  // specializations; sets respondentId null on responses). Generic CRUD
-  // .remove does this automatically — members use a custom path, so it is
-  // called explicitly.
-  const effects = await enforceIntegrityOnDelete('members', targetId, { userId: callerUserId });
-
-  // Owned-target cascade: the ProfilePicture is private to one Member, so
-  // deleting the Member also deletes their picture. The only owned-target
-  // relationship in the registry; per the rule of three (one instance), kept
-  // here as code rather than promoted to a registry primitive. See
-  // server/integrity.ts.
-  const profilePictureId = member.profile!.profilePictureId;
-  if (profilePictureId) {
-    await ProfilePicturesCollection.removeAsync({ _id: profilePictureId } as never);
-    effects.cascaded.profilePictures = (effects.cascaded.profilePictures ?? 0) + 1;
+  // Squad scope: a scoped caller may only delete members of their own squad —
+  // the same boundary members.update enforces on writes and every member read
+  // path merges into its selector. getSquadScope returns `{}` for officers,
+  // admins, squadless callers, and when squad scoping is disabled.
+  const squadScope = await getSquadScope(callerUserId);
+  if (squadScope['profile.squadId'] && member.profile!.squadId !== squadScope['profile.squadId']) {
+    throw new Meteor.Error(403, 'Cannot delete members outside your squad');
   }
 
+  const profilePictureId = member.profile!.profilePictureId;
+
+  // Phase 1 — the member document itself, deleted before the cascade. If the
+  // cascade below fails, what is left behind is stale references the orphan
+  // scanner reports (server/integrity/orphans.ts); the reverse order instead
+  // left a member alive with their associations stripped and no audit entry,
+  // which nothing detects. Safe because no incoming edge to `members` is
+  // `onDelete: 'block'` (COLLECTION_REGISTRY), so the block pass inside
+  // enforceIntegrityOnDelete cannot reject a delete that already happened.
   await MembersCollection.removeAsync({ _id: targetId } as never);
-  return { id: targetId, effects };
+
+  // Phase 2 — the cascade: the registry-driven integrity layer (pulls from
+  // events, tasks, specializations; sets respondentId null on responses, which
+  // generic CRUD .remove does automatically) plus the owned ProfilePicture. The
+  // picture is private to one Member, the registry's only owned-target
+  // relationship; per the rule of three it stays code here rather than becoming
+  // a registry primitive. See server/integrity/.
+  try {
+    const effects = await enforceIntegrityOnDelete('members', targetId, { userId: callerUserId });
+    if (profilePictureId) {
+      await ProfilePicturesCollection.removeAsync({ _id: profilePictureId } as never);
+      effects.cascaded.profilePictures = (effects.cascaded.profilePictures ?? 0) + 1;
+    }
+    return { id: targetId, effects };
+  } catch (error) {
+    // The member is already gone, and a throw skips the pipeline's audit step —
+    // so record the deletion (and that its cleanup failed) before rethrowing,
+    // or the audit trail would lose it entirely.
+    console.error(`[members] cleanup after deleting ${targetId} failed`, error);
+    await createLog('members.deleted', { id: targetId, cleanupFailed: describeFailure(error, 'unexpected error') });
+    throw new Meteor.Error(500, `Member deleted, but cleanup failed: ${describeFailure(error, 'unexpected error')}`);
+  }
 }
 
 if (Meteor.isServer) {
@@ -315,7 +362,11 @@ if (Meteor.isServer) {
               await createLog('members.deleted', buildRemoveAuditPayload(result.id, result.effects));
               removed++;
             } catch (error) {
-              errors.push(`Failed to delete ${id}: ${(error as Error).message}`);
+              // Classify: the caller gets the Meteor.Error reason (or a generic
+              // fallback), never a raw exception message; the full error stays
+              // in the server log.
+              console.error(`[members] bulkRemove failed for ${id}`, error);
+              errors.push(`Failed to delete ${id}: ${describeFailure(error, 'Delete failed')}`);
             }
           }
           return { removed, errors };
@@ -354,6 +405,26 @@ if (Meteor.isServer) {
 
       return options;
     },
+    // Batched counterpart to members.participantNames: one call resolves a whole
+    // view's member ids instead of one call per widget. Same gate and squad
+    // scope — ids outside the caller's scope are simply absent from the result.
+    'members.namesByIds': async function (ids: string[] = []): Promise<Record<string, string>> {
+      validateUserId(this.userId);
+      validateArrayOfStrings(ids, false);
+      if (ids.length > NAMES_BY_IDS_MAX) throw new Meteor.Error(400, `Maximum ${NAMES_BY_IDS_MAX} ids per lookup`);
+      if (!ids.length) return {};
+
+      const hasPermission = await checkPermission(this.userId, 'members', 'read');
+      if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+
+      const squadScope = await getSquadScope(this.userId);
+      const members = await MembersCollection.find(
+        { ...squadScope, _id: { $in: ids } },
+        { fields: { 'profile.rankId': 1, 'profile.id': 1, 'profile.name': 1 } }
+      ).fetchAsync();
+
+      return Object.fromEntries(await buildMemberNames(members));
+    },
     'members.participantNames': async function (filter: Record<string, unknown> = {}, options: Record<string, unknown> = {}) {
       validateUserId(this.userId);
       validateObject(filter, false);
@@ -367,14 +438,7 @@ if (Meteor.isServer) {
       const scopedFilter = { ...filter, ...squadScope };
       const members = await MembersCollection.find(scopedFilter, options).fetchAsync();
 
-      const rankIds = [...new Set(members.flatMap(m => m.profile?.rankId ? [m.profile.rankId] : []))];
-      const ranks = await RanksCollection.find({ _id: { $in: rankIds } }).fetchAsync();
-      const rankNameById = new Map(ranks.map(r => [r._id, r.name]));
-
-      const names = members.map(member =>
-        getFullName(rankNameById.get(member.profile!.rankId as string), member.profile!.id, member.profile!.name)
-      );
-      return names.join(', ');
+      return [...(await buildMemberNames(members)).values()].join(', ');
     },
     'members.getUsedIds': async function () {
       if (!this.userId) {

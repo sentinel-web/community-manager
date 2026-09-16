@@ -18,7 +18,8 @@ import EventCalendar from './EventCalendar';
 import EventForm from './EventForm';
 import EventTypesForm from './event-types/EventTypesForm';
 import getEventColumns from './event.columns';
-import { buildEventFilter, getCalendarRange, type EventDateRange } from './eventFilter';
+import { buildEventFilter, getCalendarRange, getInitialCalendarView, type EventDateRange } from './eventFilter';
+import { PUBLISH_LIMITS } from '../../config';
 
 type ViewType = 'calendar' | 'attendance' | 'table';
 
@@ -32,7 +33,7 @@ export default function Events() {
   const [viewType, setViewType] = useState<ViewType>('calendar');
   // Single source of truth for the date filter: the range picker writes it in
   // the table/attendance views, the calendar reports its visible range into it.
-  const [dateRange, setDateRange] = useState<EventDateRange>(() => getCalendarRange('month', dayjs()));
+  const [dateRange, setDateRange] = useState<EventDateRange>(() => getCalendarRange(getInitialCalendarView(), dayjs()));
   const [eventTypes, setEventTypes] = useState<string[]>([]);
   const [relevantOnly, setRelevantOnly] = useState(false);
   const { t } = useTranslation();
@@ -60,9 +61,14 @@ export default function Events() {
   const customViewProps = useMemo<EventsViewProps>(() => ({ onRangeChange: handleCalendarRangeChange }), [handleCalendarRangeChange]);
 
   const handleViewTypeChange = useCallback((value: ViewType) => {
-    // The calendar reports its own visible range when it mounts.
+    // Every view gets its range set synchronously, including the calendar:
+    // otherwise the switch renders one frame against the outgoing view's range
+    // — unbounded if the range picker had been cleared — before the calendar
+    // mounts and reports its own. That mount report still lands and corrects
+    // this if the calendar opens on a different range than predicted.
     if (value === 'attendance') setDateRange([dayjs().startOf('month').subtract(1, 'month'), dayjs().endOf('month')]);
     else if (value === 'table') setDateRange([dayjs().startOf('month'), dayjs().endOf('month')]);
+    else setDateRange(getCalendarRange(getInitialCalendarView(), dayjs()));
     setViewType(value);
   }, []);
 
@@ -82,6 +88,9 @@ export default function Events() {
         filterFactory={filterFactory}
         sort={EVENT_SORT}
         customViewProps={customViewProps}
+        // Calendar and attendance grid are bounded by the date range above, so
+        // they must show every event in it — not just the first table page (#359).
+        customViewLimit={PUBLISH_LIMITS.MAX}
         extra={<></>}
         headerExtra={
           <>

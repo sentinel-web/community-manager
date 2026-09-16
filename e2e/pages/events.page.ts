@@ -193,6 +193,21 @@ export class EventsPage extends BasePage {
   }
 
   /**
+   * Set the table/attendance date-range filter (format YYYY-MM-DD). Changes the
+   * Section filter without touching the search input.
+   */
+  async setDateRange(from: string, to: string): Promise<void> {
+    const inputs = this.page.locator('.ant-picker-range input');
+    await inputs.first().click();
+    await inputs.first().fill(from);
+    await this.page.keyboard.press('Enter');
+    await inputs.nth(1).fill(to);
+    await this.page.keyboard.press('Enter');
+    // Dismiss the picker panel so it can't swallow the next interaction.
+    await this.page.keyboard.press('Escape');
+  }
+
+  /**
    * Filter by event type
    */
   async filterByEventType(eventType: string): Promise<void> {

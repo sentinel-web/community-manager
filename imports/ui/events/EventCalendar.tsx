@@ -8,14 +8,13 @@ import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import EventTypesCollection from '../../api/collections/eventTypes.collection';
 import getLegibleTextColor from '../../helpers/colors/getLegibleTextColor';
-import { BREAKPOINTS } from '../../config';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { EventDoc } from '../../api/types/event';
 import { useDrawerStack } from '../drawer-stack';
 import EventDetailPopover from './EventDetailPopover';
 import EventForm from './EventForm';
 import { useTourRef } from '../tour/TourContext';
-import { getCalendarRange } from './eventFilter';
+import { getCalendarRange, getInitialCalendarView } from './eventFilter';
 
 const DnDCalendar = withDragAndDrop(Calendar);
 
@@ -110,14 +109,13 @@ const EventCalendar = ({ datasource, onRangeChange }: EventCalendarProps) => {
   // Default to the agenda list below the mobile breakpoint — react-big-calendar's
   // month grid is unreadable on a phone. Read once at mount; the user can switch
   // views afterwards via the (controlled) toolbar.
-  const [currentView, setCurrentView] = useState<View>(() =>
-    typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.MOBILE ? 'agenda' : 'month'
-  );
+  const [currentView, setCurrentView] = useState<View>(getInitialCalendarView);
 
   // react-big-calendar only reports ranges on navigation, so report the
-  // initial one on mount. Later ranges come from handleRangeChange.
+  // initial one on mount. It corrects the range the owner predicted when it
+  // switched to this view. Later ranges come from handleRangeChange.
   useEffect(() => {
-    const [start, end] = getCalendarRange(currentView, dayjs());
+    const [start, end] = getCalendarRange(getInitialCalendarView(), dayjs());
     onRangeChange?.(start.toDate(), end.toDate());
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: the calendar starts on today's date in the initial view
   }, []);

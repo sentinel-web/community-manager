@@ -118,6 +118,10 @@ view; `status` and `participants` arrays feed the Mongo selector.
   back into the same slot is a no-op.
 - Cards show description (truncated), participant + completed-by avatars
   (`Participants` from `task.columns`), created date, and a comment-count badge.
+  The board resolves every card's member names in **one** `members.namesByIds`
+  call and passes the lookup down as `nameById`; `Participants` only falls back
+  to its own `members.participantNames` call when no lookup is supplied (the
+  table columns, one row at a time).
 - **`TaskForm`** additionally hosts an inline comments thread (existing tasks
   only): `tasks.addComment(taskId, text)` appends, with optimistic local state.
   `parent` is a self-referential `CollectionSelect` (subtasks).

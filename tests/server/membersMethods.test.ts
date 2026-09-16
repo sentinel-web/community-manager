@@ -296,4 +296,126 @@ describe('members.bulkRemove — per-id members.remove semantics (#360)', () => 
 
     assert.ok(await MembersCollection.findOneAsync(targetId), 'target must survive a denied bulk delete');
   });
+
+  it('classifies per-id failures instead of forwarding the raw exception text', async () => {
+    const pictureId = await createTestDoc(ProfilePicturesCollection, { value: 'data:image/png;base64,xxx' });
+    const memberId = await createTestUser({ profile: { profilePictureId: pictureId } });
+    const originalRemove = ProfilePicturesCollection.removeAsync.bind(ProfilePicturesCollection);
+    (ProfilePicturesCollection as unknown as { removeAsync: unknown }).removeAsync = async () => {
+      throw new Error('ECONNREFUSED mongodb://internal-host:27017 stack detail');
+    };
+
+    try {
+      const result = (await callAs(adminUserId, 'members.bulkRemove', [memberId])) as BulkRemoveResult;
+
+      assert.strictEqual(result.errors.length, 1);
+      assert.match(result.errors[0], new RegExp(memberId));
+      assert.ok(!result.errors[0].includes('ECONNREFUSED'), `per-id error leaked internal detail: ${result.errors[0]}`);
+      assert.ok(!result.errors[0].includes('internal-host'), `per-id error leaked internal detail: ${result.errors[0]}`);
+    } finally {
+      (ProfilePicturesCollection as unknown as { removeAsync: typeof originalRemove }).removeAsync = originalRemove;
+    }
+  });
+});
+
+// A member delete has two phases: the member document itself, then the
+// registry-driven cascade. Phase order decides what a partial failure leaves
+// behind — a removed member with stale references (detectable by the orphan
+// scan) or a detached member that survives with no audit entry at all.
+describe('members.remove — partial-failure ordering (#384)', () => {
+  let adminUserId: string;
+
+  before(async () => {
+    const adminRoleId = await createTestRole({ roles: true });
+    adminUserId = await createTestUser({ roleId: adminRoleId });
+  });
+
+  after(async () => {
+    await cleanupFixtures([ProfilePicturesCollection]);
+  });
+
+  it('keeps the member deleted and audited when the cascade fails, naming the phase', async () => {
+    const pictureId = await createTestDoc(ProfilePicturesCollection, { value: 'data:image/png;base64,xxx' });
+    const targetId = await createTestUser({ profile: { profilePictureId: pictureId } });
+    const originalRemove = ProfilePicturesCollection.removeAsync.bind(ProfilePicturesCollection);
+    (ProfilePicturesCollection as unknown as { removeAsync: unknown }).removeAsync = async () => {
+      throw new Meteor.Error('cascade-boom', 'picture store offline');
+    };
+
+    try {
+      await assert.rejects(
+        () => callAs(adminUserId, 'members.remove', targetId),
+        (error: unknown) => /cleanup/i.test((error as Meteor.Error).message),
+        'error message must say which phase failed',
+      );
+      assert.strictEqual(await MembersCollection.findOneAsync(targetId), undefined, 'member must not survive detached');
+      assert.ok(await findLatestAuditLog('members.deleted', targetId), 'the deletion must still be audited');
+    } finally {
+      (ProfilePicturesCollection as unknown as { removeAsync: typeof originalRemove }).removeAsync = originalRemove;
+    }
+  });
+});
+
+// Every member read path merges getSquadScope into its selector, and
+// members.update refuses cross-squad writes. Deletes must refuse them too —
+// bulkRemove would otherwise wipe up to 100 out-of-squad members in one call.
+describe('members.remove / members.bulkRemove — squad scope (#384)', () => {
+  let adminUserId: string;
+  let scopedUserId: string;
+  let sameSquadTargetId: string;
+  let otherSquadTargetId: string;
+  const scopedSquadId = `${TEST_PREFIX}squad_scoped`;
+  const otherSquadId = `${TEST_PREFIX}squad_other`;
+
+  before(async () => {
+    const [adminRoleId, scopedRoleId] = await Promise.all([
+      createTestRole({ roles: true }),
+      createTestRole({ members: { read: true, create: true, update: true, delete: true } }),
+    ]);
+    [adminUserId, scopedUserId] = await Promise.all([
+      createTestUser({ roleId: adminRoleId }),
+      createTestUser({ roleId: scopedRoleId, profile: { squadId: scopedSquadId } }),
+    ]);
+  });
+
+  beforeEach(async () => {
+    [sameSquadTargetId, otherSquadTargetId] = await Promise.all([
+      createTestUser({ profile: { squadId: scopedSquadId } }),
+      createTestUser({ profile: { squadId: otherSquadId } }),
+    ]);
+  });
+
+  after(async () => {
+    await cleanupFixtures();
+  });
+
+  it('refuses members.remove for a member of another squad', async () => {
+    await assertRejectsWithCode(() => callAs(scopedUserId, 'members.remove', otherSquadTargetId), 403);
+
+    assert.ok(await MembersCollection.findOneAsync(otherSquadTargetId), 'out-of-squad member must survive');
+  });
+
+  it('allows members.remove within the caller squad', async () => {
+    await callAs(scopedUserId, 'members.remove', sameSquadTargetId);
+
+    assert.strictEqual(await MembersCollection.findOneAsync(sameSquadTargetId), undefined);
+  });
+
+  it('refuses out-of-squad ids in members.bulkRemove while removing in-squad ones', async () => {
+    const result = (await callAs(scopedUserId, 'members.bulkRemove', [otherSquadTargetId, sameSquadTargetId])) as BulkRemoveResult;
+
+    assert.strictEqual(result.removed, 1);
+    assert.strictEqual(result.errors.length, 1);
+    assert.match(result.errors[0], new RegExp(otherSquadTargetId));
+    assert.ok(await MembersCollection.findOneAsync(otherSquadTargetId), 'out-of-squad member must survive a bulk delete');
+    assert.strictEqual(await MembersCollection.findOneAsync(sameSquadTargetId), undefined);
+  });
+
+  it('leaves an admin unscoped — deletes across squads', async () => {
+    const result = (await callAs(adminUserId, 'members.bulkRemove', [otherSquadTargetId, sameSquadTargetId])) as BulkRemoveResult;
+
+    assert.deepStrictEqual(result, { removed: 2, errors: [] });
+    assert.strictEqual(await MembersCollection.findOneAsync(otherSquadTargetId), undefined);
+    assert.strictEqual(await MembersCollection.findOneAsync(sameSquadTargetId), undefined);
+  });
 });

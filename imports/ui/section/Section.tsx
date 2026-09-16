@@ -47,6 +47,11 @@ interface SectionProps<T extends { _id?: string }, V extends object = object> {
   customView?: ComponentType<CustomViewProps<T> & V> | false;
   // Extra props for the custom view (e.g. a callback reporting its visible range).
   customViewProps?: V;
+  // Opt-in page size for the custom view, for views that bound their own query
+  // (the calendar, by date range) and must show every match at once. Views that
+  // don't opt in stay on the table page size and surface a truncation warning —
+  // a custom view has no "load more" button.
+  customViewLimit?: number;
   permissionModule?: string | null;
   expandable?: ExpandableConfig<T>;
   groupActions?: GroupAction[];
@@ -64,6 +69,7 @@ export default function Section<T extends { _id?: string }, V extends object = o
   sort,
   customView = false,
   customViewProps,
+  customViewLimit,
   permissionModule = null,
   expandable,
   groupActions = emptyGroupActions,
@@ -74,9 +80,10 @@ export default function Section<T extends { _id?: string }, V extends object = o
   // search input re-queries immediately. useStableValue keeps the identity while
   // the selector is structurally unchanged, so deps below don't churn.
   const filter = useStableValue(useMemo(() => filterFactory(nameInput), [filterFactory, nameInput]));
-  // Custom views have no "load more", so they load everything up to the
-  // server's publish cap instead of silently stopping at one page.
-  const limit = customView ? PUBLISH_LIMITS.MAX : pageLimit;
+  // Custom views have no "load more". One that bounds its own query can raise
+  // its page size via customViewLimit (capped at the server's publish limit);
+  // the rest stay on the table page size and warn when they hit it.
+  const limit = customView && customViewLimit ? Math.min(customViewLimit, PUBLISH_LIMITS.MAX) : pageLimit;
   const options = useStableValue(useMemo(() => (sort ? { limit, sort } : { limit }), [limit, sort]));
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [bulkActionLoading, setBulkActionLoading] = useState(false);

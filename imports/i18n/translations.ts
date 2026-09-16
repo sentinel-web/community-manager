@@ -362,7 +362,7 @@ export const translations = {
   "messages.rankCreated": { en: "Rank created successfully", de: "Rang erfolgreich erstellt", fr: "Grade créé avec succès" },
   "messages.rankUpdated": { en: "Rank updated successfully", de: "Rang erfolgreich aktualisiert", fr: "Grade mis à jour avec succès" },
   "messages.registrationSuccessful": { en: "Registration successful", de: "Bewerbung erfolgreich", fr: "Inscription réussie" },
-  "messages.resultsTruncated": { en: "Showing the first {{limit}} entries only. Narrow the filters to see the rest.", de: "Es werden nur die ersten {{limit}} Einträge angezeigt. Grenzen Sie die Filter ein, um den Rest zu sehen.", fr: "Seules les {{limit}} premières entrées sont affichées. Affinez les filtres pour voir le reste." },
+  "messages.resultsTruncated": { en: "Showing the first {{limit}} entries — there may be more. Narrow the filters to see them.", de: "Es werden die ersten {{limit}} Einträge angezeigt – möglicherweise gibt es weitere. Grenzen Sie die Filter ein, um sie zu sehen.", fr: "Les {{limit}} premières entrées sont affichées — il peut y en avoir d'autres. Affinez les filtres pour les voir." },
   "messages.roleCreated": { en: "Role created", de: "Rolle erstellt", fr: "Rôle créé" },
   "messages.roleUpdated": { en: "Role updated", de: "Rolle aktualisiert", fr: "Rôle mis à jour" },
   "messages.saveSuccessful": { en: "Save successful", de: "Erfolgreich gespeichert", fr: "Enregistrement réussi" },
