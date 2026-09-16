@@ -1,7 +1,8 @@
-import { Tag, Tooltip } from 'antd';
+import { Tag } from 'antd';
 import React, { useEffect, useState } from 'react';
 import type { Rank } from '../../../api/types/rank';
 import useMethod from '../../hooks/useMethod';
+import CompactRankTag from './CompactRankTag';
 
 interface RankTagProps {
   rankId?: string;
@@ -26,9 +27,5 @@ export default function RankTag({ rankId }: RankTagProps) {
 
   if (!rankId) return <Tag>-</Tag>;
   if (!match) return <Tag>Not found</Tag>;
-  return (
-    <Tooltip title={match.description}>
-      <Tag color={match.color}>{match.name}</Tag>
-    </Tooltip>
-  );
+  return <CompactRankTag name={match.name} abbreviation={match.abbreviation} color={match.color} description={match.description} />;
 }
