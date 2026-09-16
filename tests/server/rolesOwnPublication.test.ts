@@ -82,8 +82,17 @@ describe('roles.own publication (#355)', () => {
     assert.strictEqual(readyCalled, true);
   });
 
-  it('rejects a non-string hint (e.g. a selector object)', async () => {
-    await assert.rejects(() => subscribeAs('roles.own', memberUserId, { _id: { $ne: null } }));
+  it('rejects a non-string hint, truthy or falsy', async () => {
+    // The falsy cases are the point: an "optional string" check that only
+    // rejects truthy non-strings would pass 0 / false / '' silently.
+    for (const hint of [{ _id: { $ne: null } }, ['a'], 0, false, '']) {
+      await assert.rejects(() => subscribeAs('roles.own', memberUserId, hint), `hint ${JSON.stringify(hint)} must be rejected`);
+    }
+  });
+
+  it('accepts an omitted hint', async () => {
+    const { docs } = await subscribeAs('roles.own', memberUserId);
+    assert.strictEqual(docs.length, 1);
   });
 
   it('leaves the generic roles publication gated on roles.read — 403', async () => {

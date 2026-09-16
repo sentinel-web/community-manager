@@ -1,4 +1,7 @@
 import assert from 'node:assert';
+import { Meteor } from 'meteor/meteor';
+import MedalsCollection from '../../imports/api/collections/medals.collection';
+import MembersCollection from '../../imports/api/collections/members.collection';
 import {
   COLLECTION_PERMISSIONS,
   getModulePermissions,
@@ -8,7 +11,7 @@ import {
 import { COLLECTION_REGISTRY } from '../../server/collection-registry';
 import { checkPermission, checkSpecialPermission, type CrudOperation } from '../../server/main';
 import type { CrudCollectionName, Role } from '/imports/api/types';
-import { cleanupFixtures, createTestRole, createTestUser } from './fixtures';
+import { callAs, cleanupFixtures, createTestDoc, createTestRole, createTestUser } from './fixtures';
 
 // Client-side module permissions (#357) must match what the server authorizes,
 // including the registry's special-flag fallbacks (canCreateEvents, canManageTasks).
@@ -16,9 +19,26 @@ import { cleanupFixtures, createTestRole, createTestUser } from './fixtures';
 const NONE: ModulePermissions = { canRead: false, canCreate: false, canUpdate: false, canDelete: false };
 const ALL: ModulePermissions = { canRead: true, canCreate: true, canUpdate: true, canDelete: true };
 
+const PROBE_TARGET_NAME = '__test_probe_medal_target';
+const PROBE_INSERT_NAME = '__test_probe_medal_inserted';
+
 function permissionsFor(role: Role | undefined, collection: CrudCollectionName): ModulePermissions {
   const { module, fallback } = resolvePermissionTarget(collection);
   return getModulePermissions(role, module, fallback);
+}
+
+// Did the real method handler authorize the call? Only 401/403 counts as a
+// denial; anything else (a validation or integrity error) means the probe
+// itself is wrong and must not be silently read as "denied".
+async function serverAllows(run: () => Promise<unknown>): Promise<boolean> {
+  try {
+    await run();
+    return true;
+  } catch (error) {
+    const code = (error as Meteor.Error).error;
+    if (code === 401 || code === 403) return false;
+    throw error;
+  }
 }
 
 describe('COLLECTION_PERMISSIONS mirrors COLLECTION_REGISTRY', () => {
@@ -118,6 +138,17 @@ describe('getModulePermissions agrees with server authorization', () => {
 
   const ROLE_FIXTURES: Record<string, Partial<Role>> = {
     admin: { roles: true },
+    // `logs` is a BOOLEAN module: checkPermission short-circuits on it, so a
+    // stored CRUD object grants nothing while a bare `true` grants everything.
+    // Both shapes are exercised here — this is the case the mirror used to get
+    // wrong (it read `logs.read` and reported a permission the server denies).
+    // The cast is the point: `Role.logs` is typed boolean, but nothing stops a
+    // stored document (or a crafted write) from holding a CRUD object there.
+    booleanModuleCrudShaped: {
+      logs: { read: true, create: true, update: true, delete: true } as unknown as boolean,
+      medals: { read: true },
+    },
+    booleanModuleTrue: { logs: true },
     developer: { canManageTasks: true, tasks: { read: true } },
     legacy: { members: true, events: false },
     member: { events: { read: true }, roles: { read: false, create: false, update: false, delete: false } },
@@ -135,7 +166,8 @@ describe('getModulePermissions agrees with server authorization', () => {
   });
 
   after(async () => {
-    await cleanupFixtures();
+    await MedalsCollection.removeAsync({ name: { $in: [PROBE_INSERT_NAME, PROBE_TARGET_NAME] } });
+    await cleanupFixtures([MedalsCollection]);
   });
 
   for (const label of Object.keys(ROLE_FIXTURES)) {
@@ -152,4 +184,69 @@ describe('getModulePermissions agrees with server authorization', () => {
       }
     });
   }
+
+  // The loop above re-implements the server gate, so it can only catch a mirror
+  // that disagrees with `checkPermission` — not one that disagrees with what the
+  // methods actually do. These drive the real `medals.<op>` handlers end to end.
+  // Medals is the plain-CRUD stand-in: no foreign keys, no custom overrides, so
+  // the permission gate is the only thing that can reject the call.
+  for (const label of Object.keys(ROLE_FIXTURES)) {
+    it(`${label}: client permissions equal what the real medals.<op> handlers allow`, async () => {
+      const { userId, role } = users[label];
+      const client = permissionsFor(role, 'medals');
+      // Probes run read → create → update → delete so the target still exists
+      // for the middle two.
+      const probeId = await createTestDoc(MedalsCollection, { name: PROBE_TARGET_NAME, color: '#ff0000' });
+      const probes: { key: keyof ModulePermissions; op: string; run: () => Promise<unknown> }[] = [
+        { key: 'canRead', op: 'read', run: () => callAs(userId, 'medals.read', { _id: probeId }) },
+        { key: 'canCreate', op: 'insert', run: () => callAs(userId, 'medals.insert', { name: PROBE_INSERT_NAME }) },
+        { key: 'canUpdate', op: 'update', run: () => callAs(userId, 'medals.update', probeId, { color: '#00ff00' }) },
+        { key: 'canDelete', op: 'remove', run: () => callAs(userId, 'medals.remove', probeId) },
+      ];
+
+      for (const { key, op, run } of probes) {
+        const allowed = await serverAllows(run);
+        assert.strictEqual(client[key], allowed, `${label} medals.${op}: client=${client[key]} handler allowed=${allowed}`);
+      }
+    });
+  }
+});
+
+// `permissionOverride` (server/mutation-pipeline.ts) re-admits a call the
+// permission gate rejected, based on the payload being written. The client
+// mirror is a pure function of the role, so it cannot express that — the
+// divergence below is known and deliberate, and it errs toward hiding an
+// affordance the server would in fact accept. Asserted rather than fixed so a
+// future change to either side shows up here.
+describe('known divergence: permissionOverride cannot be mirrored (members.update + canManageSpecializations)', () => {
+  let instructorUserId: string;
+  let targetMemberId: string;
+  const instructorRole: Role = { name: 'Instructor', canManageSpecializations: true, members: { read: true } };
+
+  before(async () => {
+    const [instructorRoleId, plainRoleId] = await Promise.all([
+      createTestRole({ canManageSpecializations: true, members: { read: true, create: false, update: false, delete: false } }),
+      createTestRole({ members: { read: true } }),
+    ]);
+    [instructorUserId, targetMemberId] = await Promise.all([createTestUser({ roleId: instructorRoleId }), createTestUser({ roleId: plainRoleId })]);
+  });
+
+  after(async () => {
+    await cleanupFixtures();
+  });
+
+  it('the mirror reports no update permission', () => {
+    assert.strictEqual(permissionsFor(instructorRole, 'members').canUpdate, false);
+  });
+
+  it('but the real members.update handler accepts a specialization-only change', async () => {
+    await callAs(instructorUserId, 'members.update', targetMemberId, { 'profile.specializationIds': [] });
+    const stored = await MembersCollection.findOneAsync(targetMemberId);
+    assert.deepStrictEqual(stored?.profile?.specializationIds, []);
+  });
+
+  it('and still refuses any other field, which is what the mirror is right about', async () => {
+    const allowed = await serverAllows(() => callAs(instructorUserId, 'members.update', targetMemberId, { 'profile.name': 'Renamed' }));
+    assert.strictEqual(allowed, false);
+  });
 });

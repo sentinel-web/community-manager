@@ -12,6 +12,8 @@ import { ADMIN_FIELD, CRUD_MODULES, buildRolePayload, prepareRoleForForm } from 
 interface RuleInputProps {
   name: string;
   label: string;
+  extra?: string;
+  disabled?: boolean;
 }
 
 interface CrudPermissionInputProps {
@@ -30,10 +32,17 @@ const RolesForm = () => {
   });
 
   const [form] = Form.useForm<Record<string, unknown>>();
-  const initialValues = useMemo(() => prepareRoleForForm(model), [model]);
+  // Keyed on the role being edited, not the model object: initial values are a
+  // snapshot and must not be recomputed mid-edit if the document re-renders.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally narrowed to the role identity
+  const initialValues = useMemo(() => prepareRoleForForm(model), [model?._id]);
   // Module permissions are irrelevant while the admin grant is on, so they are
   // hidden (not unmounted — their values stay registered for when it is turned off).
-  const isAdmin = Form.useWatch(ADMIN_FIELD, form) === true;
+  // useWatch returns undefined on the first render, before the field registers;
+  // falling back to the initial value stops an admin role's permission matrix
+  // from flashing into view as the drawer opens.
+  const watchedIsAdmin = Form.useWatch(ADMIN_FIELD, form);
+  const isAdmin = (watchedIsAdmin ?? initialValues[ADMIN_FIELD]) === true;
 
   return (
     <Form layout="vertical" form={form} onFinish={onFinish} initialValues={initialValues} disabled={loading}>
@@ -73,6 +82,10 @@ const RolesForm = () => {
         <RuleInput name="canManageSpecializations" label={t('members.canManageSpecializations')} />
         <RuleInput name="canCreateEvents" label={t('members.canCreateEvents')} />
         <RuleInput name="canManageTasks" label={t('members.canManageTasks')} />
+        {/* Inert flag (#357): nothing on the server reads it. Shown disabled
+            rather than hidden so its stored value stays visible and keeps
+            round-tripping instead of silently persisting out of sight. */}
+        <RuleInput name="canManageRecruits" label={t('members.canManageRecruits')} extra={t('members.canManageRecruitsHint')} disabled />
       </div>
 
       <FormFooter onCancel={cancel} loading={loading} />
@@ -80,10 +93,13 @@ const RolesForm = () => {
   );
 };
 
-const RuleInput = ({ name, label }: RuleInputProps) => {
+// `disabled` deliberately has no default: antd merges it as `props.disabled ??
+// DisabledContext`, so passing an explicit `false` would defeat the form-level
+// `disabled={loading}`. Leaving it undefined lets the form keep control.
+const RuleInput = ({ name, label, extra, disabled }: RuleInputProps) => {
   return (
-    <Form.Item name={name} label={label} rules={[{ required: false, type: 'boolean' }]} valuePropName="checked">
-      <Switch checkedChildren={<CheckOutlined />} unCheckedChildren={<CloseOutlined />} />
+    <Form.Item name={name} label={label} extra={extra} rules={[{ required: false, type: 'boolean' }]} valuePropName="checked">
+      <Switch checkedChildren={<CheckOutlined />} unCheckedChildren={<CloseOutlined />} disabled={disabled} />
     </Form.Item>
   );
 };

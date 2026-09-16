@@ -303,6 +303,8 @@ export const translations = {
   "members.attendanceQuarterly": { en: "Attendance (Quarterly)", de: "Anwesenheit (Quartal)", fr: "Présence (Trimestriel)" },
   "members.basicPermissions": { en: "Basic Permissions", de: "Grundberechtigungen", fr: "Permissions de base" },
   "members.canCreateEvents": { en: "Can Create Events (Zeus)", de: "Kann Ereignisse erstellen (Zeus)", fr: "Peut créer des événements (Zeus)" },
+  "members.canManageRecruits": { en: "Can Manage Recruits (Mentor)", de: "Kann Rekruten verwalten (Mentor)", fr: "Peut gérer les recrues (Mentor)" },
+  "members.canManageRecruitsHint": { en: "Not used anywhere yet — this flag grants no permissions.", de: "Wird noch nirgends verwendet — dieses Kennzeichen gewährt keine Berechtigungen.", fr: "Pas encore utilisé — cet indicateur n'accorde aucune permission." },
   "members.canManageSpecializations": { en: "Can Manage Specializations (Instructor)", de: "Kann Spezialisierungen verwalten (Ausbilder)", fr: "Peut gérer les spécialisations (Instructeur)" },
   "members.canManageTasks": { en: "Can Manage Tasks (Developer)", de: "Kann Aufgaben verwalten (Entwickler)", fr: "Peut gérer les tâches (Développeur)" },
   "members.contactInfo": { en: "Contact Information", de: "Kontaktinformationen", fr: "Informations de contact" },

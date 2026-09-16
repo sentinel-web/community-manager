@@ -8,6 +8,15 @@ import type { CrudCollectionName, Role } from '/imports/api/types';
  * if the two diverge. Keep alphabetical.
  */
 
+/**
+ * Modules whose grant is a bare `true` instead of a CRUD object. `checkPermission`
+ * short-circuits on them (server/main.ts re-exports this list rather than keeping
+ * its own), so a stored CRUD object on one of them grants nothing at all.
+ * Single source of truth so the client mirror cannot drift from the server.
+ * Keep alphabetical.
+ */
+export const BOOLEAN_MODULES: readonly string[] = ['dashboard', 'logs', 'orbat', 'settings'];
+
 export type SpecialPermissionFlag = 'canCreateEvents' | 'canManageTasks';
 
 export interface PermissionFallback {
@@ -70,15 +79,31 @@ export function resolvePermissionTarget(name: string, moduleOverride?: string | 
 
 /**
  * Mirrors the server's authorization (checkPermission + runMutation's fallback
- * flag): `roles: true` grants everything, a legacy `true` module grants full
- * CRUD, a CRUD object grants per operation, and a fallback flag additionally
- * grants the operation it is declared for.
+ * flag): `roles: true` grants everything, a boolean module grants all four
+ * operations on a bare `true` and nothing otherwise, a legacy `true` module
+ * grants full CRUD, a CRUD object grants per operation, and a fallback flag
+ * additionally grants the operation it is declared for.
+ *
+ * Known, deliberate divergence: `permissionOverride` (mutation-pipeline.ts) —
+ * today only members.update re-admitted for a specialization-only change by
+ * `canManageSpecializations` — depends on the payload being written and cannot
+ * be expressed here. Such a caller is shown no update affordance even though
+ * the server would accept that one narrow write; erring toward "hidden" is the
+ * safe direction. Asserted in tests/server/modulePermissions.test.ts.
  */
 export function getModulePermissions(role: Role | null | undefined, module: string, fallback?: PermissionFallback): ModulePermissions {
   if (!role) return { ...NO_PERMISSIONS };
   if (role.roles === true) return { ...ALL_PERMISSIONS };
 
   const permission = (role as unknown as Record<string, unknown>)[module];
+
+  // Boolean modules short-circuit exactly as checkPermission does: the bare
+  // `true` grants every operation, anything else (including a CRUD object)
+  // grants none. No fallback flag is declared for a boolean module.
+  if (BOOLEAN_MODULES.includes(module)) {
+    return permission === true ? { ...ALL_PERMISSIONS } : { ...NO_PERMISSIONS };
+  }
+
   let permissions: ModulePermissions;
   if (permission === true) {
     permissions = { ...ALL_PERMISSIONS };

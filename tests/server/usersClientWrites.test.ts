@@ -51,6 +51,11 @@ describe('Meteor.users — client-side writes are denied', () => {
     });
   }
 
+  // Characterization, not regression guards for the deny rule: Meteor rejects
+  // client inserts and removes on Meteor.users by default (no `insecure`, no
+  // allow rule), so these would pass with the deny rule removed. They are here
+  // to pin that default down — only the `update` cases above actually exercise
+  // it, since accounts-base otherwise lets a user write their own profile.
   for (const op of ['insert', 'insertAsync']) {
     it(`/users/${op}: rejects a client insert — 403`, async () => {
       await assertRejectsWithCode(
