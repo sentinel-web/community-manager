@@ -71,7 +71,9 @@ const getSquadsColumns: ColumnsFactory<Squad> = (
       title: t('squads.order'),
       dataIndex: 'order',
       key: 'order',
-      defaultSortOrder: 'ascend',
+      // Opt-in sorter only: Section paginates a `limit`ed subscription with no server-side sort, so a
+      // default sort order would silently claim the whole collection is ordered while only ranking the
+      // rows already loaded. The ORBAT, which does sort server-side, is the ordered view.
       sorter: compareByOrderThenName,
       render: (order: number | null | undefined) => order ?? '-',
     },

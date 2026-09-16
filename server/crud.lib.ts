@@ -162,22 +162,49 @@ const INSERT_VALIDATORS: Partial<Record<CrudCollectionName, (payload: Record<str
 // timestamp can never be forged or rewritten through a crafted DDP call.
 const SERVER_CREATED_AT: ReadonlySet<CrudCollectionName> = new Set<CrudCollectionName>(['registrations', 'tasks']);
 
-// Per-collection field validators run on BOTH insert and update (the `$set` payload), unlike
-// INSERT_VALIDATORS. Each field is optional: absent/null (a cleared form field) passes, but a present
-// value must have the right shape, so a crafted DDP call can't store e.g. a string sort order.
-const FIELD_VALIDATORS: Partial<Record<CrudCollectionName, (payload: Record<string, unknown>) => void>> = {
-  ranks: payload => {
-    const abbreviation = payload.abbreviation;
-    if (abbreviation == null) return;
-    if (typeof abbreviation !== 'string' || abbreviation.length > RANK_ABBREVIATION_MAX_LENGTH) {
-      throw new Meteor.Error('invalid-abbreviation', `Rank abbreviation must be a string of at most ${RANK_ABBREVIATION_MAX_LENGTH} characters`);
-    }
+// Per-field validators run on BOTH insert and update (the `$set` payload), unlike INSERT_VALIDATORS.
+// Each field is optional: absent/null (a cleared form field) passes, but a present value must have the
+// right shape, so a crafted DDP call can't store e.g. a string sort order.
+const FIELD_VALIDATORS: Partial<Record<CrudCollectionName, Record<string, (value: unknown) => void>>> = {
+  ranks: {
+    abbreviation: value => {
+      if (value == null) return;
+      if (typeof value !== 'string' || value.length > RANK_ABBREVIATION_MAX_LENGTH) {
+        throw new Meteor.Error('invalid-abbreviation', `Rank abbreviation must be a string of at most ${RANK_ABBREVIATION_MAX_LENGTH} characters`);
+      }
+    },
   },
-  squads: payload => {
-    const order = payload.order;
-    if (order == null) return;
-    if (typeof order !== 'number' || !Number.isFinite(order) || order < 0) {
-      throw new Meteor.Error('invalid-order', 'Squad order must be a non-negative number');
+  squads: {
+    order: value => {
+      if (value == null) return;
+      if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+        throw new Meteor.Error('invalid-order', 'Squad order must be a non-negative number');
+      }
+    },
+  },
+};
+
+/**
+ * Applies the collection's per-field validators to a payload.
+ *
+ * Only the keys present in the payload are checked, so an untouched field always passes. A dotted key
+ * (`{'order.x': 1}`) is rejected outright rather than validated: `$set` would turn the scalar into a
+ * nested object that the value check never sees, and every reader downstream then faces a shape the
+ * type says is impossible.
+ */
+function validateFields(collection: CrudCollectionName, payload: Record<string, unknown>): void {
+  const validators = FIELD_VALIDATORS[collection];
+  if (!validators) return;
+  for (const key of Object.keys(payload)) {
+    const [field] = key.split('.');
+    const validate = validators[field];
+    if (!validate) continue;
+    if (key !== field) {
+      throw new Meteor.Error('invalid-field-path', `Cannot write a nested path into "${field}"`);
+    }
+    validate(payload[key]);
+  }
+}
 
 // Per-collection guards for fields a caller must not be able to write merely
 // because they hold the collection's write permission. Unlike INSERT_VALIDATORS
@@ -309,7 +336,7 @@ function createCollectionMethods(collection: CrudCollectionName): void {
               validate: ([p]) => {
                 validateObject(p, false);
                 INSERT_VALIDATORS[collection]?.(p);
-                FIELD_VALIDATORS[collection]?.(p);
+                validateFields(collection, p);
               },
               authorize: privilegedFieldGuard ? async (ctx, [p]) => privilegedFieldGuard(ctx.userId, p) : undefined,
             },
@@ -338,7 +365,7 @@ function createCollectionMethods(collection: CrudCollectionName): void {
               validate: ([targetId, changes]) => {
                 validateString(targetId, false);
                 validateObject(changes, false);
-                FIELD_VALIDATORS[collection]?.(changes as Record<string, unknown>);
+                validateFields(collection, changes as Record<string, unknown>);
               },
               authorize: privilegedFieldGuard ? async (ctx, [, changes]) => privilegedFieldGuard(ctx.userId, changes) : undefined,
               // One indexed _id read so the audit log captures pre-update values

@@ -17,7 +17,7 @@ import TableHeader from '../table/header/TableHeader';
 import Table from '../table/Table';
 import DeleteImpactPreview, { type DeleteImpactPreviewData } from './DeleteImpactPreview';
 import SectionCard from './SectionCard';
-import type { BoundGroupAction, ColumnsFactory, CustomViewProps, GroupAction, RowClickEvent, SectionPermissions } from './types';
+import type { BoundGroupAction, ColumnsFactory, CustomViewProps, GroupAction, RowClickEvent } from './types';
 
 function defaultFilterFactory(input: string): Mongo.Selector<Record<string, unknown>> {
   return { name: { $regex: input, $options: 'i' } };
