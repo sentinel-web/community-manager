@@ -24,13 +24,13 @@ import {
 import { Button, Dropdown, Grid, Tooltip } from 'antd';
 import type { MenuProps } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
+import { useTracker } from 'meteor/react-meteor-data';
 import React, { useCallback, useEffect, useMemo } from 'react';
-import RolesCollection from '../../api/collections/roles.collection';
 import type { Role } from '../../api/types';
 import useNavigation from './navigation.hook';
 import { useTranslation } from '../../i18n/LanguageContext';
 import useUserMenu from '../components/useUserMenu';
+import useOwnRole from '../hooks/useOwnRole';
 
 // Keys handled as user actions (in the mobile menu) rather than navigation.
 const USER_ACTION_KEYS = new Set(['profile', 'changePassword', 'logout']);
@@ -162,13 +162,8 @@ export default function Navigation() {
     [setNavigationValue, handleAction]
   );
 
-  useSubscribe('roles', { _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 });
-  const roles = useFind(
-    () => RolesCollection.find({ _id: (user?.profile?.roleId ?? null) as unknown as string }, { limit: 1 }),
-    [user?.profile?.roleId]
-  );
+  const { role } = useOwnRole();
   const items = useMemo(() => {
-    const role = roles?.[0];
     const newItems: NonNullable<MenuProps['items']> = [];
     if (!role) {
       return [];
@@ -364,7 +359,7 @@ export default function Navigation() {
     }
 
     return newItems;
-  }, [roles, navigationValue, t, isMobile, user, actionItems]);
+  }, [role, navigationValue, t, isMobile, user, actionItems]);
 
   const shortcutLabel = useMemo(() => getPaletteShortcutLabel(), []);
 

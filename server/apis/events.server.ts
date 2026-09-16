@@ -3,7 +3,8 @@ import EventsCollection from '../../imports/api/collections/events.collection';
 import EventTypesCollection from '../../imports/api/collections/eventTypes.collection';
 import MembersCollection from '../../imports/api/collections/members.collection';
 import RanksCollection from '../../imports/api/collections/ranks.collection';
-import { validateUserId, validateString, validateObject, getUserRole, isOfficerOrAdmin } from '../main';
+import { getEventVisibilityFilter, withEventVisibility } from '../event-visibility';
+import { validateUserId, validateString, validateObject } from '../main';
 import { createLog } from './logs.server';
 
 const getFullName = (rank: string | undefined, id: number | undefined, name: string | undefined): string =>
@@ -26,6 +27,18 @@ async function resolveNames(userIds: string[] | undefined): Promise<ResolvedMemb
   }));
 }
 
+// Loads an event the caller may see, applying the shared private-event filter
+// (server/event-visibility.ts) that also gates the `events` publication, the
+// generated `events.read`/`.count`/`.options` methods, and `palette.search`.
+// Invisible events are reported exactly like missing ones (404), so private
+// event ids can't be probed.
+async function findVisibleEvent(userId: string, eventId: string) {
+  const visibility = await getEventVisibilityFilter(userId);
+  const event = await EventsCollection.findOneAsync(withEventVisibility({ _id: eventId }, visibility));
+  if (!event) throw new Meteor.Error(404, 'Event not found');
+  return event;
+}
+
 const DEFAULT_PUBLISH_LIMIT = 100;
 const MAX_PUBLISH_LIMIT = 1000;
 
@@ -42,14 +55,8 @@ if (Meteor.isServer) {
       limitedOptions.limit = MAX_PUBLISH_LIMIT;
     }
 
-    const role = await getUserRole(this.userId);
-    if (isOfficerOrAdmin(role)) {
-      return EventsCollection.find(filter, limitedOptions);
-    }
-
-    const privateFilter = { $or: [{ isPrivate: { $ne: true } }, { hosts: this.userId }, { attendees: this.userId }] };
-    const mergedFilter = { $and: [filter, privateFilter] };
-    return EventsCollection.find(mergedFilter, limitedOptions);
+    const visibility = await getEventVisibilityFilter(this.userId);
+    return EventsCollection.find(withEventVisibility(filter, visibility), limitedOptions);
   });
 
   Meteor.methods({
@@ -57,8 +64,7 @@ if (Meteor.isServer) {
       validateUserId(this.userId);
       validateString(eventId);
 
-      const event = await EventsCollection.findOneAsync(eventId);
-      if (!event) throw new Meteor.Error(404, 'Event not found');
+      const event = await findVisibleEvent(this.userId as string, eventId);
 
       const attendees = event.attendees || [];
       const isSignedUp = attendees.includes(this.userId);
@@ -77,8 +83,7 @@ if (Meteor.isServer) {
       validateUserId(this.userId);
       validateString(eventId);
 
-      const event = await EventsCollection.findOneAsync(eventId);
-      if (!event) throw new Meteor.Error(404, 'Event not found');
+      const event = await findVisibleEvent(this.userId as string, eventId);
 
       // Event-type lookup, host names, and attendee names are independent —
       // race them via Promise.all instead of waterfalling.

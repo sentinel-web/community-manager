@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 #
-# Stop gate — refuses to let the agent finish a turn when the current feature
-# branch has SOURCE changes that have not passed typecheck + tests.
+# Stop gate — refuses to let the agent finish a turn when the working tree the
+# session is in has SOURCE changes on a feature branch that have not passed
+# typecheck + tests.
 #
-# It reads the marker written by record-verify.sh. The marker is keyed to a
-# tree signature, so any edit since the last green run re-arms the gate.
+# It reads the marker written by record-verify.sh for that working tree
+# (<toplevel>/.claude/.verify-state). The marker is keyed to a tree signature, so
+# any edit since the last green run re-arms the gate.
 #
 # Scope guards (keep it low-friction):
-#   - inactive on the default branch (commits there are blocked anyway)
+#   - the working tree is the session cwd's (payload `cwd`, else $PWD); work done
+#     elsewhere via `cd <other> && …` is not gated
+#   - inactive outside a git working tree and on the default branch
 #   - inactive when no source files changed vs the default branch / working tree
 #   - bypass entirely with CLAUDE_SKIP_VERIFY_GATE=1
 #
@@ -30,31 +34,34 @@ if printf '%s' "$INPUT" | grep -qE '"stop_hook_active":[[:space:]]*true'; then
   exit 0
 fi
 
-STATE_FILE="${CLAUDE_PROJECT_DIR:-.}/.claude/.verify-state"
+CWD=$(analyze_payload "$INPUT" | awk -F '\t' '$1 == "CWD" { print $2; exit }')
+RESOLVED=$(resolve_dir "${CWD:-$PWD}") || exit 0
+TOP=$(repo_top "$RESOLVED") || exit 0
+STATE_FILE=$(state_file "$TOP")
 
-BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+BRANCH=$(git -C "$TOP" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 [ -z "$BRANCH" ] && exit 0
 { [ "$BRANCH" = "main" ] || [ "$BRANCH" = "master" ]; } && exit 0
 
 # Source files changed on this branch: committed vs main + staged + unstaged +
 # untracked (new files don't appear in `git diff`, so list them explicitly).
-BASE=$(git merge-base main HEAD 2>/dev/null || echo "")
+BASE=$(git -C "$TOP" merge-base main HEAD 2>/dev/null || echo "")
 CHANGED=$(
   {
-    [ -n "$BASE" ] && git diff --name-only "$BASE"...HEAD 2>/dev/null
-    git diff --name-only 2>/dev/null
-    git diff --cached --name-only 2>/dev/null
-    git ls-files --others --exclude-standard 2>/dev/null
+    [ -n "$BASE" ] && git -C "$TOP" diff --name-only "$BASE"...HEAD 2>/dev/null
+    git -C "$TOP" diff --name-only 2>/dev/null
+    git -C "$TOP" diff --cached --name-only 2>/dev/null
+    git -C "$TOP" ls-files --others --exclude-standard 2>/dev/null
   } | sort -u | grep -E '^(imports|server|client|tests|e2e)/|^[^/]+\.ts$' || true
 )
 [ -z "$CHANGED" ] && exit 0   # no source changes — nothing to gate
 
 # Has the current code state passed both checks?
-SIG="$(tree_sig)"
+SIG="$(tree_sig "$TOP")"
 MARK_SIG=""
 [ -f "$STATE_FILE" ] && MARK_SIG=$(grep '^SIG=' "$STATE_FILE" 2>/dev/null | head -1 | cut -d= -f2-)
 
-if [ "$MARK_SIG" = "$SIG" ] \
+if [ -n "$SIG" ] && [ "$MARK_SIG" = "$SIG" ] \
    && grep -qx 'typecheck=1' "$STATE_FILE" 2>/dev/null \
    && grep -qx 'test=1' "$STATE_FILE" 2>/dev/null; then
   exit 0

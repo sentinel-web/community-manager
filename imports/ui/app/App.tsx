@@ -12,6 +12,7 @@ import type { Locale } from '../../i18n';
 import { useLanguage } from '../../i18n/LanguageContext';
 import Footer from '../footer/Footer';
 import Header from '../header/Header';
+import OwnRoleProvider from '../hooks/OwnRoleProvider';
 import Main from '../main/Main';
 import { getNavigationValue } from '../navigation/Navigation';
 import type { NavigationContextValue } from '../navigation/navigation.hook';
@@ -73,46 +74,50 @@ export default function App() {
   }, [theme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
-      <NavigationContext.Provider value={{ navigationValue, setNavigationValue }}>
-        <TourProvider>
-          <PaletteProvider>
-            <ConfigProvider
-              locale={ANTD_LOCALES[language]}
-              theme={{
-                token: {
-                  colorPrimary: communityColor,
-                  borderRadius: 8,
-                  fontSize: 16,
-                  colorBgBase: theme === 'dark' ? '#282828' : '#f8f8f2',
-                  colorTextBase: theme === 'dark' ? '#f8f8f2' : '#282828',
-                },
-                algorithm: theme === 'dark' ? AntdTheme.darkAlgorithm : AntdTheme.defaultAlgorithm,
-              }}
-            >
-              <AntdApp className="app" message={{ maxCount: 1 }} notification={{ maxCount: 3 }}>
-                <DrawerStackProvider>
-                  <Layout>
-                    <Layout.Header>
-                      <Header />
-                    </Layout.Header>
-                    <Layout.Content style={{ flex: 1, overflow: 'auto' }}>
-                      <Main />
-                    </Layout.Content>
-                    {!isMobile && (
-                      <Layout.Footer>
-                        <Footer />
-                      </Layout.Footer>
-                    )}
-                  </Layout>
-                  {Meteor.isDevelopment && <DemoTour />}
-                  <Palette />
-                </DrawerStackProvider>
-              </AntdApp>
-            </ConfigProvider>
-          </PaletteProvider>
-        </TourProvider>
-      </NavigationContext.Provider>
-    </ThemeContext.Provider>
+    // One `roles.own` subscription for the whole app — every permission-gated
+    // component reads it through useOwnRole instead of subscribing itself.
+    <OwnRoleProvider>
+      <ThemeContext.Provider value={{ theme, setTheme }}>
+        <NavigationContext.Provider value={{ navigationValue, setNavigationValue }}>
+          <TourProvider>
+            <PaletteProvider>
+              <ConfigProvider
+                locale={ANTD_LOCALES[language]}
+                theme={{
+                  token: {
+                    colorPrimary: communityColor,
+                    borderRadius: 8,
+                    fontSize: 16,
+                    colorBgBase: theme === 'dark' ? '#282828' : '#f8f8f2',
+                    colorTextBase: theme === 'dark' ? '#f8f8f2' : '#282828',
+                  },
+                  algorithm: theme === 'dark' ? AntdTheme.darkAlgorithm : AntdTheme.defaultAlgorithm,
+                }}
+              >
+                <AntdApp className="app" message={{ maxCount: 1 }} notification={{ maxCount: 3 }}>
+                  <DrawerStackProvider>
+                    <Layout>
+                      <Layout.Header>
+                        <Header />
+                      </Layout.Header>
+                      <Layout.Content style={{ flex: 1, overflow: 'auto' }}>
+                        <Main />
+                      </Layout.Content>
+                      {!isMobile && (
+                        <Layout.Footer>
+                          <Footer />
+                        </Layout.Footer>
+                      )}
+                    </Layout>
+                    {Meteor.isDevelopment && <DemoTour />}
+                    <Palette />
+                  </DrawerStackProvider>
+                </AntdApp>
+              </ConfigProvider>
+            </PaletteProvider>
+          </TourProvider>
+        </NavigationContext.Provider>
+      </ThemeContext.Provider>
+    </OwnRoleProvider>
   );
 }

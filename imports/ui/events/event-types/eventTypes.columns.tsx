@@ -36,6 +36,13 @@ const getEventTypeColumns = (
       sorter: (a, b) => (a.color || '').localeCompare(b.color || ''),
       render: (color: string | null) => <Tag color={color || 'transparent'}>{color}</Tag>,
     },
+    {
+      title: t('events.countsForInactivity'),
+      dataIndex: 'countsForInactivity',
+      key: 'countsForInactivity',
+      sorter: (a, b) => Number(a.countsForInactivity !== false) - Number(b.countsForInactivity !== false),
+      render: (countsForInactivity: boolean | undefined) => (countsForInactivity === false ? t('common.no') : t('common.yes')),
+    },
   ];
 
   if (canUpdate || canDelete) {

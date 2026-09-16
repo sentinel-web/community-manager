@@ -11,9 +11,11 @@ import RanksCollection from '../../imports/api/collections/ranks.collection';
 import RolesCollection from '../../imports/api/collections/roles.collection';
 import SpecializationsCollection from '../../imports/api/collections/specializations.collection';
 import SquadsCollection from '../../imports/api/collections/squads.collection';
-import { validateObject, validatePublish, validateString, validateNumber, validateUserId, checkPermission, checkSpecialPermission, getSquadScope, isOfficerOrAdmin, getUserRole, assertSafeSelector } from '../main';
+import { loadMemberPoints } from '../attendance-points';
+import { validateArrayOfStrings, validateObject, validatePublish, validateString, validateNumber, validateUserId, checkPermission, checkSpecialPermission, getSquadScope, isOfficerOrAdmin, getUserRole, assertSafeSelector } from '../main';
 import { runMutation, snapshotTouchedFields } from '../mutation-pipeline';
 import { instrument } from '../telemetry';
+import { createLog } from './logs.server';
 import { COLLECTION_REGISTRY } from '../collection-registry';
 import {
   enforceIntegrityOnDelete,
@@ -57,7 +59,108 @@ const getFullName = (rank: string | undefined, id: number | undefined, name: str
   return `${rank || 'Unranked'}-${id || '0000'} ${name || 'Name'}`;
 };
 
+// Matches the generic CRUD bulkRemove cap (server/crud.lib.ts).
+const BULK_REMOVE_MAX_IDS = 100;
+
+// members.namesByIds resolves one view's worth of ids, so the cap matches the
+// publish cap a custom view can hold (PUBLISH_LIMITS.MAX in imports/config.ts).
+const NAMES_BY_IDS_MAX = 1000;
+
+// Rank-prefixed display names ("Rank-ID Name") for a set of member docs, keyed
+// by member id and ordered as the docs were fetched. One rank lookup for the
+// whole set, not one per member.
+async function buildMemberNames(members: Meteor.User[]): Promise<Map<string, string>> {
+  const rankIds = [...new Set(members.flatMap(m => (m.profile?.rankId ? [m.profile.rankId] : [])))];
+  const ranks = await RanksCollection.find({ _id: { $in: rankIds } }).fetchAsync();
+  const rankNameById = new Map(ranks.map(r => [r._id, r.name]));
+
+  return new Map(
+    members.map(member => [member._id, getFullName(rankNameById.get(member.profile!.rankId as string), member.profile!.id, member.profile!.name)])
+  );
+}
+
+interface MemberRemoval {
+  id: string;
+  effects: Awaited<ReturnType<typeof enforceIntegrityOnDelete>>;
+}
+
+// Client-facing text for a failed delete. A Meteor.Error's `reason` is written
+// for the caller, so it passes through; anything else can carry internal detail
+// (driver messages, stack text) and is replaced by `fallback` — the full error
+// is logged server-side instead.
+function describeFailure(error: unknown, fallback: string): string {
+  return error instanceof Meteor.Error && error.reason ? error.reason : fallback;
+}
+
+// The per-member delete shared by members.remove and members.bulkRemove. Runs
+// after the caller passed the pipeline's auth/permission/validation gates.
+async function removeMember(targetId: string, callerUserId: string | null): Promise<MemberRemoval> {
+  // Self-delete prevention: an admin deleting their own account would lock
+  // themselves out instantly. The integrity layer can't help here — even a
+  // clean delete is undesirable.
+  if (targetId === callerUserId) {
+    throw new Meteor.Error(400, 'Cannot delete your own account');
+  }
+
+  const member = await MembersCollection.findOneAsync(targetId);
+  if (!member) throw new Meteor.Error(404, 'Member not found');
+
+  // Squad scope: a scoped caller may only delete members of their own squad —
+  // the same boundary members.update enforces on writes and every member read
+  // path merges into its selector. getSquadScope returns `{}` for officers,
+  // admins, squadless callers, and when squad scoping is disabled.
+  const squadScope = await getSquadScope(callerUserId);
+  if (squadScope['profile.squadId'] && member.profile!.squadId !== squadScope['profile.squadId']) {
+    throw new Meteor.Error(403, 'Cannot delete members outside your squad');
+  }
+
+  const profilePictureId = member.profile!.profilePictureId;
+
+  // Phase 1 — the member document itself, deleted before the cascade. If the
+  // cascade below fails, what is left behind is stale references the orphan
+  // scanner reports (server/integrity/orphans.ts); the reverse order instead
+  // left a member alive with their associations stripped and no audit entry,
+  // which nothing detects. Safe because no incoming edge to `members` is
+  // `onDelete: 'block'` (COLLECTION_REGISTRY), so the block pass inside
+  // enforceIntegrityOnDelete cannot reject a delete that already happened.
+  await MembersCollection.removeAsync({ _id: targetId } as never);
+
+  // Phase 2 — the cascade: the registry-driven integrity layer (pulls from
+  // events, tasks, specializations; sets respondentId null on responses, which
+  // generic CRUD .remove does automatically) plus the owned ProfilePicture. The
+  // picture is private to one Member, the registry's only owned-target
+  // relationship; per the rule of three it stays code here rather than becoming
+  // a registry primitive. See server/integrity/.
+  try {
+    const effects = await enforceIntegrityOnDelete('members', targetId, { userId: callerUserId });
+    if (profilePictureId) {
+      await ProfilePicturesCollection.removeAsync({ _id: profilePictureId } as never);
+      effects.cascaded.profilePictures = (effects.cascaded.profilePictures ?? 0) + 1;
+    }
+    return { id: targetId, effects };
+  } catch (error) {
+    // The member is already gone, and a throw skips the pipeline's audit step —
+    // so record the deletion (and that its cleanup failed) before rethrowing,
+    // or the audit trail would lose it entirely.
+    console.error(`[members] cleanup after deleting ${targetId} failed`, error);
+    await createLog('members.deleted', { id: targetId, cleanupFailed: describeFailure(error, 'unexpected error') });
+    throw new Meteor.Error(500, `Member deleted, but cleanup failed: ${describeFailure(error, 'unexpected error')}`);
+  }
+}
+
 if (Meteor.isServer) {
+  // User documents are written only through server methods (members.*,
+  // Accounts). accounts-base ships a default `users.allow` rule that lets a
+  // client update the `profile` of its own document directly, and `profile`
+  // carries authorization data (roleId, squadId). A deny rule overrides every
+  // allow rule, so all client-originated insert/update/remove on Meteor.users
+  // are rejected. Server-side collection calls are unaffected.
+  Meteor.users.deny({
+    insert: () => true,
+    update: () => true,
+    remove: () => true,
+  });
+
   Meteor.publish('user', function () {
     validateUserId(this.userId);
     return MembersCollection.find({ _id: this.userId }, { fields: { services: 0 } });
@@ -224,46 +327,50 @@ if (Meteor.isServer) {
           collection: 'members',
           operation: 'delete',
           action: 'members.deleted',
-          audit: (args, result) => {
-            const r = result as { id: string; effects: Awaited<ReturnType<typeof enforceIntegrityOnDelete>> };
-            return buildRemoveAuditPayload(r.id, r.effects);
-          },
+          audit: (_args, result: MemberRemoval) => buildRemoveAuditPayload(result.id, result.effects),
           permissionModule: 'members',
           validate: ([id]) => validateString(id, false),
         },
         [memberId] as const,
-        async ([targetId]) => {
-          // Self-delete prevention: an admin deleting their own account
-          // would lock themselves out instantly. The integrity layer can't
-          // help here — even a clean delete is undesirable. This guard is
-          // 1-site, so it stays in the body per the rule of three.
-          if (targetId === callerUserId) {
-            throw new Meteor.Error(400, 'Cannot delete your own account');
+        async ([targetId]) => removeMember(targetId, callerUserId),
+      );
+    },
+    // Same per-id semantics as members.remove (self-delete guard, existence
+    // check, integrity layer, profile-picture cascade, one audit entry per id);
+    // per-id failures are collected instead of aborting the batch. Mirrors the
+    // generic `<collection>.bulkRemove` contract that Section relies on.
+    'members.bulkRemove': async function (memberIds: string[] = []) {
+      const callerUserId = this.userId;
+      return runMutation(
+        { userId: callerUserId },
+        {
+          collection: 'members',
+          operation: 'delete',
+          permissionModule: 'members',
+          validate: ([ids]) => {
+            validateArrayOfStrings(ids, false);
+            if (ids.length === 0) throw new Meteor.Error(400, 'No ids provided');
+            if (ids.length > BULK_REMOVE_MAX_IDS) throw new Meteor.Error(400, `Maximum ${BULK_REMOVE_MAX_IDS} items per bulk delete`);
+          },
+        },
+        [memberIds] as const,
+        async ([ids]) => {
+          let removed = 0;
+          const errors: string[] = [];
+          for (const id of ids) {
+            try {
+              const result = await removeMember(id, callerUserId);
+              await createLog('members.deleted', buildRemoveAuditPayload(result.id, result.effects));
+              removed++;
+            } catch (error) {
+              // Classify: the caller gets the Meteor.Error reason (or a generic
+              // fallback), never a raw exception message; the full error stays
+              // in the server log.
+              console.error(`[members] bulkRemove failed for ${id}`, error);
+              errors.push(`Failed to delete ${id}: ${describeFailure(error, 'Delete failed')}`);
+            }
           }
-
-          // Existence check stays as code in the body (1-site variation;
-          // not promoted to a registry field per the rule of three).
-          const member = await getMemberById(targetId);
-
-          // Run the registry-driven integrity layer (pulls from events,
-          // tasks, specializations; sets respondentId null on responses).
-          // Generic CRUD .remove does this automatically — members.remove
-          // is a custom path so it calls explicitly.
-          const effects = await enforceIntegrityOnDelete('members', targetId, { userId: callerUserId });
-
-          // Owned-target cascade: the ProfilePicture is private to one
-          // Member, so deleting the Member also deletes their picture.
-          // The only owned-target relationship in the registry; per the
-          // rule of three (one instance), kept here as code rather than
-          // promoted to a registry primitive. See server/integrity.ts.
-          const profilePictureId = member.profile!.profilePictureId;
-          if (profilePictureId) {
-            await ProfilePicturesCollection.removeAsync({ _id: profilePictureId } as never);
-            effects.cascaded.profilePictures = (effects.cascaded.profilePictures ?? 0) + 1;
-          }
-
-          await MembersCollection.removeAsync({ _id: targetId } as never);
-          return { id: targetId, effects };
+          return { removed, errors };
         },
       );
     },
@@ -299,6 +406,26 @@ if (Meteor.isServer) {
 
       return options;
     },
+    // Batched counterpart to members.participantNames: one call resolves a whole
+    // view's member ids instead of one call per widget. Same gate and squad
+    // scope — ids outside the caller's scope are simply absent from the result.
+    'members.namesByIds': async function (ids: string[] = []): Promise<Record<string, string>> {
+      validateUserId(this.userId);
+      validateArrayOfStrings(ids, false);
+      if (ids.length > NAMES_BY_IDS_MAX) throw new Meteor.Error(400, `Maximum ${NAMES_BY_IDS_MAX} ids per lookup`);
+      if (!ids.length) return {};
+
+      const hasPermission = await checkPermission(this.userId, 'members', 'read');
+      if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
+
+      const squadScope = await getSquadScope(this.userId);
+      const members = await MembersCollection.find(
+        { ...squadScope, _id: { $in: ids } },
+        { fields: { 'profile.rankId': 1, 'profile.id': 1, 'profile.name': 1 } }
+      ).fetchAsync();
+
+      return Object.fromEntries(await buildMemberNames(members));
+    },
     'members.participantNames': async function (filter: Record<string, unknown> = {}, options: Record<string, unknown> = {}) {
       validateUserId(this.userId);
       validateObject(filter, false);
@@ -312,14 +439,7 @@ if (Meteor.isServer) {
       const scopedFilter = { ...filter, ...squadScope };
       const members = await MembersCollection.find(scopedFilter, options).fetchAsync();
 
-      const rankIds = [...new Set(members.flatMap(m => m.profile?.rankId ? [m.profile.rankId] : []))];
-      const ranks = await RanksCollection.find({ _id: { $in: rankIds } }).fetchAsync();
-      const rankNameById = new Map(ranks.map(r => [r._id, r.name]));
-
-      const names = members.map(member =>
-        getFullName(rankNameById.get(member.profile!.rankId as string), member.profile!.id, member.profile!.name)
-      );
-      return names.join(', ');
+      return [...(await buildMemberNames(members)).values()].join(', ');
     },
     'members.getUsedIds': async function () {
       if (!this.userId) {
@@ -454,7 +574,15 @@ if (Meteor.isServer) {
     'members.profileStats': async function (userOrTargetId: Meteor.User | string | undefined, role?: Role) {
       if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
 
-      let user: Meteor.User | null | undefined = typeof userOrTargetId === 'object' ? userOrTargetId : undefined;
+      // The object form (used by dashboard.stats, which already holds the member
+      // document) is caller-supplied over DDP too, and its `_id` flows into the
+      // shared points loader as a dynamic field path — so validate it here
+      // rather than letting a shapeless object reach the database layer.
+      let user: Meteor.User | null | undefined;
+      if (userOrTargetId && typeof userOrTargetId === 'object') {
+        validateString((userOrTargetId as { _id?: unknown })._id);
+        user = userOrTargetId;
+      }
 
       if (typeof userOrTargetId === 'string') {
         if (userOrTargetId !== this.userId) {
@@ -480,15 +608,10 @@ if (Meteor.isServer) {
       const roleId = user.profile?.roleId;
       if (!role) role = (await RolesCollection.findOneAsync({ _id: roleId ?? null } as never)) as Role | undefined;
 
-      let inactivityPoints = user.profile?.staticInactivityPoints || 0;
-      let attendancePoints = user.profile?.staticAttendancePoints || 0;
-      const userIdKey = user._id;
-      await AttendancesCollection.find({ [userIdKey]: { $exists: true } }).forEachAsync(attendance => {
-        const val = (attendance as Record<string, unknown>)[userIdKey] as number;
-        if (val === -2) return;
-        if (val === -1) inactivityPoints += 1;
-        attendancePoints += val === 2 ? 1 : (val || 0);
-      });
+      // Same calculation as the attendance grid's attendances.pointsSummary (#363).
+      // The loader skips ids it cannot use as a field path, so fall back to zeroed
+      // totals rather than destructuring an absent entry.
+      const { attendancePoints, inactivityPoints } = (await loadMemberPoints([user]))[user._id] ?? { attendancePoints: 0, inactivityPoints: 0 };
 
       const resolvedRank = user.profile?.rankId ? await RanksCollection.findOneAsync({ _id: user.profile.rankId }) : null;
       const resolvedNavyRank = user.profile?.navyRankId ? await RanksCollection.findOneAsync({ _id: user.profile.navyRankId }) : null;

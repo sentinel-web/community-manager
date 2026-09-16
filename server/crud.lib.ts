@@ -7,8 +7,10 @@ import {
   clearRoleCache,
   assertSafeSelector,
   checkPermission,
+  getUserRole,
 } from './main';
 import { createLog } from './apis/logs.server';
+import { getEventVisibilityFilter } from './event-visibility';
 import { runMutation, snapshotTouchedFields } from './mutation-pipeline';
 import { COLLECTION_REGISTRY } from './collection-registry';
 import {
@@ -19,6 +21,7 @@ import {
 } from './integrity';
 import { sanitizeHtml } from './htmlSanitizer';
 import type { CrudCollectionMap, CrudCollectionName } from '/imports/api/types';
+import { PUBLISH_LIMITS } from '/imports/config';
 
 import AttendancesCollection from '../imports/api/collections/attendances.collection';
 import BriefingTemplatesCollection from '../imports/api/collections/briefingTemplates.collection';
@@ -159,8 +162,55 @@ const INSERT_VALIDATORS: Partial<Record<CrudCollectionName, (payload: Record<str
 // timestamp can never be forged or rewritten through a crafted DDP call.
 const SERVER_CREATED_AT: ReadonlySet<CrudCollectionName> = new Set<CrudCollectionName>(['registrations', 'tasks']);
 
-const DEFAULT_PUBLISH_LIMIT = 100;
-const MAX_PUBLISH_LIMIT = 1000;
+// Per-collection guards for fields a caller must not be able to write merely
+// because they hold the collection's write permission. Unlike INSERT_VALIDATORS
+// (which only inspects the payload's shape) these need to know WHO is calling,
+// so they run through runMutation's `authorize` hook — on both `.insert` and
+// `.update`, and their denials are audited like any other pre-body failure.
+//
+// roles: `roles` is overloaded on a Role document. `roles: { read, … }` is the
+// ordinary CRUD permission on the roles collection, but `roles: true` is the
+// super-admin grant that checkPermission short-circuits on. Holding
+// `roles.create`/`roles.update` must therefore not be enough to mint it — only
+// a caller who is already an admin may set it. (The RolesForm admin switch is
+// UI convenience; this is the control.)
+const PRIVILEGED_FIELD_GUARDS: Partial<
+  Record<CrudCollectionName, (userId: string | null, payload: Record<string, unknown>) => Promise<void>>
+> = {
+  roles: async (userId, payload) => {
+    if (payload.roles !== true) return;
+    const callerRole = await getUserRole(userId);
+    if (callerRole?.roles !== true) {
+      throw new Meteor.Error(403, 'Permission denied. Administrator access is required to grant administrator permissions.');
+    }
+  },
+};
+
+// Per-collection read scopes: an extra selector ANDed onto the caller's filter
+// on every generic read (`.read`, `.count`, `.options`). Without it a rule the
+// collection's publication enforces can be sidestepped simply by calling the
+// method with a known document id.
+//
+// Events are the only collection needing one today: they are method-only (see
+// `methodOnlyCollections` in server/main.ts) and their hand-written publication
+// hides private events, so the generated reads must hide them too. Kept as a
+// one-entry map rather than a registry field per the Rule of Three.
+const READ_SCOPES: Partial<Record<CrudCollectionName, (userId: string | null) => Promise<Record<string, unknown> | null>>> = {
+  events: getEventVisibilityFilter,
+};
+
+async function applyReadScope(
+  collection: CrudCollectionName,
+  userId: string | null,
+  filter: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const scope = READ_SCOPES[collection];
+  if (!scope) return filter;
+  const extra = await scope(userId);
+  return extra ? { $and: [filter, extra] } : filter;
+}
+
+const { DEFAULT: DEFAULT_PUBLISH_LIMIT, MAX: MAX_PUBLISH_LIMIT } = PUBLISH_LIMITS;
 
 function createCollectionPublish(collection: CrudCollectionName): void {
   if (Meteor.isServer) {
@@ -207,11 +257,13 @@ function createCollectionMethods(collection: CrudCollectionName): void {
       const fallback = registryEntry.fallback;
       const allowsAnonymousInsert = registryEntry.allowsAnonymous?.insert === true;
       const auditAllowed = collection !== 'logs';
+      const privilegedFieldGuard = PRIVILEGED_FIELD_GUARDS[collection];
 
       Meteor.methods({
         [`${collection}.read`]: async function (filter: Record<string, unknown> = {}, options: Record<string, unknown> = {}) {
+          const callerUserId = this.userId;
           return runMutation(
-            { userId: this.userId },
+            { userId: callerUserId },
             {
               collection,
               operation: 'read',
@@ -223,7 +275,7 @@ function createCollectionMethods(collection: CrudCollectionName): void {
               },
             },
             [filter, options] as const,
-            async ([f, o]) => Collection.find(f, o).fetchAsync(),
+            async ([f, o]) => Collection.find(await applyReadScope(collection, callerUserId, f), o).fetchAsync(),
           );
         },
         [`${collection}.insert`]: async function (payload: Record<string, unknown> = {}) {
@@ -241,6 +293,7 @@ function createCollectionMethods(collection: CrudCollectionName): void {
                 validateObject(p, false);
                 INSERT_VALIDATORS[collection]?.(p);
               },
+              authorize: privilegedFieldGuard ? async (ctx, [p]) => privilegedFieldGuard(ctx.userId, p) : undefined,
             },
             [payload] as const,
             async ([p]) => {
@@ -268,6 +321,7 @@ function createCollectionMethods(collection: CrudCollectionName): void {
                 validateString(targetId, false);
                 validateObject(changes, false);
               },
+              authorize: privilegedFieldGuard ? async (ctx, [, changes]) => privilegedFieldGuard(ctx.userId, changes) : undefined,
               // One indexed _id read so the audit log captures pre-update values
               // for the touched fields, enabling a before→after diff view.
               captureBefore: async ([targetId, changes]) => {
@@ -373,8 +427,9 @@ function createCollectionMethods(collection: CrudCollectionName): void {
           );
         },
         [`${collection}.count`]: async function (filter: Record<string, unknown> = {}) {
+          const callerUserId = this.userId;
           return runMutation(
-            { userId: this.userId },
+            { userId: callerUserId },
             {
               collection,
               operation: 'read',
@@ -385,12 +440,13 @@ function createCollectionMethods(collection: CrudCollectionName): void {
               },
             },
             [filter] as const,
-            async ([f]) => Collection.countDocuments(f),
+            async ([f]) => Collection.countDocuments(await applyReadScope(collection, callerUserId, f)),
           );
         },
         [`${collection}.options`]: async function (filter: Record<string, unknown> = {}, options: Record<string, unknown> = {}) {
+          const callerUserId = this.userId;
           return runMutation(
-            { userId: this.userId },
+            { userId: callerUserId },
             {
               collection,
               operation: 'read',
@@ -404,7 +460,7 @@ function createCollectionMethods(collection: CrudCollectionName): void {
             [filter, options] as const,
             async ([f, o]) =>
               // eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic CRUD factory operates over arbitrary collection shapes
-              Collection.find(f, o).mapAsync((item: any) => {
+              Collection.find(await applyReadScope(collection, callerUserId, f), o).mapAsync((item: any) => {
                 const profile = item.profile as { name?: string } | undefined;
                 const name = profile?.name || (item.name as string | undefined);
                 return { key: item._id, label: name, title: name, value: item._id, raw: item };

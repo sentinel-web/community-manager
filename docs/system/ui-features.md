@@ -49,16 +49,18 @@ the custom view receives the filtered `datasource` plus `handleEdit`/`handleDele
 `Events.tsx` is the shell: a `viewType` selector (`calendar`/`attendance`/`table`),
 an event-type multi-select filter, a date-range picker (shown only for table &
 attendance), and a "relevant to me" checkbox that ORs `hosts`/`attendees` against
-the current `userId` into the Mongo selector (`filterFactory`, `Events.tsx:44`).
+the current `userId` into the Mongo selector. `Events` owns one `dateRange` state
+(the single source of truth for every view) and builds the selector with the pure
+`buildEventFilter` (`eventFilter.ts`: day-inclusive overlap range, sorted by `start`).
 
 - **`EventCalendar`** wraps `react-big-calendar` with its drag-and-drop addon
   (`withDragAndDrop(Calendar)`, `EventCalendar.tsx:21`). The localizer is
   `dayjsLocalizer(dayjs)`, re-created when the i18n `language` changes
   (`EventCalendar.tsx:34-40`). Below `BREAKPOINTS.MOBILE` it defaults to the
-  `agenda` list (the month grid is unreadable on a phone). `onRangeChange`
-  (`EventCalendar.tsx:123`) recomputes the visible window and pushes a
-  `{ start: {$lte}, end: {$gte} }` overlap filter up to the parent's `setFilter`,
-  so the subscription only loads visible events. Drag/resize/slot-select all
+  `agenda` list (the month grid is unreadable on a phone). It reports its visible
+  window through the `onRangeChange` prop (on mount via `getCalendarRange`, then on
+  every navigation/view change) into `Events`' `dateRange`, so the subscription
+  only loads visible events. Drag/resize/slot-select all
   funnel into `openForm` which pushes `EventForm` onto the DrawerStack with the
   dragged dates pre-filled — **the drag does not persist directly**, it opens the
   form. `eventPropGetter` colours each block by `event.color` (falling back to its
@@ -68,7 +70,8 @@ the current `userId` into the Mongo selector (`filterFactory`, `Events.tsx:44`).
   subscription yields (see `data-model.md` → Events, `rrule` for recurrence).
 - **`EventDetailPopover`** is a `Modal` (not a real popover) opened on
   `onSelectEvent`. It lazily calls `events.detail` for the enriched single event
-  (resolved host/attendee names, type colour, `isSignedUp`) and exposes an
+  (resolved host/attendee names, type colour, `isSignedUp`), lists the signed-up
+  members' names (scrollable when long), and exposes an
   **RSVP** button calling `events.rsvp`, which toggles the caller in/out of
   `attendees` and returns the new boolean state.
 - **`EventAttendance`** renders a grid: members down the rows, events across the
@@ -77,18 +80,26 @@ the current `userId` into the Mongo selector (`filterFactory`, `Events.tsx:44`).
   — see [attendance value mapping] in memory). A cell write calls
   `attendances.upsert(eventId, memberId, status)` — an **atomic per-event upsert
   keyed on `{ eventId }`**, race-safe after #261; the old read-then-write created
-  duplicate rows. The leftmost columns derive running **inactivity points** (+1
-  per absence) and **attendance points** (per-status sum) from the member's
-  `static*Points` baseline plus the attendance docs (`EventAttendance.tsx:230-252`).
-  Member names are pre-computed into a `Map` to avoid N+1 lookups per row.
+  duplicate rows. The leftmost columns show each member's **all-time**
+  **inactivity points** and **attendance points** from `attendances.pointsSummary`
+  — the same shared calculation (`imports/api/attendance/points.ts`) the profile
+  uses, not just the events currently loaded (#363) — a column tooltip
+  (`events.pointsAllTimeHint`) spells out that those two columns ignore the
+  selected date range while every event column honours it. The summary is
+  refetched off narrow digests of the member set, their static points and the
+  loaded attendance statuses, so unrelated document updates don't re-call the
+  method. Status labels and tag colours
+  come from the shared map in `imports/api/attendance/status.ts` (also used by the
+  profile `AttendancePieChart`). Member names are pre-computed into a `Map` to
+  avoid N+1 lookups per row.
 
 | Attendance status | Value | Tag colour | Points effect |
 |-------------------|-------|-----------|---------------|
-| Event cancelled | `-2` | default | skipped (neither IP nor points) |
-| Absent | `-1` | red | `+1` inactivity point |
-| Excused | `0` | yellow | `+0` |
+| Event cancelled | `-2` | black | skipped (neither IP nor points) |
+| Absent (unexcused) | `-1` | red | `+1` inactivity point (none if the event type has `countsForInactivity: false`), `-1` attendance point |
+| Excused | `0` | gold | `+0` |
 | Present | `1` | green | `+1` |
-| Present (Zeus) | `2` | cyan | `+1` |
+| Present (Zeus) | `2` | blue | `+1` |
 
 - **`EventForm`** is a rich form: `MembersSelect` for hosts/attendees, a
   `SquadQuickAdd` widget (bulk-adds a whole squad or all members via
@@ -116,6 +127,10 @@ view; `status` and `participants` arrays feed the Mongo selector.
   back into the same slot is a no-op.
 - Cards show description (truncated), participant + completed-by avatars
   (`Participants` from `task.columns`), created date, and a comment-count badge.
+  The board resolves every card's member names in **one** `members.namesByIds`
+  call and passes the lookup down as `nameById`; `Participants` only falls back
+  to its own `members.participantNames` call when no lookup is supplied (the
+  table columns, one row at a time).
 - **`TaskForm`** additionally hosts an inline comments thread (existing tasks
   only): `tasks.addComment(taskId, text)` appends, with optimistic local state.
   `parent` is a self-referential `CollectionSelect` (subtasks).

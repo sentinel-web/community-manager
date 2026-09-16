@@ -32,5 +32,9 @@ export interface Role {
   canCreateEvents?: boolean;
   canManageTasks?: boolean;
   canManageSpecializations?: boolean;
+  // Not checked anywhere on the server, so it grants nothing. Kept (rather than
+  // stripped on write) so existing roles and backups round-trip unchanged until
+  // a behaviour is defined (#357); RolesForm renders it disabled, labelled as
+  // having no effect, so the stored value stays visible instead of hidden.
   canManageRecruits?: boolean;
 }
