@@ -1,6 +1,8 @@
 import assert from 'node:assert';
+import { DDPRateLimiter } from 'meteor/ddp-rate-limiter';
 import MembersCollection from '../../imports/api/collections/members.collection';
 import RegistrationsCollection from '../../imports/api/collections/registrations.collection';
+import { RATE_LIMITS } from '../../server/config';
 import {
   assertRejectsWithCode,
   callAs,
@@ -10,6 +12,20 @@ import {
   createTestUser,
   TEST_PREFIX,
 } from './fixtures';
+
+// The limiter's internal counters — the same seam livedata_server drives per
+// DDP call — so the rule can be exercised without waiting out an interval.
+interface RateLimiterInput {
+  type: string;
+  name: string;
+  userId: string | null;
+  connectionId: string;
+  clientAddress: string;
+}
+const limiter = DDPRateLimiter as unknown as {
+  _increment: (input: RateLimiterInput) => void;
+  _check: (input: RateLimiterInput) => { allowed: boolean };
+};
 
 // A valid registration payload shared across the insert-validation specs.
 function validRegistration(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -119,6 +135,74 @@ describe('registrations.insert — server-side id-range & age validation (#260)'
     );
     const leaked = await RegistrationsCollection.findOneAsync({ name: '__test_reg_leak' });
     assert.strictEqual(leaked, undefined, 'A rejected insert must not persist');
+  });
+});
+
+describe('registrations.insert — anonymous write surface', () => {
+  // The public application form is the only unauthenticated mutation, so the
+  // payload it accepts and the budget it gets are part of the contract.
+  const names = ['__test_reg_allowlist', '__test_reg_extra', '__test_reg_chosen_id', '__test_reg_full'];
+
+  after(async () => {
+    await RegistrationsCollection.removeAsync({ name: { $in: names } });
+    await cleanupFixtures([RegistrationsCollection]);
+  });
+
+  it('accepts the full payload the public form sends', async () => {
+    const id = (await callAs(
+      null,
+      'registrations.insert',
+      validRegistration({
+        id: 3001,
+        name: names[3],
+        discoveryType: null,
+        discoveryTypeDetails: 'A friend',
+        steamProfileLink: 'https://steamcommunity.com/id/example',
+        discordTag: 'example',
+        description: 'Hello',
+      })
+    )) as string;
+    const doc = await RegistrationsCollection.findOneAsync(id);
+    assert.ok(doc, 'The form payload must still be accepted');
+    assert.strictEqual(doc.discordTag, 'example');
+  });
+
+  it('rejects a payload field the form does not send', async () => {
+    await assertRejectsWithCode(
+      () => callAs(null, 'registrations.insert', validRegistration({ id: 3002, name: names[1], roleId: 'admin' })),
+      'invalid-field'
+    );
+    const leaked = await RegistrationsCollection.findOneAsync({ name: names[1] });
+    assert.strictEqual(leaked, undefined, 'A rejected insert must not persist');
+  });
+
+  it('does not honour a client-supplied _id', async () => {
+    const chosen = '__test_reg_client_chosen_id';
+    const id = (await callAs(null, 'registrations.insert', validRegistration({ _id: chosen, id: 3003, name: names[2] }))) as string;
+    assert.notStrictEqual(id, chosen, 'The server must generate the document id');
+    const doc = await RegistrationsCollection.findOneAsync(chosen);
+    assert.strictEqual(doc, undefined, 'A client-chosen _id must not be used');
+    await RegistrationsCollection.removeAsync(id);
+  });
+
+  it('is rate limited per client address', () => {
+    // Behavioural check against the limiter's own counters (no waiting): the
+    // configured budget is spendable, the next attempt is refused.
+    const input = {
+      type: 'method',
+      name: 'registrations.insert',
+      userId: null,
+      connectionId: '__test_reg_conn',
+      // Documentation-only address (RFC 5737) so this bucket is ours alone.
+      clientAddress: '203.0.113.7',
+    };
+    const budget = RATE_LIMITS.registrations.insert.count;
+    for (let attempt = 0; attempt < budget; attempt += 1) {
+      limiter._increment(input);
+      assert.strictEqual(limiter._check(input).allowed, true, `attempt ${attempt + 1} of ${budget} must be allowed`);
+    }
+    limiter._increment(input);
+    assert.strictEqual(limiter._check(input).allowed, false, 'the attempt after the budget must be refused');
   });
 });
 

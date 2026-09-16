@@ -256,12 +256,15 @@ if (Meteor.isServer) {
       const response = await QuestionnaireResponsesCollection.findOneAsync(responseId);
       if (!response) throw new Meteor.Error(404, 'Response not found');
 
-      if (response.respondentId !== this.userId) {
-        throw questionnaireError('questionnaire-response-not-own');
-      }
-
+      // Anonymous first: an anonymous response has no respondentId, so the
+      // ownership check below can never match it and would otherwise claim the
+      // response belongs to someone else.
       if (!response.respondentId) {
         throw questionnaireError('questionnaire-response-anonymous');
+      }
+
+      if (response.respondentId !== this.userId) {
+        throw questionnaireError('questionnaire-response-not-own');
       }
 
       await QuestionnaireResponsesCollection.removeAsync(responseId);

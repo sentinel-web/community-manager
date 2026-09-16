@@ -62,9 +62,19 @@ const ConfirmModal = ({ open, setOpen, record, onCreated }: ConfirmModalProps) =
       return;
     }
 
+    // Validation runs outside the try: antd rejects with a ValidateErrorEntity
+    // whose `values` carry the generated password, and the form already shows
+    // the field errors, so it must never reach the method-error handler below.
+    let values: CredentialsFormValues;
     try {
-      const values = await form.validateFields();
-      const { username, password } = values || {};
+      values = await form.validateFields();
+    } catch {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { username, password } = values;
       const { name, id, age, discoveryType, steamProfileLink, discordTag, description } = record || {};
       const payload = {
         username,

@@ -1,6 +1,8 @@
+import { DDPRateLimiter } from 'meteor/ddp-rate-limiter';
 import { Meteor } from 'meteor/meteor';
 import MembersCollection from '../../imports/api/collections/members.collection';
 import RegistrationsCollection from '../../imports/api/collections/registrations.collection';
+import { RATE_LIMITS } from '../config';
 import { validateNumber } from '../main';
 
 if (Meteor.isServer) {
@@ -43,4 +45,17 @@ if (Meteor.isServer) {
       return !(matchingMembers || matchingRegistrations);
     },
   });
+
+  // `registrations.insert` is the one mutation the app exposes without a login
+  // (the public application form), so it gets a per-client-address budget.
+  // Limits are configurable through Meteor.settings — see server/config.ts.
+  DDPRateLimiter.addRule(
+    {
+      type: 'method',
+      name: 'registrations.insert',
+      clientAddress: () => true,
+    },
+    RATE_LIMITS.registrations.insert.count,
+    RATE_LIMITS.registrations.insert.intervalMs,
+  );
 }

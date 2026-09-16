@@ -1,5 +1,5 @@
 import assert from 'node:assert';
-import { generatePassword, MIN_GENERATED_PASSWORD_LENGTH, usernameFromName } from '../../imports/helpers/memberCredentials';
+import { generatePassword, MAX_GENERATED_PASSWORD_LENGTH, MIN_GENERATED_PASSWORD_LENGTH, usernameFromName } from '../../imports/helpers/memberCredentials';
 
 describe('usernameFromName', () => {
   it('trims surrounding whitespace', () => {
@@ -31,8 +31,13 @@ describe('generatePassword', () => {
     assert.strictEqual(generatePassword(Number.NaN).length, MIN_GENERATED_PASSWORD_LENGTH);
   });
 
+  it('clamps an absurd requested length', () => {
+    assert.strictEqual(generatePassword(10000).length, MAX_GENERATED_PASSWORD_LENGTH);
+    assert.strictEqual(generatePassword(Number.POSITIVE_INFINITY).length, MIN_GENERATED_PASSWORD_LENGTH);
+  });
+
   it('uses only unambiguous characters', () => {
-    const password = generatePassword(200);
+    const password = generatePassword(MAX_GENERATED_PASSWORD_LENGTH);
     assert.doesNotMatch(password, /[0O1lI\s]/);
   });
 

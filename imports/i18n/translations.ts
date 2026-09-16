@@ -525,7 +525,7 @@ export const translations = {
   "registrations.memberCreated": { en: "Member created", de: "Mitglied erstellt", fr: "Membre créé" },
   "registrations.passwordCopied": { en: "Password copied to the clipboard", de: "Passwort in die Zwischenablage kopiert", fr: "Mot de passe copié dans le presse-papiers" },
   "registrations.selectUsernamePassword": { en: "Please select a username and a password", de: "Bitte wählen Sie einen Benutzernamen und ein Passwort", fr: "Veuillez choisir un nom d'utilisateur et un mot de passe" },
-  "registrations.submittedAt": { en: "Submitted at", de: "Eingegangen am", fr: "Soumise le" },
+  "registrations.submittedAt": { en: "Submitted At", de: "Eingegangen am", fr: "Soumise le" },
   "registrations.title": { en: "Registrations", de: "Bewerbungen", fr: "Inscriptions" },
   "richText.bold": { en: "Bold", de: "Fett", fr: "Gras" },
   "richText.bulletList": { en: "Bullet list", de: "Aufzählung", fr: "Liste à puces" },

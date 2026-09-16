@@ -47,10 +47,10 @@ export default function App() {
   const [navigationValue, setNavigationValue] = useState<string>(getNavigationValue);
   const { language } = useLanguage();
 
-  useEffect(() => {
-    // antd date pickers format through the global dayjs locale.
-    dayjs.locale(language);
-  }, [language]);
+  // antd date pickers and the calendar format through the global dayjs locale.
+  // Set during render, not in an effect: an effect runs after the first paint,
+  // which would show English dates for a frame after every reload.
+  if (dayjs.locale() !== language) dayjs.locale(language);
 
   useEffect(() => {
     if (!communityColor) return;
