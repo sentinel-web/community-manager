@@ -17,6 +17,8 @@ describe('attendances.pointsSummary (#363, #366)', () => {
   let squadViewerId: string;
   let memberId: string;
   let otherSquadMemberId: string;
+  let edgeTypeMemberId: string;
+  let noAttendanceMemberId: string;
 
   before(async () => {
     const [adminRoleId, noEventsRoleId, eventsReadRoleId] = await Promise.all([
@@ -24,12 +26,14 @@ describe('attendances.pointsSummary (#363, #366)', () => {
       createTestRole({ events: { read: false, create: false, update: false, delete: false } }),
       createTestRole({ events: { read: true, create: false, update: false, delete: false } }),
     ]);
-    [adminUserId, noEventsReadUserId, squadViewerId, memberId, otherSquadMemberId] = await Promise.all([
+    [adminUserId, noEventsReadUserId, squadViewerId, memberId, otherSquadMemberId, edgeTypeMemberId, noAttendanceMemberId] = await Promise.all([
       createTestUser({ roleId: adminRoleId }),
       createTestUser({ roleId: noEventsRoleId }),
       createTestUser({ roleId: eventsReadRoleId, profile: { squadId: 'test_squad_a' } }),
       createTestUser({ profile: { squadId: 'test_squad_a', staticAttendancePoints: 5, staticInactivityPoints: 2 } }),
       createTestUser({ profile: { squadId: 'test_squad_b' } }),
+      createTestUser({ profile: { squadId: 'test_squad_a' } }),
+      createTestUser({ profile: { squadId: 'test_squad_a', staticAttendancePoints: 3, staticInactivityPoints: 1 } }),
     ]);
 
     const [countingTypeId, excludedTypeId] = await Promise.all([
@@ -43,12 +47,25 @@ describe('attendances.pointsSummary (#363, #366)', () => {
       createTestDoc(EventsCollection, { name: 'Social', eventType: excludedTypeId }),
       createTestDoc(EventsCollection, { name: 'Cancelled', eventType: countingTypeId }),
     ]);
+    // `countsForInactivity` is unset = true, so a no-show only escapes an
+    // inactivity point when its event type explicitly opts out. An event with no
+    // event type at all, or one whose event type has since been deleted, must
+    // still cost an inactivity point.
+    const danglingTypeId = await createTestDoc(EventTypesCollection, { name: 'Deleted type', countsForInactivity: false });
+    const [typelessOp, danglingTypeOp] = await Promise.all([
+      createTestDoc(EventsCollection, { name: 'Typeless op' }),
+      createTestDoc(EventsCollection, { name: 'Dangling type op', eventType: danglingTypeId }),
+    ]);
+    await EventTypesCollection.removeAsync({ _id: danglingTypeId });
+
     await Promise.all([
       createTestDoc(AttendancesCollection, { eventId: opA, [memberId]: 1, [otherSquadMemberId]: -1 }),
       createTestDoc(AttendancesCollection, { eventId: opB, [memberId]: -1 }),
       createTestDoc(AttendancesCollection, { eventId: opC, [memberId]: 2 }),
       createTestDoc(AttendancesCollection, { eventId: social, [memberId]: -1 }),
       createTestDoc(AttendancesCollection, { eventId: cancelled, [memberId]: -2 }),
+      createTestDoc(AttendancesCollection, { eventId: typelessOp, [edgeTypeMemberId]: -1 }),
+      createTestDoc(AttendancesCollection, { eventId: danglingTypeOp, [edgeTypeMemberId]: -1 }),
     ]);
   });
 
@@ -62,6 +79,11 @@ describe('attendances.pointsSummary (#363, #366)', () => {
 
   it('rejects callers without events.read permission with 403', async () => {
     await assertRejectsWithCode(() => callAs(noEventsReadUserId, 'attendances.pointsSummary', [memberId]), 403);
+  });
+
+  it('answers an unauthorized caller with 403 even when the argument is also invalid', async () => {
+    const tooMany = Array.from({ length: 1001 }, (_, i) => `test_member_${i}`);
+    await assertRejectsWithCode(() => callAs(noEventsReadUserId, 'attendances.pointsSummary', tooMany), 403);
   });
 
   it('rejects a non-array argument', async () => {
@@ -79,6 +101,16 @@ describe('attendances.pointsSummary (#363, #366)', () => {
     // static 2 + no-show at Op B 1 (the Social no-show is excluded) = 3
     assert.deepStrictEqual(summary[memberId], { attendancePoints: 5, inactivityPoints: 3 });
     assert.deepStrictEqual(summary[otherSquadMemberId], { attendancePoints: -1, inactivityPoints: 1 });
+  });
+
+  it('still charges an inactivity point for a no-show at an event with no event type or a deleted one', async () => {
+    const summary = (await callAs(adminUserId, 'attendances.pointsSummary', [edgeTypeMemberId])) as Summary;
+    assert.deepStrictEqual(summary[edgeTypeMemberId], { attendancePoints: -2, inactivityPoints: 2 });
+  });
+
+  it('returns the static points of an in-scope member with no attendance documents', async () => {
+    const summary = (await callAs(adminUserId, 'attendances.pointsSummary', [noAttendanceMemberId])) as Summary;
+    assert.deepStrictEqual(summary[noAttendanceMemberId], { attendancePoints: 3, inactivityPoints: 1 });
   });
 
   it('omits unknown member ids', async () => {

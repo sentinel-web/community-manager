@@ -1,5 +1,5 @@
 import { EditFilled, SaveFilled } from '@ant-design/icons';
-import { App, Button, Col, Row, Select, Tag } from 'antd';
+import { App, Button, Col, Row, Select, Tag, Tooltip } from 'antd';
 import dayjs from 'dayjs';
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
@@ -119,7 +119,24 @@ interface AttendanceRow {
   [eventId: string]: AttendanceStatus | string | number | null | undefined;
 }
 
+// Rows whose totals have not arrived yet render '-'. Sorting them as if they
+// were 0 interleaves them with genuine zeros, so keep them as one group at the
+// end of the ascending order instead.
+function comparePoints(a: number | null, b: number | null): number {
+  if (a === null || b === null) return a === b ? 0 : a === null ? 1 : -1;
+  return a - b;
+}
+
 function transformEventsIntoColumns(events: EventDoc[], memberNameMap: Map<string, string>, t: TranslateFn): ColumnsType<AttendanceRow> {
+  // The IP and attendance-point columns are the members' all-time totals from
+  // the server (#363); every remaining column is one event of the selected
+  // range. The tooltip spells that difference out — it was the exact confusion
+  // #363 was raised about.
+  const allTimeTitle = (label: string) => (
+    <Tooltip title={t('events.pointsAllTimeHint')}>
+      <span>{label}</span>
+    </Tooltip>
+  );
   const columns: ColumnsType<AttendanceRow> = [
     {
       title: t('common.name'),
@@ -129,19 +146,19 @@ function transformEventsIntoColumns(events: EventDoc[], memberNameMap: Map<strin
       render: (memberId: string) => <MemberName memberId={memberId} memberNameMap={memberNameMap} />,
     },
     {
-      title: t('events.inactivityPoints'),
+      title: allTimeTitle(t('events.inactivityPoints')),
       dataIndex: 'ip',
       key: 'ip',
       ellipsis: true,
-      sorter: (a, b) => (a.ip ?? 0) - (b.ip ?? 0),
+      sorter: (a, b) => comparePoints(a.ip, b.ip),
       render: (ip: number | null) => ip ?? '-',
     },
     {
-      title: t('events.attendancePoints'),
+      title: allTimeTitle(t('events.attendancePoints')),
       dataIndex: 'points',
       key: 'points',
       ellipsis: true,
-      sorter: (a, b) => (a.points ?? 0) - (b.points ?? 0),
+      sorter: (a, b) => comparePoints(a.points, b.points),
       render: (points: number | null) => points ?? '-',
     },
   ];
@@ -207,13 +224,35 @@ export default function EventAttendance({ datasource }: EventAttendanceProps) {
 
   // The grid only loads the events in view, so IP/attendance points are the
   // members' true all-time totals from the server — the same calculation the
-  // profile uses (#363). Refetched whenever members (static points) or the
-  // loaded attendances change.
+  // profile uses (#363).
+  //
+  // The refetch keys off narrow digests rather than the `useFind` arrays: those
+  // get a fresh identity on any change to any member or attendance document, so
+  // depending on them refires the method call for edits that cannot move a
+  // total (a renamed member, an unrelated profile field). `notify: false`
+  // because a background refetch that fails must not raise a notification per
+  // attempt — the cells simply keep rendering '-'.
   const memberIds = useMemo(() => members.map(member => member._id), [members]);
-  const { call: fetchPointsSummary } = useMethod<Record<string, MemberPoints>>('attendances.pointsSummary');
+  const memberPointsKey = useMemo(
+    () => members.map(m => `${m._id}#${m.profile?.staticAttendancePoints ?? ''}#${m.profile?.staticInactivityPoints ?? ''}`).join('|'),
+    [members]
+  );
+  const attendanceRevision = useMemo(
+    () =>
+      attendances
+        .map(attendance =>
+          Object.entries(attendance)
+            .filter(([key]) => key !== '_id')
+            .map(([key, value]) => `${key}:${String(value)}`)
+            .join(',')
+        )
+        .join('|'),
+    [attendances]
+  );
+  const { call: fetchPointsSummary } = useMethod<Record<string, MemberPoints>>('attendances.pointsSummary', { notify: false });
   const [pointsByMember, setPointsByMember] = useState<Record<string, MemberPoints>>({});
   useEffect(() => {
-    if (!memberIds.length) return;
+    if (!memberPointsKey) return;
     let stale = false;
     fetchPointsSummary(memberIds).then(result => {
       if (!stale && result.ok) setPointsByMember(result.data);
@@ -221,7 +260,10 @@ export default function EventAttendance({ datasource }: EventAttendanceProps) {
     return () => {
       stale = true;
     };
-  }, [memberIds, attendances, fetchPointsSummary]);
+    // memberIds is intentionally omitted: memberPointsKey already encodes the
+    // member set and the static points the totals depend on.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memberPointsKey, attendanceRevision, fetchPointsSummary]);
 
   const columns = useMemo(() => transformEventsIntoColumns(datasource, memberNameMap, t), [datasource, memberNameMap, t]);
   const rows = useMemo(() => {
