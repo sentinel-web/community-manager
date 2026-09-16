@@ -69,12 +69,15 @@ Every generated CRUD method routes through `runMutation` (`server/mutation-pipel
 | Fallback flag | if denied and `fallbackFlag` set: `checkSpecialPermission(userId, flag)` | falls through to override |
 | Permission override | if still denied and `permissionOverride` set: `await permissionOverride(ctx, args)` | `.denied` log, `Meteor.Error(403)` |
 | Validate | `descriptor.validate(args)` | `.denied` log, re-throws the validation error |
+| Authorize | `descriptor.authorize(ctx, args)` — identity-aware gate that can only **tighten** | `.denied` log, re-throws (a `403`) |
 | Body | runs the actual mutation | error propagates **untouched** (no `.denied`) |
 
 `bodyStarted` flips true only after every gate passes, so telemetry can classify a pre-body rejection as `denied` vs. a body throw as `error`. The four special flags are wired in two ways:
 
 - **`fallbackFlag`** (unconditional) — comes from `registryEntry.fallback`. `events.create` re-admits on `canCreateEvents`; `tasks.{create,update}` re-admit on `canManageTasks`. Set in `crud.lib.ts` (`fallbackFlag: fallback?.create` / `fallback?.update`).
 - **`permissionOverride`** (conditional callback) — used by `members.update` so a caller lacking update permission may still edit `profile.specializationIds` *alone* if they hold `canManageSpecializations` (`server/apis/members.server.ts:180`). Kept as a callback per the Rule of Three (one site today).
+
+`authorize` is the mirror image: `permissionOverride` re-admits a denied call, `authorize` denies an admitted one. It exists for writes whose permission module is not fine-grained enough — a field that the collection's write permission alone must not be enough to set. `crud.lib.ts` wires it from `PRIVILEGED_FIELD_GUARDS`, which today holds one entry: **only a caller whose own role has `roles === true` may write `roles: true`** on `roles.insert`/`roles.update`. Without it, any role with `roles.update` could set the super-admin grant on its own role and take over the instance (the role cache is cleared on write, so it takes effect immediately). The "Administrator" switch in `RolesForm` is UI convenience; this is the control. Covered by `tests/server/rolesPrivilegeEscalation.test.ts`.
 
 ### Denial auditing
 
@@ -102,7 +105,7 @@ The client never reads its own role through the gated `roles` publication: `role
 | `canCreateEvents` | registry `fallback.create` on `events` | create events without `events.create` (Zeus role) |
 | `canManageTasks` | registry `fallback.{create,update}` on `tasks` | create/update tasks without `tasks` perms (Developer role) |
 | `canManageSpecializations` | `members.update` `permissionOverride` | edit only `profile.specializationIds` without `members.update` |
-| `canManageRecruits` | nothing — not checked server-side | no effect; kept on the `Role` type for stored documents but hidden from `RolesForm` until a behaviour is defined |
+| `canManageRecruits` | nothing — not checked server-side | no effect; kept on the `Role` type so stored documents and backups round-trip, and rendered **disabled** in `RolesForm` (labelled "grants no permissions") rather than hidden, until a behaviour is defined |
 
 The three enforced flags are edited in `RolesForm.tsx` under "Special Permissions" alongside the boolean and CRUD matrices. Client-side, `getModulePermissions` applies the same `fallback` flags so e.g. a Zeus role sees the event create button.
 

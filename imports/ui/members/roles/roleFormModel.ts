@@ -7,10 +7,17 @@ import type { CrudPermission, Role } from '/imports/api/types/role';
 // `roles` is overloaded on a Role document: `roles: true` is the super-admin
 // grant (checkPermission short-circuits on it), while `roles: { read, ... }` is
 // the ordinary CRUD permission on the roles collection. The form therefore
-// exposes the admin grant as its own switch (`isAdmin`) and never converts
-// `roles: true` into a CRUD object — doing so silently demoted admins (#354).
+// exposes the admin grant as its own switch and never converts `roles: true`
+// into a CRUD object — doing so silently demoted admins (#354).
+//
+// Layering: these transforms only decide what THIS FORM submits. They are not a
+// security control — a crafted DDP call bypasses them entirely. Whether a
+// caller may set `roles: true` at all is enforced server-side, in
+// PRIVILEGED_FIELD_GUARDS (server/crud.lib.ts).
 
-export const ADMIN_FIELD = 'isAdmin';
+// Form-only key: double-underscored so it can never collide with a real Role
+// field, and stripped from the payload by buildRolePayload.
+export const ADMIN_FIELD = '__isAdmin';
 
 // Modules that use CRUD permissions - label keys reference navigation translations.
 // `as const satisfies` preserves the literal union of labelKey values so t(labelKey)
@@ -52,7 +59,7 @@ export function normalizeCrudPermission(value: unknown): CrudPermission {
 }
 
 /**
- * Stored role -> form initial values. `roles: true` becomes `isAdmin: true`
+ * Stored role -> form initial values. `roles: true` turns the admin switch on
  * (the roles-collection checkboxes start empty so turning the switch off never
  * leaves an implicit grant behind); every CRUD module is normalized.
  */
@@ -67,8 +74,9 @@ export function prepareRoleForForm(model: Partial<Role> | null | undefined): Rec
 }
 
 /**
- * Form values -> wire payload. The admin switch is the only way to produce
- * `roles: true`; with it off, `roles` is always a CRUD object.
+ * Form values -> wire payload. Within this form the admin switch is the only
+ * thing that produces `roles: true`; with it off, `roles` is always a CRUD
+ * object. The server decides whether the caller may send `roles: true` at all.
  */
 export function buildRolePayload(values: Record<string, unknown>): Record<string, unknown> {
   const { [ADMIN_FIELD]: isAdmin, ...rest } = values;

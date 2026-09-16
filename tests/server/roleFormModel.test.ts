@@ -4,6 +4,16 @@ import type { Role } from '/imports/api/types';
 
 // RolesForm model transforms (#354): saving the Admin role (`roles: true`)
 // must never downgrade it to a CRUD object.
+//
+// These cover a client module (imports/ui/members/roles/roleFormModel.ts), but
+// live in the server suite because the transforms are pure and DOM-free: the
+// server suite runs them once per `meteor test` without a browser driver, while
+// tests/client is reserved for anything that needs React or a DOM.
+//
+// Scope: what the FORM submits, nothing more. These are not privilege-escalation
+// guards — a crafted DDP call never runs this code. The rule that only an admin
+// may set `roles: true` is server-side and covered by
+// tests/server/rolesPrivilegeEscalation.test.ts.
 
 const NONE = { read: false, create: false, update: false, delete: false };
 const FULL = { read: true, create: true, update: true, delete: true };

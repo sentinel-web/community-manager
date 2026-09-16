@@ -7,6 +7,7 @@ import {
   clearRoleCache,
   assertSafeSelector,
   checkPermission,
+  getUserRole,
 } from './main';
 import { createLog } from './apis/logs.server';
 import { runMutation, snapshotTouchedFields } from './mutation-pipeline';
@@ -159,6 +160,30 @@ const INSERT_VALIDATORS: Partial<Record<CrudCollectionName, (payload: Record<str
 // timestamp can never be forged or rewritten through a crafted DDP call.
 const SERVER_CREATED_AT: ReadonlySet<CrudCollectionName> = new Set<CrudCollectionName>(['registrations', 'tasks']);
 
+// Per-collection guards for fields a caller must not be able to write merely
+// because they hold the collection's write permission. Unlike INSERT_VALIDATORS
+// (which only inspects the payload's shape) these need to know WHO is calling,
+// so they run through runMutation's `authorize` hook — on both `.insert` and
+// `.update`, and their denials are audited like any other pre-body failure.
+//
+// roles: `roles` is overloaded on a Role document. `roles: { read, … }` is the
+// ordinary CRUD permission on the roles collection, but `roles: true` is the
+// super-admin grant that checkPermission short-circuits on. Holding
+// `roles.create`/`roles.update` must therefore not be enough to mint it — only
+// a caller who is already an admin may set it. (The RolesForm admin switch is
+// UI convenience; this is the control.)
+const PRIVILEGED_FIELD_GUARDS: Partial<
+  Record<CrudCollectionName, (userId: string | null, payload: Record<string, unknown>) => Promise<void>>
+> = {
+  roles: async (userId, payload) => {
+    if (payload.roles !== true) return;
+    const callerRole = await getUserRole(userId);
+    if (callerRole?.roles !== true) {
+      throw new Meteor.Error(403, 'Permission denied. Administrator access is required to grant administrator permissions.');
+    }
+  },
+};
+
 const DEFAULT_PUBLISH_LIMIT = 100;
 const MAX_PUBLISH_LIMIT = 1000;
 
@@ -207,6 +232,7 @@ function createCollectionMethods(collection: CrudCollectionName): void {
       const fallback = registryEntry.fallback;
       const allowsAnonymousInsert = registryEntry.allowsAnonymous?.insert === true;
       const auditAllowed = collection !== 'logs';
+      const privilegedFieldGuard = PRIVILEGED_FIELD_GUARDS[collection];
 
       Meteor.methods({
         [`${collection}.read`]: async function (filter: Record<string, unknown> = {}, options: Record<string, unknown> = {}) {
@@ -241,6 +267,7 @@ function createCollectionMethods(collection: CrudCollectionName): void {
                 validateObject(p, false);
                 INSERT_VALIDATORS[collection]?.(p);
               },
+              authorize: privilegedFieldGuard ? async (ctx, [p]) => privilegedFieldGuard(ctx.userId, p) : undefined,
             },
             [payload] as const,
             async ([p]) => {
@@ -268,6 +295,7 @@ function createCollectionMethods(collection: CrudCollectionName): void {
                 validateString(targetId, false);
                 validateObject(changes, false);
               },
+              authorize: privilegedFieldGuard ? async (ctx, [, changes]) => privilegedFieldGuard(ctx.userId, changes) : undefined,
               // One indexed _id read so the audit log captures pre-update values
               // for the touched fields, enabling a before→after diff view.
               captureBefore: async ([targetId, changes]) => {
