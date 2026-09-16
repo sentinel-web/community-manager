@@ -75,6 +75,31 @@ describe('questionnaireResponses.* — stable error codes (#364)', () => {
     );
   });
 
+  it('rejects revoking an anonymous response with questionnaire-response-anonymous', async () => {
+    // An anonymous response has no respondentId, so the ownership check can
+    // never match it — the anonymous branch must be reached first, otherwise
+    // the user is told the response belongs to someone else.
+    const id = await createQuestionnaire({ allowAnonymous: true });
+    const responseId = await createTestDoc(QuestionnaireResponsesCollection, {
+      questionnaireId: id,
+      respondentId: null,
+      answers: [],
+      submittedAt: new Date(),
+    });
+    await assertRejectsWithCode(() => callAs(userId, 'questionnaireResponses.revoke', responseId), 'questionnaire-response-anonymous');
+  });
+
+  it('rejects revoking someone else’s response with questionnaire-response-not-own', async () => {
+    const id = await createQuestionnaire();
+    const responseId = await createTestDoc(QuestionnaireResponsesCollection, {
+      questionnaireId: id,
+      respondentId: `${userId}_other`,
+      answers: [],
+      submittedAt: new Date(),
+    });
+    await assertRejectsWithCode(() => callAs(userId, 'questionnaireResponses.revoke', responseId), 'questionnaire-response-not-own');
+  });
+
   it('returns a null respondentName for anonymous responses (translated client-side)', async () => {
     const id = await createQuestionnaire({ allowAnonymous: true });
     const responseId = await createTestDoc(QuestionnaireResponsesCollection, {

@@ -8,6 +8,9 @@
       "create": { "count": 5, "intervalMs": 60000 },
       "restore": { "count": 2, "intervalMs": 60000 },
       "createQuick": { "count": 5, "intervalMs": 60000 }
+    },
+    "registrations": {
+      "insert": { "count": 5, "intervalMs": 60000 }
     }
   },
   "cache": {

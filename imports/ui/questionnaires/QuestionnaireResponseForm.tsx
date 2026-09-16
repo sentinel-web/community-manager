@@ -1,7 +1,7 @@
 import { App, Form, Input, InputNumber, Rate, Select, Typography } from 'antd';
 import React, { useCallback } from 'react';
 import type { Question, Questionnaire } from '../../api/types/questionnaire';
-import { useTranslation } from '../../i18n/LanguageContext';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { describeMethodError } from '../../i18n/methodErrors';
 import { useDrawerFrame } from '../drawer-stack';
 import useMethod from '../hooks/useMethod';
@@ -14,7 +14,7 @@ type ResponseFormValues = Record<string, string | number | string[] | undefined>
 const QuestionnaireResponseForm = () => {
   const { model, resolve, cancel } = useDrawerFrame<true, Questionnaire>();
   const questionnaire = (model || {}) as unknown as Questionnaire;
-  const { t } = useTranslation();
+  const { t, language } = useLanguage();
   const [form] = Form.useForm<ResponseFormValues>();
   const { notification } = App.useApp();
 
@@ -34,14 +34,14 @@ const QuestionnaireResponseForm = () => {
 
       const res = await call(questionnaire._id, answers);
       if (!res.ok) {
-        notification.error(describeMethodError(res.error, t));
+        notification.error(describeMethodError(res.error, { t, language }));
         return;
       }
       // Resolve with a truthy sentinel so the opener can detect "submitted"
       // and refresh its list — undefined would mean "cancelled".
       resolve(true);
     },
-    [resolve, questionnaire, call, notification, t]
+    [resolve, questionnaire, call, notification, t, language]
   );
 
   const renderQuestionField = (question: Question, index: number) => {

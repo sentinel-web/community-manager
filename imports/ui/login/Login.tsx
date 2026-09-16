@@ -54,7 +54,7 @@ export default function Login() {
         </Form.Item>
         <Row gutter={[16, 16]} align="middle">
           <Col xs={24} md={12}>
-            <Button onClick={handleRegister}>{t('auth.register')}</Button>
+            <Button onClick={() => void handleRegister()}>{t('auth.register')}</Button>
           </Col>
           <Col xs={24} md={12}>
             <Button type="primary" htmlType="submit">

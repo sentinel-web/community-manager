@@ -121,6 +121,7 @@ Components that render inside a view but never mount standalone.
 
 **Registration**
 - `registration/RegistrationExtra.tsx` — registration row-expand detail + confirm modal
+- `login/Login.tsx#registrationReceived` — success `Result` modal shown after the public sign-up drawer resolves with a new registration id
 
 **Logs**
 - `logs/LogDiffView.tsx` — before/after diff of a log payload

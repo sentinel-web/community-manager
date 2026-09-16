@@ -1,14 +1,14 @@
 import assert from 'node:assert';
 import { Meteor } from 'meteor/meteor';
-import { getTranslation, type Locale, type Translator } from '../../imports/i18n';
-import { describeMethodError, translateErrorCode } from '../../imports/i18n/methodErrors';
+import { getTranslation, type Locale } from '../../imports/i18n';
+import { describeMethodError, translateErrorCode, type Localizer } from '../../imports/i18n/methodErrors';
 
-function translatorFor(locale: Locale): Translator {
-  return (key, ...args) => getTranslation(key, locale, ...args);
+function localizerFor(language: Locale): Localizer {
+  return { language, t: (key, ...args) => getTranslation(key, language, ...args) };
 }
 
 describe('methodErrors — client translation of stable server error codes (#364)', () => {
-  const de = translatorFor('de');
+  const de = localizerFor('de');
 
   it('translates a known code', () => {
     assert.strictEqual(translateErrorCode('questionnaire-not-active', undefined, de), 'Diese Umfrage ist nicht aktiv');
@@ -18,10 +18,17 @@ describe('methodErrors — client translation of stable server error codes (#364
     assert.strictEqual(translateErrorCode('questionnaire-answer-required', { question: 'Warum?' }, de), 'Die Frage „Warum?“ ist erforderlich');
   });
 
-  it('formats the cooldown date from details', () => {
+  it('formats the cooldown date in the app language, not the host locale', () => {
     const iso = '2030-01-15T12:00:00.000Z';
-    const message = translateErrorCode('questionnaire-response-cooldown', { nextAllowedDate: iso }, translatorFor('en'));
-    assert.strictEqual(message, `You can submit again after ${new Date(iso).toLocaleDateString()}`);
+    const date = new Date(iso);
+    assert.strictEqual(
+      translateErrorCode('questionnaire-response-cooldown', { nextAllowedDate: iso }, de),
+      `Sie können ab dem ${new Intl.DateTimeFormat('de').format(date)} erneut antworten`
+    );
+    assert.strictEqual(
+      translateErrorCode('questionnaire-response-cooldown', { nextAllowedDate: iso }, localizerFor('en')),
+      `You can submit again after ${new Intl.DateTimeFormat('en').format(date)}`
+    );
   });
 
   it('returns null for unknown or non-string codes', () => {

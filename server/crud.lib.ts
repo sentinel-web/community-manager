@@ -111,14 +111,41 @@ const REGISTRATION_ID_MIN = 1000;
 const REGISTRATION_ID_MAX = 9999;
 const REGISTRATION_MIN_AGE = 16;
 
+// The fields the registration form sends, plus the server-owned `createdAt`.
+// `registrations.insert` is reachable without a login, so the payload is
+// constrained to this set instead of being stored as-is.
+const REGISTRATION_INSERT_FIELDS: ReadonlySet<string> = new Set([
+  'age',
+  'createdAt',
+  'description',
+  'discordTag',
+  'discoveryType',
+  'discoveryTypeDetails',
+  'id',
+  'name',
+  'rulesReadAndAccepted',
+  'steamProfileLink',
+]);
+
 // Per-collection insert-only validators, run inside the generic `.insert`
 // validate hook after the shared shape check. Insert-only by design (#260): a
 // crafted DDP insert must respect the same bounds as the form, but pre-existing
 // out-of-range rows stay editable (update is intentionally not gated here).
+// They also normalise the payload the body will insert (it is the same object).
 // Registrations are the lone case today, so this stays a single inline entry
 // rather than a registry field (Rule of Three).
 const INSERT_VALIDATORS: Partial<Record<CrudCollectionName, (payload: Record<string, unknown>) => void>> = {
   registrations: payload => {
+    // Document ids are server-generated: a supplied `_id` is dropped rather
+    // than rejected, so the insert says nothing about what already exists.
+    delete payload._id;
+
+    for (const field of Object.keys(payload)) {
+      if (!REGISTRATION_INSERT_FIELDS.has(field)) {
+        throw new Meteor.Error('invalid-field', 'Registration payload contains an unsupported field');
+      }
+    }
+
     const id = payload.id;
     if (typeof id !== 'number' || !Number.isInteger(id) || id < REGISTRATION_ID_MIN || id > REGISTRATION_ID_MAX) {
       throw new Meteor.Error('invalid-id', `Registration id must be an integer between ${REGISTRATION_ID_MIN} and ${REGISTRATION_ID_MAX}`);

@@ -1,6 +1,4 @@
 import dayjs from 'dayjs';
-import 'dayjs/locale/de';
-import 'dayjs/locale/fr';
 import { useFind, useSubscribe } from 'meteor/react-meteor-data';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Calendar, dayjsLocalizer } from 'react-big-calendar';
@@ -32,11 +30,8 @@ const EventCalendar = ({ datasource, onRangeChange }: EventCalendarProps) => {
   const { t, language } = useLanguage();
   const drawerStack = useDrawerStack();
 
-  // Set dayjs locale based on current language
-  useEffect(() => {
-    dayjs.locale(language);
-  }, [language]);
-
+  // App.tsx owns the global dayjs locale (it is set before the first paint);
+  // the calendar only rebuilds its localizer when the language changes.
   // Create localizer with current locale
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const localizer = useMemo(() => dayjsLocalizer(dayjs), [language]);

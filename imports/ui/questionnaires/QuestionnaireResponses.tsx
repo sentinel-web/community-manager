@@ -1,8 +1,9 @@
 import { App, Empty, Row, Spin, Typography } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Questionnaire } from '../../api/types/questionnaire';
-import { useTranslation } from '../../i18n/LanguageContext';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { describeMethodError, type Localizer } from '../../i18n/methodErrors';
 import { useDrawerFrame, useDrawerStack } from '../drawer-stack';
 import useModulePermissions from '../hooks/useModulePermissions';
 import type { RowClickEvent } from '../section/types';
@@ -20,7 +21,14 @@ export default function QuestionnaireResponses() {
   const drawerStack = useDrawerStack();
   const questionnaire = (model || {}) as unknown as Questionnaire;
   const { notification, message } = App.useApp();
-  const { t } = useTranslation();
+  const { t, language } = useLanguage();
+
+  // Same as MyQuestionnaires: the translator stays out of the fetch deps so a
+  // language switch does not re-run the response query.
+  const i18nRef = useRef<Localizer>({ t, language });
+  useEffect(() => {
+    i18nRef.current = { t, language };
+  }, [t, language]);
 
   const [responses, setResponses] = useState<QuestionnaireResponseRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,10 +43,7 @@ export default function QuestionnaireResponses() {
       const result = await Meteor.callAsync('questionnaireResponses.getForQuestionnaire', questionnaire._id, { limit });
       setResponses(result as QuestionnaireResponseRow[]);
     } catch (error) {
-      notification.error({
-        message: (error as Meteor.Error).error,
-        description: (error as Meteor.Error).message,
-      });
+      notification.error(describeMethodError(error, i18nRef.current));
     } finally {
       setLoading(false);
     }
@@ -68,10 +73,7 @@ export default function QuestionnaireResponses() {
         message.success(response.ignored ? t('questionnaires.responseUnignored') : t('questionnaires.responseIgnored'));
         loadResponses();
       } catch (error) {
-        notification.error({
-          message: (error as Meteor.Error).error,
-          description: (error as Meteor.Error).message,
-        });
+        notification.error(describeMethodError(error, i18nRef.current));
       }
     },
     [message, notification, loadResponses, t]
