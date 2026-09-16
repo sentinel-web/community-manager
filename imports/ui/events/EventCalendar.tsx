@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import { useFind, useSubscribe } from 'meteor/react-meteor-data';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Calendar, dayjsLocalizer } from 'react-big-calendar';
 import type { CalendarEvent, DateRange, View } from 'react-big-calendar';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
