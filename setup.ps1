@@ -80,8 +80,8 @@ function Install-NodeWithNvm {
         Write-Success "nvm-windows is already installed."
     }
 
-    # `nvm install 22` grabs the latest 22.x patch — floating within the major,
-    # mirroring the NodeSource `setup_22.x` line used in setup.sh.
+    # `nvm install 24` grabs the latest 24.x patch — floating within the major,
+    # mirroring the NodeSource `setup_24.x` line used in setup.sh.
     Write-Info "Installing and activating Node.js $NodeVersion..."
     nvm install $NodeVersion
     nvm use $NodeVersion

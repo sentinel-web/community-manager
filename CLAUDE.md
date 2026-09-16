@@ -23,7 +23,7 @@ Test user auto-created in development mode only: `admin` / `admin` (requires `NO
 
 ## Architecture
 
-This is a **Meteor.js 3.4+** full-stack application for managing ArmA III communities, using **React 18** with **Ant Design** and **MongoDB**.
+This is a **Meteor.js 3.5+** full-stack application for managing ArmA III communities, using **React 18** with **Ant Design** and **MongoDB**.
 
 ### Directory Structure
 
@@ -122,7 +122,7 @@ Full index of every navigable view, drawer form, drawer viewer, and embedded wid
 
 ## Deployment
 
-Docker + Traefik (production), Node 22, MongoDB 7. Full env vars and compose notes: [`docs/deployment.md`](docs/deployment.md).
+Docker + Traefik (production), Node 24, MongoDB 7. Full env vars and compose notes: [`docs/deployment.md`](docs/deployment.md).
 
 ## Key Dependencies
 

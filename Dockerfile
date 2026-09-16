@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
 # ---------- Build stage ----------
-FROM geoffreybooth/meteor-base:3.4 AS builder
+FROM geoffreybooth/meteor-base:3.5 AS builder
 
 WORKDIR /app
 
@@ -20,7 +20,7 @@ COPY . .
 RUN meteor build --server-only --directory /built-app
 
 # ---------- Production stage ----------
-FROM node:22-slim AS production
+FROM node:24-slim AS production
 
 RUN apt-get update \
     && apt-get upgrade -y \

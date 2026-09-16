@@ -27,7 +27,7 @@ updates:
         patterns: ["*"]
         update-types: ["minor", "patch"]
     ignore:
-      # engines.node is pinned to 22.x to match Meteor 3.4.1's bundled node.
+      # engines.node is pinned to 24.x to match Meteor 3.5.2's bundled node.
       - dependency-name: "node"
       # Major bumps are opt-in across the board: they need a deliberate migration
       # (react 18->19, rspack 1->2, eslint 9->10 all break the build/tests).

@@ -1,6 +1,6 @@
 # System Documentation
 
-**community-manager** is a Meteor 3.4 + React 18 + Ant Design + MongoDB full-stack
+**community-manager** is a Meteor 3.5 + React 18 + Ant Design + MongoDB full-stack
 application for managing ArmA III communities — members, events, attendance, tasks,
 squads, questionnaires, and the ORBAT org chart, all behind role-based access control.
 
@@ -19,7 +19,7 @@ drill into a subsystem doc for the depth.
 | Language | TypeScript (`strict: true`) |
 | UI | React 18, Ant Design |
 | Transport / reactivity | Meteor methods + DDP pub/sub |
-| Server runtime | Meteor.js 3.4+ on Node 22 |
+| Server runtime | Meteor.js 3.5+ on Node 24 |
 | Database | MongoDB 7 |
 | i18n | Typed in-code translation set (en/de/fr) |
 | Rich text | Tiptap (edit) + sanitize-html (server) / DOMPurify (client) |
