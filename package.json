@@ -53,7 +53,7 @@
     "@eslint/js": "^9.28.0",
     "@eslint/json": "^1.2.0",
     "@eslint/markdown": "^6.5.0",
-    "@meteorjs/rspack": "^2.0.1",
+    "@meteorjs/rspack": "^2.2.0",
     "@playwright/test": "^1.49.0",
     "@rsdoctor/rspack-plugin": "^1.5.7",
     "@rspack/cli": "^1.7.1",
