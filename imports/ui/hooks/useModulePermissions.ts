@@ -12,7 +12,9 @@ import useOwnRole from './useOwnRole';
  * @param moduleOverride explicit permission module, when it differs from the collection's registry module
  */
 export default function useModulePermissions(name: string | undefined, moduleOverride?: string | null): ModulePermissions {
-  const role = useOwnRole();
+  // While the role is still loading `role` is undefined, so every affordance
+  // stays hidden until the answer is known — the safe direction for a UI gate.
+  const { role } = useOwnRole();
   return useMemo(() => {
     if (!name && !moduleOverride) return { ...NO_PERMISSIONS };
     const { module, fallback } = resolvePermissionTarget(name ?? '', moduleOverride);

@@ -162,7 +162,7 @@ export default function Navigation() {
     [setNavigationValue, handleAction]
   );
 
-  const role = useOwnRole();
+  const { role } = useOwnRole();
   const items = useMemo(() => {
     const newItems: NonNullable<MenuProps['items']> = [];
     if (!role) {

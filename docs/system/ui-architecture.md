@@ -101,7 +101,7 @@ const getSquadColumns: ColumnsFactory<Squad> =
 
 A view that is not a table passes `customView` (a render component receiving `{ handleEdit, handleDelete, datasource, setFilter, permissions }`) instead of using the built-in `Table` — e.g. calendar, kanban, orbat.
 
-`getModulePermissions` (`imports/api/permissions/modulePermissions.ts`) and `checkAccess` (`Main.tsx`) and `hasAccess` (`Navigation.tsx:46`) are the role→permission readers — Section/CollectionSelect need the CRUD set, Main/Navigation only the read bit. All read the role via `useOwnRole()`. Pass `permissionModule` when the collection name differs from its permission module (e.g. a sub-collection page), or the wrong module is resolved.
+`getModulePermissions` (`imports/api/permissions/modulePermissions.ts`) and `checkAccess` (`Main.tsx`) and `hasAccess` (`Navigation.tsx:46`) are the role→permission readers — Section/CollectionSelect need the CRUD set, Main/Navigation only the read bit. All read the role via `useOwnRole()`, which returns `{ role, loading }` from the app-wide `OwnRoleProvider`. Pass `permissionModule` when the collection name differs from its permission module (e.g. a sub-collection page), or the wrong module is resolved.
 
 ### DrawerStack — nested entity editing
 
@@ -193,7 +193,8 @@ function SquadsForm() {
 - **`useConfirmClose` predicate only runs on user-initiated close.** `resolve`/`cancel` from inside a form skip it; closing a non-top frame cascades resolutions downward with `undefined`.
 - **No router.** Links must `history.pushState` + `setNavigationValue`; reading `window.location` alone won't re-render. Reachable views must be wired into both `getNavigationValue()` and the `Main.tsx` switch.
 - **`Palette` opens create forms via the URL, not `push`.** It navigates to `/key?action=create`; the target `Section`'s effect picks up the param and opens the drawer once. A view without a `FormComponent` (or without `canCreate`) silently ignores it.
-- **Independent role reads.** `Main`, `Navigation`, `Palette`, each `Section` and `CollectionSelect` call `useOwnRole()` (the `roles.own` publication — never the `roles.read`-gated `roles` one) and recompute permissions; there is no shared permission context. Role changes can lag up to the server-side cache TTL (~1 min).
+- **One shared role subscription.** `OwnRoleProvider` (mounted once at the root of `App`) holds the app's single `roles.own` subscription — never the `roles.read`-gated `roles` one — and publishes `{ role, loading }` on `OwnRoleContext`. `Main`, `Navigation`, `Palette`, every `Section` and every `CollectionSelect` read it via `useOwnRole()` and recompute their own permissions. Do not `useSubscribe('roles.own', …)` from a component: Meteor only de-duplicates *inactive* subscriptions, so per-consumer subscribing costs one DDP subscription and one server-side findOne each (a MemberForm alone mounts ~8 `CollectionSelect`s). Role changes can lag up to the server-side cache TTL (~1 min).
+- **`loading` is not "no permissions".** `useOwnRole()` returns `loading: true` while the user document or the role subscription is in flight. Gate on it before rendering a refusal — `Main` renders the Suspense fallback while loading and only shows the 403 panel once the role is known.
 - **`Switch`/`Checkbox` Form.Items need `valuePropName="checked"`; handle both create (`model = {}`, no `_id`) and update in `toPayload`/`handleFinish`.** (CLAUDE.md → Forms.)
 
 ## See also

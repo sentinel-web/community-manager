@@ -30,7 +30,7 @@ export default function Palette() {
   const { t, language, setLanguage, locales } = useLanguage();
   const { theme, setTheme } = useTheme();
   const { setNavigationValue } = useNavigation();
-  const role = useOwnRole();
+  const { role } = useOwnRole();
 
   const [query, setQuery] = useState('');
   const [highlighted, setHighlighted] = useState(0);
