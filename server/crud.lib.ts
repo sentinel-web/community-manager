@@ -9,6 +9,7 @@ import {
   checkPermission,
 } from './main';
 import { createLog } from './apis/logs.server';
+import { getEventVisibilityFilter } from './event-visibility';
 import { runMutation, snapshotTouchedFields } from './mutation-pipeline';
 import { COLLECTION_REGISTRY } from './collection-registry';
 import {
@@ -128,6 +129,30 @@ const INSERT_VALIDATORS: Partial<Record<CrudCollectionName, (payload: Record<str
   },
 };
 
+// Per-collection read scopes: an extra selector ANDed onto the caller's filter
+// on every generic read (`.read`, `.count`, `.options`). Without it a rule the
+// collection's publication enforces can be sidestepped simply by calling the
+// method with a known document id.
+//
+// Events are the only collection needing one today: they are method-only (see
+// `methodOnlyCollections` in server/main.ts) and their hand-written publication
+// hides private events, so the generated reads must hide them too. Kept as a
+// one-entry map rather than a registry field per the Rule of Three.
+const READ_SCOPES: Partial<Record<CrudCollectionName, (userId: string | null) => Promise<Record<string, unknown> | null>>> = {
+  events: getEventVisibilityFilter,
+};
+
+async function applyReadScope(
+  collection: CrudCollectionName,
+  userId: string | null,
+  filter: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const scope = READ_SCOPES[collection];
+  if (!scope) return filter;
+  const extra = await scope(userId);
+  return extra ? { $and: [filter, extra] } : filter;
+}
+
 const { DEFAULT: DEFAULT_PUBLISH_LIMIT, MAX: MAX_PUBLISH_LIMIT } = PUBLISH_LIMITS;
 
 function createCollectionPublish(collection: CrudCollectionName): void {
@@ -178,8 +203,9 @@ function createCollectionMethods(collection: CrudCollectionName): void {
 
       Meteor.methods({
         [`${collection}.read`]: async function (filter: Record<string, unknown> = {}, options: Record<string, unknown> = {}) {
+          const callerUserId = this.userId;
           return runMutation(
-            { userId: this.userId },
+            { userId: callerUserId },
             {
               collection,
               operation: 'read',
@@ -191,7 +217,7 @@ function createCollectionMethods(collection: CrudCollectionName): void {
               },
             },
             [filter, options] as const,
-            async ([f, o]) => Collection.find(f, o).fetchAsync(),
+            async ([f, o]) => Collection.find(await applyReadScope(collection, callerUserId, f), o).fetchAsync(),
           );
         },
         [`${collection}.insert`]: async function (payload: Record<string, unknown> = {}) {
@@ -338,8 +364,9 @@ function createCollectionMethods(collection: CrudCollectionName): void {
           );
         },
         [`${collection}.count`]: async function (filter: Record<string, unknown> = {}) {
+          const callerUserId = this.userId;
           return runMutation(
-            { userId: this.userId },
+            { userId: callerUserId },
             {
               collection,
               operation: 'read',
@@ -350,12 +377,13 @@ function createCollectionMethods(collection: CrudCollectionName): void {
               },
             },
             [filter] as const,
-            async ([f]) => Collection.countDocuments(f),
+            async ([f]) => Collection.countDocuments(await applyReadScope(collection, callerUserId, f)),
           );
         },
         [`${collection}.options`]: async function (filter: Record<string, unknown> = {}, options: Record<string, unknown> = {}) {
+          const callerUserId = this.userId;
           return runMutation(
-            { userId: this.userId },
+            { userId: callerUserId },
             {
               collection,
               operation: 'read',
@@ -369,7 +397,7 @@ function createCollectionMethods(collection: CrudCollectionName): void {
             [filter, options] as const,
             async ([f, o]) =>
               // eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic CRUD factory operates over arbitrary collection shapes
-              Collection.find(f, o).mapAsync((item: any) => {
+              Collection.find(await applyReadScope(collection, callerUserId, f), o).mapAsync((item: any) => {
                 const profile = item.profile as { name?: string } | undefined;
                 const name = profile?.name || (item.name as string | undefined);
                 return { key: item._id, label: name, title: name, value: item._id, raw: item };

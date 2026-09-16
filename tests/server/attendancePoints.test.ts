@@ -96,4 +96,27 @@ describe('collectNoShowEventIds (#366)', () => {
     );
     assert.deepStrictEqual([...ids].sort(), ['e1', 'e3']);
   });
+
+  it('returns each event id once when several of the members were no-shows at it', () => {
+    const ids = collectNoShowEventIds([MEMBER, OTHER], [attendance('e1', { [MEMBER]: -1, [OTHER]: -1 })]);
+    assert.deepStrictEqual([...ids], ['e1']);
+  });
+
+  it('ignores no-shows by members outside the list and non-status values', () => {
+    const ids = collectNoShowEventIds(
+      [MEMBER],
+      [attendance('e1', { [OTHER]: -1 }), attendance('e2', { [MEMBER]: '-1' }), attendance('e3', { [MEMBER]: -2 })]
+    );
+    assert.deepStrictEqual([...ids], []);
+  });
+
+  it('ignores attendance documents without an event id', () => {
+    const ids = collectNoShowEventIds([MEMBER], [{ _id: 'orphan', [MEMBER]: -1 } as unknown as AttendanceDoc]);
+    assert.deepStrictEqual([...ids], []);
+  });
+
+  it('does not treat a structural field name as a member id', () => {
+    const ids = collectNoShowEventIds(['eventId', '_id'], [attendance('e1', { [MEMBER]: 1 })]);
+    assert.deepStrictEqual([...ids], []);
+  });
 });

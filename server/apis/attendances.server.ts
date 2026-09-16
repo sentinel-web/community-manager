@@ -28,12 +28,14 @@ if (Meteor.isServer) {
      */
     'attendances.pointsSummary': async function (memberIds: string[] = []): Promise<Record<string, MemberPoints>> {
       if (!this.userId) throw new Meteor.Error(401, 'Unauthorized');
+      // Authorize before inspecting the argument, so an unauthorized caller gets
+      // 403 rather than learning the shape rules from a 400.
+      const allowed = await checkPermission(this.userId, 'events', 'read');
+      if (!allowed) throw new Meteor.Error(403, 'Permission denied');
       validateArrayOfStrings(memberIds, false);
       if (memberIds.length > PUBLISH_LIMITS.MAX) {
         throw new Meteor.Error(400, `At most ${PUBLISH_LIMITS.MAX} member ids are allowed`);
       }
-      const allowed = await checkPermission(this.userId, 'events', 'read');
-      if (!allowed) throw new Meteor.Error(403, 'Forbidden');
       if (!memberIds.length) return {};
 
       const squadScope = await getSquadScope(this.userId);

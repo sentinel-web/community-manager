@@ -9,18 +9,26 @@ export interface PointsMember {
   profile?: StaticPoints;
 }
 
-// Member ids are used as dynamic field paths in the attendance query and
-// projection, so anything that could be read as a nested path or an operator
-// is skipped (such ids can never hold an attendance — attendances.upsert
-// rejects them). Their static points still count.
-function isQueryableMemberKey(memberId: string): boolean {
-  return memberId.length > 0 && !memberId.includes('.') && !memberId.includes('$');
+// Member ids are used as dynamic field paths in the attendance projection, so
+// anything that could be read as a nested path or an operator is skipped (such
+// ids can never hold an attendance — attendances.upsert rejects them). Their
+// static points still count.
+//
+// Callers can reach this with an unvalidated member document (members.profileStats
+// takes one straight from the client), so the guard starts at the type rather
+// than assuming a string.
+function isQueryableMemberKey(memberId: unknown): memberId is string {
+  return typeof memberId === 'string' && memberId.length > 0 && !memberId.includes('.') && !memberId.includes('$');
 }
 
 /**
  * Event ids whose event type opts out of inactivity points (#366), narrowed to
  * the events where one of the members was actually a no-show. Two batched
  * lookups at most; none when no event type opts out.
+ *
+ * `countsForInactivity` is unset = true: only an event type that explicitly
+ * stores `false` opts out, so an event with no event type — or one whose event
+ * type has since been deleted — still costs an inactivity point.
  */
 async function loadEventIdsExcludedFromInactivity(memberIds: readonly string[], attendances: readonly AttendanceDoc[]): Promise<Set<string>> {
   const noShowEventIds = collectNoShowEventIds(memberIds, attendances);
@@ -45,10 +53,16 @@ async function loadEventIdsExcludedFromInactivity(memberIds: readonly string[], 
 export async function loadMemberPoints(members: readonly PointsMember[]): Promise<Record<string, MemberPoints>> {
   const memberIds = members.map(member => member._id).filter(isQueryableMemberKey);
 
+  // No selector: one attendance document exists per event, and an `$or` of
+  // `{ [memberId]: { $exists: true } }` filters almost nothing (any event these
+  // members were graded at matches) while costing one predicate per member per
+  // scanned document. The projection already keeps the payload to `eventId`
+  // plus these members' statuses.
   const attendances: AttendanceDoc[] = memberIds.length
-    ? await AttendancesCollection.find({ $or: memberIds.map(memberId => ({ [memberId]: { $exists: true } })) } as never, {
-        fields: Object.fromEntries([['eventId', 1], ...memberIds.map(memberId => [memberId, 1])]),
-      }).fetchAsync()
+    ? await AttendancesCollection.find(
+        {},
+        { fields: Object.fromEntries([['eventId', 1], ...memberIds.map(memberId => [memberId, 1])]) }
+      ).fetchAsync()
     : [];
   const excludedEventIds = await loadEventIdsExcludedFromInactivity(memberIds, attendances);
 

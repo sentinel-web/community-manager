@@ -83,7 +83,12 @@ the current `userId` into the Mongo selector. `Events` owns one `dateRange` stat
   duplicate rows. The leftmost columns show each member's **all-time**
   **inactivity points** and **attendance points** from `attendances.pointsSummary`
   — the same shared calculation (`imports/api/attendance/points.ts`) the profile
-  uses, not just the events currently loaded (#363). Status labels and tag colours
+  uses, not just the events currently loaded (#363) — a column tooltip
+  (`events.pointsAllTimeHint`) spells out that those two columns ignore the
+  selected date range while every event column honours it. The summary is
+  refetched off narrow digests of the member set, their static points and the
+  loaded attendance statuses, so unrelated document updates don't re-call the
+  method. Status labels and tag colours
   come from the shared map in `imports/api/attendance/status.ts` (also used by the
   profile `AttendancePieChart`). Member names are pre-computed into a `Map` to
   avoid N+1 lookups per row.
