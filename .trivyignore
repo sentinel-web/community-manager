@@ -6,20 +6,43 @@
 #
 # NOTE: trivyignore suppresses each CVE globally (any path), not just the vendored
 # location. Matching code-scanning alerts were dismissed as won't-fix on 2026-06-10.
+#
+# Regenerated for Meteor 3.5.2 (2026-09-16): the upgrade fixed every entry of the
+# previous baseline — all 24 were gone from the scan — and the newer vendored
+# versions brought these. Generated from the Trivy scan of the 3.5.2 image; the tar
+# entries carried over from the previous baseline are still reported by 3.5.2.
 
-# nodemailer@6.9.10 (Meteor-vendored; HIGH/MEDIUM/LOW)
-CVE-2025-13033
-CVE-2025-14874
-GHSA-c7w3-x93f-qmm8
-GHSA-vvjj-xcjg-gr5g
+# browserslist@4.28.4 (Meteor-vendored; HIGH)
+CVE-2026-73089
+CVE-2026-73088
 
-# openpgp@5.11.1 (Meteor-vendored; HIGH)
-CVE-2025-47934
+# nodemailer@8.0.3 (Meteor-vendored; HIGH/MEDIUM)
+GHSA-wqvq-jvpq-h66f
+GHSA-wmmp-3585-3rmp
+GHSA-r7g4-qg5f-qqm2
+GHSA-cc9r-2j5m-2m83
+GHSA-8m3c-c648-2xjj
+GHSA-268h-hp4c-crq3
+GHSA-2x7j-588g-ccc2
+CVE-2026-82659
 
-# svgo@2.8.0 (Meteor-vendored; HIGH)
-CVE-2026-29074
+# postcss@8.5.1 (Meteor-vendored; HIGH/MEDIUM)
+CVE-2026-69153
+CVE-2026-73646
+CVE-2026-45623
 
-# tar@6.2.1 (Meteor-vendored; HIGH)
+# svgo@2.8.2 (Meteor-vendored; HIGH/MEDIUM)
+CVE-2026-84369
+CVE-2026-84370
+CVE-2026-73650
+
+# tar@6.2.1 (Meteor-vendored; HIGH/MEDIUM)
+CVE-2026-59875
+CVE-2026-59871
+CVE-2026-53655
+CVE-2026-73566
+CVE-2026-59874
+CVE-2026-59873
 CVE-2026-23745
 CVE-2026-23950
 CVE-2026-24842
@@ -27,32 +50,40 @@ CVE-2026-26960
 CVE-2026-29786
 CVE-2026-31802
 
-# tmp@0.2.3 (Meteor-vendored; HIGH/LOW)
+# baseline-browser-mapping@2.10.40 (Meteor-vendored; MEDIUM)
+CVE-2026-45819
+
+# colord@2.9.3 (Meteor-vendored; MEDIUM)
+CVE-2026-85062
+
+# nanoid@3.3.15 (Meteor-vendored; MEDIUM)
+CVE-2026-67214
+CVE-2026-67213
+
+# qs@6.13.0 (Meteor-vendored; MEDIUM)
+CVE-2026-82417
+
+# qs@6.15.3 (Meteor-vendored; MEDIUM/LOW)
+CVE-2026-82562
+
+# Carried over from the pre-3.5.2 baseline. Trivy still reports some of these
+# (openpgp and tmp) against the 3.5.2 image, so the list is kept as a union rather
+# than pruned; prune it with a scan of the published image, not from memory.
+CVE-2025-13033
+CVE-2025-14874
+GHSA-c7w3-x93f-qmm8
+GHSA-vvjj-xcjg-gr5g
+CVE-2025-47934
+CVE-2026-29074
 CVE-2025-54798
 CVE-2026-44705
-
-# @babel/runtime@7.20.7 (Meteor-vendored; MEDIUM)
 CVE-2025-27789
-
-# bn.js@4.12.1 (Meteor-vendored; MEDIUM)
 CVE-2026-2739
-
-# postcss@8.5.1 (Meteor-vendored; MEDIUM)
 CVE-2026-41305
-
-# qs@6.13.0/6.14.2/6.15.1 (Meteor-vendored; MEDIUM/LOW)
 CVE-2025-15284
 CVE-2026-2391
 CVE-2026-8723
-
-# uuid@3.3.2/8.3.2 (Meteor-vendored; MEDIUM)
 CVE-2026-41907
-
-# yaml@1.10.2 (Meteor-vendored; MEDIUM)
 CVE-2026-33532
-
-# cookie@0.4.1 (Meteor-vendored; LOW)
 CVE-2024-47764
-
-# on-headers@1.0.2 (Meteor-vendored; LOW)
 CVE-2025-7339
