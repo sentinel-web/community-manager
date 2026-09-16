@@ -19,7 +19,11 @@ import { validateString } from '../main';
 if (Meteor.isServer) {
   Meteor.publish('roles.own', async function (roleIdHint?: unknown) {
     if (!this.userId) return this.ready();
-    validateString(roleIdHint, true);
+    // The hint is never trusted, but a malformed one still means a broken
+    // caller, so reject anything that is not an omitted value or a non-empty
+    // string. `validateString(hint, true)` would not do: its optional mode only
+    // rejects *truthy* non-strings, waving 0 / false / null through.
+    if (roleIdHint !== undefined && roleIdHint !== null) validateString(roleIdHint, false);
 
     const user = await MembersCollection.findOneAsync({ _id: this.userId }, { fields: { 'profile.roleId': 1 } });
     const roleId = user?.profile?.roleId;
