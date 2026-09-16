@@ -1,9 +1,11 @@
 import { CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined, FormOutlined } from '@ant-design/icons';
 import { App, Button, Card, Col, Empty, Popconfirm, Row, Space, Spin, Tag, Tooltip, Typography } from 'antd';
 import { Meteor } from 'meteor/meteor';
-import React, { useCallback, useEffect, useState } from 'react';
-import type { QuestionnaireInterval } from '../../api/types/questionnaire';
-import { useTranslation } from '../../i18n/LanguageContext';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import type { QuestionnaireErrorCode, QuestionnaireInterval } from '../../api/types/questionnaire';
+import { formatDate, type Locale } from '../../i18n';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { describeMethodError, translateErrorCode, type Localizer } from '../../i18n/methodErrors';
 import { useDrawerStack } from '../drawer-stack';
 import type { TranslateFn } from '../section/types';
 import SectionCard from '../section/SectionCard';
@@ -18,7 +20,7 @@ interface ActiveQuestionnaire {
   description?: string;
   questionCount?: number;
   canRespond?: boolean;
-  responseReason?: string;
+  responseReason?: QuestionnaireErrorCode;
   nextAllowedDate?: string | Date;
   responseCount?: number;
   allowAnonymous?: boolean;
@@ -31,6 +33,7 @@ interface QuestionnaireCardProps {
   onFillOut: (questionnaire: ActiveQuestionnaire) => void;
   onRevoke: (responseId: string) => void;
   t: TranslateFn;
+  language: Locale;
 }
 
 export default function MyQuestionnaires() {
@@ -38,7 +41,15 @@ export default function MyQuestionnaires() {
   const [loading, setLoading] = useState(true);
   const { notification } = App.useApp();
   const drawerStack = useDrawerStack();
-  const { t } = useTranslation();
+  const { t, language } = useLanguage();
+
+  // The fetch must not depend on the language: the error branch reads the
+  // current translator through a ref, so switching language re-renders the
+  // cards without re-running `questionnaires.getActiveForUser`.
+  const i18nRef = useRef<Localizer>({ t, language });
+  useEffect(() => {
+    i18nRef.current = { t, language };
+  }, [t, language]);
 
   const loadQuestionnaires = useCallback(async () => {
     try {
@@ -46,10 +57,7 @@ export default function MyQuestionnaires() {
       const result = await Meteor.callAsync('questionnaires.getActiveForUser');
       setQuestionnaires(result as ActiveQuestionnaire[]);
     } catch (error) {
-      notification.error({
-        message: (error as Meteor.Error).error,
-        description: (error as Meteor.Error).message,
-      });
+      notification.error(describeMethodError(error, i18nRef.current));
     } finally {
       setLoading(false);
     }
@@ -81,10 +89,7 @@ export default function MyQuestionnaires() {
         notification.success({ message: t('questionnaires.revokeSuccess') });
         loadQuestionnaires();
       } catch (error) {
-        notification.error({
-          message: (error as Meteor.Error).error,
-          description: (error as Meteor.Error).message,
-        });
+        notification.error(describeMethodError(error, i18nRef.current));
       }
     },
     [notification, loadQuestionnaires, t]
@@ -102,7 +107,7 @@ export default function MyQuestionnaires() {
         <Row gutter={[16, 16]}>
           {questionnaires.map(questionnaire => (
             <Col xs={24} sm={12} lg={8} key={questionnaire._id}>
-              <QuestionnaireCard questionnaire={questionnaire} onFillOut={handleFillOut} onRevoke={handleRevoke} t={t} />
+              <QuestionnaireCard questionnaire={questionnaire} onFillOut={handleFillOut} onRevoke={handleRevoke} t={t} language={language} />
             </Col>
           ))}
         </Row>
@@ -111,7 +116,7 @@ export default function MyQuestionnaires() {
   );
 }
 
-const QuestionnaireCard = ({ questionnaire, onFillOut, onRevoke, t }: QuestionnaireCardProps) => {
+const QuestionnaireCard = ({ questionnaire, onFillOut, onRevoke, t, language }: QuestionnaireCardProps) => {
   const { name, description, questionCount, canRespond, responseReason, nextAllowedDate, responseCount, allowAnonymous, interval, latestResponseId } =
     questionnaire;
 
@@ -125,6 +130,8 @@ const QuestionnaireCard = ({ questionnaire, onFillOut, onRevoke, t }: Questionna
 
   const intervalLabel = interval ? intervalLabels[interval] || intervalLabels.once : intervalLabels.once;
   const canRevoke = !allowAnonymous && latestResponseId && !canRespond;
+  const nextAllowedIso = nextAllowedDate ? new Date(nextAllowedDate).toISOString() : undefined;
+  const reasonText = translateErrorCode(responseReason, { nextAllowedDate: nextAllowedIso }, { t, language });
 
   const renderAction = () => {
     if (canRespond) {
@@ -145,11 +152,11 @@ const QuestionnaireCard = ({ questionnaire, onFillOut, onRevoke, t }: Questionna
     }
 
     return (
-      <Tooltip title={responseReason}>
+      <Tooltip title={reasonText}>
         <Space key="waiting">
           <ClockCircleOutlined style={{ color: '#faad14' }} />
           <Text type="warning">
-            {nextAllowedDate ? t('questionnaires.availableDate', { date: new Date(nextAllowedDate).toLocaleDateString() }) : t('questionnaires.pleaseWait')}
+            {nextAllowedDate ? t('questionnaires.availableDate', { date: formatDate(nextAllowedDate, language) }) : t('questionnaires.pleaseWait')}
           </Text>
         </Space>
       </Tooltip>

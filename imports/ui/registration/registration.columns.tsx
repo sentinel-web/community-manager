@@ -1,4 +1,5 @@
 import type { ColumnsType } from 'antd/es/table';
+import dayjs from 'dayjs';
 import React from 'react';
 import type { Registration } from '../../api/types';
 import type { LanguageContextValue } from '../../i18n/LanguageContext';
@@ -69,6 +70,15 @@ export default function getRegistrationColumns(
       key: 'description',
       ellipsis: true,
       sorter: (a, b) => (a.description ?? '').localeCompare(b.description ?? ''),
+    },
+    {
+      title: t('registrations.submittedAt'),
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      // Legacy rows without a timestamp sort as the oldest.
+      sorter: (a, b) => new Date(a.createdAt ?? 0).valueOf() - new Date(b.createdAt ?? 0).valueOf(),
+      defaultSortOrder: 'descend',
+      render: (createdAt: Date | undefined) => (createdAt ? dayjs(createdAt).format('YYYY-MM-DD HH:mm') : '-'),
     },
   ];
 

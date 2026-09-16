@@ -12,6 +12,11 @@ interface Defaults {
       restore: RateLimitBucket;
       createQuick: RateLimitBucket;
     };
+    registrations: {
+      // The public application form is reachable without an account, so the
+      // insert is capped per client address.
+      insert: RateLimitBucket;
+    };
   };
   cache: {
     roleTtlMs: number;
@@ -36,6 +41,9 @@ const DEFAULTS: Defaults = {
       create: { count: 5, intervalMs: 60000 },
       restore: { count: 2, intervalMs: 60000 },
       createQuick: { count: 5, intervalMs: 60000 },
+    },
+    registrations: {
+      insert: { count: 5, intervalMs: 60000 },
     },
   },
   cache: {
@@ -76,6 +84,9 @@ interface RateLimitsConfig {
     restore: RateLimitBucket;
     createQuick: RateLimitBucket;
   };
+  registrations: {
+    insert: RateLimitBucket;
+  };
 }
 
 export const RATE_LIMITS: RateLimitsConfig = {
@@ -102,6 +113,16 @@ export const RATE_LIMITS: RateLimitsConfig = {
       },
       get intervalMs() {
         return getConfig(['rateLimits', 'backup', 'createQuick', 'intervalMs'], 60000);
+      },
+    },
+  },
+  registrations: {
+    insert: {
+      get count() {
+        return getConfig(['rateLimits', 'registrations', 'insert', 'count'], 5);
+      },
+      get intervalMs() {
+        return getConfig(['rateLimits', 'registrations', 'insert', 'intervalMs'], 60000);
       },
     },
   },

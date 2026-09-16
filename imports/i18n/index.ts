@@ -46,3 +46,11 @@ export function getTranslation<K extends LocaleKey>(key: K, locale: Locale, ...a
   const params = (args[0] ?? {}) as Record<string, string | number>;
   return interpolate(value, params);
 }
+
+/**
+ * Date formatted for the app language — never the browser locale, which can
+ * differ from the language the user picked in the header.
+ */
+export function formatDate(value: string | number | Date, locale: Locale): string {
+  return new Intl.DateTimeFormat(locale).format(new Date(value));
+}

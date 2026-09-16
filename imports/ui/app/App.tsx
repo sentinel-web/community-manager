@@ -1,6 +1,15 @@
 import { App as AntdApp, theme as AntdTheme, ConfigProvider, Grid, Layout } from 'antd';
+import type { ConfigProviderProps } from 'antd';
+import deDE from 'antd/locale/de_DE';
+import enUS from 'antd/locale/en_US';
+import frFR from 'antd/locale/fr_FR';
+import dayjs from 'dayjs';
+import 'dayjs/locale/de';
+import 'dayjs/locale/fr';
 import { Meteor } from 'meteor/meteor';
 import React, { createContext, useCallback, useEffect, useState } from 'react';
+import type { Locale } from '../../i18n';
+import { useLanguage } from '../../i18n/LanguageContext';
 import Footer from '../footer/Footer';
 import Header from '../header/Header';
 import Main from '../main/Main';
@@ -18,6 +27,14 @@ import { DrawerStackProvider } from '../drawer-stack';
 export const NavigationContext = createContext<NavigationContextValue>({} as NavigationContextValue);
 export const ThemeContext = createContext<ThemeContextValue>({} as ThemeContextValue);
 
+// antd's built-in texts (pagination, pickers, Popconfirm/Modal buttons, form
+// validation messages, …) follow the app language.
+const ANTD_LOCALES: Record<Locale, ConfigProviderProps['locale']> = {
+  de: deDE,
+  en: enUS,
+  fr: frFR,
+};
+
 interface AppSettings {
   communityColor?: string;
 }
@@ -28,6 +45,12 @@ export default function App() {
   const isMobile = !screens.md;
   const [theme, setTheme] = useState<ThemeMode>(getPreferedTheme);
   const [navigationValue, setNavigationValue] = useState<string>(getNavigationValue);
+  const { language } = useLanguage();
+
+  // antd date pickers and the calendar format through the global dayjs locale.
+  // Set during render, not in an effect: an effect runs after the first paint,
+  // which would show English dates for a frame after every reload.
+  if (dayjs.locale() !== language) dayjs.locale(language);
 
   useEffect(() => {
     if (!communityColor) return;
@@ -55,6 +78,7 @@ export default function App() {
         <TourProvider>
           <PaletteProvider>
             <ConfigProvider
+              locale={ANTD_LOCALES[language]}
               theme={{
                 token: {
                   colorPrimary: communityColor,

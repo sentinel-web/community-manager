@@ -21,7 +21,8 @@ Members (Meteor.users), Events, Attendances, Tasks, TaskStatus, Squads, Ranks, S
 - `name, color, content, description` — `content` is the rich-text briefing body (sanitized HTML) loaded into an event's `description` as a one-way snapshot; `description` is a short plain-text note. Rides on the `briefingTemplates` permission module. See `CONTEXT.md` → BriefingTemplate.
 
 **Tasks**
-- `name, status (taskStatusId), participants[], priority ('low'|'medium'|'high'), link, description, parent (taskId)`
+- `name, status (taskStatusId), participants[], priority ('low'|'medium'|'high'), link, description, parent (taskId), createdAt`
+- `createdAt` is server-owned: stamped on insert (any client-supplied value is overwritten) and stripped from updates.
 
 **Squads**
 - `name, color, image (base64), parentSquadId, shortRangeFrequency, longRangeFrequency, description`
@@ -39,7 +40,9 @@ Members (Meteor.users), Events, Attendances, Tasks, TaskStatus, Squads, Ranks, S
 - `name, color, description` + boolean permissions (`dashboard, orbat, logs, settings`) + CRUD permissions (`members, events, tasks, squads, ranks, specializations, medals, eventTypes, positions, taskStatus, registrations, discoveryTypes, roles, questionnaires`)
 
 **Registrations**
-- `name, id (1000-9999), age (min 16), discoveryType, rulesReadAndAccepted, description`
+- `name, id (1000-9999), age (min 16), discoveryType, rulesReadAndAccepted, description, createdAt`
+- `createdAt` is server-owned: stamped on insert (any client-supplied value is overwritten) and stripped from updates. Registrations created before it was introduced have none.
+- Insert is the only mutation open to anonymous callers (the public application form), so it takes only the fields listed above plus `discoveryTypeDetails, steamProfileLink, discordTag` — anything else is rejected, `_id` is always server-generated, and the method is rate limited per client address (`rateLimits.registrations.insert` in `server/config.ts`).
 
 **Questionnaires**
 - `name, description, status ('draft'|'active'|'closed'), allowAnonymous, interval ('once'|'daily'|'weekly'|'monthly'|'unlimited'), questions[], createdAt, updatedAt`

@@ -53,6 +53,9 @@ function defaultFilterFactory(input: string): Mongo.Selector<Record<string, unkn
 
 const emptyGroupActions: GroupAction[] = [];
 
+// Table view page size; each "load more" adds another page.
+const PAGE_SIZE = 20;
+
 function defaultColumnsFactory(): ReturnType<ColumnsFactory<Record<string, unknown>>> {
   return [];
 }
@@ -63,6 +66,7 @@ interface SectionProps<T extends { _id?: string }> {
   Collection?: Mongo.Collection<T> | null;
   FormComponent?: ComponentType<unknown>;
   filterFactory?: (input: string) => Mongo.Selector<T>;
+  sort?: Mongo.SortSpecifier;
   columnsFactory?: ColumnsFactory<T>;
   extra?: ReactNode;
   headerExtra?: ReactNode;
@@ -89,6 +93,7 @@ export default function Section<T extends { _id?: string }>({
   columnsFactory = defaultColumnsFactory as unknown as ColumnsFactory<T>,
   extra = <></>,
   headerExtra = <></>,
+  sort,
   customView = false,
   permissionModule = null,
   expandable,
@@ -96,7 +101,10 @@ export default function Section<T extends { _id?: string }>({
 }: SectionProps<T>) {
   const [nameInput, setNameInput] = useState('');
   const [filter, setFilter] = useState<Mongo.Selector<T>>(() => filterFactory(''));
-  const [options, setOptions] = useState<{ limit: number }>({ limit: 20 });
+  const [pageLimit, setPageLimit] = useState(PAGE_SIZE);
+  // The sort travels to the publication, so "load more" keeps extending the
+  // same server-side order instead of re-sorting an arbitrary first page.
+  const options = useMemo(() => (sort ? { limit: pageLimit, sort } : { limit: pageLimit }), [pageLimit, sort]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
   useSubscribe(collectionName, filter, options);
@@ -285,10 +293,10 @@ export default function Section<T extends { _id?: string }>({
   const columns = useMemo(() => columnsFactory(handleEdit, handleDelete, permissions, t), [handleEdit, handleDelete, columnsFactory, permissions, t]);
 
   const handleLoadMore = useCallback(() => {
-    setOptions(prevOptions => ({ limit: prevOptions.limit + 20 }));
+    setPageLimit(prevLimit => prevLimit + PAGE_SIZE);
   }, []);
 
-  const loadMoreDisabled = useMemo(() => datasource?.length < options?.limit, [options, datasource]);
+  const loadMoreDisabled = datasource.length < pageLimit;
 
   return (
     <SectionCard title={title} ready={true}>

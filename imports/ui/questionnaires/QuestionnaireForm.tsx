@@ -1,5 +1,5 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, Card, Form, Input, Select, Space, Switch } from 'antd';
+import { Button, Card, Col, Form, Input, Row, Select, Space, Switch } from 'antd';
 import React, { useMemo } from 'react';
 import type { Questionnaire, QuestionnaireInterval, QuestionnaireStatus, QuestionType } from '../../api/types/questionnaire';
 import { useTranslation } from '../../i18n/LanguageContext';
@@ -145,17 +145,21 @@ const QuestionItem = ({ name, restField, remove, t, questionTypes }: QuestionIte
   return (
     <Card size="small" style={{ marginBottom: 12 }}>
       <Space direction="vertical" style={{ width: '100%' }}>
-        <Space align="start" style={{ width: '100%', justifyContent: 'space-between' }}>
-          <Form.Item
-            {...restField}
-            name={[name, 'text']}
-            rules={[{ required: true, message: t('questionnaires.pleaseEnterQuestion') }]}
-            style={{ marginBottom: 8, flex: 1 }}
-          >
-            <Input placeholder={t('questionnaires.questionText')} />
-          </Form.Item>
-          <Button type="text" danger icon={<DeleteOutlined />} onClick={() => remove(name)} />
-        </Space>
+        <Row gutter={8} align="top" wrap={false}>
+          <Col flex="auto" style={{ minWidth: 0 }}>
+            <Form.Item
+              {...restField}
+              name={[name, 'text']}
+              rules={[{ required: true, message: t('questionnaires.pleaseEnterQuestion') }]}
+              style={{ marginBottom: 8 }}
+            >
+              <Input.TextArea placeholder={t('questionnaires.questionText')} autoSize={{ minRows: 2 }} />
+            </Form.Item>
+          </Col>
+          <Col flex="none">
+            <Button type="text" danger icon={<DeleteOutlined />} onClick={() => remove(name)} />
+          </Col>
+        </Row>
         <Space wrap>
           <Form.Item
             {...restField}

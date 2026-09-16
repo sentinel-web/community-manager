@@ -34,7 +34,7 @@ const ResponseDetailView = () => {
     <Space direction="vertical" style={{ width: '100%' }} size="large">
       <div>
         <Text type="secondary">{t('questionnaires.respondent')}</Text>
-        <div>{respondentId ? respondentName : <Tag color="blue">{t('questionnaires.anonymous')}</Tag>}</div>
+        <div>{respondentId ? respondentName || t('questionnaires.unknownRespondent') : <Tag color="blue">{t('questionnaires.anonymous')}</Tag>}</div>
       </div>
       <div>
         <Text type="secondary">{t('questionnaires.submitted')}</Text>
