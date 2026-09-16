@@ -67,6 +67,7 @@ Two non-obvious build facts, both with inline Dockerfile comments:
 
 - **`--include=dev` is mandatory** (`Dockerfile:16`). The meteor-base image sets `NODE_ENV=production`, which makes npm treat installs as `--omit=dev`. The rspack bundler (`@meteorjs/rspack`, `@rspack/*`) is a **devDependency** but is needed by `meteor build`; without the flag the build fails with a misleading "Could not find rspack.config.js".
 - The runtime stage runs `npm install --omit=dev`, **not** `npm ci` (`Dockerfile:38`), because Meteor's server bundle ships only `package.json` — no lockfile.
+- **npm is pinned to 11 in the production stage** (`npm install -g npm@11`). npm 12 cannot install Meteor's bundle at all: it defaults `allow-remote` to `none` and the bundle declares `source-map-support` as a commit-pinned GitHub tarball (`EALLOWREMOTE`, still true in 3.5.2), and it rejects unknown flags, which breaks the bundle's own `npm-rebuild.js` (`--update-binary` → `EUNKNOWNCONFIG`). The image used to install `npm@latest`, so deploys broke the day npm 12 shipped — with CI green throughout, because CI never builds the image. Re-check this pin when upgrading Meteor.
 
 Local `docker compose up` (dev) builds via the `build:` block; deploys leave `IMAGE` unset locally and instead set it to a **digest-pinned GHCR reference** so the host only `pull`s.
 
