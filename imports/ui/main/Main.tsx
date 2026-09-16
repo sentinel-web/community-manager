@@ -8,7 +8,7 @@ import useOwnRole from '../hooks/useOwnRole';
 import useViewportSize from '../hooks/useViewportSize';
 import Login from '../login/Login';
 import useNavigation from '../navigation/navigation.hook';
-import Suspense from '../suspense/Suspense';
+import Suspense, { SuspenseFallback } from '../suspense/Suspense';
 
 const MODULE_PERMISSION_MAP: Record<string, keyof Role> = {
   backup: 'settings',
@@ -60,7 +60,7 @@ export default function Main() {
   const { width } = useViewportSize();
   const loggedIn = useTracker(() => !!Meteor.userId(), []);
 
-  const role = useOwnRole();
+  const { role, loading: roleLoading } = useOwnRole();
   const hasAccess = useMemo(() => checkAccess(role, navigationValue), [role, navigationValue]);
 
   if (isDeviceUnsupported(width)) {
@@ -76,7 +76,13 @@ export default function Main() {
       {!loggedIn && <Login />}
       {loggedIn && (
         <Suspense>
-          {!hasAccess && <Result status="403" title="401 - Access Denied" subTitle="Sorry, you are not authorized to access this page." />}
+          {/* The role decides every branch below, so it must be known first:
+              showing the 403 panel while it is still in flight made a normal
+              page load flash "Access Denied" (#355). */}
+          {roleLoading && <SuspenseFallback />}
+          {!roleLoading && !hasAccess && (
+            <Result status="403" title="401 - Access Denied" subTitle="Sorry, you are not authorized to access this page." />
+          )}
           {hasAccess && navigationValue === 'dashboard' && <Dashboard />}
           {hasAccess && navigationValue === 'orbat' && <Orbat />}
           {hasAccess && navigationValue === 'events' && <Events />}
