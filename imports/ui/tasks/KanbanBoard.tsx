@@ -3,11 +3,13 @@ import { Badge, Button, Card, Col, Empty, Grid, Row, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { Meteor } from 'meteor/meteor';
 import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { DragDropContext, Draggable, Droppable, type DropResult } from 'react-beautiful-dnd';
 import TaskStatusCollection from '../../api/collections/taskStatus.collection';
 import type { Task } from '../../api/types/task';
 import { useTranslation } from '../../i18n/LanguageContext';
+import useMethod from '../hooks/useMethod';
+import useStableValue from '../hooks/useStableValue';
 import type { RowClickEvent } from '../section/types';
 import TaskStatusTag from './task-status/TaskStatusTag';
 import { Participants } from './task.columns';
@@ -46,6 +48,33 @@ export default function KanbanBoard({ datasource, handleEdit, handleDelete }: Ka
     }, {}) || {};
     return result;
   }, [datasource]);
+
+  // Every card shows participants and completed-by names. Resolving them per
+  // card is two method calls per card (and the board can hold a full page of
+  // tasks), so the whole board's ids are resolved in one call and handed down.
+  // useStableValue keeps the id list's identity across reactive datasource
+  // updates that don't change the ids, so the effect doesn't re-fire.
+  const memberIds = useStableValue(
+    useMemo(() => [...new Set((datasource ?? []).flatMap(task => [...(task.participants ?? []), ...(task.completedBy ?? [])]))], [datasource])
+  );
+  const [nameById, setNameById] = useState<Record<string, string> | null>(null);
+  const { call: fetchNames } = useMethod<Record<string, string>>('members.namesByIds');
+
+  useEffect(() => {
+    if (!memberIds.length) {
+      setNameById({});
+      return;
+    }
+    let active = true;
+    void fetchNames(memberIds).then(res => {
+      // A failed lookup resolves to "no names known" rather than leaving every
+      // card stuck on the loading placeholder.
+      if (active) setNameById(res.ok ? res.data ?? {} : {});
+    });
+    return () => {
+      active = false;
+    };
+  }, [memberIds, fetchNames]);
 
   const breakpoints = Grid.useBreakpoint();
   const colSpan = useMemo(() => {
@@ -89,13 +118,13 @@ export default function KanbanBoard({ datasource, handleEdit, handleDelete }: Ka
                                   {task.description.length > 150 ? `${task.description.substring(0, 100)}...` : task.description}
                                 </pre>
                               )}
-                              <Participants participants={task.participants} />
+                              <Participants participants={task.participants} nameById={nameById} />
                               {task.completedBy && task.completedBy.length > 0 && (
                                 <div style={{ marginTop: 4 }}>
                                   <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                                     {t('tasks.completedBy')}{' '}
                                   </Typography.Text>
-                                  <Participants participants={task.completedBy} />
+                                  <Participants participants={task.completedBy} nameById={nameById} />
                                 </div>
                               )}
                               <Row justify="space-between" align="middle" style={{ marginTop: 8 }}>

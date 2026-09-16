@@ -21,6 +21,9 @@ interface EventDetail extends EventDoc {
   isSignedUp: boolean;
 }
 
+// Signed-up members (#374); long lists scroll instead of stretching the modal.
+const ATTENDEE_LIST_STYLE: React.CSSProperties = { margin: 0, paddingInlineStart: 16, maxHeight: 160, overflowY: 'auto' };
+
 interface EventDetailPopoverProps {
   event?: EventDoc | null;
   open: boolean;
@@ -98,7 +101,17 @@ export default function EventDetailPopover({ event, open, setOpen, onEdit }: Eve
               </Descriptions.Item>
               <Descriptions.Item label={t('events.endDate')}>{detail.end ? dayjs(detail.end).format('YYYY-MM-DD HH:mm') : '-'}</Descriptions.Item>
               <Descriptions.Item label={t('events.hosts')}>{detail.resolvedHosts?.map(h => h.name).join(', ') || '-'}</Descriptions.Item>
-              <Descriptions.Item label={t('events.attendeeCount')}>{detail.resolvedAttendees?.length || 0}</Descriptions.Item>
+              <Descriptions.Item label={`${t('events.attendeeCount')} (${detail.resolvedAttendees?.length || 0})`}>
+                {detail.resolvedAttendees?.length ? (
+                  <ul style={ATTENDEE_LIST_STYLE}>
+                    {detail.resolvedAttendees.map(attendee => (
+                      <li key={attendee._id}>{attendee.name}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  '-'
+                )}
+              </Descriptions.Item>
               {detail.description && (
                 <Descriptions.Item label={t('common.description')}>
                   <RichTextView html={detail.description} />

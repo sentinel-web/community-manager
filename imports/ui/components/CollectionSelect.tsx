@@ -2,11 +2,13 @@ import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { App, Button, Col, Divider, Form, Row, Select, Tag } from 'antd';
 import type { Rule } from 'antd/es/form';
 import type { NamePath } from 'antd/es/form/interface';
-import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
-import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
+import { useFind, useSubscribe } from 'meteor/react-meteor-data';
 import React, { ComponentType, MouseEvent, ReactNode, useCallback, useMemo, useState } from 'react';
 import { useDrawerStack } from '../drawer-stack';
+import useMethod from '../hooks/useMethod';
+import useModulePermissions from '../hooks/useModulePermissions';
+import DeleteImpactPreview, { type DeleteImpactPreviewData } from '../section/DeleteImpactPreview';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 
 const empty = <></>;
@@ -93,7 +95,15 @@ const CollectionSelect = ({
     [documents]
   );
   const isFormItem = useMemo(() => Boolean(name && label && rules), [name, label, rules]);
-  const user = useTracker(() => Meteor.user(), []);
+  // Same permission resolution as Section (module + special-flag fallbacks), so
+  // the inline create/edit/delete affordances only appear when the server would
+  // authorize them (#356). Anonymous users have no role and therefore see none.
+  const { canCreate, canUpdate, canDelete } = useModulePermissions(subscription);
+
+  // Delete-flow seams, mirroring Section: the preview read and the remove
+  // mutation both notify on failure; remove owns the success toast.
+  const { call: previewDelete } = useMethod<DeleteImpactPreviewData>('integrity.preview');
+  const { call: removeEntry } = useMethod(`${subscription}.remove`, { success: t('messages.deleteSuccess') });
 
   const writeBack = useCallback(
     (insertedId: string) => {
@@ -144,20 +154,33 @@ const CollectionSelect = ({
   );
 
   const handleDelete = useCallback(
-    (e: MouseEvent<HTMLElement>, selectedValue: string | undefined) => {
+    async (e: MouseEvent<HTMLElement>, selectedValue: string | undefined) => {
       e.preventDefault();
       e.stopPropagation();
+      if (!selectedValue || !subscription) return;
+
+      const previewRes = await previewDelete(subscription, selectedValue);
+      if (!previewRes.ok) return;
+      const preview = previewRes.data;
+      const isBlocked = preview != null && preview.blockedBy.length > 0;
+
       modal.confirm({
-        title: t('messages.deleteConfirm'),
+        title: t('modals.deleteEntry'),
+        content: (
+          <>
+            <DeleteImpactPreview preview={preview} />
+            {!isBlocked && <p>{t('modals.deleteEntryConfirm')}</p>}
+          </>
+        ),
+        okButtonProps: { danger: true, disabled: isBlocked },
         okText: t('common.delete'),
         cancelText: t('common.cancel'),
-        okType: 'danger',
-        onOk: () => {
-          Meteor.callAsync(`${subscription}.remove`, selectedValue);
+        onOk: async () => {
+          await removeEntry(selectedValue);
         },
       });
     },
-    [modal, subscription, t]
+    [modal, subscription, t, previewDelete, removeEntry]
   );
 
   const renderPopup = useCallback(
@@ -192,21 +215,21 @@ const CollectionSelect = ({
         <Col flex="auto">
           <Tag color={raw?.color}>{optionLabel}</Tag>
         </Col>
-        {user && (
-          <>
-            <Col>
-              <Button icon={<EditOutlined />} onClick={e => handleEdit(e, raw)} type="text" size="small" />
-            </Col>
-            <Col>
-              <Button
-                icon={<DeleteOutlined />}
-                onClick={e => handleDelete(e, optionValue === undefined ? undefined : String(optionValue))}
-                type="text"
-                size="small"
-                danger
-              />
-            </Col>
-          </>
+        {canUpdate && (
+          <Col>
+            <Button icon={<EditOutlined />} onClick={e => handleEdit(e, raw)} type="text" size="small" />
+          </Col>
+        )}
+        {canDelete && (
+          <Col>
+            <Button
+              icon={<DeleteOutlined />}
+              onClick={e => void handleDelete(e, optionValue === undefined ? undefined : String(optionValue))}
+              type="text"
+              size="small"
+              danger
+            />
+          </Col>
         )}
       </Row>
     );
@@ -258,7 +281,7 @@ const CollectionSelect = ({
           />
         )}
       </Col>
-      <Col>{user && <Button icon={<PlusOutlined />} onClick={handleCreate} style={isFormItem ? { marginTop: 8 } : {}} />}</Col>
+      <Col>{canCreate && <Button icon={<PlusOutlined />} onClick={handleCreate} style={isFormItem ? { marginTop: 8 } : {}} />}</Col>
     </Row>
   );
 };

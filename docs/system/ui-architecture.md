@@ -82,9 +82,10 @@ What `Section` does internally:
 | Concern | Implementation |
 |---------|----------------|
 | Reactive data | `useSubscribe(collectionName, filter, options)` + `useFind(() => Collection.find(filter, options))`. |
-| Search | `TableHeader` input → `filterFactory(input)` (default `{ name: { $regex, $options: 'i' } }`). |
-| Pagination | `options.limit` starts at 20, `handleLoadMore` adds 20; `TableFooter` "load more" disabled when fewer rows than the limit. |
-| Permissions | reads the user's role doc, derives `{ canCreate, canUpdate, canDelete }` via `getModulePermissions(role, permissionModule ?? collectionName)`. |
+
+| Search / filters | `filter` is derived (`useMemo`) from `filterFactory(nameInput)` (default `{ name: { $regex, $options: 'i' } }`), so both typing and a new `filterFactory` identity re-query. Parents that build `filterFactory` from their own filter state must memoize it with `useCallback`; `useStableValue` keeps the selector identity while it is structurally unchanged. |
+| Pagination | Table view: `options.limit` starts at 20, `handleLoadMore` adds 20; `TableFooter` "load more" disabled when fewer rows than the limit. A `customView` has no "load more": it keeps the same page size unless it opts into a larger one with `customViewLimit` (capped at `PUBLISH_LIMITS.MAX` = 1000, `imports/config.ts`) — only `Events` does, because its views are already bounded by the date range. Either way a custom view shows a truncation warning once it hits its limit. Optional `sort` is forwarded to both the subscription and `find`. |
+| Permissions | `useModulePermissions(collectionName, permissionModule)` — the user's own role (`roles.own`) → `{ canRead, canCreate, canUpdate, canDelete }` via `getModulePermissions`, including registry fallback flags (`canCreateEvents`, `canManageTasks`). `CollectionSelect` uses the same hook to gate its inline create/edit/delete. |
 | Columns | `columns = columnsFactory(handleEdit, handleDelete, permissions, t)` — the factory builds the antd `ColumnsType<T>` and decides which action buttons to show. |
 | Create | `handleCreate` → `drawerStack.push({ Component: FormComponent, model: {} })`. |
 | Edit | `handleEdit(e, record)` → `drawerStack.push({ Component: FormComponent, model: record })`. |
@@ -99,9 +100,9 @@ const getSquadColumns: ColumnsFactory<Squad> =
   (handleEdit, handleDelete, permissions, t) => [ /* antd columns */ ];
 ```
 
-A view that is not a table passes `customView` (a render component receiving `{ handleEdit, handleDelete, datasource, setFilter, permissions }`) instead of using the built-in `Table` — e.g. calendar, kanban, orbat.
+A view that is not a table passes `customView` (a render component receiving `CustomViewProps` — `{ handleEdit, handleDelete, datasource, permissions }` — plus any `customViewProps`) instead of using the built-in `Table` — e.g. calendar, kanban, orbat. Custom views never write the filter themselves; they report state (e.g. the calendar's visible range) up to the parent, which folds it into `filterFactory`.
 
-`getModulePermissions` (`Section.tsx:23`) and `checkAccess` (`Main.tsx`) and `hasAccess` (`Navigation.tsx:46`) are three near-identical role→permission readers — Section needs the full CRUD triple, Main/Navigation only the read bit. Pass `permissionModule` when the collection name differs from its permission module (e.g. a sub-collection page), or the wrong module is resolved.
+`getModulePermissions` (`imports/api/permissions/modulePermissions.ts`) and `checkAccess` (`Main.tsx`) and `hasAccess` (`Navigation.tsx:46`) are the role→permission readers — Section/CollectionSelect need the CRUD set, Main/Navigation only the read bit. All read the role via `useOwnRole()`, which returns `{ role, loading }` from the app-wide `OwnRoleProvider`. Pass `permissionModule` when the collection name differs from its permission module (e.g. a sub-collection page), or the wrong module is resolved.
 
 ### DrawerStack — nested entity editing
 
@@ -193,7 +194,8 @@ function SquadsForm() {
 - **`useConfirmClose` predicate only runs on user-initiated close.** `resolve`/`cancel` from inside a form skip it; closing a non-top frame cascades resolutions downward with `undefined`.
 - **No router.** Links must `history.pushState` + `setNavigationValue`; reading `window.location` alone won't re-render. Reachable views must be wired into both `getNavigationValue()` and the `Main.tsx` switch.
 - **`Palette` opens create forms via the URL, not `push`.** It navigates to `/key?action=create`; the target `Section`'s effect picks up the param and opens the drawer once. A view without a `FormComponent` (or without `canCreate`) silently ignores it.
-- **Three independent role reads.** `Main`, `Navigation`, and each `Section` each `useSubscribe('roles', …)` and recompute permissions; there is no shared permission context. Role changes can lag up to the server-side cache TTL (~1 min).
+- **One shared role subscription.** `OwnRoleProvider` (mounted once at the root of `App`) holds the app's single `roles.own` subscription — never the `roles.read`-gated `roles` one — and publishes `{ role, loading }` on `OwnRoleContext`. `Main`, `Navigation`, `Palette`, every `Section` and every `CollectionSelect` read it via `useOwnRole()` and recompute their own permissions. Do not `useSubscribe('roles.own', …)` from a component: Meteor only de-duplicates *inactive* subscriptions, so per-consumer subscribing costs one DDP subscription and one server-side findOne each (a MemberForm alone mounts ~8 `CollectionSelect`s). Role changes can lag up to the server-side cache TTL (~1 min).
+- **`loading` is not "no permissions".** `useOwnRole()` returns `loading: true` while the user document or the role subscription is in flight. Gate on it before rendering a refusal — `Main` renders the Suspense fallback while loading and only shows the 403 panel once the role is known.
 - **`Switch`/`Checkbox` Form.Items need `valuePropName="checked"`; handle both create (`model = {}`, no `_id`) and update in `toPayload`/`handleFinish`.** (CLAUDE.md → Forms.)
 
 ## See also
