@@ -2,7 +2,7 @@
 
 How the test suite is wired and run: an in-process **Mocha** tier executed by Meteor (`npm test`) and an out-of-process **Playwright** end-to-end tier that drives a real browser (`npm run e2e`). This doc maps the mechanics, what actually runs in CI, and the traps around the server/browser split.
 
-> Note: this is a TypeScript-first Meteor 3.4+ app with a generic CRUD factory and a collection registry; tests are `.ts`/`.tsx`, the entry is `tests/main.ts`, and there **is** a Playwright e2e suite (`e2e/`). The product is multilingual (en/de/fr) — there is no German-only naming convention in the test code, so no German glossary is needed here.
+> Note: this is a TypeScript-first Meteor 3.5+ app with a generic CRUD factory and a collection registry; tests are `.ts`/`.tsx`, the entry is `tests/main.ts`, and there **is** a Playwright e2e suite (`e2e/`). The product is multilingual (en/de/fr) — there is no German-only naming convention in the test code, so no German glossary is needed here.
 
 ## Key files
 

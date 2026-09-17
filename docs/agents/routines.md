@@ -258,7 +258,7 @@ it.
   major boundary since last run
 - Flag the Meteor-pinned packages separately — those can't be bumped
   without a Meteor compatibility check (see CLAUDE.md → Deployment for
-  the Node 22 / Meteor 3.4+ baseline)
+  the Node 24 / Meteor 3.5+ baseline)
 - Suggest a triage: *patch / minor*, *major (needs review)*, *Meteor
   pinned (skip)*
 

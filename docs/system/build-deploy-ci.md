@@ -6,11 +6,11 @@ How the app is configured at runtime, compiled into a Docker image, shipped to a
 
 | Path | Role |
 |------|------|
-| `package.json` | npm scripts (`start`/`test`/`test-app`/`update`/`visualize`/`typecheck`/`lint`/`e2e`); `engines.node` pinned to `22.x`; Meteor main/test modules |
+| `package.json` | npm scripts (`start`/`test`/`test-app`/`update`/`visualize`/`typecheck`/`lint`/`e2e`); `engines.node` pinned to `24.x`; Meteor main/test modules |
 | `.meteor/release` | Single source of truth for the Meteor version (`METEOR@3.4.1`); CI keys its Meteor cache on this file |
 | `rspack.config.js` | Rspack bundler config via `@meteorjs/rspack` (returns `{}` — defaults only; flags via `Meteor.is*`) |
 | `tsconfig.json` | `strict: true`, `noEmit`, `bundler` resolution; `meteor/*` resolved to `.meteor/local/types/packages.d.ts` |
-| `Dockerfile` | Two-stage build: `geoffreybooth/meteor-base:3.4` builder → `node:22-slim` runtime; tini, non-root `meteor` user, healthcheck |
+| `Dockerfile` | Two-stage build: `geoffreybooth/meteor-base:3.5` builder → `node:24-slim` runtime; tini, non-root `meteor` user, healthcheck |
 | `docker-compose.yml` | Production/preview stack: `app` + `mongo:7.0`, Traefik labels, hardening (read-only, cap_drop, no-new-privileges) |
 | `docker-compose.override.yml` | Dev-only override: publishes `3000:3000`, disables Traefik, `ROOT_URL` default |
 | `server/config.ts` | Server settings (`RATE_LIMITS`, `CACHE`, `SQUAD_SCOPED_PERMISSIONS`, `TELEMETRY`, `LOGS`) with `Meteor.settings` overrides via lazy getters |
@@ -54,10 +54,10 @@ There are three distinct configuration channels; they do not overlap:
 ### Build pipeline (Dockerfile)
 
 ```
-geoffreybooth/meteor-base:3.4 (builder)
+geoffreybooth/meteor-base:3.5 (builder)
   └─ meteor npm ci --include=dev          # rspack lives in devDependencies
   └─ meteor build --server-only --directory /built-app
-node:22-slim (production)
+node:24-slim (production)
   └─ COPY /built-app/bundle ./
   └─ (programs/server) npm install --omit=dev   # no lockfile in the bundle → npm ci impossible
   └─ tini → node main.js   (USER meteor, EXPOSE 3000, HEALTHCHECK GET /)
@@ -67,18 +67,19 @@ Two non-obvious build facts, both with inline Dockerfile comments:
 
 - **`--include=dev` is mandatory** (`Dockerfile:16`). The meteor-base image sets `NODE_ENV=production`, which makes npm treat installs as `--omit=dev`. The rspack bundler (`@meteorjs/rspack`, `@rspack/*`) is a **devDependency** but is needed by `meteor build`; without the flag the build fails with a misleading "Could not find rspack.config.js".
 - The runtime stage runs `npm install --omit=dev`, **not** `npm ci` (`Dockerfile:38`), because Meteor's server bundle ships only `package.json` — no lockfile.
+- **npm is pinned to 11 in the production stage** (`npm install -g npm@11`). npm 12 cannot install Meteor's bundle at all: it defaults `allow-remote` to `none` and the bundle declares `source-map-support` as a commit-pinned GitHub tarball (`EALLOWREMOTE`, still true in 3.5.2), and it rejects unknown flags, which breaks the bundle's own `npm-rebuild.js` (`--update-binary` → `EUNKNOWNCONFIG`). The image used to install `npm@latest`, so deploys broke the day npm 12 shipped — with CI green throughout, because CI never builds the image. Re-check this pin when upgrading Meteor.
 
 Local `docker compose up` (dev) builds via the `build:` block; deploys leave `IMAGE` unset locally and instead set it to a **digest-pinned GHCR reference** so the host only `pull`s.
 
-### Node 22 pinning (coupled spots)
+### Node 24 pinning (coupled spots)
 
-Node 22 matches Meteor 3.4.1's bundled node and is pinned, with **nothing enforcing consistency**, across:
+Node 24 matches Meteor 3.5.2's bundled node and is pinned, with **nothing enforcing consistency**, across:
 
 | Spot | Mechanism |
 |------|-----------|
-| `package.json` | `engines.node: "22.x"` |
-| `Dockerfile` | runtime stage `FROM node:22-slim` |
-| `.github/workflows/ci.yml` | `setup-node` `node-version: '22'` (typecheck, lint, test jobs) |
+| `package.json` | `engines.node: "24.x"` |
+| `Dockerfile` | runtime stage `FROM node:24-slim` |
+| `.github/workflows/ci.yml` | `setup-node` `node-version: '24'` (typecheck, lint, test jobs) |
 | `.github/dependabot.yml` | ignores `node` bumps for npm + docker ecosystems |
 | `setup.sh` / `setup.ps1`, `README.md`, this docs tree | hand-maintained references |
 
@@ -174,12 +175,12 @@ Two distinct paths seed the first login (`server/main.ts`, in `Meteor.startup`):
 |-----------|--------|---------|
 | npm (`/`) | `react`, `tiptap`, `rspack`, `eslint`, `types`, `misc-minor-patch` | `node`; **all** `semver-major` bumps (react 18→19, rspack 1→2, eslint 9→10 break the build) |
 | github-actions (`/`) | single `actions` group (keeps SHA/major pins current) | — |
-| docker (`/`) | — | `node`, `geoffreybooth/meteor-base` (hand-coupled to Meteor 3.4.1) |
+| docker (`/`) | — | `node`, `geoffreybooth/meteor-base` (hand-coupled to Meteor 3.5.2) |
 
 ## Gotchas
 
 - **`meteor build` needs `--include=dev`.** The rspack bundler is a devDependency; the meteor-base image's `NODE_ENV=production` otherwise omits it and the build dies with a misleading "Could not find rspack.config.js". (`Dockerfile:11-16`)
-- **Node 22 is pinned in ~6 uncoupled spots** (`engines.node`, Dockerfile, CI, setup scripts, README, deployment docs) with nothing enforcing agreement. Don't trust `*-LTS` (now Node 24). Keep `@types/node` on v20.
+- **Node 24 is pinned in ~6 uncoupled spots** (`engines.node`, Dockerfile, CI, setup scripts, README, deployment docs) with nothing enforcing agreement — bump them together, as the Meteor 3.5.2 upgrade had to. Don't trust `*-LTS`. `@types/node` stays on v20: it is deliberately older than the runtime, and raising it is a separate, breaking change.
 - **`ROOT_URL` must equal `https://$STACK_HOST` exactly** — Meteor requirement; the deploy workflow renders it that way, but a manual `.env` that mismatches breaks the app silently.
 - **`tests/` is intentionally not in `.dockerignore`** — `package.json` references `tests/main.ts` as `meteor.testModule` and Meteor resolves the path even in production builds. Removing it breaks `meteor build`.
 - **`.meteorignore` must exclude *all* of `e2e/`** — partial excludes leave Playwright's transient writes visible to Meteor HMR, triggering a mid-test `forceBrowserReload` that wipes form state and notifications.

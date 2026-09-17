@@ -25,7 +25,7 @@ docker network create traefik            # once, if not present
 docker compose up -d
 ```
 
-- Multi-stage Dockerfile: builds the Meteor app, runs on Node 22.
+- Multi-stage Dockerfile: builds the Meteor app, runs on Node 24.
 - Requires the external `traefik` network (assumes a Traefik reverse proxy).
 - MongoDB 7 with health checks and a persistent volume.
 - With `STACK` / `STACK_HOST` unset, the Traefik router is named `community-manager` and routes `$DOMAIN` — the original behaviour, unchanged.

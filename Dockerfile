@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
 # ---------- Build stage ----------
-FROM geoffreybooth/meteor-base:3.4 AS builder
+FROM geoffreybooth/meteor-base:3.5 AS builder
 
 WORKDIR /app
 
@@ -20,7 +20,7 @@ COPY . .
 RUN meteor build --server-only --directory /built-app
 
 # ---------- Production stage ----------
-FROM node:22-slim AS production
+FROM node:24-slim AS production
 
 RUN apt-get update \
     && apt-get upgrade -y \
@@ -36,7 +36,12 @@ RUN apt-get update \
             || { echo "$pkg $v is older than required 3.0.20-1~deb12u2" >&2; exit 1; }; \
     done \
     && rm -rf /var/lib/apt/lists/* \
-    && npm install -g npm@latest \
+    # npm is pinned to 11: npm 12 cannot install Meteor's server bundle. It
+    # defaults allow-remote to none (the bundle declares source-map-support as a
+    # commit-pinned GitHub tarball) and it rejects unknown flags, which breaks
+    # the bundle's own `npm-rebuild.js` install script (`--update-binary`).
+    # Floating to @latest is what silently broke every deploy when npm 12 shipped.
+    && npm install -g npm@11 \
     && npm cache clean --force \
     && groupadd --system --gid 1001 meteor \
     && useradd --system --uid 1001 --gid meteor --home /app --shell /usr/sbin/nologin meteor
