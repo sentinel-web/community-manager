@@ -54,7 +54,23 @@ Traefik   https://<slug>.<base-domain>  →  cm-<slug>-app   (router/service nam
 
 1. Docker Engine + Compose v2, the external `traefik` network, and a running Traefik with the `letsencrypt` (HTTP-01) cert resolver — same as production.
 2. A deploy user whose `~/.ssh/authorized_keys` holds the public half of `DEPLOY_SSH_KEY`, and which can run `docker`.
-3. **Wildcard DNS:** `*.<base-domain>` → the host's IP. Traefik then mints a per-host cert for each `<slug>.<base-domain>` on first request via HTTP-01 — no wildcard certificate needed. (Watch Let's Encrypt's 50-certs/registered-domain/week limit; switch Traefik to a DNS-01 wildcard cert if branch churn is high.)
+3. **Wildcard DNS:** `*.<base-domain>` → the host's IP. Traefik then mints a per-host cert for each `<slug>.<base-domain>` on demand, using whichever ACME challenge it is configured for (this host uses TLS-ALPN-01) — no wildcard certificate needed. (Watch Let's Encrypt's 50-certs/registered-domain/week limit; switch Traefik to a DNS-01 wildcard cert if branch churn is high.)
+4. **Traefik's docker provider must actually work.** Every stack is routed from container
+   labels, so if Traefik cannot read the Docker API it creates no routers at all — and the
+   failure is silent from the deploy's point of view: the workflow reports success, the
+   container is healthy, and every request returns **404 with `CN = TRAEFIK DEFAULT CERT`**.
+   Traefik logs the cause, but only to its own log file (`log.filePath`), so `docker logs
+   traefik` shows nothing. Check that file first:
+
+   ```bash
+   tail -20 <traefik-log-dir>/traefik.log          # e.g. "Provider connection error … 503"
+   curl -s http://127.0.0.1:2375/version | head    # if a docker-socket-proxy sits in front
+   ```
+
+   A proxy that answers `503 Service Unavailable / No server is available` cannot reach
+   `/var/run/docker.sock` (usually a group-permission mismatch on the socket). Until it is
+   fixed, only file-provider routes work and preview deploys cannot be verified over HTTP.
+
 4. First GHCR publish creates the package — in its settings, link it to this repo so the workflow's `GITHUB_TOKEN` retains pull access.
 
 ### GitHub secrets & variables
