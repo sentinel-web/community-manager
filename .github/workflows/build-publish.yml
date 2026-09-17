@@ -61,7 +61,7 @@ jobs:
       image: ${{ steps.image.outputs.ref }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
 
