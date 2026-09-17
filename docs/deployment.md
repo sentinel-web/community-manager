@@ -79,7 +79,7 @@ GHCR push/pull uses the built-in `GITHUB_TOKEN`; no registry secret is required.
 
 ### Deploying & tearing down
 
-- **Deploy:** Actions → **deploy** → Run workflow → enter a branch. (Or merge to `main`.) The job backs up the stack's DB (`mongodump`, kept under `/opt/cm/<slug>/backups/`, last 10 retained) **before** pulling, then `docker compose -p cm-<slug> up -d` and waits for the container healthcheck.
+- **Deploy:** Actions → **deploy** → Run workflow → enter a branch. (Or merge to `main`.) The job backs up the stack's DB (`mongodump`, kept under `/opt/cm/<slug>/backups/`, last 10 retained) **before** pulling, then `docker compose -p cm-<slug> up -d`, waits for the container healthcheck, and finally requests `https://<slug>.<base-domain>/` from outside — the container healthcheck alone cannot tell whether Traefik routes to it.
 - **Tear down:** Actions → **teardown** → Run workflow → enter a branch (tick *purge* to also drop its Mongo volume). Deleting a branch on GitHub auto-tears-down its stack (and purges the volume, since the data is disposable then). Backups are always preserved.
 - **List stacks on the host:** `bash /opt/cm/<any-slug>/teardown.sh --list`.
 

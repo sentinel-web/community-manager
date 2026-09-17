@@ -174,3 +174,40 @@ jobs:
 
           # Run the deploy (backup -> pull -> up -> health) on the host.
           $SSH "MAX_STACKS='${MAX_STACKS:-6}' bash '$STACK_DIR/deploy.sh' --slug '$SLUG' --dir '$STACK_DIR' --backup"
+
+      # deploy.sh waits for the *container's* healthcheck, which passes even when
+      # nothing routes to it: if Traefik cannot read the Docker API it builds no
+      # routers, every request 404s with its default certificate, and the deploy
+      # still reports success (see docs/deployment.md). So verify the public URL
+      # the way a user reaches it — through DNS, Traefik and a real certificate.
+      - name: Verify the public URL
+        env:
+          BASE_DOMAIN: ${{ vars.BASE_DOMAIN }}
+          SLUG: ${{ needs.resolve.outputs.slug }}
+        run: |
+          set -euo pipefail
+          url="https://$SLUG.$BASE_DOMAIN/"
+          echo "Checking $url"
+
+          # TLS-ALPN-01 mints the certificate on demand, so allow it to appear.
+          for attempt in $(seq 1 12); do
+            code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$url")" || code=000
+            [ "$code" = "200" ] && { echo "  $url -> 200"; exit 0; }
+            echo "  attempt $attempt: HTTP $code"
+            sleep 10
+          done
+
+          echo "::error::$url did not serve HTTP 200 (last: $code) though the container is healthy."
+          # Name the usual cause: an unrouted stack answers 404 with Traefik's default cert.
+          insecure="$(curl -sk -o /dev/null -w '%{http_code}' --max-time 15 "$url")" || insecure=000
+          subject="$(echo | openssl s_client -connect "$SLUG.$BASE_DOMAIN:443" -servername "$SLUG.$BASE_DOMAIN" 2>/dev/null \
+            | openssl x509 -noout -subject 2>/dev/null || true)"
+          echo "  ignoring certificate: HTTP $insecure"
+          echo "  certificate: ${subject:-none presented}"
+          case "$insecure:$subject" in
+            404:*TRAEFIK\ DEFAULT\ CERT*)
+              echo "::error::No Traefik router matched this host — Traefik is not reading container labels."
+              echo "Check Traefik's own log file (log.filePath; 'docker logs traefik' stays empty) and, if a"
+              echo "docker-socket-proxy sits in front, that it can reach /var/run/docker.sock." ;;
+          esac
+          exit 1
