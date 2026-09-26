@@ -13,7 +13,10 @@ export const TEST_PREFIX = 'test_';
 const TEST_PREFIX_END = 'test`'; // next char after '_' (0x5F) is '`' (0x60)
 const prefixFilter = { _id: { $gte: TEST_PREFIX, $lt: TEST_PREFIX_END } };
 
-function prefixedId(): string {
+// Exported for tests that create docs through a Meteor method rather than
+// `createTestDoc`: they pass this as the payload `_id` so the row still falls
+// inside the prefix range `cleanupFixtures` scopes to.
+export function prefixedId(): string {
   return `${TEST_PREFIX}${Random.id()}`;
 }
 

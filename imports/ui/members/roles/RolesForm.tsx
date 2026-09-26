@@ -53,7 +53,7 @@ const RolesForm = () => {
         <Input.TextArea placeholder={t('forms.placeholders.enterDescription')} />
       </Form.Item>
       <Form.Item name="color" label={t('common.color')}>
-        <ColorPicker format="hex" />
+        <ColorPicker format="hex" disabledAlpha />
       </Form.Item>
 
       <Form.Item name={ADMIN_FIELD} label={t('members.administrator')} extra={t('members.administratorHint')} valuePropName="checked">

@@ -1,7 +1,7 @@
-import { Tag } from 'antd';
 import { useFind, useSubscribe } from 'meteor/react-meteor-data';
 import React, { useMemo } from 'react';
 import PositionsCollection from '../../../api/collections/positions.collection';
+import ColoredTag from '../../components/ColoredTag';
 
 interface PositionTagProps {
   positionId?: string;
@@ -15,5 +15,5 @@ export default function PositionTag({ positionId }: PositionTagProps) {
 
   if (!position) return '-';
 
-  return <Tag color={position.color}>{position.name}</Tag>;
+  return <ColoredTag color={position.color}>{position.name}</ColoredTag>;
 }

@@ -26,7 +26,7 @@ spending a CI cycle:
 ## Client
 - [ ] No `React.FC` / PropTypes; props are a typed `interface` above the component.
 - [ ] `valuePropName="checked"` on Switch/Checkbox `Form.Item`s.
-- [ ] `!` (not `?.`) on `member.profile.X`; color render uses `color || 'transparent'`.
+- [ ] `!` (not `?.`) on `member.profile.X`; user colors render via `ColoredTag`, not a raw `<Tag color>`.
 - [ ] `useFind` has a `useSubscribe`; hook dependency arrays are narrowed.
 
 ## Rich text / sanitizer

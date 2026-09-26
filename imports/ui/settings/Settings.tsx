@@ -309,7 +309,7 @@ function CommunityColorSettings({ communityColor, handleChange = () => {}, t }: 
     <Row gutter={[16, 16]}>
       <SettingTitle title={t('settings.communityColor')} />
       <Col span={24}>
-        <ColorPicker defaultValue={communityColor} onChange={color => handleChange(color, 'community-color')} />
+        <ColorPicker format="hex" disabledAlpha defaultValue={communityColor} onChange={color => handleChange(color, 'community-color')} />
       </Col>
     </Row>
   );

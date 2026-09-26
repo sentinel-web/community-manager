@@ -49,8 +49,8 @@ regenerations (CLAUDE.md → Demo Data).
 | Attendances | `attendances` | `events` | **One document per `eventId`**, with each member's status under a dynamic `[memberId]` key. Status is an int **-2..2**, not a boolean. |
 | Tasks | `tasks` | `tasks` | Kanban cards. Self-referential `parent`; embedded `comments[]` (`{ userId, text, createdAt }`); `priority: low\|medium\|high`. |
 | TaskStatus | `taskStatus` | `taskStatus` | Kanban columns. Bare `ColoredEntity`. |
-| Squads | `squads` | `squads` | Org units. Self-referential `parentSquadId` (drives the ORBAT tree); `excludeFromOrbat?` hides a node; radio frequencies + base64 `image`. |
-| Ranks | `ranks` | `ranks` | Self-referential `previousRankId`/`nextRankId` (ordered chain); `type: player\|zeus`. |
+| Squads | `squads` | `squads` | Org units. Self-referential `parentSquadId` (drives the ORBAT tree); `excludeFromOrbat?` hides a node; `order?` sorts siblings/lists by `{ order, name }`; radio frequencies + base64 `image`. |
+| Ranks | `ranks` | `ranks` | Self-referential `previousRankId`/`nextRankId` (ordered chain, drives rank seniority sorting); `abbreviation?` for compact display; `type: player\|zeus`. |
 | Specializations | `specializations` | `specializations` | Qualifications. `ColoredEntity` + `instructors[]`, self-ref `requiredSpecializations[]`, `requiredRankId`, `linkToFile`. |
 | Medals | `medals` | `medals` | Awards. Bare `ColoredEntity`. |
 | EventTypes | `eventTypes` | `eventTypes` | Reference. Bare `ColoredEntity`. |

@@ -1,5 +1,6 @@
 import { Tag } from 'antd';
 import React from 'react';
+import ColoredTag from '../../components/ColoredTag';
 import type { Rank } from '../../../api/types/rank';
 import type { ColumnsFactory } from '../../section/types';
 import TableActions from '../../table/body/actions/TableActions';
@@ -14,6 +15,14 @@ const getRankColumns: ColumnsFactory<Rank> = (handleEdit, handleDelete, permissi
       key: 'name',
       ellipsis: true,
       sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
+    },
+    {
+      title: t('ranks.abbreviation'),
+      dataIndex: 'abbreviation',
+      key: 'abbreviation',
+      ellipsis: true,
+      sorter: (a: Rank, b: Rank) => (a.abbreviation || '').localeCompare(b.abbreviation || ''),
+      render: (abbreviation: string | undefined) => abbreviation || '-',
     },
     {
       title: t('columns.type'),
@@ -42,7 +51,7 @@ const getRankColumns: ColumnsFactory<Rank> = (handleEdit, handleDelete, permissi
       key: 'color',
       ellipsis: true,
       sorter: (a: Rank, b: Rank) => (a.color || '').localeCompare(b.color || ''),
-      render: (color: string) => <Tag color={color || 'transparent'}>{color}</Tag>,
+      render: (color: string) => <ColoredTag color={color}>{color || '-'}</ColoredTag>,
     },
   ];
 
