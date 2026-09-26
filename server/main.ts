@@ -246,9 +246,12 @@ export async function ensureAttendancesUniqueIndex(): Promise<void> {
       await raw.dropIndex(conflicting.name);
     }
   } catch (error) {
-    // indexes()/dropIndex can fail on a missing collection (never created yet)
-    // — that's fine, createIndex below will materialise it. Log and continue.
-    console.warn('[attendances] could not inspect/drop existing { eventId } index:', error);
+    // indexes() fails with NamespaceNotFound (code 26) on a fresh database where
+    // the collection was never created — expected, and createIndex below will
+    // materialise it, so stay silent. Anything else: log and continue.
+    if ((error as { code?: number }).code !== 26) {
+      console.warn('[attendances] could not inspect/drop existing { eventId } index:', error);
+    }
   }
 
   // 3. Create the unique index. This is the race protection from #261 and must
