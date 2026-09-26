@@ -61,6 +61,7 @@ WORKDIR /app/programs/server
 RUN apt-get update \
     && apt-get install -y --no-install-recommends python3 make g++ \
     && npm install --omit=dev --no-audit --no-fund \
+    && npm install --no-audit --no-fund underscore@1.13.8 \
     && npm cache clean --force \
     && apt-get purge -y python3 make g++ \
     && apt-get autoremove -y \
