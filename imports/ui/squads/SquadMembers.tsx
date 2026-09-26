@@ -1,28 +1,20 @@
-import { Empty, List, Spin, Tag } from 'antd';
+import { Empty, List, Spin } from 'antd';
 import React, { useEffect, useState } from 'react';
+import type { SquadMemberRow } from '../../api/types/orbat';
 import { useTranslation } from '../../i18n/LanguageContext';
-import getLegibleTextColor from '../../helpers/colors/getLegibleTextColor';
+import ColoredTag from '../components/ColoredTag';
 import useMethod from '../hooks/useMethod';
-
-interface SquadMemberItem {
-  _id: string;
-  id: number;
-  name: string;
-  rankName: string | null;
-  rankColor: string | null;
-  positionName: string | null;
-  positionColor: string | null;
-}
+import CompactRankTag from '../members/ranks/CompactRankTag';
 
 interface SquadMembersProps {
   squadId: string;
 }
 
 export default function SquadMembers({ squadId }: SquadMembersProps) {
-  const [members, setMembers] = useState<SquadMemberItem[]>([]);
+  const [members, setMembers] = useState<SquadMemberRow[]>([]);
   const [loading, setLoading] = useState(true);
   const { t } = useTranslation();
-  const { call } = useMethod<SquadMemberItem[]>('squads.members');
+  const { call } = useMethod<SquadMemberRow[]>('squads.members');
 
   useEffect(() => {
     call(squadId)
@@ -33,24 +25,23 @@ export default function SquadMembers({ squadId }: SquadMembersProps) {
   if (loading) return <Spin size="small" />;
   if (members.length === 0) return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('squads.noMembers')} />;
 
+  // Rows arrive sorted by position order, rank seniority, then name.
   return (
     <List
       size="small"
       dataSource={members}
       renderItem={member => (
-        <List.Item key={member._id}>
+        <List.Item key={member.memberId}>
           <span>
-            {member.id} &quot;{member.name}&quot;
+            {member.memberNumber} &quot;{member.memberName}&quot;
           </span>
           {member.rankName && (
-            <Tag color={member.rankColor ?? undefined} style={{ marginLeft: 8 }}>
-              <span style={{ color: member.rankColor ? getLegibleTextColor(member.rankColor) : undefined }}>{member.rankName}</span>
-            </Tag>
+            <CompactRankTag name={member.rankName} abbreviation={member.rankAbbreviation} color={member.rankColor} style={{ marginLeft: 8 }} />
           )}
           {member.positionName && (
-            <Tag color={member.positionColor ?? undefined} style={{ marginLeft: 4 }}>
-              <span style={{ color: member.positionColor ? getLegibleTextColor(member.positionColor) : undefined }}>{member.positionName}</span>
-            </Tag>
+            <ColoredTag color={member.positionColor} style={{ marginLeft: 4 }}>
+              {member.positionName}
+            </ColoredTag>
           )}
         </List.Item>
       )}

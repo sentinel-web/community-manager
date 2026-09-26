@@ -50,7 +50,7 @@ export default function BriefingTemplatesForm() {
         <Input.TextArea autoSize placeholder={t('forms.placeholders.enterDescription')} />
       </Form.Item>
       <Form.Item name="color" label={t('common.color')}>
-        <ColorPicker format="hex" />
+        <ColorPicker format="hex" disabledAlpha />
       </Form.Item>
       <FormFooter onCancel={cancel} loading={loading} />
     </Form>

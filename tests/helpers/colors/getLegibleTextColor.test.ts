@@ -1,71 +1,66 @@
 import assert from 'node:assert';
 import getLegibleTextColor from '../../../imports/helpers/colors/getLegibleTextColor';
-import getLuminance from '../../../imports/helpers/colors/getLuminance';
-import parseColor from '../../../imports/helpers/colors/parseColor';
 
 describe('getLegibleTextColor', () => {
   it('returns white text for dark backgrounds', () => {
-    // Dark backgrounds need light text for readability
-    const backgroundColor = '#333333';
-    assert.strictEqual(getLegibleTextColor(backgroundColor), 'white');
+    assert.strictEqual(getLegibleTextColor('#333333'), 'white');
   });
 
   it('returns black text for light backgrounds', () => {
-    // Light backgrounds need dark text for readability
-    const backgroundColor = '#FFFFFF';
-    assert.strictEqual(getLegibleTextColor(backgroundColor), 'black');
+    assert.strictEqual(getLegibleTextColor('#FFFFFF'), 'black');
   });
 
   it('handles hex colors with shorthand notation', () => {
-    // #FFF is white, needs black text
-    const backgroundColor = '#FFF';
-    assert.strictEqual(getLegibleTextColor(backgroundColor), 'black');
+    assert.strictEqual(getLegibleTextColor('#FFF'), 'black');
   });
 
   it('handles RGB colors', () => {
-    // White in RGB format needs black text
-    const backgroundColor = 'rgb(255, 255, 255)';
-    assert.strictEqual(getLegibleTextColor(backgroundColor), 'black');
+    assert.strictEqual(getLegibleTextColor('rgb(255, 255, 255)'), 'black');
   });
 
-  it('throws an error for unsupported color formats', () => {
-    const backgroundColor = 'invalid-color';
-    assert.throws(() => getLegibleTextColor(backgroundColor), { message: 'Unsupported color format' });
+  it('does not throw on 8-digit #rrggbbaa colors emitted by the antd ColorPicker', () => {
+    assert.strictEqual(getLegibleTextColor('#ffd66680'), 'black');
+    assert.strictEqual(getLegibleTextColor('#000000cc'), 'white');
+  });
+
+  it('returns undefined (theme default) for unsupported color formats instead of throwing', () => {
+    assert.strictEqual(getLegibleTextColor('invalid-color'), undefined);
+    assert.strictEqual(getLegibleTextColor('blue'), undefined);
+  });
+
+  it('returns undefined for empty colors', () => {
+    assert.strictEqual(getLegibleTextColor(''), undefined);
+    assert.strictEqual(getLegibleTextColor(null), undefined);
+    assert.strictEqual(getLegibleTextColor(undefined), undefined);
   });
 
   it('returns white text for mid-dark gray', () => {
-    // #666666 has luminance ~0.13, which is < 0.5
-    const backgroundColor = '#666666';
-    assert.strictEqual(getLegibleTextColor(backgroundColor), 'white');
+    // #666666 luminance ~0.133
+    assert.strictEqual(getLegibleTextColor('#666666'), 'white');
   });
 
   it('returns black text for light gray', () => {
-    // #CCCCCC has luminance ~0.6, which is > 0.5
-    const backgroundColor = '#CCCCCC';
-    assert.strictEqual(getLegibleTextColor(backgroundColor), 'black');
+    assert.strictEqual(getLegibleTextColor('#CCCCCC'), 'black');
   });
 
-  it('uses 0.5 as the luminance threshold', () => {
-    // Verify the threshold behavior by checking a color near the boundary
-    const lightGray = '#BBBBBB';
-    const luminance = getLuminance(...parseColor(lightGray));
-    // #BBBBBB has luminance ~0.48, so should return white
-    if (luminance > 0.5) {
-      assert.strictEqual(getLegibleTextColor(lightGray), 'black');
-    } else {
-      assert.strictEqual(getLegibleTextColor(lightGray), 'white');
-    }
+  it('picks the WCAG higher-contrast text color around the ~0.179 luminance crossover', () => {
+    // #757575 luminance ~0.178: white contrast 4.61 > black contrast 4.56
+    assert.strictEqual(getLegibleTextColor('#757575'), 'white');
+    // #767676 luminance ~0.181: black contrast 4.62 > white contrast 4.54
+    assert.strictEqual(getLegibleTextColor('#767676'), 'black');
+  });
+
+  it('returns black text for mid-light colors that a 0.5 threshold got wrong', () => {
+    // #BBBBBB luminance ~0.497, #52c41a luminance ~0.41 — white text is barely legible on both
+    assert.strictEqual(getLegibleTextColor('#BBBBBB'), 'black');
+    assert.strictEqual(getLegibleTextColor('#52c41a'), 'black');
   });
 
   it('returns white text for pure blue', () => {
-    // Blue has low luminance (~0.07)
-    const backgroundColor = '#0000FF';
-    assert.strictEqual(getLegibleTextColor(backgroundColor), 'white');
+    assert.strictEqual(getLegibleTextColor('#0000FF'), 'white');
   });
 
   it('returns black text for pure green', () => {
-    // Green has high luminance (~0.72)
-    const backgroundColor = '#00FF00';
-    assert.strictEqual(getLegibleTextColor(backgroundColor), 'black');
+    assert.strictEqual(getLegibleTextColor('#00FF00'), 'black');
   });
 });
