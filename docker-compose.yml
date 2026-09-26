@@ -61,10 +61,33 @@ services:
       - "traefik.http.routers.${STACK:-community-manager}.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}"
       - "traefik.http.services.${STACK:-community-manager}.loadbalancer.server.port=3000"
 
+  # Single-member replica set (rs0), not a standalone: Meteor >= 3.5 keeps live
+  # subscriptions current via change streams, which only exist on a replica set;
+  # on a standalone it silently falls back to polling every 10 s. MONGO_URL needs
+  # no replicaSet parameter (the driver discovers the topology), and there must be
+  # no MONGO_OPLOG_URL, or Meteor picks oplog tailing over change streams.
   mongo:
-    image: mongo:7.0
+    image: mongo:7.0.43
     restart: unless-stopped
-    command: ["--bind_ip_all", "--auth"]
+    # A replica set with --auth requires a keyfile. It is generated here, inside
+    # the container, once per stack and kept in the mongo-config volume — never on
+    # the host or in the repo — because deploy.sh runs unprivileged and cannot
+    # chown a host file to the mongodb user, while mongod refuses a keyfile that is
+    # group- or world-readable. The container starts as root; the official
+    # entrypoint then drops to mongodb and strips --replSet/--keyFile from the
+    # temporary mongod it uses to create the root user on an empty volume.
+    entrypoint:
+      - bash
+      - -euc
+      - |
+        KF=/data/configdb/rs-keyfile
+        [ -s "$$KF" ] || (umask 077 && head -c 756 /dev/urandom | base64 > "$$KF")
+        chown mongodb:mongodb "$$KF" && chmod 400 "$$KF"
+        exec docker-entrypoint.sh "$$@"
+      - --
+    # --oplogSize only applies when the oplog is first created. 256 MB keeps up to
+    # MAX_STACKS preview stacks affordable on one shared disk.
+    command: ["--bind_ip_all", "--auth", "--replSet", "rs0", "--keyFile", "/data/configdb/rs-keyfile", "--oplogSize", "256"]
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
@@ -83,11 +106,19 @@ services:
         - "--authenticationDatabase"
         - "admin"
         - "--eval"
-        - "db.adminCommand('ping').ok"
+        # Idempotently initiate rs0 (fresh volume, or a former standalone volume),
+        # and report healthy only once this node is a writable PRIMARY, so the app
+        # (depends_on: service_healthy) never sees an uninitiated set. The member
+        # host is the compose service name, which every stack resolves on its own
+        # internal network.
+        - >-
+          try { rs.status() } catch (e) { if (e.codeName !== 'NotYetInitialized') throw e;
+          rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mongo:27017' }] }) }
+          db.hello().isWritablePrimary ? 1 : quit(1)
       interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
     security_opt:
       - no-new-privileges:true
     deploy:
