@@ -1,5 +1,5 @@
-import { Tag } from 'antd';
 import React from 'react';
+import ColoredTag from '../../components/ColoredTag';
 import type { Role } from '../../../api/types/role';
 import type { ColumnsFactory } from '../../section/types';
 import TableActions from '../../table/body/actions/TableActions';
@@ -28,7 +28,7 @@ const getRolesColumns: ColumnsFactory<Role> = (handleEdit, handleDelete, permiss
       key: 'color',
       ellipsis: true,
       sorter: (a: Role, b: Role) => (a.color || '').localeCompare(b.color || ''),
-      render: (color: string) => <Tag color={color || 'transparent'}>{color}</Tag>,
+      render: (color: string) => <ColoredTag color={color}>{color || '-'}</ColoredTag>,
     },
   ];
 

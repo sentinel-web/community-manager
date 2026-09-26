@@ -5,6 +5,7 @@ import { useTracker } from 'meteor/react-meteor-data';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import type { EventDoc } from '../../api/types/event';
+import ColoredTag from '../components/ColoredTag';
 import RichTextView from '../components/RichTextView';
 import useMethod from '../hooks/useMethod';
 
@@ -93,7 +94,7 @@ export default function EventDetailPopover({ event, open, setOpen, onEdit }: Eve
               <Descriptions.Item label={t('events.eventName')}>{detail.name}</Descriptions.Item>
               {detail.eventTypeName && (
                 <Descriptions.Item label={t('events.eventType')}>
-                  <Tag color={detail.eventTypeColor ?? undefined}>{detail.eventTypeName}</Tag>
+                  <ColoredTag color={detail.eventTypeColor}>{detail.eventTypeName}</ColoredTag>
                 </Descriptions.Item>
               )}
               <Descriptions.Item label={t('events.startDate')}>

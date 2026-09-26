@@ -1,40 +1,50 @@
-import { Card, Descriptions, Empty, Popover, Select, Space, Typography } from 'antd';
+import { Card, Empty, Popover, Select, Tooltip, Typography } from 'antd';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Tree, TreeNode } from 'react-organizational-chart';
 import getLegibleTextColor from '../../helpers/colors/getLegibleTextColor';
 import { useTranslation } from '../../i18n/LanguageContext';
 import type { LanguageContextValue } from '../../i18n/LanguageContext';
-import type { Squad } from '/imports/api/types';
+import type { OrbatSquad, SquadMemberRow } from '/imports/api/types';
+import buildOrbatTree, { type OrbatTreeNode } from '/imports/helpers/orbat/buildOrbatTree';
 import useMethod from '../hooks/useMethod';
 import { turnBase64ToImage } from '../profile-picture-input/ProfilePictureInput';
 import useTheme from '../theme/theme.hook';
 import { useTourRef } from '../tour/TourContext';
+import OrbatMemberRows from './OrbatMemberRows';
 
 interface OrbatNode {
   id: string;
   name: string;
   descritpion: string;
   info?: string;
-  parentId?: string;
   src: string | null;
   color?: string;
+  memberCount: number;
   children: OrbatNode[];
 }
 
-interface OrbatPopoverItem {
-  label: string;
-  children: string;
+function toOrbatNode({ item, children }: OrbatTreeNode<OrbatSquad>, srcById: Map<string, string | null>): OrbatNode {
+  return {
+    id: item._id ?? '',
+    name: item.name,
+    descritpion: `(SR: ${item.shortRangeFrequency || 'N/A'} Mhz)`,
+    info: item.description,
+    src: srcById.get(item._id ?? '') ?? null,
+    color: item.color,
+    memberCount: item.memberCount,
+    children: children.map(child => toOrbatNode(child, srcById)),
+  };
 }
 
 export default function Orbat() {
   const [ready, setReady] = useState(true);
-  const [squads, setSquads] = useState<Squad[]>([]);
+  const [squads, setSquads] = useState<OrbatSquad[]>([]);
   const [options, setOptions] = useState<OrbatNode[]>([]);
   const [viewType, setViewType] = useState('simple');
   const { t } = useTranslation();
   const { theme } = useTheme();
   const chartRef = useTourRef('orbat-chart');
-  const { call: fetchSquads } = useMethod<Squad[]>('orbat.squads');
+  const { call: fetchSquads } = useMethod<OrbatSquad[]>('orbat.squads');
 
   useEffect(() => {
     setReady(false);
@@ -44,68 +54,15 @@ export default function Orbat() {
     });
   }, [fetchSquads]);
 
-  const findParentRecursive = useCallback((options: OrbatNode[], parentId: string | undefined): OrbatNode | null => {
-    if (!parentId) return null;
-    for (const o of options) {
-      if (o.id === parentId) return o;
-      const found = findParentRecursive(o.children, parentId);
-      if (found) return found;
-    }
-    return null;
-  }, []);
-
   const getOptions = useCallback(async (): Promise<OrbatNode[]> => {
-    const preparedOrbatOptions: OrbatNode[] = [];
-    const roots: Squad[] = [];
-    const parents: Squad[] = [];
-    const children: Squad[] = [];
-    // Build a single Set of squad IDs that appear as someone's parent — turns
-    // the inner "does anything reference me?" lookup from O(n²) into O(n).
-    const referencedParentIds = new Set(squads.flatMap(s => (s.parentSquadId ? [s.parentSquadId] : [])));
-    const seen = new Set<string>();
-    for (const squad of squads) {
-      if (seen.has(squad._id!)) continue;
-      seen.add(squad._id!);
-      if (!squad.parentSquadId) {
-        roots.push(squad);
-      } else if (referencedParentIds.has(squad._id!)) {
-        parents.push(squad);
-      } else {
-        children.push(squad);
-      }
-    }
-
-    // Two-phase build: race the per-squad image decoding in parallel, then
-    // assemble the tree sequentially so parents are placed before children
-    // look them up via findParentRecursive. The ordered traversal (roots →
-    // parents → children) preserves the prior tree-attachment semantics.
-    const orderedSquads = [...roots, ...parents, ...children];
+    // Decode the squad images in parallel, then assemble the tree. The server returns squads sorted by
+    // { order, name }; buildOrbatTree keeps that order among siblings.
     const decoded = await Promise.all(
-      orderedSquads.map(async squad => ({
-        squad,
-        src: squad.image ? (await turnBase64ToImage(squad.image)).src : null,
-      }))
+      squads.map(async squad => [squad._id ?? '', squad.image ? (await turnBase64ToImage(squad.image)).src : null] as const)
     );
-    for (const { squad, src } of decoded) {
-      const data: OrbatNode = {
-        id: squad._id ?? '',
-        name: squad.name,
-        descritpion: `(SR: ${squad.shortRangeFrequency || 'N/A'} Mhz)`,
-        info: squad.description,
-        parentId: squad.parentSquadId,
-        src: src,
-        color: squad.color,
-        children: [],
-      };
-      const parent = findParentRecursive(preparedOrbatOptions, data.parentId);
-      if (!parent) {
-        preparedOrbatOptions.push(data);
-      } else {
-        parent.children.push(data);
-      }
-    }
-    return preparedOrbatOptions;
-  }, [squads, findParentRecursive]);
+    const srcById = new Map<string, string | null>(decoded);
+    return buildOrbatTree(squads).map(node => toOrbatNode(node, srcById));
+  }, [squads]);
 
   useEffect(() => {
     getOptions().then(setOptions);
@@ -170,8 +127,8 @@ interface ORBAT_LabelProps {
 }
 
 const ORBAT_Label = ({ option, viewType }: ORBAT_LabelProps) => {
-  const [items, setItems] = useState<OrbatPopoverItem[]>([]);
-  const { call: fetchPopoverItems } = useMethod<OrbatPopoverItem[]>('orbat.popover.items');
+  const [items, setItems] = useState<SquadMemberRow[]>([]);
+  const { call: fetchPopoverItems } = useMethod<SquadMemberRow[]>('orbat.popover.items');
 
   useEffect(() => {
     let isMounted = true;
@@ -191,7 +148,7 @@ const ORBAT_Label = ({ option, viewType }: ORBAT_LabelProps) => {
 
 interface ORBAT_SimpleLabelProps {
   option: OrbatNode;
-  items: OrbatPopoverItem[];
+  items: SquadMemberRow[];
 }
 
 const ORBAT_SimpleLabel = ({ option, items }: ORBAT_SimpleLabelProps) => {
@@ -199,19 +156,7 @@ const ORBAT_SimpleLabel = ({ option, items }: ORBAT_SimpleLabelProps) => {
 
   return (
     <div>
-      <Popover
-        trigger="click"
-        placement="bottom"
-        content={
-          items?.length > 0 ? (
-            <div style={{ maxWidth: 400 }}>
-              <Descriptions items={items} />
-            </div>
-          ) : (
-            <Empty />
-          )
-        }
-      >
+      <Popover trigger="click" placement="bottom" content={items?.length > 0 ? <OrbatMemberRows rows={items} /> : <Empty />}>
         <img
           style={{ ...hoverStyle, maxWidth: '128px', aspectRatio: '1/1', objectFit: 'contain' }}
           src={option.src ?? undefined}
@@ -226,6 +171,9 @@ const ORBAT_SimpleLabel = ({ option, items }: ORBAT_SimpleLabelProps) => {
             {option.descritpion}
           </Typography.Text>
         </div>
+        <div>
+          <OrbatMemberCount count={option.memberCount} />
+        </div>
       </Popover>
     </div>
   );
@@ -233,7 +181,7 @@ const ORBAT_SimpleLabel = ({ option, items }: ORBAT_SimpleLabelProps) => {
 
 interface ORBAT_AdvancedLabelProps {
   option: OrbatNode;
-  items: OrbatPopoverItem[];
+  items: SquadMemberRow[];
 }
 
 const ORBAT_AdvancedLabel = ({ option, items }: ORBAT_AdvancedLabelProps) => {
@@ -243,23 +191,33 @@ const ORBAT_AdvancedLabel = ({ option, items }: ORBAT_AdvancedLabelProps) => {
 
   return (
     <Card type="inner" title={option.name} styles={{ header: { backgroundColor: bgColor, color: textColor } }}>
-      <Space direction="vertical" align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
         {option.src && (
           <img style={{ maxWidth: '64px', aspectRatio: '1/1', objectFit: 'contain' }} src={option.src} alt="-" title={option.info || option.name} />
         )}
         <Typography.Text type="secondary">{option.descritpion}</Typography.Text>
+        <OrbatMemberCount count={option.memberCount} />
         {items?.length > 0 ? (
-          items.map(item => (
-            <div key={item.label}>
-              <Typography.Text strong>{item.label}</Typography.Text> <Typography.Text>{item.children}</Typography.Text>
-            </div>
-          ))
+          <OrbatMemberRows rows={items} />
         ) : (
           <Typography.Text type="secondary" italic>
             {t('orbat.noMembers')}
           </Typography.Text>
         )}
-      </Space>
+      </div>
     </Card>
+  );
+};
+
+interface OrbatMemberCountProps {
+  count: number;
+}
+
+const OrbatMemberCount = ({ count }: OrbatMemberCountProps) => {
+  const { t } = useTranslation();
+  return (
+    <Tooltip title={t('orbat.memberCountHint')}>
+      <Typography.Text type="secondary">{t('orbat.memberCount', { count })}</Typography.Text>
+    </Tooltip>
   );
 };

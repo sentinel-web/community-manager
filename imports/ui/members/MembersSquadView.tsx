@@ -1,11 +1,12 @@
-import { Card, Col, List, Row, Tag } from 'antd';
+import { Card, Col, List, Row } from 'antd';
 import { useFind, useSubscribe } from 'meteor/react-meteor-data';
 import React, { useCallback, useMemo } from 'react';
 import SquadsCollection from '../../api/collections/squads.collection';
 import type { Member } from '../../api/types/member';
 import type { Squad } from '../../api/types/squad';
-import getLegibleTextColor from '../../helpers/colors/getLegibleTextColor';
+import compareByOrderThenName from '../../helpers/sorting/compareByOrderThenName';
 import { useTranslation } from '../../i18n/LanguageContext';
+import ColoredTag from '../components/ColoredTag';
 import type { RowClickEvent } from '../section/types';
 import RankTag from './ranks/RankTag';
 
@@ -33,11 +34,7 @@ export default function MembersSquadView({ datasource, handleEdit }: MembersSqua
 
   const sortedSquadIds = useMemo(() => {
     const ids = Object.keys(grouped).filter(id => id !== '__none__');
-    ids.sort((a, b) => {
-      const nameA = squadMap.get(a)?.name || '';
-      const nameB = squadMap.get(b)?.name || '';
-      return nameA.localeCompare(nameB);
-    });
+    ids.sort((a, b) => compareByOrderThenName(squadMap.get(a) ?? {}, squadMap.get(b) ?? {}));
     if (grouped.__none__?.length) ids.push('__none__');
     return ids;
   }, [grouped, squadMap]);
@@ -54,18 +51,7 @@ export default function MembersSquadView({ datasource, handleEdit }: MembersSqua
 
         return (
           <Col key={squadId} xs={24} sm={24} md={12} lg={8}>
-            <Card
-              size="small"
-              title={
-                color ? (
-                  <Tag color={color}>
-                    <span style={{ color: getLegibleTextColor(color) }}>{title}</span>
-                  </Tag>
-                ) : (
-                  title
-                )
-              }
-            >
+            <Card size="small" title={color ? <ColoredTag color={color}>{title}</ColoredTag> : title}>
               <List
                 size="small"
                 dataSource={members}

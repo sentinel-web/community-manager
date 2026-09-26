@@ -1,8 +1,8 @@
 import type { ColumnsType } from 'antd/es/table';
-import { Tag } from 'antd';
 import React, { useEffect, useState } from 'react';
 import type { Specialization } from '../../api/types/misc';
 import type { LanguageContextValue } from '../../i18n/LanguageContext';
+import ColoredTag from '../components/ColoredTag';
 import useMethod from '../hooks/useMethod';
 import type { SectionPermissions, RowClickEvent } from '../section/types';
 import RankTag from '../members/ranks/RankTag';
@@ -38,9 +38,9 @@ const SpecializationTags = ({ specializations }: SpecializationTagsProps) => {
     <>
       {values.length > 0
         ? values.map(value => (
-            <Tag style={{ marginRight: 4 }} key={value.value} color={value.raw.color}>
+            <ColoredTag style={{ marginRight: 4 }} key={value.value} color={value.raw.color}>
               {value.label}
-            </Tag>
+            </ColoredTag>
           ))
         : '-'}
     </>
@@ -62,7 +62,7 @@ const getSpecializationColumns = (
       key: 'name',
       ellipsis: true,
       sorter: (a, b) => String(a.name).localeCompare(String(b.name)),
-      render: (name: string, record: Specialization) => (name ? record.color ? <Tag color={record.color}>{name}</Tag> : <Tag>{name}</Tag> : '-'),
+      render: (name: string, record: Specialization) => (name ? <ColoredTag color={record.color}>{name}</ColoredTag> : '-'),
     },
     {
       title: t('columns.instructors'),
