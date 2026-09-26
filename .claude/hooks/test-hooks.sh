@@ -254,6 +254,10 @@ gate "a subdirectory session records for the whole tree" 0 "$WT2"
 echo "export const z = 1;" >"$WT2/client/z.ts"
 gate "untracked files outside the session subdirectory re-arm the gate" 2 "$WT2/imports"
 
+git init -q "$WT2/nested-repo"   # listed by `git ls-files --others` as `nested-repo/`
+record "$(payload "$WT2" "npm run typecheck && npm test" "$OK")"
+gate "an untracked nested repository does not blank the signature" 0 "$WT2"
+
 record "$(payload "$NONGIT" "npm run typecheck && npm test" "$OK")"
 expect_true "no state is recorded outside a git repo" "[ ! -e '$NONGIT/.claude' ] && [ ! -f '$MAIN/.claude/.verify-state' ]"
 
