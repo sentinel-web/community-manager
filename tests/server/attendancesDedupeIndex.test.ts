@@ -102,4 +102,42 @@ describe('ensureAttendancesUniqueIndex — startup-safe dedupe + unique index (#
     const after = await AttendancesCollection.find({ eventId }).fetchAsync();
     assert.strictEqual(after.length, 1, 'second run should leave the single doc untouched');
   });
+
+  // On a fresh database the collection does not exist yet, so indexes() fails
+  // with NamespaceNotFound (code 26). That is expected on every first start and
+  // must stay silent; any other inspect failure is still logged.
+  describe('inspect failures', () => {
+    // rawCollection() hands out a fresh driver Collection per call, so the stub
+    // must go on the shared prototype to reach the instance the code under test gets.
+    const proto = Object.getPrototypeOf(AttendancesCollection.rawCollection()) as ReturnType<typeof AttendancesCollection.rawCollection>;
+    const originalIndexes = proto.indexes;
+    const originalWarn = console.warn;
+    let warnings: unknown[][];
+
+    function failIndexesWith(code: number): void {
+      proto.indexes = (() => Promise.reject(Object.assign(new Error('stubbed indexes() failure'), { code }))) as typeof proto.indexes;
+    }
+
+    beforeEach(() => {
+      warnings = [];
+      console.warn = (...args: unknown[]) => warnings.push(args);
+    });
+
+    afterEach(() => {
+      proto.indexes = originalIndexes;
+      console.warn = originalWarn;
+    });
+
+    it('stays silent on NamespaceNotFound (fresh database)', async () => {
+      failIndexesWith(26);
+      await assert.doesNotReject(() => ensureAttendancesUniqueIndex());
+      assert.strictEqual(warnings.length, 0, 'NamespaceNotFound should not be logged');
+    });
+
+    it('still warns on any other inspect failure', async () => {
+      failIndexesWith(13);
+      await assert.doesNotReject(() => ensureAttendancesUniqueIndex());
+      assert.strictEqual(warnings.length, 1, 'other failures should be logged once');
+    });
+  });
 });

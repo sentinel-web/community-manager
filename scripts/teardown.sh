@@ -28,7 +28,10 @@ docker compose version >/dev/null 2>&1 || { echo "docker compose v2 is required"
 
 if [ "$LIST" -eq 1 ]; then
   echo "Active preview stacks:"
-  docker compose ls --all --format '{{.Name}}\t{{.Status}}' 2>/dev/null | grep '^cm-' || echo "  (none)"
+  # Plain table output (NAME, STATUS, CONFIG FILES): newer Compose rejects Go
+  # templates in `ls --format`, which used to make this always print "(none)".
+  stacks="$(docker compose ls --all)"
+  grep '^cm-' <<<"$stacks" || echo "  (none)"
   exit 0
 fi
 

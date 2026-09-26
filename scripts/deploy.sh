@@ -44,13 +44,13 @@ chmod 600 .env 2>/dev/null || true
 # dev override that disables Traefik); --env-file feeds per-stack variables.
 COMPOSE=(docker compose -p "$PROJECT" -f docker-compose.yml --env-file .env)
 
-stack_exists() {
-  docker compose ls --all --format '{{.Name}}' 2>/dev/null | grep -qx "$PROJECT"
-}
-
 # --- Stack cap (only blocks brand-new stacks; redeploys always proceed) ----
-if ! stack_exists; then
-  count="$(docker compose ls --all --format '{{.Name}}' 2>/dev/null | grep -c '^cm-' || true)"
+# `ls -q` prints one project name per line. Not `--format '{{.Name}}'`: newer
+# Compose rejects Go templates there, and with its error swallowed the cap was
+# silently never enforced. A failing `ls` now aborts the deploy (set -e).
+projects="$(docker compose ls --all -q)"
+if ! grep -qx "$PROJECT" <<<"$projects"; then
+  count="$(grep -c '^cm-' <<<"$projects" || true)"
   if [ "${count:-0}" -ge "$MAX_STACKS" ]; then
     echo "Refusing to create a new stack: ${count}/${MAX_STACKS} preview stacks already exist." >&2
     echo "Tear one down (teardown.yml) or raise MAX_STACKS." >&2
@@ -66,9 +66,11 @@ if [ "$BACKUP" -eq 1 ]; then
     log "Backing up MongoDB for $PROJECT"
     ts="$(date -u +%Y%m%dT%H%M%SZ)"
     mkdir -p backups
-    if "${COMPOSE[@]}" exec -T mongo sh -c \
+    # The archive holds user data: create it owner-only (umask in a subshell so
+    # it does not leak into the rest of the deploy).
+    if (umask 077 && "${COMPOSE[@]}" exec -T mongo sh -c \
       'mongodump --quiet --authenticationDatabase admin -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --db community-manager --archive --gzip' \
-      > "backups/${ts}.archive.gz"; then
+      > "backups/${ts}.archive.gz"); then
       echo "  wrote backups/${ts}.archive.gz"
       # Retain the 10 most recent archives for this stack.
       ls -1t backups/*.archive.gz 2>/dev/null | tail -n +11 | xargs -r rm -f
