@@ -40,13 +40,17 @@ state_file() {
 # the top level so a session in a subdirectory still covers the whole tree.
 # Hashes with `git hash-object` (sha1sum is missing on stock macOS). Prints
 # nothing on failure; callers treat an empty signature as "not verified".
+# Untracked entries that are not regular files (a nested repository is listed as
+# `dir/`) contribute their name only: under pipefail a failing `cat` would
+# otherwise blank the signature and block the gate forever.
 tree_sig() {
   (
     cd "$1" 2>/dev/null || exit 1
     head=$(git rev-parse HEAD 2>/dev/null || echo none)
     diff=$(git diff HEAD 2>/dev/null | git hash-object --stdin) || exit 1
     others=$(git ls-files --others --exclude-standard 2>/dev/null |
-      while IFS= read -r f; do printf '%s\n' "$f"; cat "$f" 2>/dev/null; done | git hash-object --stdin) || exit 1
+      while IFS= read -r f; do printf '%s\n' "$f"; if [ -f "$f" ]; then cat "$f" 2>/dev/null || true; fi; done |
+      git hash-object --stdin) || exit 1
     printf '%s:%s:%s' "$head" "$diff" "$others"
   )
 }

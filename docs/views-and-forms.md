@@ -116,7 +116,8 @@ Components that render inside a view but never mount standalone.
 
 **Squads / orbat**
 - `squads/SquadMembers.tsx` — members within a squad (row expand)
-- `orbat/Orbat.tsx` — view selector + labelled org-chart nodes
+- `orbat/Orbat.tsx` — view selector + labelled org-chart nodes with direct member count
+- `orbat/OrbatMemberRows.tsx` — fixed position / rank / member columns inside an ORBAT node (advanced view) and its popover (simple view)
 
 **Registration**
 - `registration/RegistrationExtra.tsx` — registration row-expand detail + confirm modal

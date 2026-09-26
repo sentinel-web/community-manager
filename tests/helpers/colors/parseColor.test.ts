@@ -3,51 +3,50 @@ import parseColor from '../../../imports/helpers/colors/parseColor';
 
 describe('parseColor', () => {
   it('parses hex color to RGB values', () => {
-    const hex = '#ff0000';
-    const expectedRgb = [255, 0, 0];
-    assert.deepStrictEqual(parseColor(hex), expectedRgb);
+    assert.deepStrictEqual(parseColor('#ff0000'), [255, 0, 0]);
   });
 
   it('parses hex color with shorthand notation to RGB values', () => {
-    const hex = '#f00';
-    const expectedRgb = [255, 0, 0];
-    assert.deepStrictEqual(parseColor(hex), expectedRgb);
+    assert.deepStrictEqual(parseColor('#f00'), [255, 0, 0]);
+  });
+
+  it('parses 8-digit hex color, ignoring alpha', () => {
+    assert.deepStrictEqual(parseColor('#1677ffcc'), [22, 119, 255]);
   });
 
   it('parses RGB color to RGB values', () => {
-    const rgb = 'rgb(255, 0, 0)';
-    const expectedRgb = [255, 0, 0];
-    assert.deepStrictEqual(parseColor(rgb), expectedRgb);
-  });
-
-  it('throws an error for unsupported color format', () => {
-    const color = 'invalid-color';
-    assert.throws(() => parseColor(color), { message: 'Unsupported color format' });
-  });
-
-  it('throws an error for invalid hex color', () => {
-    const hex = '#gggggg';
-    assert.throws(() => parseColor(hex), { message: 'Invalid hex color' });
-  });
-
-  it('throws an error for invalid RGB color', () => {
-    const rgb = 'rgb(invalid)';
-    // This will return null from match, causing an error when mapping
-    assert.throws(() => parseColor(rgb));
+    assert.deepStrictEqual(parseColor('rgb(255, 0, 0)'), [255, 0, 0]);
   });
 
   it('parses RGB color without spaces', () => {
-    const rgb = 'rgb(255,128,0)';
-    const expectedRgb = [255, 128, 0];
-    assert.deepStrictEqual(parseColor(rgb), expectedRgb);
+    assert.deepStrictEqual(parseColor('rgb(255,128,0)'), [255, 128, 0]);
   });
 
   it('parses RGBA color (ignores alpha)', () => {
-    const rgba = 'rgba(255, 0, 0, 0.5)';
-    // Only extracts the RGB values, alpha is captured but we only use first 3
-    const result = parseColor(rgba);
-    assert.strictEqual(result[0], 255);
-    assert.strictEqual(result[1], 0);
-    assert.strictEqual(result[2], 0);
+    assert.deepStrictEqual(parseColor('rgba(255, 0, 0, 0.5)'), [255, 0, 0]);
+  });
+
+  it('trims surrounding whitespace', () => {
+    assert.deepStrictEqual(parseColor('  #00ff00 '), [0, 255, 0]);
+  });
+
+  it('returns undefined for named colors instead of throwing', () => {
+    assert.strictEqual(parseColor('red'), undefined);
+    assert.strictEqual(parseColor('invalid-color'), undefined);
+  });
+
+  it('returns undefined for invalid hex color', () => {
+    assert.strictEqual(parseColor('#gggggg'), undefined);
+  });
+
+  it('returns undefined for invalid RGB color', () => {
+    assert.strictEqual(parseColor('rgb(invalid)'), undefined);
+    assert.strictEqual(parseColor('rgb(300, 0, 0)'), undefined);
+  });
+
+  it('returns undefined for empty input', () => {
+    assert.strictEqual(parseColor(''), undefined);
+    assert.strictEqual(parseColor(null), undefined);
+    assert.strictEqual(parseColor(undefined), undefined);
   });
 });

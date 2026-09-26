@@ -39,7 +39,7 @@ separate step. That's what stops a reviewer "fix-and-passing" its own finding.
 - Handles both create (no `_id`) and update (has `_id`) paths.
 - `valuePropName="checked"` on Switch/Checkbox `Form.Item`s.
 - Nullable wire fields mirror `string | null`; `?? undefined` only at the antd DOM boundary.
-- Color render preserved (`color || 'transparent'`).
+- User colors render via `ColoredTag` (not a raw `<Tag color>`); `ColorPicker`s use `format="hex" disabledAlpha`.
 - Function components only — **no `React.FC`, no PropTypes** (also lint-enforced).
 - `!` (not `?.`) on `member.profile.X`.
 

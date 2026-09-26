@@ -66,7 +66,7 @@ const SpecializationForm = () => {
         </Col>
         <Col>
           <Form.Item name="color" label={t('common.color')}>
-            <ColorPicker />
+            <ColorPicker format="hex" disabledAlpha />
           </Form.Item>
         </Col>
       </Row>
