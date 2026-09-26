@@ -10,14 +10,13 @@ const { defineConfig } = require('@meteorjs/rspack');
  *
  * Use these flags to adjust your build settings based on environment.
  */
-module.exports = defineConfig(() => {
-  return {};
-  
+module.exports = defineConfig(Meteor => {
+  // discord.js's optional native add-ons are compiled in the production image
+  // (see Dockerfile); keep them out of the server bundle and require them at runtime.
+  if (Meteor.isServer) {
+    return { externals: ['zlib-sync', 'bufferutil', 'utf-8-validate'] };
+  }
+  // The bot is server-only. In test mode the client bundle still reaches
+  // server/main.ts through the test imports, so stub discord.js out there.
+  return { resolve: { alias: { 'discord.js': false } } };
 });
-module.exports = {
-  externals: [
-    'zlib-sync',
-    'bufferutil',
-    'utf-8-validate'
-  ],
-};

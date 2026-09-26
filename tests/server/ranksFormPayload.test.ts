@@ -38,7 +38,12 @@ describe('toRankPayload', () => {
       description: 'Zeus rank',
       previousRankId: 'sgt',
       nextRankId: 'maj',
+      discordRoleId: undefined,
       type: 'zeus',
     });
+  });
+
+  it('passes the Discord role id through', () => {
+    assert.strictEqual(toRankPayload({ name: 'Sergeant', type: 'player', discordRoleId: '123456789012345678' }).discordRoleId, '123456789012345678');
   });
 });
