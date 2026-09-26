@@ -5,9 +5,10 @@ import { Meteor } from 'meteor/meteor';
 const ALGORITHM = 'aes-256-cbc';
 
 // Where the 32-char key comes from, in order:
-//   1. a file mounted as a Docker secret (the production / preview path) —
-//      generated per-stack by scripts/deploy.sh and never placed in the
-//      environment, so it stays out of `docker inspect` and the client bundle;
+//   1. a mounted file (the production / preview path) — generated per-stack by
+//      scripts/deploy.sh, copied owner-only into the app-secrets volume by the
+//      secrets-init service, and never placed in the environment, so it stays
+//      out of `docker inspect` and the client bundle;
 //   2. Meteor.settings.private.encryptionKey, as a dev fallback.
 // Resolution is lazy so an unconfigured server still boots (a dev run, or a
 // stack that never enables Discord); the error only fires if encrypt/decrypt is

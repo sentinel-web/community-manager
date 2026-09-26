@@ -40,12 +40,12 @@ cd "$DIR"
 [ -f .env ]               || { echo "missing $DIR/.env" >&2; exit 1; }
 chmod 600 .env 2>/dev/null || true
 
-# --- Encryption key (per-stack, generated once, mounted as a compose secret) -
-# discord.js token encryption needs a stable 32-char key. It lives in a host
-# file mounted read-only into the app at /run/secrets/encryption_key (see the
-# `secrets:` block in docker-compose.yml) — never in the environment. Generated
-# once per stack and reused on every redeploy, so existing encrypted tokens stay
-# decryptable.
+# --- Encryption key (per-stack, generated once) -----------------------------
+# discord.js token encryption needs a stable 32-char key. It lives in this host
+# file — never in the environment — and reaches the app at
+# /run/secrets/encryption_key via the secrets-init service (docker-compose.yml).
+# Generated once per stack and reused on every redeploy, so existing encrypted
+# tokens stay decryptable.
 if [ ! -f encryption.key ]; then
   log "Generating encryption key for $PROJECT"
   ( umask 077
@@ -55,16 +55,10 @@ if [ ! -f encryption.key ]; then
       head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n' > encryption.key
     fi )
 fi
-# Lock the key to the image's runtime user (uid/gid 1001 = the `meteor` user in
-# the Dockerfile) and keep it owner-only. chown needs root; if the deploy user
-# can't chown, fall back to a group/other-readable mode so the bind-mounted
-# secret is still loadable by the non-root container process (the host is
-# single-tenant, so this is an acceptable degradation).
-if chown 1001:1001 encryption.key 2>/dev/null; then
-  chmod 600 encryption.key
-else
-  chmod 644 encryption.key
-fi
+# Owner-only on the host. The app never reads this file directly: the
+# secrets-init service copies it into a volume owned by the container user
+# (see docker-compose.yml), so it no longer has to be world-readable.
+chmod 600 encryption.key
 
 # Explicit -f suppresses auto-loading of any docker-compose.override.yml (the
 # dev override that disables Traefik); --env-file feeds per-stack variables.
