@@ -1,46 +1,33 @@
 import { Meteor } from 'meteor/meteor';
 import MembersCollection from '../../imports/api/collections/members.collection';
-import PositionsCollection from '../../imports/api/collections/positions.collection';
-import RanksCollection from '../../imports/api/collections/ranks.collection';
 import SquadsCollection from '../../imports/api/collections/squads.collection';
 import { validateObject, validateString } from '../main';
-import type { Squad } from '/imports/api/types';
+import loadSquadMemberRows from '../squad-member-rows';
+import type { OrbatSquad, SquadMemberRow } from '/imports/api/types';
+import compareByOrderThenName from '/imports/helpers/sorting/compareByOrderThenName';
 
-interface OrbatPopoverItem {
-  label: string;
-  children: string;
-}
-
-async function orbatPopoverItems(squadId: string = ''): Promise<OrbatPopoverItem[]> {
+async function orbatPopoverItems(this: Meteor.MethodThisType, squadId: string = ''): Promise<SquadMemberRow[]> {
+  validateString(this.userId, false);
   validateString(squadId, false);
   const squad = await SquadsCollection.findOneAsync(squadId);
   validateObject(squad, false);
-  const members = await MembersCollection.find({ 'profile.squadId': squadId }).fetchAsync();
-  const items: OrbatPopoverItem[] = [];
-  const rankIds = members.flatMap(m => m.profile?.rankId ? [m.profile.rankId] : []);
-  const ranks = await RanksCollection.find({ _id: { $in: rankIds } }).mapAsync(r => ({ value: r._id, label: r.name }));
-  const positionIds = members.flatMap(m => m.profile?.positionId ? [m.profile.positionId] : []);
-  const positions = positionIds.length > 0
-    ? await PositionsCollection.find({ _id: { $in: positionIds } }).mapAsync(p => ({ value: p._id, label: p.name }))
-    : [];
-  const rankLabelById = new Map(ranks.map(r => [r.value, r.label]));
-  const positionLabelById = new Map(positions.map(p => [p.value, p.label]));
-  for (const member of members) {
-    const rankName = (member.profile!.rankId ? rankLabelById.get(member.profile!.rankId) : undefined) || '-';
-    const positionName = member.profile!.positionId ? positionLabelById.get(member.profile!.positionId) : null;
-    const label = positionName ? `${positionName} - ${rankName}` : rankName;
-    items.push({
-      label,
-      children: `${member.profile!.id} "${member.profile!.name}"`,
-    });
-  }
-  return items;
+  return loadSquadMemberRows(squadId);
 }
 
-async function orbatSquads(this: { userId: string | null }): Promise<Squad[]> {
+// One aggregation for every node instead of a count request per ORBAT node.
+async function countDirectMembersBySquad(squadIds: string[]): Promise<Map<string, number>> {
+  if (squadIds.length === 0) return new Map();
+  const pipeline = [{ $match: { 'profile.squadId': { $in: squadIds } } }, { $group: { _id: '$profile.squadId', count: { $sum: 1 } } }];
+  // The driver's own generic types the result documents — no cast needed.
+  const counts = await MembersCollection.rawCollection().aggregate<{ _id: string; count: number }>(pipeline).toArray();
+  return new Map(counts.map(({ _id, count }) => [_id, count]));
+}
+
+async function orbatSquads(this: Meteor.MethodThisType): Promise<OrbatSquad[]> {
   validateString(this.userId, false);
   const squads = await SquadsCollection.find({ excludeFromOrbat: { $ne: true } }).fetchAsync();
-  return squads;
+  const memberCounts = await countDirectMembersBySquad(squads.flatMap(squad => (squad._id ? [squad._id] : [])));
+  return squads.sort(compareByOrderThenName).map(squad => ({ ...squad, memberCount: (squad._id && memberCounts.get(squad._id)) || 0 }));
 }
 
 if (Meteor.isServer) {

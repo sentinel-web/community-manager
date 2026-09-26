@@ -8,4 +8,5 @@ export interface Squad {
   longRangeFrequency?: string;
   description?: string;
   excludeFromOrbat?: boolean;
+  order?: number | null;
 }

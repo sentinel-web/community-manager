@@ -3,6 +3,7 @@ import type { DefaultOptionType } from 'antd/es/select';
 import { Meteor } from 'meteor/meteor';
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
+import ColoredTag from '../components/ColoredTag';
 import useMethod from '../hooks/useMethod';
 import { useTourRef } from '../tour/TourContext';
 
@@ -172,7 +173,7 @@ export default function MemberProfile({ memberId }: MemberProfileProps) {
               { label: t('common.name'), children: profileStats.name },
               { label: t('members.roles'), children: profileStats.role },
               ...(profileStats.position && profileStats.position !== '-'
-                ? [{ label: t('members.position'), children: <Tag color={profileStats.positionColor}>{profileStats.position}</Tag> }]
+                ? [{ label: t('members.position'), children: <ColoredTag color={profileStats.positionColor}>{profileStats.position}</ColoredTag> }]
                 : []),
             ]}
           />

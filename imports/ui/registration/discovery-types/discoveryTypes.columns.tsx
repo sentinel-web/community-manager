@@ -1,5 +1,5 @@
-import { Tag } from 'antd';
 import React from 'react';
+import ColoredTag from '../../components/ColoredTag';
 import type { ColumnsType } from 'antd/es/table';
 import TableActions from '../../table/body/actions/TableActions';
 import type { SectionPermissions, TranslateFn, RowClickEvent } from '../../section/types';
@@ -32,7 +32,7 @@ export default function getDiscoveryTypeColumns(
       dataIndex: 'color',
       key: 'color',
       sorter: (a, b) => (a.color || '').localeCompare(b.color || ''),
-      render: (color: string | null) => <Tag color={color || 'transparent'}>{color}</Tag>,
+      render: (color: string | null) => <ColoredTag color={color}>{color || '-'}</ColoredTag>,
     },
   ];
 

@@ -3,6 +3,7 @@ export * from './member';
 export * from './event';
 export * from './task';
 export * from './squad';
+export * from './orbat';
 export * from './rank';
 export * from './role';
 export * from './questionnaire';
