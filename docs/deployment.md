@@ -27,7 +27,12 @@ docker compose up -d
 
 - Multi-stage Dockerfile: builds the Meteor app, runs on Node 24.
 - Requires the external `traefik` network (assumes a Traefik reverse proxy).
-- MongoDB 7 with health checks and a persistent volume.
+- MongoDB 7 (pinned `mongo:7.0.43`) with health checks and a persistent volume, run as a **single-member replica set `rs0`**. Meteor ≥ 3.5 keeps live subscriptions current via change streams, which only exist on a replica set — on a standalone it silently falls back to polling every 10 s, with no error and no log line.
+  - The replica-set keyfile is generated inside the container on first start and kept in the `mongo-config` volume (`/data/configdb/rs-keyfile`, mode 400, owner `mongodb`) — never on the host, never in the repo — because `deploy.sh` runs unprivileged and cannot `chown` a host file.
+  - The mongo healthcheck runs `rs.initiate` idempotently and only reports healthy once the node is a writable PRIMARY, so the app (`depends_on: service_healthy`) never sees an uninitiated set. An existing standalone volume is converted in place on the next deploy; its data is kept.
+  - Oplog is 256 MB (`--oplogSize`, applied only when the oplog is first created) so up to `MAX_PREVIEW_STACKS` stacks fit on one disk.
+  - Leave `MONGO_URL` without a `replicaSet` parameter (the driver discovers the topology) and **do not** set `MONGO_OPLOG_URL` — with it, Meteor picks oplog tailing over change streams.
+  - Rollback: remove `--replSet`/`--keyFile` from the mongo `command` and redeploy. A former replica-set member then starts as a standalone (with a startup warning); the data stays.
 - With `STACK` / `STACK_HOST` unset, the Traefik router is named `community-manager` and routes `$DOMAIN` — the original behaviour, unchanged.
 
 See `docker-compose.yml` for the full configuration.

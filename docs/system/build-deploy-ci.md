@@ -11,7 +11,7 @@ How the app is configured at runtime, compiled into a Docker image, shipped to a
 | `rspack.config.js` | Rspack bundler config via `@meteorjs/rspack` (returns `{}` — defaults only; flags via `Meteor.is*`) |
 | `tsconfig.json` | `strict: true`, `noEmit`, `bundler` resolution; `meteor/*` resolved to `.meteor/local/types/packages.d.ts` |
 | `Dockerfile` | Two-stage build: `geoffreybooth/meteor-base:3.5` builder → `node:24-slim` runtime; tini, non-root `meteor` user, healthcheck |
-| `docker-compose.yml` | Production/preview stack: `app` + `mongo:7.0`, Traefik labels, hardening (read-only, cap_drop, no-new-privileges) |
+| `docker-compose.yml` | Production/preview stack: `app` + `mongo:7.0.43` as single-member replica set `rs0` (change streams), Traefik labels, hardening (read-only, cap_drop, no-new-privileges) |
 | `docker-compose.override.yml` | Dev-only override: publishes `3000:3000`, disables Traefik, `ROOT_URL` default |
 | `server/config.ts` | Server settings (`RATE_LIMITS`, `CACHE`, `SQUAD_SCOPED_PERMISSIONS`, `TELEMETRY`, `LOGS`) with `Meteor.settings` overrides via lazy getters |
 | `settings.example.json` | Example `Meteor.settings` JSON (`bootstrapAdmin`, rate limits, cache TTL) |
