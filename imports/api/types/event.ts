@@ -13,4 +13,6 @@ export interface EventDoc {
   preset?: string;
   description?: string;
   rrule?: string;
+  /** Set by the Discord bot once the event has been announced, so it is announced only once. */
+  isAnnounced?: boolean;
 }

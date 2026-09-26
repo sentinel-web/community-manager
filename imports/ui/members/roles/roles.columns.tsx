@@ -1,3 +1,4 @@
+import { Tag } from 'antd';
 import React from 'react';
 import ColoredTag from '../../components/ColoredTag';
 import type { Role } from '../../../api/types/role';

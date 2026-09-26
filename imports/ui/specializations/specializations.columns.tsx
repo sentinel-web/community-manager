@@ -1,3 +1,4 @@
+import { Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import React, { useEffect, useState } from 'react';
 import type { Specialization } from '../../api/types/misc';
