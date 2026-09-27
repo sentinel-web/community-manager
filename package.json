@@ -28,7 +28,7 @@
     "@tiptap/react": "^3.26.0",
     "@tiptap/starter-kit": "^3.26.0",
     "antd": "^5.20.2",
-    "dompurify": "^3.4.8",
+    "dompurify": "^3.4.16",
     "fuse.js": "^7.4.2",
     "jszip": "^3.10.1",
     "meteor-node-stubs": "^1.2.7",
