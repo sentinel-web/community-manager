@@ -22,13 +22,13 @@
   },
   "dependencies": {
     "@ant-design/icons": "^5.4.0",
-    "@babel/runtime": "^7.25.4",
+    "@babel/runtime": "^7.29.10",
     "@swc/helpers": "^0.5.17",
     "@tiptap/pm": "^3.26.0",
     "@tiptap/react": "^3.26.0",
     "@tiptap/starter-kit": "^3.26.0",
     "antd": "^5.20.2",
-    "dompurify": "^3.4.8",
+    "dompurify": "^3.4.16",
     "fuse.js": "^7.4.2",
     "jszip": "^3.10.1",
     "meteor-node-stubs": "^1.2.7",
@@ -39,7 +39,7 @@
     "react-organizational-chart": "^2.2.1",
     "recharts": "^3.7.0",
     "rrule": "^2.8.1",
-    "sanitize-html": "^2.17.4"
+    "sanitize-html": "^2.18.0"
   },
   "meteor": {
     "mainModule": {
@@ -54,7 +54,7 @@
     "@eslint/json": "^1.2.0",
     "@eslint/markdown": "^6.5.0",
     "@meteorjs/rspack": "^2.2.0",
-    "@playwright/test": "^1.49.0",
+    "@playwright/test": "^1.64.0",
     "@rsdoctor/rspack-plugin": "^1.5.7",
     "@rspack/cli": "^1.7.1",
     "@rspack/core": "^1.7.1",
@@ -64,13 +64,13 @@
     "@types/node": "^20.19.42",
     "@types/react-beautiful-dnd": "^13.1.8",
     "@types/react-dom": "^18.3.7",
-    "@types/sanitize-html": "^2.16.1",
+    "@types/sanitize-html": "^2.16.2",
     "eslint": "^9.28.0",
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^16.2.0",
-    "react-doctor": "^0.9.14",
+    "react-doctor": "^0.9.17",
     "react-refresh": "^0.19.0",
     "typescript": "5.9.3",
     "typescript-eslint": "^8.60.1"
