@@ -78,7 +78,9 @@ if (Meteor.isServer) {
     /** Pushes the web state (ranks, roles, squads, specializations) of every linked member to Discord. */
     'discord.syncMembers': async function (): Promise<number> {
       await requireSettingsPermission(this.userId);
-      const count = await syncAllMembers(requireContext());
+      const context = requireContext();
+      // Through the bot's queue, so it cannot interleave with a change-driven sync of the same member.
+      const count = await new Promise<number>((resolve, reject) => context.enqueue(() => syncAllMembers(context).then(resolve, reject)));
       await createLog('discord.membersSynced', { userId: this.userId, count });
       return count;
     },

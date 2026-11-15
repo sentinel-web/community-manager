@@ -36,7 +36,7 @@ editable text and would let one member receive another member's changes.
 
 | Feature | Web → Discord | Discord → web |
 |---|---|---|
-| Ranks, squads, specializations | Mapped roles are granted/removed when the member changes | Granting/removing a mapped role updates the member (switch off with *Apply Discord role changes*). A rank can be replaced but not removed |
+| Ranks, squads, specializations | Mapped roles are granted/removed when the member changes | Granting/removing a mapped role updates the member (switch off with *Apply Discord role changes*). A rank can be replaced but not removed. With squad-scoped permissions enabled, squads are web → Discord only, because the squad decides what a member may access |
 | Permission roles | Mapped role is granted/removed | **Never** — a Discord role must not grant permissions in the app |
 | Events (event types with *Mirror events to Discord*, never private events) | Scheduled event and announcement are created, updated and deleted with the event | Renaming/rescheduling the scheduled event updates the event. Deleting it detaches it (the event stays, it is not recreated) |
 | Event sign-up | The announcement lists the attendees | The *Sign up / sign off* button and "Interested" on the scheduled event |
@@ -47,6 +47,7 @@ Slash commands (replies are visible to the caller only): `/link`, `/unlink`, `/e
 
 Roles that are not mapped are never touched. Changes made while the bot was offline are not
 replayed; *Synchronize all members now* pushes the web state of every linked member to Discord.
+A backup restore stops the bot for its duration and restarts it afterwards.
 Events that existed before their event type was switched to mirroring are announced on their next edit.
 
 ## Security model

@@ -136,22 +136,25 @@ export async function startDiscordBot(): Promise<void> {
   });
   client.on(Events.Error, reportDiscordError);
 
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    // Bounded, so an unreachable gateway ends as a visible error instead of a start that never settles.
-    const ready = new Promise<Client<true>>((resolve, reject) => {
-      client.once(Events.ClientReady, resolve);
-      setTimeout(() => reject(new Error('Timed out connecting to Discord')), CONNECT_TIMEOUT_MS);
+    // The whole connect sequence is bounded, so an unreachable gateway ends as a visible error
+    // instead of a start that never settles.
+    const connect = (async () => {
+      const ready = new Promise<Client<true>>(resolve => client.once(Events.ClientReady, resolve));
+      await client.login(decrypt(encryptedToken));
+      const readyClient = await ready;
+      const guild = await readyClient.guilds.fetch(config['discord-server-id']);
+      // Caches every member, so role changes can be compared against the previous state.
+      await guild.members.fetch();
+      return { readyClient, guild };
+    })();
+    // If the timeout wins, a later failure of the abandoned attempt must not go unhandled.
+    connect.catch(() => undefined);
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error('Timed out connecting to Discord')), CONNECT_TIMEOUT_MS);
     });
-    await client.login(decrypt(encryptedToken));
-    const readyClient = await ready;
-    const guild = await readyClient.guilds.fetch(config['discord-server-id']);
-    // Caches every member, so role changes can be compared against the previous state.
-    await guild.members.fetch();
-
-    if (mine !== generation) {
-      await client.destroy();
-      return;
-    }
+    const { readyClient, guild } = await Promise.race([connect, timeout]);
 
     let queue: Promise<unknown> = Promise.resolve();
     const context: BotContext = {
@@ -163,7 +166,7 @@ export async function startDiscordBot(): Promise<void> {
         queue = queue.then(task).catch(reportDiscordError);
       },
     };
-    const stops = await Promise.all([
+    const started = await Promise.allSettled([
       startCommands(context),
       startEventSync(context),
       startMemberSync(context),
@@ -171,11 +174,22 @@ export async function startDiscordBot(): Promise<void> {
       startTaskSync(context),
       ...(spamProtection ? [startSpamProtection(context)] : []),
     ]);
+    const stops = started.flatMap(result => (result.status === 'fulfilled' ? [result.value] : []));
+    const failure = started.find(result => result.status === 'rejected');
+    // A partial start, or a start overtaken by a newer one, must not leave observers behind.
+    if (failure || mine !== generation) {
+      stops.forEach(stop => stop());
+      await client.destroy();
+      if (failure) throw failure.reason;
+      return;
+    }
     active = { context, stops };
     await setStatus({ state: 'connected', tokenSet, botTag: readyClient.user.tag, guildName: guild.name });
   } catch (error) {
     console.error('[discord] start failed:', error);
     await client.destroy().catch(() => undefined);
     if (mine === generation) await setStatus({ state: 'error', tokenSet, error: errorMessage(error) });
+  } finally {
+    clearTimeout(timer);
   }
 }

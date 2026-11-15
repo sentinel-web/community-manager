@@ -9,7 +9,8 @@ import SpecializationsCollection from '../../imports/api/collections/specializat
 import SquadsCollection from '../../imports/api/collections/squads.collection';
 import { diffDiscordRoles, profileChangesFromDiscord, type RoleLink, type RoleLinkKind, type SyncedProfile } from '../../imports/api/discord/roleSync';
 import { createLog } from '../apis/logs.server';
-import { observeLive, safe, type BotContext, type StopFn } from './bot';
+import { SQUAD_SCOPED_PERMISSIONS } from '../config';
+import { observeLive, reportDiscordError, safe, type BotContext, type StopFn } from './bot';
 
 const LINK_CODE_TTL_MS = 10 * 60 * 1000;
 const LINK_ATTEMPTS = 5;
@@ -50,24 +51,36 @@ export function findLinkedMember(discordId: string): Promise<Meteor.User | undef
   return MembersCollection.findOneAsync({ 'profile.discordId': discordId }) as Promise<Meteor.User | undefined>;
 }
 
+// Role sets the bot itself wrote, per Discord member. The gateway echoes every write back as a
+// GuildMemberUpdate; without this the echo would be read as a human edit and written to the profile.
+const ownWrites = new Map<string, string[]>();
+const roleKey = (roles: Iterable<string>): string => [...roles].sort().join(',');
+
 /** Makes the Discord member's managed roles match the profile (`null` profile = strip every managed role). */
 export async function reconcileMember(context: BotContext, profile: SyncedProfile | null, discordId: string, links?: RoleLink[]): Promise<void> {
   const member = await context.guild.members.fetch(discordId).catch(() => null);
   if (!member) return;
-  const { add, remove } = diffDiscordRoles(profile, [...member.roles.cache.keys()], links ?? (await loadRoleLinks()));
-  const assignable = add.filter(id => context.guild.roles.cache.has(id));
-  if (assignable.length) await member.roles.add(assignable);
-  if (remove.length) await member.roles.remove(remove);
+  const current = [...member.roles.cache.keys()];
+  const { add, remove } = diffDiscordRoles(profile, current, links ?? (await loadRoleLinks()));
+  // The guild id is the @everyone role, which cannot be assigned.
+  const assignable = add.filter(id => id !== context.guild.id && context.guild.roles.cache.has(id));
+  if (!assignable.length && !remove.length) return;
+  // One write: separate add/remove calls are both computed from the cache and can undo each other.
+  const target = [...current.filter(id => !remove.includes(id)), ...assignable];
+  ownWrites.set(discordId, [...(ownWrites.get(discordId) ?? []), roleKey(target)].slice(-5));
+  await member.roles.set(target);
 }
 
-/** Pushes the web state of every linked member to Discord. Returns how many members were processed. */
+/** Pushes the web state of every linked member to Discord. Returns how many members were synchronized. */
 export async function syncAllMembers(context: BotContext): Promise<number> {
   const links = await loadRoleLinks();
   const members = (await MembersCollection.find({ 'profile.discordId': { $exists: true } }, { fields: SYNCED_FIELDS }).fetchAsync()) as LinkedMember[];
+  let synced = 0;
   for (const member of members) {
-    await reconcileMember(context, member.profile ?? {}, member.profile!.discordId!, links);
+    // One member the bot may not edit (role hierarchy) must not stop the rest.
+    await reconcileMember(context, member.profile ?? {}, member.profile!.discordId!, links).then(() => synced++, reportDiscordError);
   }
-  return members.length;
+  return synced;
 }
 
 /**
@@ -126,7 +139,11 @@ export async function startMemberSync(context: BotContext): Promise<StopFn> {
   const sync = (member: LinkedMember, profile: SyncedProfile | null) => enqueue(() => reconcileMember(context, profile, member.profile!.discordId!));
   const stop = await observeLive<LinkedMember>(MembersCollection.find({ 'profile.discordId': { $exists: true } }, { fields: SYNCED_FIELDS }) as never, {
     added: member => sync(member, member.profile ?? {}),
-    changed: member => sync(member, member.profile ?? {}),
+    changed: (member, previous) => {
+      // Relinked to another account: the previous one must not keep the managed roles.
+      if (previous.profile!.discordId !== member.profile!.discordId) sync(previous, null);
+      sync(member, member.profile ?? {});
+    },
     removed: member => sync(member, null),
   });
 
@@ -139,12 +156,21 @@ export async function startMemberSync(context: BotContext): Promise<StopFn> {
       const before = [...oldMember.roles.cache.keys()];
       const after = [...newMember.roles.cache.keys()];
       if (!oldMember.partial && before.length === after.length && before.every(id => after.includes(id))) return;
+      const own = ownWrites.get(newMember.id) ?? [];
+      const echo = own.indexOf(roleKey(after));
+      if (echo !== -1) {
+        own.splice(echo, 1);
+        return;
+      }
       enqueue(async () => {
         const user = await findLinkedMember(newMember.id);
         if (!user) return;
         const links = await loadRoleLinks();
         if (config['discord-inbound-role-sync'] && !oldMember.partial) {
-          const changes = profileChangesFromDiscord(user.profile ?? {}, before, after, links);
+          // With squad-scoped permissions a member's squad decides what they may read and edit,
+          // so a Discord role must not move it; the reconcile below restores the role instead.
+          const inbound = SQUAD_SCOPED_PERMISSIONS.enabled ? links.filter(link => link.kind !== 'squad') : links;
+          const changes = profileChangesFromDiscord(user.profile ?? {}, before, after, inbound);
           if (Object.keys(changes).length) {
             // The observer above picks this write up and reconciles the Discord side.
             await MembersCollection.updateAsync(user._id, { $set: changes });

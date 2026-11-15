@@ -56,7 +56,8 @@ export default function DiscordSettings() {
 
   const handleFinish = useCallback(
     ({ token, ...config }: DiscordFormValues) => {
-      const known = Object.fromEntries(DISCORD_CONFIG_KEYS.map(key => [key, config[key]]));
+      // A cleared select yields `undefined`, which the wire format drops; send the empty default instead.
+      const known = Object.fromEntries(DISCORD_CONFIG_KEYS.map(key => [key, config[key] ?? DISCORD_CONFIG_DEFAULTS[key]]));
       void configure(known, token);
     },
     [configure]

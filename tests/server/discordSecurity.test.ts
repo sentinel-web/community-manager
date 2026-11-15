@@ -134,4 +134,10 @@ describe('Discord link — server-owned ids', () => {
     await assertRejectsWithCode(() => callAs(adminUserId, 'events.update', eventId, { discordEventId: '1' }), 'server-owned-field');
     await assertRejectsWithCode(() => callAs(adminUserId, 'events.update', eventId, { discordMessageId: '1' }), 'server-owned-field');
   });
+
+  it('a Discord role mapping must be a role id', async () => {
+    for (const collection of ['ranks', 'roles', 'specializations', 'squads']) {
+      await assertRejectsWithCode(() => callAs(adminUserId, `${collection}.update`, 'any-id', { discordRoleId: '@everyone' }), 'invalid-discord-role');
+    }
+  });
 });

@@ -20,6 +20,7 @@ import {
   validateForeignKeysForUpdate,
 } from './integrity';
 import { sanitizeHtml } from './htmlSanitizer';
+import { DISCORD_SNOWFLAKE } from '/imports/api/discord/settings';
 import { isValidPreset, PRESET_FILE_MAX_BYTES } from '/imports/api/events/preset';
 import { RANK_ABBREVIATION_MAX_LENGTH, type CrudCollectionMap, type CrudCollectionName } from '/imports/api/types';
 import { PUBLISH_LIMITS } from '/imports/config';
@@ -163,6 +164,13 @@ const INSERT_VALIDATORS: Partial<Record<CrudCollectionName, (payload: Record<str
 // timestamp can never be forged or rewritten through a crafted DDP call.
 const SERVER_CREATED_AT: ReadonlySet<CrudCollectionName> = new Set<CrudCollectionName>(['registrations', 'tasks']);
 
+// A mapped Discord role is cleared with null or holds a role id — never free text.
+const discordRoleId = (value: unknown): void => {
+  if (value != null && !(typeof value === 'string' && DISCORD_SNOWFLAKE.test(value))) {
+    throw new Meteor.Error('invalid-discord-role', 'Discord role must be a role id');
+  }
+};
+
 const serverOwnedField = (): never => {
   throw new Meteor.Error('server-owned-field', 'This field is managed by the server');
 };
@@ -183,6 +191,7 @@ const FIELD_VALIDATORS: Partial<Record<CrudCollectionName, Record<string, (value
   },
   registrations: { discordMessageId: serverOwnedField },
   ranks: {
+    discordRoleId,
     abbreviation: value => {
       if (value == null) return;
       if (typeof value !== 'string' || value.length > RANK_ABBREVIATION_MAX_LENGTH) {
@@ -190,7 +199,10 @@ const FIELD_VALIDATORS: Partial<Record<CrudCollectionName, Record<string, (value
       }
     },
   },
+  roles: { discordRoleId },
+  specializations: { discordRoleId },
   squads: {
+    discordRoleId,
     order: value => {
       if (value == null) return;
       if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {

@@ -32,21 +32,21 @@ async function memberNames(ids: string[] = []): Promise<string> {
   if (!ids.length) return '-';
   const members = await MembersCollection.find({ _id: { $in: ids } }, { fields: { 'profile.name': 1 } }).fetchAsync();
   const names = members.map(member => member.profile!.name ?? '?').join(', ');
-  return names.length > 1000 ? `${names.slice(0, 999)}…` : names;
+  return names.length > 1000 ? `${names.slice(0, 999)}…` : names || '-';
 }
 
 async function buildAnnouncement({ t }: BotContext, event: EventDoc, typeName: string, scheduledEventUrl?: string) {
   const preset = parsePreset(event.preset);
   const embed = new EmbedBuilder()
-    .setTitle(event.name.slice(0, 256))
+    .setTitle(event.name.slice(0, 256) || '-')
     .setDescription(htmlToMarkdown(event.description, 2000) || null)
     .addFields(
-      { name: t('events.eventType'), value: typeName, inline: true },
+      { name: t('events.eventType'), value: typeName.slice(0, 1024) || '-', inline: true },
       { name: t('events.startDate'), value: timestamp(event.start), inline: true },
       { name: t('events.endDate'), value: timestamp(event.end), inline: true },
       { name: t('events.hosts'), value: await memberNames(event.hosts) },
       { name: `${t('events.attendees')} (${event.attendees?.length ?? 0})`, value: await memberNames(event.attendees) },
-      ...(preset?.kind === 'link' ? [{ name: t('forms.labels.presetLink'), value: preset.url }] : []),
+      ...(preset?.kind === 'link' && preset.url.length <= 1024 ? [{ name: t('forms.labels.presetLink'), value: preset.url }] : []),
       ...(scheduledEventUrl ? [{ name: 'Discord', value: scheduledEventUrl }] : [])
     );
   if (/^#[0-9a-f]{6}$/i.test(event.color ?? '')) embed.setColor(parseInt(event.color!.slice(1), 16));
@@ -80,11 +80,10 @@ async function syncEvent(context: BotContext, eventId: string): Promise<void> {
     return;
   }
 
-  const stored: Partial<EventDoc> = {};
   const start = new Date(event.start);
   const end = new Date(event.end) > start ? new Date(event.end) : new Date(start.getTime() + HOUR_MS);
   const details = {
-    name: event.name.slice(0, 100),
+    name: event.name.slice(0, 100) || '-',
     description: htmlToMarkdown(event.description),
     scheduledStartTime: start,
     scheduledEndTime: end,
@@ -106,7 +105,8 @@ async function syncEvent(context: BotContext, eventId: string): Promise<void> {
       entityType: GuildScheduledEventEntityType.External,
       entityMetadata: { location: Meteor.absoluteUrl().slice(0, 100) },
     });
-    stored.discordEventId = scheduled.id;
+    // Stored at once: a failure further down must not lead to a second scheduled event on the next sync.
+    await EventsCollection.updateAsync(eventId, { $set: { discordEventId: scheduled.id } });
   }
 
   const channel = await fetchTextChannel(context, config['discord-events-channel-id']);
@@ -119,11 +119,10 @@ async function syncEvent(context: BotContext, eventId: string): Promise<void> {
     } else if (end > new Date()) {
       const preset = parsePreset(event.preset);
       const files = preset?.kind === 'file' ? [{ attachment: Buffer.from(preset.base64, 'base64'), name: preset.filename }] : [];
-      stored.discordMessageId = (await channel.send({ ...announcement, files })).id;
+      const sent = await channel.send({ ...announcement, files });
+      await EventsCollection.updateAsync(eventId, { $set: { discordMessageId: sent.id } });
     }
   }
-
-  if (Object.keys(stored).length) await EventsCollection.updateAsync(eventId, { $set: stored });
 }
 
 /** Signs a member up for / off a public event. Returns the new state, or `null` when the event is not available. */
@@ -173,7 +172,7 @@ export async function startEventSync(context: BotContext): Promise<StopFn> {
       const event = await EventsCollection.findOneAsync({ discordEventId: scheduled.id });
       if (!event) return;
       const changes: Partial<EventDoc> = {};
-      if (previous.name !== scheduled.name && scheduled.name !== event.name.slice(0, 100)) changes.name = scheduled.name;
+      if (previous.name !== scheduled.name && scheduled.name !== (event.name.slice(0, 100) || '-')) changes.name = scheduled.name;
       if (scheduled.scheduledStartAt && scheduled.scheduledStartTimestamp !== new Date(event.start).getTime()) changes.start = scheduled.scheduledStartAt;
       if (scheduled.scheduledEndAt && scheduled.scheduledEndTimestamp !== new Date(event.end).getTime()) changes.end = scheduled.scheduledEndAt;
       if (!Object.keys(changes).length) return;

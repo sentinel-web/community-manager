@@ -100,7 +100,7 @@ export async function startCommands(context: BotContext): Promise<StopFn> {
         console.error('[discord] interaction failed:', error);
         return t('discord.bot.failed');
       });
-      await interaction.editReply({ content: content ?? t('discord.bot.failed') });
+      await interaction.editReply({ content: (content ?? t('discord.bot.failed')).slice(0, 2000) });
     })
   );
 
