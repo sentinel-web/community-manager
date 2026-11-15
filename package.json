@@ -24,9 +24,9 @@
     "@ant-design/icons": "^5.4.0",
     "@babel/runtime": "^7.25.4",
     "@swc/helpers": "^0.5.17",
-    "@tiptap/pm": "^3.26.0",
-    "@tiptap/react": "^3.26.0",
-    "@tiptap/starter-kit": "^3.26.0",
+    "@tiptap/pm": "^3.31.4",
+    "@tiptap/react": "^3.31.4",
+    "@tiptap/starter-kit": "^3.31.4",
     "antd": "^5.20.2",
     "bufferutil": "^4.1.0",
     "discord.js": "^14.26.4",
@@ -59,7 +59,7 @@
     "@eslint/markdown": "^6.5.0",
     "@meteorjs/rspack": "^2.2.0",
     "@playwright/test": "^1.49.0",
-    "@rsdoctor/rspack-plugin": "^1.5.7",
+    "@rsdoctor/rspack-plugin": "^1.6.5",
     "@rspack/cli": "^1.7.1",
     "@rspack/core": "^1.7.1",
     "@rspack/plugin-react-refresh": "^1.4.3",
@@ -77,6 +77,6 @@
     "react-doctor": "^0.9.14",
     "react-refresh": "^0.19.0",
     "typescript": "5.9.3",
-    "typescript-eslint": "^8.60.1"
+    "typescript-eslint": "^8.70.1"
   }
 }
