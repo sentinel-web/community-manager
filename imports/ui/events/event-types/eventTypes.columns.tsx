@@ -1,4 +1,3 @@
-import { Tag } from 'antd';
 import React from 'react';
 import ColoredTag from '../../components/ColoredTag';
 import type { ColumnsType } from 'antd/es/table';
@@ -43,12 +42,6 @@ const getEventTypeColumns = (
       key: 'countsForInactivity',
       sorter: (a, b) => Number(a.countsForInactivity !== false) - Number(b.countsForInactivity !== false),
       render: (countsForInactivity: boolean | undefined) => (countsForInactivity === false ? t('common.no') : t('common.yes')),
-    },
-    {
-      title: 'Discord Sync',
-      dataIndex: 'createDiscordEvent',
-      key: 'createDiscordEvent',
-      render: (createDiscordEvent: boolean) => createDiscordEvent ? <Tag color="green">Aktiv</Tag> : <Tag color="default">Inaktiv</Tag>,
     },
   ];
 

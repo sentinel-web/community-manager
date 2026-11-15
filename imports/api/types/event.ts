@@ -13,6 +13,8 @@ export interface EventDoc {
   preset?: string;
   description?: string;
   rrule?: string;
-  /** Set by the Discord bot once the event has been announced, so it is announced only once. */
-  isAnnounced?: boolean;
+  /** Server-owned. `null` = the scheduled event was deleted in Discord and must not be recreated. */
+  discordEventId?: string | null;
+  /** Server-owned: the announcement message in the events channel. */
+  discordMessageId?: string;
 }

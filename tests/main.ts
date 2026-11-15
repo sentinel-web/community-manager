@@ -25,6 +25,8 @@ import './server/backupRestore.test';
 import './server/briefingTemplatesMethods.test';
 import './server/crudMethods.test';
 import './server/dashboardEventTypeStats.test';
+import './server/discordRoleSync.test';
+import './server/discordSecurity.test';
 import './server/entityFormSubmit.test';
 import './server/eventsDescriptionSanitize.test';
 import './server/eventsVisibility.test';

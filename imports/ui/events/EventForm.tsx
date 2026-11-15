@@ -1,5 +1,5 @@
-import { DeleteOutlined, SaveOutlined, SnippetsOutlined, TeamOutlined, UploadOutlined, UsergroupAddOutlined } from '@ant-design/icons';
-import { App, Button, Col, ColorPicker, DatePicker, Form, Input, Radio, Row, Select, Switch, Tag, Upload } from 'antd';
+import { DeleteOutlined, SaveOutlined, SnippetsOutlined, TeamOutlined, UsergroupAddOutlined } from '@ant-design/icons';
+import { App, Button, Col, ColorPicker, DatePicker, Form, Input, Row, Select, Switch } from 'antd';
 import type { FormInstance } from 'antd';
 import dayjs, { Dayjs } from 'dayjs';
 import { Meteor } from 'meteor/meteor';
@@ -22,6 +22,7 @@ import RichTextEditor from '../components/RichTextEditor';
 import shouldConfirmTemplateOverwrite from '/imports/helpers/shouldConfirmTemplateOverwrite';
 import { getColorFromValues } from '../specializations/SpecializationForm';
 import EventTypesForm from './event-types/EventTypesForm';
+import PresetInput from './PresetInput';
 
 const styles = {
   datePicker: {
@@ -29,6 +30,7 @@ const styles = {
   },
 };
 
+/** Form values — DatePicker yields Dayjs objects, not Date. */
 interface EventFormValues {
   start: Dayjs | null;
   end: Dayjs | null;
@@ -51,9 +53,6 @@ export const getDateFromValues = (values: Record<string, unknown>, key = 'date')
 const EventForm = () => {
   const { modal } = App.useApp();
   const { t } = useTranslation();
-  // 'form' is declared before useEntityForm so toPayload can read the imperatively-set
-  // preset value (file uploads set it via form.setFieldValue with no mounted Form.Item).
-  const [form] = Form.useForm<EventFormValues>();
   const {
     onFinish,
     loading,
@@ -65,7 +64,6 @@ const EventForm = () => {
     updated: 'messages.eventUpdated',
     toPayload: values => ({
       ...values,
-      preset: form.getFieldValue('preset'),
       color: getColorFromValues(values as unknown as Record<string, unknown>),
       start: getDateFromValues(values as unknown as Record<string, unknown>, 'start'),
       end: getDateFromValues(values as unknown as Record<string, unknown>, 'end'),
@@ -84,20 +82,6 @@ const EventForm = () => {
 
   const { call: remove } = useMethod('events.remove', { success: t('messages.eventDeleted') });
 
-  const [presetType, setPresetType] = useState<'link' | 'file'>('link');
-  const [uploadedFileName, setUploadedFileName] = useState<string>('');
-
-  React.useEffect(() => {
-    if (model.preset?.startsWith('file:')) {
-      setPresetType('file');
-      const [fileMeta] = model.preset.split(':::');
-      setUploadedFileName(fileMeta.replace('file:', ''));
-    } else {
-      setPresetType('link');
-      setUploadedFileName('');
-    }
-  }, [model]);
-
   const handleDelete = useCallback(() => {
     modal.confirm({
       title: t('forms.confirmations.deleteEvent'),
@@ -112,6 +96,8 @@ const EventForm = () => {
     });
   }, [modal, cancel, model, remove, t]);
 
+  const [form] = Form.useForm<EventFormValues>();
+
   return (
     <Form form={form} layout="vertical" initialValues={model} onFinish={onFinish} disabled={loading}>
       <Form.Item name="start" label={t('events.startDate')} rules={[{ required: true, type: 'date' }]}>
@@ -123,7 +109,6 @@ const EventForm = () => {
       <Form.Item name="name" label={t('common.name')} rules={[{ required: true, type: 'string' }]}>
         <Input placeholder={t('forms.placeholders.enterTitle')} />
       </Form.Item>
-      
       <CollectionSelect
         defaultValue={model.eventType}
         name="eventType"
@@ -134,11 +119,9 @@ const EventForm = () => {
         subscription="eventTypes"
         FormComponent={EventTypesForm}
       />
-      
       <MembersSelect multiple grouped name="hosts" label={t('events.hosts')} rules={[{ type: 'array' }]} defaultValue={model.hosts} />
       <MembersSelect multiple grouped name="attendees" label={t('events.attendees')} rules={[{ type: 'array' }]} defaultValue={model.attendees} />
       <SquadQuickAdd form={form} t={t} />
-      
       <Row gutter={[16, 16]} style={{ flexWrap: 'nowrap' }}>
         <Col flex="auto">
           <Form.Item name="isPrivate" label={t('forms.labels.isPrivate')} valuePropName="checked" rules={[{ type: 'boolean' }]}>
@@ -151,61 +134,8 @@ const EventForm = () => {
           </Form.Item>
         </Col>
       </Row>
-
-      {/* Flexibles Preset-Feld */}
-      <Form.Item label={t('forms.labels.presetLink') || 'Preset'}>
-        <Radio.Group 
-          value={presetType} 
-          onChange={e => {
-            setPresetType(e.target.value);
-            form.setFieldValue('preset', '');
-            setUploadedFileName('');
-          }} 
-          style={{ marginBottom: 8 }}
-        >
-          <Radio value="link">Web-Link</Radio>
-          <Radio value="file">Datei-Upload</Radio>
-        </Radio.Group>
-
-        {presetType === 'link' ? (
-          <Form.Item name="preset" noStyle rules={[{ type: 'string' }]}>
-            <Input placeholder={t('forms.placeholders.enterPresetLink')} />
-          </Form.Item>
-        ) : (
-          <Row gutter={[8, 8]} align="middle">
-            <Col>
-              <Upload
-                beforeUpload={(file) => {
-                  const reader = new FileReader();
-                  reader.onload = (uploadEvent) => {
-                    const dataUrl = uploadEvent.target?.result as string;
-                    const finalValue = `file:${file.name}:::${dataUrl}`;
-                    form.setFieldValue('preset', finalValue);
-                    setUploadedFileName(file.name);
-                  };
-                  reader.readAsDataURL(file);
-                  return false;
-                }}
-                showUploadList={false}
-                accept=".html,.txt,.json"
-              >
-                <Button icon={<UploadOutlined />}>Datei auswählen</Button>
-              </Upload>
-            </Col>
-            <Col flex="auto">
-              {uploadedFileName ? (
-                <Tag color="blue" closable onClose={() => {
-                  form.setFieldValue('preset', '');
-                  setUploadedFileName('');
-                }}>
-                  {uploadedFileName}
-                </Tag>
-              ) : (
-                <span style={{ color: '#8c8c8c' }}>Keine Datei ausgewählt</span>
-              )}
-            </Col>
-          </Row>
-        )}
+      <Form.Item name="preset" label={t('forms.labels.presetLink')} rules={[{ type: 'string' }]}>
+        <PresetInput />
       </Form.Item>
       <BriefingTemplatePicker form={form} t={t} />
       <Form.Item name="description" label={t('common.description')} rules={[{ type: 'string' }]}>

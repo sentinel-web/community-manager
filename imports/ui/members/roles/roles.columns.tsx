@@ -1,4 +1,3 @@
-import { Tag } from 'antd';
 import React from 'react';
 import ColoredTag from '../../components/ColoredTag';
 import type { Role } from '../../../api/types/role';
@@ -30,13 +29,6 @@ const getRolesColumns: ColumnsFactory<Role> = (handleEdit, handleDelete, permiss
       ellipsis: true,
       sorter: (a: Role, b: Role) => (a.color || '').localeCompare(b.color || ''),
       render: (color: string) => <ColoredTag color={color}>{color || '-'}</ColoredTag>,
-    },
-    {
-      title: t('members.discordRole'),
-      dataIndex: 'discordRoleId',
-      key: 'discordRoleId',
-      ellipsis: true,
-      render: (discordRoleId: string) => discordRoleId ? <Tag color="blue">ID: {discordRoleId}</Tag> : <i>-</i>,
     },
   ];
 

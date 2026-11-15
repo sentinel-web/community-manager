@@ -58,8 +58,8 @@ export default function EventTypesForm() {
       >
         <Switch />
       </Form.Item>
-      <Form.Item name="createDiscordEvent" label="Discord Event-Benachrichtigung erstellen?" valuePropName="checked">
-        <Switch checkedChildren="Ja" unCheckedChildren="Nein" />
+      <Form.Item name="createDiscordEvent" label={t('eventTypes.createDiscordEvent')} valuePropName="checked">
+        <Switch />
       </Form.Item>
       <FormFooter onCancel={cancel} loading={loading} />
     </Form>

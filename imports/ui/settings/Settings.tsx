@@ -1,5 +1,5 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, Checkbox, Col, ColorPicker, Input, List, Popconfirm, Row, Typography } from 'antd';
+import { Button, Col, ColorPicker, Input, List, Popconfirm, Row, Typography } from 'antd';
 import Dragger from 'antd/es/upload/Dragger';
 import { Meteor } from 'meteor/meteor';
 import React, { useCallback, useContext, useState } from 'react';
@@ -8,6 +8,7 @@ import Logo from '../logo/Logo';
 import useNavigation from '../navigation/navigation.hook';
 import SectionCard from '../section/SectionCard';
 import TourContext, { useTourRef } from '../tour/TourContext';
+import DiscordSettings from './DiscordSettings';
 import useSettings from './settings.hook';
 
 type TFn = LanguageContextValue['t'];
@@ -16,22 +17,12 @@ type HandleChangeFn = (e: unknown, key: string) => void | Promise<void>;
 const emptyStringList: string[] = [];
 const noopHandleChange: HandleChangeFn = () => {};
 
-async function getEventValue(key: string, e: unknown): Promise<string | string[] | boolean | undefined> {
+async function getEventValue(key: string, e: unknown): Promise<string | string[] | undefined> {
   switch (key) {
     case 'community-title':
       return (e as React.ChangeEvent<HTMLInputElement>).target.value;
-      case 'discord-bot-token': 
-      case 'discord-server-id': 
-      case 'discord-recruitment-channel-id':
-        return (e as React.ChangeEvent<HTMLInputElement>).target.value;
-        case 'discord-events-channel-id': // 👈 NEU
-        return (e as React.ChangeEvent<HTMLInputElement>).target.value;
-      case 'discord-enabled': 
-      case 'discord-spam-protection-enabled': 
-        return (e as { target: { checked: boolean } }).target.checked;
     case 'community-logo':
       return await transformFileToBase64(e as File);
-    
     case 'community-color': {
       const colorObj = e as { toHexString?: () => string };
       return colorObj.toHexString ? colorObj.toHexString() : undefined;
@@ -75,7 +66,7 @@ async function turnImageFileIntoWebp(file: File): Promise<Blob> {
 
 export default function Settings() {
   const settingsRef = useTourRef('settings-section');
-  const { ready, communityTitle, communityLogo, communityColor, communityNameBlackList, communityIdBlackList, discordEnabled, discordBotToken, discordServerId, discordRecruitmentChannelId, discordEventsChannelId, discordSpamProtectionEnabled, discordErrorMessage } = useSettings();
+  const { ready, communityTitle, communityLogo, communityColor, communityNameBlackList, communityIdBlackList } = useSettings();
   const { t } = useTranslation();
 
   const handleChange: HandleChangeFn = useCallback(async (e: unknown, key: string) => {
@@ -108,19 +99,11 @@ export default function Settings() {
                   <Col xs={24} lg={12}>
                     <CommunityIdBlackListSettings communityIdBlackList={communityIdBlackList} handleChange={handleChange} t={t} />
                   </Col>
-                  <Col span={24}>
-                    <DiscordSettings 
-                      discordEnabled={discordEnabled}
-                      discordBotToken={discordBotToken}
-                      discordServerId={discordServerId}
-                      discordRecruitmentChannelId={discordRecruitmentChannelId}
-                      discordEventsChannelId={discordEventsChannelId}
-                      discordSpamProtectionEnabled={discordSpamProtectionEnabled}
-                      discordErrorMessage={discordErrorMessage}
-                      handleChange={handleChange}
-                      t={t}
-                    />
-                  </Col>
+                  {ready && (
+                    <Col span={24}>
+                      <DiscordSettings />
+                    </Col>
+                  )}
                   {Meteor.isDevelopment && (
                     <Col span={24}>
                       <DemoDataSettings t={t} />
@@ -374,77 +357,6 @@ function DemoDataSettings({ t }: DemoDataSettingsProps) {
           </Button>
         </Popconfirm>
       </Col>
-    </Row>
-  );
-}
-
-interface DiscordSettingsProps {
-  discordEnabled: boolean;
-  discordBotToken?: string;
-  discordServerId?: string;
-  discordRecruitmentChannelId?: string;
-  discordEventsChannelId?: string;
-  discordSpamProtectionEnabled: boolean;
-  discordErrorMessage?: string;
-  handleChange: HandleChangeFn;
-  t: TFn;
-}
-
-function DiscordSettings({ discordEnabled, discordBotToken, discordServerId, discordRecruitmentChannelId, handleChange, discordErrorMessage, discordEventsChannelId, discordSpamProtectionEnabled, t }: DiscordSettingsProps) {
-  return (
-    <Row gutter={[16, 16]}>
-      <SettingTitle title={t('settings.discordIntegration')} />
-      {/* Fehlermeldung anzeigen */}
-      {discordErrorMessage && (
-        <Col span={24}>
-          <Typography.Text type="danger" strong>
-            ⚠️ {discordErrorMessage === 'An invalid token was provided.' 
-                 ? 'Ungültiger Discord-Token!' 
-                 : discordErrorMessage}
-          </Typography.Text>
-        </Col>
-      )}
-      <Col span={24}>
-        <Checkbox 
-          checked={discordEnabled} 
-          onChange={e => handleChange(e, 'discord-enabled')}
-        >
-          {t('settings.discord.enabled')}
-        </Checkbox>
-      </Col>
-      {discordEnabled && (
-        <>
-          <Col xs={24} lg={12}>
-            <Typography.Text strong>{t('settings.discord.botToken')}</Typography.Text>
-            <Input.Password style={{ marginTop: 8 }} value={discordBotToken} onChange={e => handleChange(e, 'discord-bot-token')} />
-          </Col>
-          <Col xs={24} lg={12}>
-            <Typography.Text strong>{t('settings.discord.serverId')}</Typography.Text>
-            <Input style={{ marginTop: 8 }} value={discordServerId} onChange={e => handleChange(e, 'discord-server-id')} />
-          </Col>
-          {/* NEU: Eingabefeld für den Recruitment-Kanal */}
-          <Col xs={24} lg={12}>
-            <Typography.Text strong>Recruitment Channel ID</Typography.Text>
-            <Input style={{ marginTop: 8 }} value={discordRecruitmentChannelId} onChange={e => handleChange(e, 'discord-recruitment-channel-id')} />
-          </Col>
-          <Col xs={24} lg={12}>
-            <Typography.Text strong>Ankündigungs-Kanal ID (Events)</Typography.Text>
-            <Input 
-              style={{ marginTop: 8 }}
-              value={discordEventsChannelId} 
-              onChange={e => handleChange(e, 'discord-events-channel-id')} 
-            />
-          </Col>
-          <Col span={24}>
-            <Checkbox 
-              checked={discordSpamProtectionEnabled} 
-              onChange={e => handleChange(e, 'discord-spam-protection-enabled')}
-            >
-              {t('settings.discord.spamProtectionEnabled')}
-            </Checkbox>
-          </Col>
-        </>
-      )}
     </Row>
   );
 }

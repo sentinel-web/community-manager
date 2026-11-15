@@ -1,4 +1,4 @@
-import { App, Button, Card, Col, Descriptions, Modal, Row, Select, Spin, Statistic, Tag, Typography } from 'antd';
+import { App, Button, Card, Col, Descriptions, Modal, Row, Select, Space, Spin, Statistic, Tag, Typography } from 'antd';
 import type { DefaultOptionType } from 'antd/es/select';
 import { Meteor } from 'meteor/meteor';
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
@@ -6,6 +6,7 @@ import { useTranslation } from '../../i18n/LanguageContext';
 import ColoredTag from '../components/ColoredTag';
 import useMethod from '../hooks/useMethod';
 import { useTourRef } from '../tour/TourContext';
+import DiscordLink from './DiscordLink';
 
 // recharts ships ~100 KB into the initial bundle even though pie charts only
 // appear inside a member's expanded profile row. Load it lazily on demand.
@@ -37,6 +38,7 @@ interface ProfileStats {
   description?: string;
   steamProfileLink?: string;
   discordTag?: string;
+  discordLinked?: boolean;
 }
 
 interface ProfileAccess {
@@ -282,7 +284,15 @@ export default function MemberProfile({ memberId }: MemberProfileProps) {
                       '-'
                     ),
                   },
-                  { label: t('members.discordTag'), children: profileStats.discordTag || '-' },
+                  {
+                    label: t('members.discordTag'),
+                    children: (
+                      <Space>
+                        {profileStats.discordTag || '-'}
+                        <DiscordLink linked={profileStats.discordLinked} own={isOwnProfile} />
+                      </Space>
+                    ),
+                  },
                 ]}
               />
             </Card>

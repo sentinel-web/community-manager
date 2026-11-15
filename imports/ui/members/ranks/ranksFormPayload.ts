@@ -8,7 +8,7 @@ export interface RankFormValues {
   color?: { toHexString?: () => string } | string;
   previousRankId?: string;
   nextRankId?: string;
-  discordRoleId?: string;
+  discordRoleId?: string | null;
 }
 
 export interface RankPayload {
@@ -19,7 +19,7 @@ export interface RankPayload {
   previousRankId: string | undefined;
   nextRankId: string | undefined;
   type: 'player' | 'zeus';
-  discordRoleId: string | undefined;
+  discordRoleId: string | null;
 }
 
 /**
@@ -39,6 +39,6 @@ export default function toRankPayload(values: RankFormValues): RankPayload {
     previousRankId,
     nextRankId,
     type,
-    discordRoleId,
+    discordRoleId: discordRoleId ?? null,
   };
 }

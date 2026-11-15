@@ -34,6 +34,7 @@ declare module 'meteor/meteor' {
       positionId?: string;
       profilePictureId?: string;
       discordTag?: string;
+      discordId?: string;
       steamProfileLink?: string;
       description?: string;
       entryDate?: Date;

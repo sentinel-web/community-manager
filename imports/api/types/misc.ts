@@ -9,6 +9,8 @@ export type TaskStatus = ColoredEntity;
  */
 export interface EventType extends ColoredEntity {
   countsForInactivity?: boolean;
+  /** Events of this type are mirrored to Discord (scheduled event + announcement). */
+  createDiscordEvent?: boolean;
 }
 
 /** A reusable rich-text briefing block; `content` holds sanitized HTML (ADR 0001). */
@@ -23,7 +25,7 @@ export interface Position extends ColoredEntity {
 }
 
 export interface Specialization extends ColoredEntity {
-  discordRoleId: string;
+  discordRoleId?: string | null;
   linkToFile?: string;
   instructors?: string[];
   requiredSpecializations?: string[];
@@ -43,6 +45,8 @@ export interface Registration {
   description?: string | null;
   /** Server-set on insert (never client-supplied); absent on registrations created before #377. */
   createdAt?: Date;
+  /** Server-owned: the Discord notification posted for this registration. */
+  discordMessageId?: string;
 }
 
 export interface ProfilePicture {

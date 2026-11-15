@@ -25,6 +25,18 @@ import {
 } from '../integrity';
 import type { Role } from '/imports/api/types';
 
+/**
+ * `profile.discordId` is server-owned: only the verified link flow (server/discord/memberSync.ts)
+ * sets it. A member form can neither set it nor — by replacing the whole `profile` — drop it.
+ */
+function keepServerOwnedDiscordId(payload: Record<string, unknown>, stored?: string): void {
+  delete payload['profile.discordId'];
+  const profile = payload.profile;
+  if (!profile || typeof profile !== 'object') return;
+  if (stored) (profile as Record<string, unknown>).discordId = stored;
+  else delete (profile as Record<string, unknown>).discordId;
+}
+
 async function getMemberById(memberId: string): Promise<Meteor.User> {
   validateUserId(memberId);
   const member = await MembersCollection.findOneAsync(memberId);
@@ -253,6 +265,7 @@ if (Meteor.isServer) {
           // Validates every FK present on the bare-doc payload — same
           // semantics generic CRUD applies on .insert.
           await validateForeignKeys('members', p);
+          keepServerOwnedDiscordId(p);
           return Accounts.createUserAsync(p as Parameters<typeof Accounts.createUserAsync>[0]);
         },
       );
@@ -312,6 +325,7 @@ if (Meteor.isServer) {
           // existing orphans on members.profile must be cleared by the orphan
           // migration before this is enabled in production. Supersedes the
           // touched-fields-only path.
+          keepServerOwnedDiscordId(changes as Record<string, unknown>, targetMember.profile?.discordId);
           await validateForeignKeysForUpdate('members', targetMember as unknown as Record<string, unknown>, {
             $set: changes,
           });
@@ -640,6 +654,7 @@ if (Meteor.isServer) {
         description: user.profile?.description || '-',
         steamProfileLink: user.profile?.steamProfileLink || '',
         discordTag: user.profile?.discordTag || '',
+        discordLinked: !!user.profile?.discordId,
         position: resolvedPosition?.name || '-',
         positionColor: resolvedPosition?.color || null,
       };

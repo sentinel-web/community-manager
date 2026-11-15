@@ -38,7 +38,7 @@ describe('toRankPayload', () => {
       description: 'Zeus rank',
       previousRankId: 'sgt',
       nextRankId: 'maj',
-      discordRoleId: undefined,
+      discordRoleId: null,
       type: 'zeus',
     });
   });

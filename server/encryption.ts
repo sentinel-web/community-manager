@@ -2,59 +2,62 @@ import crypto from 'crypto';
 import fs from 'fs';
 import { Meteor } from 'meteor/meteor';
 
-const ALGORITHM = 'aes-256-cbc';
-
-// Where the 32-char key comes from, in order:
+// Authenticated encryption (AES-256-GCM) for secrets stored in the database —
+// today only the Discord bot token. Stored as `v1:<iv>:<tag>:<ciphertext>` (hex).
+//
+// Where the key material comes from, in order:
 //   1. a mounted file (the production / preview path) — generated per-stack by
 //      scripts/deploy.sh, copied owner-only into the app-secrets volume by the
 //      secrets-init service, and never placed in the environment, so it stays
-//      out of `docker inspect` and the client bundle;
-//   2. Meteor.settings.private.encryptionKey, as a dev fallback.
+//      out of `docker inspect`;
+//   2. Meteor.settings.private.encryptionKey;
+//   3. outside production only, a fixed development key, so `npm start` and the test
+//      suite work without any setup. Production never falls back to it.
 // Resolution is lazy so an unconfigured server still boots (a dev run, or a
-// stack that never enables Discord); the error only fires if encrypt/decrypt is
-// actually called without a usable key — it is no longer a startup invariant.
+// stack that never enables Discord); the error only fires when encrypt/decrypt
+// is actually called without usable key material.
 const KEY_FILE = process.env.ENCRYPTION_KEY_FILE || '/run/secrets/encryption_key';
+const MIN_KEY_MATERIAL_LENGTH = 32;
+const DEVELOPMENT_KEY = 'development-only-encryption-key!!';
 
-let cachedKey: string | undefined;
+let cachedKey: Buffer | undefined;
 
-function resolveKey(): string {
+function resolveKey(): Buffer {
   if (cachedKey) return cachedKey;
-  let key: string | undefined;
+  let material: string | undefined;
   try {
-    key = fs.readFileSync(KEY_FILE, 'utf8').trim();
+    material = fs.readFileSync(KEY_FILE, 'utf8').trim();
   } catch {
-    key = Meteor.settings.private?.encryptionKey;
+    material = Meteor.settings.private?.encryptionKey ?? (Meteor.isProduction ? undefined : DEVELOPMENT_KEY);
   }
-  if (!key || key.length !== 32) {
+  if (!material || material.length < MIN_KEY_MATERIAL_LENGTH) {
     throw new Meteor.Error(
       'encryption-key-missing',
-      `Encryption key must be 32 characters long — provide it via ${KEY_FILE} or Meteor.settings.private.encryptionKey`
+      `No encryption key of at least ${MIN_KEY_MATERIAL_LENGTH} characters — provide it via ${KEY_FILE} or Meteor.settings.private.encryptionKey`
     );
   }
-  cachedKey = key;
-  return key;
+  cachedKey = crypto.createHash('sha256').update(material).digest();
+  return cachedKey;
 }
 
 export function encrypt(text: string): string {
-  const key = resolveKey();
-  const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv(ALGORITHM, Buffer.from(key), iv);
-  let encrypted = cipher.update(text);
-  encrypted = Buffer.concat([encrypted, cipher.final()]);
-  return iv.toString('hex') + ':' + encrypted.toString('hex');
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', resolveKey(), iv);
+  const data = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()]);
+  return ['v1', iv.toString('hex'), cipher.getAuthTag().toString('hex'), data.toString('hex')].join(':');
 }
 
-export function decrypt(text: string): string {
+/** Throws when the value was tampered with, was encrypted with another key, or is not in the `v1` format. */
+export function decrypt(value: string): string {
+  const [version, iv, tag, data] = value.split(':');
+  if (version !== 'v1' || !iv || !tag || data === undefined) {
+    throw new Meteor.Error('decryption-failed', 'Stored secret is not in a supported format');
+  }
+  const decipher = crypto.createDecipheriv('aes-256-gcm', resolveKey(), Buffer.from(iv, 'hex'));
+  decipher.setAuthTag(Buffer.from(tag, 'hex'));
   try {
-    const key = resolveKey();
-    const textParts = text.split(':');
-    const iv = Buffer.from(textParts.shift()!, 'hex');
-    const encryptedText = Buffer.from(textParts.join(':'), 'hex');
-    const decipher = crypto.createDecipheriv(ALGORITHM, Buffer.from(key), iv);
-    let decrypted = decipher.update(encryptedText);
-    decrypted = Buffer.concat([decrypted, decipher.final()]);
-    return decrypted.toString();
+    return Buffer.concat([decipher.update(Buffer.from(data, 'hex')), decipher.final()]).toString('utf8');
   } catch {
-    return 'Error decrypting value';
+    throw new Meteor.Error('decryption-failed', 'Stored secret could not be decrypted with the current key');
   }
 }

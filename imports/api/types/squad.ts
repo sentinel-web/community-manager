@@ -9,4 +9,5 @@ export interface Squad {
   description?: string;
   excludeFromOrbat?: boolean;
   order?: number | null;
+  discordRoleId?: string | null;
 }

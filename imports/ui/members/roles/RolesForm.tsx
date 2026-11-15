@@ -6,6 +6,7 @@ import { getColorFromValues } from '/imports/helpers/colors/getColorFromValues';
 import type { TranslateFn } from '../../section/types';
 import type { Role } from '../../../api/types/role';
 import useEntityForm from '../../hooks/useEntityForm';
+import DiscordRoleSelect from '../../components/DiscordRoleSelect';
 import FormFooter from '../../components/FormFooter';
 import { ADMIN_FIELD, CRUD_MODULES, buildRolePayload, prepareRoleForForm } from './roleFormModel';
 
@@ -55,13 +56,7 @@ const RolesForm = () => {
       <Form.Item name="color" label={t('common.color')}>
         <ColorPicker format="hex" disabledAlpha />
       </Form.Item>
-      <Form.Item 
-        name="discordRoleId" 
-        label={t('members.discordRoleId')} 
-        rules={[{ required: false, type: 'string', pattern: /^\d+$/, message: 'Muss eine gültige ID sein!' }]}
-      >
-        <Input placeholder={t('forms.placeholders.enterDiscordRoleId')} allowClear />
-      </Form.Item>
+      <DiscordRoleSelect />
 
       <Form.Item name={ADMIN_FIELD} label={t('members.administrator')} extra={t('members.administratorHint')} valuePropName="checked">
         <Switch checkedChildren={<CheckOutlined />} unCheckedChildren={<CloseOutlined />} />

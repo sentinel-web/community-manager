@@ -16,6 +16,7 @@ import './apis/attendances.server';
 import './apis/backup.server';
 import './apis/dashboard.server';
 import './apis/demoData.server';
+import './apis/discord.server';
 import './apis/events.server';
 import './apis/integrity.server';
 import './apis/logs.server';
@@ -33,7 +34,7 @@ import './apis/tasks.server';
 import { COLLECTION_REGISTRY } from './collection-registry';
 import { createCollectionMethods, createCollectionPublish } from './crud.lib';
 import { CACHE, LOGS, SQUAD_SCOPED_PERMISSIONS } from './config';
-import { initializeDiscordBot } from './discord/bot';
+import { startDiscordBot } from './discord/bot';
 
 // === Permission System ===
 
@@ -337,6 +338,8 @@ async function createDatabaseIndexes(): Promise<void> {
   await Promise.all([
     MembersCollection.rawCollection().createIndex({ 'profile.squadId': 1 }),
     MembersCollection.rawCollection().createIndex({ 'profile.rankId': 1 }),
+    // One Discord account links to at most one member (see server/discord/memberSync.ts).
+    MembersCollection.rawCollection().createIndex({ 'profile.discordId': 1 }, { unique: true, sparse: true }),
     ensureAttendancesUniqueIndex(),
     LogsCollection.rawCollection().createIndex({ createdAt: -1 }),
     LogsCollection.rawCollection().createIndex({ action: 1 }),
@@ -349,7 +352,6 @@ async function createDatabaseIndexes(): Promise<void> {
 
 if (Meteor.isServer) {
   Meteor.startup(async () => {
-    await initializeDiscordBot();
     if (process.env.NODE_ENV !== 'production') {
       await createTestData();
     }
@@ -357,6 +359,9 @@ if (Meteor.isServer) {
     // in dev once createTestData has run, and whenever any user already exists.
     await bootstrapAdminFromSettings();
     await createDatabaseIndexes();
+    // Not awaited: a slow or unreachable Discord gateway must never delay server startup.
+    // The outcome is written to the `discord-status` setting.
+    void startDiscordBot();
   });
 }
 

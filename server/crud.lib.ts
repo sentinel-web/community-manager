@@ -20,6 +20,7 @@ import {
   validateForeignKeysForUpdate,
 } from './integrity';
 import { sanitizeHtml } from './htmlSanitizer';
+import { isValidPreset, PRESET_FILE_MAX_BYTES } from '/imports/api/events/preset';
 import { RANK_ABBREVIATION_MAX_LENGTH, type CrudCollectionMap, type CrudCollectionName } from '/imports/api/types';
 import { PUBLISH_LIMITS } from '/imports/config';
 
@@ -162,10 +163,25 @@ const INSERT_VALIDATORS: Partial<Record<CrudCollectionName, (payload: Record<str
 // timestamp can never be forged or rewritten through a crafted DDP call.
 const SERVER_CREATED_AT: ReadonlySet<CrudCollectionName> = new Set<CrudCollectionName>(['registrations', 'tasks']);
 
+const serverOwnedField = (): never => {
+  throw new Meteor.Error('server-owned-field', 'This field is managed by the server');
+};
+
 // Per-field validators run on BOTH insert and update (the `$set` payload), unlike INSERT_VALIDATORS.
 // Each field is optional: absent/null (a cleared form field) passes, but a present value must have the
 // right shape, so a crafted DDP call can't store e.g. a string sort order.
 const FIELD_VALIDATORS: Partial<Record<CrudCollectionName, Record<string, (value: unknown) => void>>> = {
+  events: {
+    // Written only by the Discord bot (server/discord/eventSync.ts), never through a method.
+    discordEventId: serverOwnedField,
+    discordMessageId: serverOwnedField,
+    preset: value => {
+      if (!isValidPreset(value)) {
+        throw new Meteor.Error('invalid-preset', `Preset must be a link or a file of at most ${PRESET_FILE_MAX_BYTES / 1024} KB`);
+      }
+    },
+  },
+  registrations: { discordMessageId: serverOwnedField },
   ranks: {
     abbreviation: value => {
       if (value == null) return;
