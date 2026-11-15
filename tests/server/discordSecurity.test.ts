@@ -48,7 +48,7 @@ describe('Discord settings — the bot token never reaches a client', () => {
 
   it('discord.configure requires the settings permission', async () => {
     await assertRejectsWithCode(() => callAs(memberUserId, 'discord.configure', { 'discord-enabled': false }), 403);
-    await assertRejectsWithCode(() => callAs(null, 'discord.configure', { 'discord-enabled': false }), 'not-authorized');
+    await assertRejectsWithCode(() => callAs(null, 'discord.configure', { 'discord-enabled': false }), 'validateUserId');
   });
 
   it('discord.configure rejects unknown keys and malformed ids', async () => {
