@@ -60,6 +60,20 @@ services:
       - "traefik.http.routers.${STACK:-community-manager}.tls=true"
       - "traefik.http.routers.${STACK:-community-manager}.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}"
       - "traefik.http.services.${STACK:-community-manager}.loadbalancer.server.port=3000"
+      # Every stack is public, so each router gets its own rate limit and
+      # security headers. They are defined here rather than borrowed from a
+      # host-level file-provider chain: a router that references a middleware
+      # the host does not define is dropped by Traefik (404), and a shared
+      # chain's limit is sized for plain HTTP sites. The limit is per client
+      # address and counts HTTP requests only — a DDP websocket is one upgrade
+      # request, so the budget covers page loads and SockJS fallback polling.
+      - "traefik.http.routers.${STACK:-community-manager}.middlewares=${STACK:-community-manager}-ratelimit,${STACK:-community-manager}-headers"
+      - "traefik.http.middlewares.${STACK:-community-manager}-ratelimit.ratelimit.average=${RATE_LIMIT_AVERAGE:-50}"
+      - "traefik.http.middlewares.${STACK:-community-manager}-ratelimit.ratelimit.burst=${RATE_LIMIT_BURST:-100}"
+      - "traefik.http.middlewares.${STACK:-community-manager}-headers.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.${STACK:-community-manager}-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.${STACK:-community-manager}-headers.headers.customFrameOptionsValue=SAMEORIGIN"
+      - "traefik.http.middlewares.${STACK:-community-manager}-headers.headers.referrerPolicy=strict-origin-when-cross-origin"
 
   # Single-member replica set (rs0), not a standalone: Meteor >= 3.5 keeps live
   # subscriptions current via change streams, which only exist on a replica set;

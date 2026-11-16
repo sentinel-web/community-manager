@@ -33,6 +33,7 @@ docker compose up -d
   - Oplog is 256 MB (`--oplogSize`, applied only when the oplog is first created) so up to `MAX_PREVIEW_STACKS` stacks fit on one disk.
   - Leave `MONGO_URL` without a `replicaSet` parameter (the driver discovers the topology) and **do not** set `MONGO_OPLOG_URL` — with it, Meteor picks oplog tailing over change streams.
   - Rollback: remove `--replSet`/`--keyFile` from the mongo `command` and redeploy. A former replica-set member then starts as a standalone (with a startup warning); the data stays.
+- Each router carries its own Traefik middlewares, defined by container labels (no host-level middleware is required): a per-client-address rate limit (`RATE_LIMIT_AVERAGE` requests/second, default 50, with `RATE_LIMIT_BURST`, default 100 — exceeding it returns 429) and security headers (HSTS, `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy`). The limit counts HTTP requests; a DDP websocket is a single request. If Traefik sits behind another proxy or CDN, configure its `forwardedHeaders` so the client address is not the proxy's.
 - With `STACK` / `STACK_HOST` unset, the Traefik router is named `community-manager` and routes `$DOMAIN` — the original behaviour, unchanged.
 
 See `docker-compose.yml` for the full configuration.
