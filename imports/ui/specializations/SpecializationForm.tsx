@@ -3,6 +3,7 @@ import type { Rule } from 'antd/es/form';
 import React, { ComponentType, useMemo } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import useEntityForm from '../hooks/useEntityForm';
+import DiscordRoleSelect from '../components/DiscordRoleSelect';
 import FormFooter from '../components/FormFooter';
 import MembersSelect from '../members/MembersSelect';
 import RanksSelect from '../members/ranks/RanksSelect';
@@ -33,6 +34,7 @@ interface SpecializationFormValues {
   requiredSpecializations?: string[];
   requiredRankId?: string;
   description?: string;
+  discordRoleId?: string | null;
 }
 
 const SpecializationForm = () => {
@@ -93,6 +95,7 @@ const SpecializationForm = () => {
       <Form.Item name="description" label={t('common.description')} rules={[{ required: false, type: 'string' }]}>
         <Input.TextArea autoSize placeholder={t('forms.placeholders.enterDescription')} />
       </Form.Item>
+      <DiscordRoleSelect />
       <FormFooter onCancel={cancel} loading={loading} />
     </Form>
   );

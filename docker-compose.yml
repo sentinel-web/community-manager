@@ -20,9 +20,17 @@ services:
       MONGO_URL: ${MONGO_URL:-mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/community-manager?authSource=admin}
       METEOR_SETTINGS: ${METEOR_SETTINGS:-}
       PORT: 3000
+    # The discord.js token-encryption key is read from
+    # /run/secrets/encryption_key (never an env var; server/encryption.ts reads
+    # it lazily). It comes from the app-secrets volume, owner-only for this
+    # container's user — see the secrets-init service.
+    volumes:
+      - app-secrets:/run/secrets:ro
     depends_on:
       mongo:
         condition: service_healthy
+      secrets-init:
+        condition: service_completed_successfully
     restart: unless-stopped
     read_only: true
     tmpfs:
@@ -74,6 +82,34 @@ services:
       - "traefik.http.middlewares.${STACK:-community-manager}-headers.headers.contentTypeNosniff=true"
       - "traefik.http.middlewares.${STACK:-community-manager}-headers.headers.customFrameOptionsValue=SAMEORIGIN"
       - "traefik.http.middlewares.${STACK:-community-manager}-headers.headers.referrerPolicy=strict-origin-when-cross-origin"
+
+  # One-shot: copies the stack's encryption key into the app-secrets volume,
+  # owned by the app image's runtime user (uid/gid 1001 = `meteor`) at mode 400.
+  # deploy.sh runs unprivileged and cannot chown the host file to 1001, and a
+  # bind-mounted file keeps its host owner/mode, so the only other way for the
+  # non-root app to read it was a world-readable key. Runs as root with just the
+  # capabilities `install` needs, no network. Reuses the app image, so nothing
+  # extra is pulled.
+  secrets-init:
+    image: ${IMAGE:-community-manager:latest}
+    user: "0:0"
+    entrypoint: ["install", "-o", "1001", "-g", "1001", "-m", "400", "/run/secrets/encryption_key", "/app-secrets/encryption_key"]
+    secrets:
+      - encryption_key
+    volumes:
+      - app-secrets:/app-secrets
+    network_mode: none
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+    restart: "no"
+    logging: *default-logging
 
   # Single-member replica set (rs0), not a standalone: Meteor >= 3.5 keeps live
   # subscriptions current via change streams, which only exist on a replica set;
@@ -146,8 +182,19 @@ services:
       - internal
 
 volumes:
+  app-secrets:
   mongo-data:
   mongo-config:
+
+# The stack's encryption key on the host: ./encryption.key in the stack dir,
+# generated once by scripts/deploy.sh, mode 600 owned by the deploy user. It is
+# the source of truth — it survives `teardown --purge`, so DB backups stay
+# decryptable — and is only read by secrets-init, which copies it into the
+# app-secrets volume for the app. For a local `docker compose up`, create one
+# first: `(umask 077 && openssl rand -hex 16 > encryption.key)`.
+secrets:
+  encryption_key:
+    file: ./encryption.key
 
 networks:
   traefik:

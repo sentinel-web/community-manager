@@ -22,6 +22,7 @@ import RichTextEditor from '../components/RichTextEditor';
 import shouldConfirmTemplateOverwrite from '/imports/helpers/shouldConfirmTemplateOverwrite';
 import { getColorFromValues } from '../specializations/SpecializationForm';
 import EventTypesForm from './event-types/EventTypesForm';
+import PresetInput from './PresetInput';
 
 const styles = {
   datePicker: {
@@ -134,7 +135,7 @@ const EventForm = () => {
         </Col>
       </Row>
       <Form.Item name="preset" label={t('forms.labels.presetLink')} rules={[{ type: 'string' }]}>
-        <Input placeholder={t('forms.placeholders.enterPresetLink')} />
+        <PresetInput />
       </Form.Item>
       <BriefingTemplatePicker form={form} t={t} />
       <Form.Item name="description" label={t('common.description')} rules={[{ type: 'string' }]}>

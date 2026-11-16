@@ -8,6 +8,7 @@ import Logo from '../logo/Logo';
 import useNavigation from '../navigation/navigation.hook';
 import SectionCard from '../section/SectionCard';
 import TourContext, { useTourRef } from '../tour/TourContext';
+import DiscordSettings from './DiscordSettings';
 import useSettings from './settings.hook';
 
 type TFn = LanguageContextValue['t'];
@@ -98,6 +99,11 @@ export default function Settings() {
                   <Col xs={24} lg={12}>
                     <CommunityIdBlackListSettings communityIdBlackList={communityIdBlackList} handleChange={handleChange} t={t} />
                   </Col>
+                  {ready && (
+                    <Col span={24}>
+                      <DiscordSettings />
+                    </Col>
+                  )}
                   {Meteor.isDevelopment && (
                     <Col span={24}>
                       <DemoDataSettings t={t} />

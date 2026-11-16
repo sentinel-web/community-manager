@@ -4,6 +4,7 @@ import { checkPermission, getUserRole, isOfficerOrAdmin, validateUserId } from '
 import { getCollection } from '../crud.lib';
 import { createLog } from './logs.server';
 import { RATE_LIMITS } from '../config';
+import { startDiscordBot, stopDiscordBot } from '../discord/bot';
 import type { CrudCollectionName } from '/imports/api/types';
 import SettingsCollection from '../../imports/api/collections/settings.collection';
 import MembersCollection from '../../imports/api/collections/members.collection';
@@ -329,6 +330,10 @@ if (Meteor.isServer) {
       // preserves any implicit FK ordering. Inner inserts are parallelized
       // because every doc within a collection is independent (fixed _ids,
       // no intra-collection ordering dependency).
+      // The restore empties and refills every collection. The Discord bot would read that as
+      // "everything was deleted" and remove the mirrored events, posts and roles, so it is
+      // stopped for the duration and restarted on the restored settings afterwards.
+      await stopDiscordBot();
       for (const collectionName of BACKUP_COLLECTIONS) {
         if (backupData.collections[collectionName]) {
           try {
@@ -381,6 +386,8 @@ if (Meteor.isServer) {
           results.errors.push({ collection: 'users', error: (error as Error).message });
         }
       }
+
+      void startDiscordBot();
 
       await createLog('backup.restored', {
         userId: this.userId,

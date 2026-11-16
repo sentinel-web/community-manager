@@ -1,6 +1,7 @@
 import { Meteor } from 'meteor/meteor';
 import SettingsCollection from '../../imports/api/collections/settings.collection';
 import { validateObject, validateString, validateUserId, checkPermission } from '../main';
+import { DISCORD_SECRET_KEYS } from '../../imports/api/discord/settings';
 import { createLog } from './logs.server';
 
 const PUBLIC_SETTING_KEYS = ['community-title', 'community-logo', 'community-color'];
@@ -14,7 +15,8 @@ if (Meteor.isServer) {
     validateUserId(this.userId);
     validateObject(filter, false);
     validateObject(options, false);
-    return SettingsCollection.find(filter, options);
+    // Secrets (the encrypted Discord bot token) never leave the server, whatever the caller's filter says.
+    return SettingsCollection.find({ $and: [filter, { key: { $nin: DISCORD_SECRET_KEYS } }] }, options);
   });
 
   Meteor.methods({
@@ -23,6 +25,8 @@ if (Meteor.isServer) {
       const hasPermission = await checkPermission(this.userId, 'settings');
       if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
       validateString(key, false);
+      // The Discord configuration is validated, encrypted and applied as a whole by `discord.configure`.
+      if (key.startsWith('discord-')) throw new Meteor.Error(400, 'Discord settings are changed through discord.configure');
       if (value === null || value === undefined) {
         throw new Meteor.Error('invalid-value', 'Invalid value');
       }
@@ -44,6 +48,7 @@ if (Meteor.isServer) {
       const hasPermission = await checkPermission(this.userId, 'settings');
       if (!hasPermission) throw new Meteor.Error(403, 'Permission denied');
       validateString(key, false);
+      if (DISCORD_SECRET_KEYS.includes(key)) throw new Meteor.Error(403, 'Permission denied');
       const setting = await SettingsCollection.findOneAsync({ key });
       return setting?.value;
     },

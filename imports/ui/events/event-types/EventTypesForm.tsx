@@ -14,8 +14,13 @@ export default function EventTypesForm() {
     created: 'messages.eventTypeCreated',
     updated: 'messages.eventTypeUpdated',
     toPayload: values => {
-      const { name, description, countsForInactivity } = values as { name: string; description?: string; countsForInactivity?: boolean };
-      return { name, color: getColorFromValues(values), description, countsForInactivity: countsForInactivity !== false };
+      const { name, description, countsForInactivity, createDiscordEvent } = values as {
+        name: string;
+        description?: string;
+        countsForInactivity?: boolean;
+        createDiscordEvent?: boolean;
+      };
+      return { name, color: getColorFromValues(values), description, countsForInactivity: countsForInactivity !== false, createDiscordEvent };
     },
   });
 
@@ -51,6 +56,9 @@ export default function EventTypesForm() {
         valuePropName="checked"
         rules={[{ type: 'boolean' }]}
       >
+        <Switch />
+      </Form.Item>
+      <Form.Item name="createDiscordEvent" label={t('eventTypes.createDiscordEvent')} valuePropName="checked">
         <Switch />
       </Form.Item>
       <FormFooter onCancel={cancel} loading={loading} />

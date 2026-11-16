@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import { RANK_ABBREVIATION_MAX_LENGTH, type Rank } from '../../../api/types/rank';
 import useEntityForm from '../../hooks/useEntityForm';
+import DiscordRoleSelect from '../../components/DiscordRoleSelect';
 import FormFooter from '../../components/FormFooter';
 import toRankPayload, { type RankFormValues } from './ranksFormPayload';
 import RanksSelect from './RanksSelect';
@@ -67,6 +68,7 @@ export default function RanksForm() {
         rules={[{ required: false, type: 'string' }]}
         defaultValue={model?.nextRankId as string | undefined}
       />
+      <DiscordRoleSelect />
       <FormFooter onCancel={cancel} loading={loading} />
     </Form>
   );

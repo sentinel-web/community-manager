@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from '/imports/i18n/LanguageContext';
 import type { Squad } from '../../api/types/squad';
 import useEntityForm from '../hooks/useEntityForm';
+import DiscordRoleSelect from '../components/DiscordRoleSelect';
 import FormFooter from '../components/FormFooter';
 import { turnBase64ToImage, turnImageFileToBase64 } from '../profile-picture-input/ProfilePictureInput';
 import { getColorFromValues } from '../specializations/SpecializationForm';
@@ -100,6 +101,7 @@ const SquadsForm = () => {
       <Form.Item label={t('squads.excludeFromOrbat')} name="excludeFromOrbat" valuePropName="checked">
         <Switch />
       </Form.Item>
+      <DiscordRoleSelect />
       <FormFooter onCancel={cancel} loading={loading} />
     </Form>
   );

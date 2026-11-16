@@ -13,4 +13,8 @@ export interface EventDoc {
   preset?: string;
   description?: string;
   rrule?: string;
+  /** Server-owned. `null` = the scheduled event was deleted in Discord and must not be recreated. */
+  discordEventId?: string | null;
+  /** Server-owned: the announcement message in the events channel. */
+  discordMessageId?: string;
 }

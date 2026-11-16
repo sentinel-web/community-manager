@@ -7,6 +7,7 @@ import { useTranslation } from '../../i18n/LanguageContext';
 import type { EventDoc } from '../../api/types/event';
 import ColoredTag from '../components/ColoredTag';
 import RichTextView from '../components/RichTextView';
+import { parsePreset } from '/imports/api/events/preset';
 import useMethod from '../hooks/useMethod';
 
 interface ResolvedMember {
@@ -30,6 +31,31 @@ interface EventDetailPopoverProps {
   open: boolean;
   setOpen: (open: boolean) => void;
   onEdit?: (event: EventDoc) => void;
+}
+
+interface PresetLinkProps {
+  preset: string;
+}
+
+/** Only an uploaded file or an http(s) link becomes an anchor; any other stored value is shown as text. */
+function PresetLink({ preset }: PresetLinkProps) {
+  const { t } = useTranslation();
+  const parsed = parsePreset(preset);
+  if (parsed?.kind === 'file') {
+    return (
+      <a href={parsed.dataUrl} download={parsed.filename}>
+        {t('events.preset.download', { name: parsed.filename })}
+      </a>
+    );
+  }
+  if (parsed?.kind === 'link') {
+    return (
+      <a href={parsed.url} target="_blank" rel="noopener noreferrer">
+        {t('events.preset.open')}
+      </a>
+    );
+  }
+  return <>{preset}</>;
 }
 
 export default function EventDetailPopover({ event, open, setOpen, onEdit }: EventDetailPopoverProps) {
@@ -116,6 +142,11 @@ export default function EventDetailPopover({ event, open, setOpen, onEdit }: Eve
               {detail.description && (
                 <Descriptions.Item label={t('common.description')}>
                   <RichTextView html={detail.description} />
+                </Descriptions.Item>
+              )}
+              {detail.preset && (
+                <Descriptions.Item label={t('forms.labels.presetLink')}>
+                  <PresetLink preset={detail.preset} />
                 </Descriptions.Item>
               )}
             </Descriptions>

@@ -14,6 +14,8 @@ export interface MemberProfile {
   positionId?: string;
   profilePictureId?: string;
   discordTag?: string;
+  /** Server-owned Discord user id, set only by the verified link flow (never by a member form). */
+  discordId?: string;
   steamProfileLink?: string;
   description?: string;
   entryDate?: Date;

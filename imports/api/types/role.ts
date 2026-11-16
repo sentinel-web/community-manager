@@ -6,6 +6,7 @@ export interface CrudPermission {
 }
 
 export interface Role {
+  discordRoleId?: string | null;
   _id?: string;
   name: string;
   color?: string;

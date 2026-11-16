@@ -37,9 +37,12 @@ server/collection-registry.ts  # Per-collection permission/FK/audit metadata (CO
 server/mutation-pipeline.ts    # Shared server-mutation lifecycle (runMutation: auth→perm→validate→body→audit)
 server/attendance-points.ts    # Batched attendance/static-points loader behind attendances.pointsSummary + members.profileStats
 server/event-visibility.ts     # Private-event read filter shared by the events publication, methods, generic reads and palette
+server/discord/         # Discord bot (discord.js): lifecycle in bot.ts, one module per synced feature — see docs/discord.md
+server/encryption.ts    # AES-256-GCM for secrets stored in the database (the Discord bot token)
 server/config.ts        # Server settings with Meteor.settings overrides
 imports/api/attendance/   # Pure attendance domain logic (points calculation, status → label/color map)
 imports/api/collections/  # MongoDB collection definitions (*.collection.ts)
+imports/api/discord/      # Pure Discord logic (role mapping diff, rich text → markdown, settings keys) — no Meteor, no discord.js
 imports/api/types/      # Shared TS interfaces mirroring server return shapes
 imports/ui/             # React components organized by feature (.tsx)
 imports/i18n/           # Localization — LanguageContext.tsx, translations.ts
@@ -123,6 +126,10 @@ Field-level schemas for every collection: [`docs/collections.md`](docs/collectio
 - Chrome: `app/`, `header/`, `footer/`, `navigation/`, `login/`, `theme/`, `title/`, `logo/`, `profile-picture-input/`, `suspense/`, `section/`, `table/`, `components/`
 
 Full index of every navigable view, drawer form, drawer viewer, and embedded widget: [`docs/views-and-forms.md`](docs/views-and-forms.md).
+
+## Discord Integration
+
+Two-way sync between the app and one Discord server (roles, events, sign-ups, registrations, tasks, slash commands). Setup, feature list, sync rules and the security model: [`docs/discord.md`](docs/discord.md). Non-obvious rules: members are matched by the server-owned `profile.discordId` (never by username); permission roles sync web → Discord only; `discord-*` settings go through `discord.configure`; the bot token never reaches a client.
 
 ## Deployment
 
