@@ -77,6 +77,6 @@
     "react-doctor": "^0.9.22",
     "react-refresh": "^0.19.0",
     "typescript": "5.9.3",
-    "typescript-eslint": "^8.70.1"
+    "typescript-eslint": "^8.73.0"
   }
 }
